@@ -10,7 +10,7 @@
  */
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
-import { Toaster } from "sonner";
+import { DSToaster } from "@/components/design-system/feedback/sonner";
 import { Analytics } from "@vercel/analytics/next";
 import { LenisProvider } from "@/components/layout/LenisProvider";
 import { OverlayDismisser } from "@/components/OverlayDismisser";
@@ -186,7 +186,7 @@ export default function RootLayout({
           <LenisProvider>
             {children}
           </LenisProvider>
-          <Toaster richColors position="bottom-right" />
+          <DSToaster />
           <Analytics />
         </PostHogProvider>
       </body>

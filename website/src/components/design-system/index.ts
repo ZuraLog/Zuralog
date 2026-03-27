@@ -70,6 +70,52 @@ export {
   DSCollapsibleTrigger,
   DSCollapsibleContent,
 } from "./display/collapsible";
+export {
+  DSCommand,
+  DSCommandDialog,
+  DSCommandInput,
+  DSCommandList,
+  DSCommandEmpty,
+  DSCommandGroup,
+  DSCommandItem,
+  DSCommandSeparator,
+  DSCommandShortcut,
+} from "./display/command";
+export {
+  DSBreadcrumb,
+  DSBreadcrumbList,
+  DSBreadcrumbItem,
+  DSBreadcrumbLink,
+  DSBreadcrumbPage,
+  DSBreadcrumbSeparator,
+  DSBreadcrumbEllipsis,
+} from "./display/breadcrumb";
+export {
+  DSNavigationMenu,
+  DSNavigationMenuList,
+  DSNavigationMenuItem,
+  DSNavigationMenuTrigger,
+  DSNavigationMenuContent,
+  DSNavigationMenuLink,
+  DSNavigationMenuIndicator,
+  navigationMenuTriggerStyle,
+} from "./display/navigation-menu";
+export {
+  DSContextMenu,
+  DSContextMenuTrigger,
+  DSContextMenuContent,
+  DSContextMenuItem,
+  DSContextMenuCheckboxItem,
+  DSContextMenuRadioGroup,
+  DSContextMenuRadioItem,
+  DSContextMenuLabel,
+  DSContextMenuSeparator,
+  DSContextMenuShortcut,
+  DSContextMenuGroup,
+  DSContextMenuSub,
+  DSContextMenuSubTrigger,
+  DSContextMenuSubContent,
+} from "./display/context-menu";
 
 // Feedback components
 export { Badge } from "./feedback/badge";
@@ -116,6 +162,7 @@ export {
   DSHoverCardTrigger,
   DSHoverCardContent,
 } from "./feedback/hover-card";
+export { DSToaster, dsToast } from "./feedback/sonner";
 
 // Input components (new)
 export { DSLabel } from "./inputs/label";
@@ -134,6 +181,39 @@ export {
 } from "./inputs/select";
 export { DSToggleGroup } from "./inputs/toggle-group";
 export type { DSToggleGroupProps } from "./inputs/toggle-group";
+export { DSCalendar } from "./inputs/calendar";
+export {
+  DSInputOTP,
+  DSInputOTPGroup,
+  DSInputOTPSlot,
+  DSInputOTPSeparator,
+} from "./inputs/input-otp";
+
+// Data components
+export {
+  CHART_COLORS,
+  DS_CHART_THEME,
+  DSChartContainer,
+  DSChartTooltip,
+} from "./data/chart";
+export {
+  DSTable,
+  DSTableHeader,
+  DSTableBody,
+  DSTableFooter,
+  DSTableHead,
+  DSTableRow,
+  DSTableCell,
+  DSTableCaption,
+} from "./data/table";
+
+// Form components
+export {
+  DSFormField,
+  DSFormLabel,
+  DSFormDescription,
+  DSFormMessage,
+} from "./inputs/form";
 
 // Hooks
 export { useMagnetic } from "@/hooks/use-magnetic";
