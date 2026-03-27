@@ -63,6 +63,7 @@ interface DSPaginationLinkProps
 export function DSPaginationLink({
   isActive,
   className,
+  style,
   ...props
 }: DSPaginationLinkProps) {
   return (
@@ -76,10 +77,15 @@ export function DSPaginationLink({
         "cursor-pointer select-none",
         "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[rgba(207,225,185,0.3)]",
         isActive
-          ? "bg-ds-sage text-ds-text-on-sage"
+          ? "bg-ds-sage text-ds-text-on-sage bg-cover bg-center bg-no-repeat"
           : "text-ds-text-secondary hover:text-ds-text-primary",
         className,
       )}
+      style={
+        isActive
+          ? { backgroundImage: "url('/patterns/sage.png')", ...style }
+          : style
+      }
       {...props}
     />
   );

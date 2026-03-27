@@ -25,7 +25,18 @@ export function DSCommand({
   return (
     <Command
       className={cn(
-        "bg-ds-surface-overlay rounded-ds-xl font-jakarta",
+        "bg-ds-surface-overlay rounded-ds-xl font-jakarta overflow-hidden",
+        /* Override cmdk root rendered by shadcn */
+        "[&_[data-slot=command]]:bg-ds-surface-overlay [&_[data-slot=command]]:rounded-ds-xl [&_[data-slot=command]]:overflow-hidden [&_[data-slot=command]]:p-0",
+        /* Override input wrapper */
+        "[&_[data-slot=command-input-wrapper]]:bg-ds-surface [&_[data-slot=command-input-wrapper]]:border-b [&_[data-slot=command-input-wrapper]]:border-[rgba(240,238,233,0.06)] [&_[data-slot=command-input-wrapper]]:p-3",
+        /* Override InputGroup inside input wrapper */
+        "[&_[data-slot=command-input-wrapper]_.group]:bg-transparent [&_[data-slot=command-input-wrapper]_.group]:border-none [&_[data-slot=command-input-wrapper]_.group]:shadow-none",
+        /* Override selected item */
+        "[&_[data-slot=command-item][data-selected=true]]:bg-[rgba(207,225,185,0.08)] [&_[data-slot=command-item][data-selected=true]]:text-ds-sage",
+        "[&_[data-slot=command-item][data-selected=true]_svg]:text-ds-sage",
+        /* Override group headings */
+        "[&_[cmdk-group-heading]]:text-ds-text-secondary [&_[cmdk-group-heading]]:text-[0.6875rem] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider",
         className,
       )}
       {...props}
@@ -67,10 +78,9 @@ export function DSCommandInput({
   return (
     <BaseInput
       className={cn(
-        "bg-ds-surface rounded-ds-sm text-ds-text-primary",
+        "text-ds-text-primary bg-transparent border-none font-jakarta text-[0.875rem]",
         "placeholder:text-ds-text-secondary",
-        "border-none px-4 py-3 font-jakarta",
-        "[&_svg]:text-ds-text-secondary",
+        "outline-none",
         className,
       )}
       {...props}
@@ -140,7 +150,7 @@ export function DSCommandItem({
     <BaseItem
       className={cn(
         "px-3 py-2.5 rounded-ds-xs text-ds-text-primary text-[0.875rem] font-jakarta",
-        "data-selected:bg-ds-surface",
+        "data-selected:bg-[rgba(207,225,185,0.08)] data-selected:text-ds-sage",
         "[&_svg]:text-ds-sage [&_svg]:mr-3",
         "cursor-pointer",
         className,
