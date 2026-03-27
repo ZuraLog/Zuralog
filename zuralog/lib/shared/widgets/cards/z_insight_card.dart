@@ -12,6 +12,7 @@ import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/core/theme/category_colors.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/shared/widgets/buttons/spring_button.dart';
+import 'package:zuralog/shared/widgets/cards/zuralog_card.dart';
 import 'package:zuralog/shared/widgets/indicators/z_icon_badge.dart';
 
 /// A tappable card displaying a single [InsightCard] in the Today feed.
@@ -36,8 +37,10 @@ class ZInsightCard extends StatelessWidget {
 
     return ZuralogSpringButton(
       onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+      child: ZuralogCard(
+        variant: ZCardVariant.feature,
+        category: categoryColor,
+        padding: const EdgeInsets.all(AppDimens.spaceMd),
         child: Stack(
           children: [
             // Category-colour radial glow (unread only).
@@ -58,19 +61,8 @@ class ZInsightCard extends StatelessWidget {
                   ),
                 ),
               ),
-            // Card body.
-            Container(
-              padding: const EdgeInsets.all(AppDimens.spaceMd),
-              decoration: BoxDecoration(
-                color: colors.cardBackground,
-                borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-                border: Border.all(
-                  color: isUnread
-                      ? categoryColor.withValues(alpha: 0.20)
-                      : colors.border,
-                ),
-              ),
-              child: IntrinsicHeight(
+            // Card content.
+            IntrinsicHeight(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -174,7 +166,6 @@ class ZInsightCard extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
           ],
         ),
       ),

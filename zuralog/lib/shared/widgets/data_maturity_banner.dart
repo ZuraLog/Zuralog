@@ -60,20 +60,11 @@ class DataMaturityBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? AppColors.cardBackgroundDark : AppColors.surfaceLight;
-    final textColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryColor =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final trackColor =
-        isDark ? AppColors.surfaceDark : AppColors.borderLight;
+    final colors = AppColorsOf(context);
 
     if (mode == DataMaturityMode.stillBuilding) {
       return _StillBuildingBanner(
-        bg: bg,
-        textColor: textColor,
-        secondaryColor: secondaryColor,
+        colors: colors,
         onDismiss: onDismiss,
         onPermanentDismiss: onPermanentDismiss,
       );
@@ -87,8 +78,8 @@ class DataMaturityBanner extends StatelessWidget {
         vertical: AppDimens.spaceSm,
       ),
       decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppDimens.shapeMd),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,7 +90,9 @@ class DataMaturityBanner extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Data maturity: $daysWithData of $targetDays days',
-                  style: AppTextStyles.caption.copyWith(color: textColor),
+                  style: AppTextStyles.caption.copyWith(
+                    color: colors.textPrimary,
+                  ),
                 ),
               ),
               if (onDismiss != null)
@@ -111,7 +104,7 @@ class DataMaturityBanner extends StatelessWidget {
                     child: Icon(
                       Icons.close_rounded,
                       size: AppDimens.iconSm,
-                      color: secondaryColor,
+                      color: colors.textSecondary,
                     ),
                   ),
                 ),
@@ -122,7 +115,7 @@ class DataMaturityBanner extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: progress,
-              backgroundColor: trackColor,
+              backgroundColor: colors.elevatedSurface,
               valueColor:
                   const AlwaysStoppedAnimation<Color>(AppColors.primary),
               minHeight: 4,
@@ -133,8 +126,10 @@ class DataMaturityBanner extends StatelessWidget {
             progress >= 1.0
                 ? 'AI insights fully unlocked!'
                 : 'Keep logging to unlock deeper AI insights.',
-            style: AppTextStyles.caption
-                .copyWith(color: secondaryColor, fontSize: 10),
+            style: AppTextStyles.caption.copyWith(
+              color: colors.textSecondary,
+              fontSize: 10,
+            ),
           ),
         ],
       ),
@@ -146,16 +141,12 @@ class DataMaturityBanner extends StatelessWidget {
 
 class _StillBuildingBanner extends StatelessWidget {
   const _StillBuildingBanner({
-    required this.bg,
-    required this.textColor,
-    required this.secondaryColor,
+    required this.colors,
     this.onDismiss,
     this.onPermanentDismiss,
   });
 
-  final Color bg;
-  final Color textColor;
-  final Color secondaryColor;
+  final AppColorsOf colors;
   final VoidCallback? onDismiss;
   final VoidCallback? onPermanentDismiss;
 
@@ -167,8 +158,8 @@ class _StillBuildingBanner extends StatelessWidget {
         vertical: AppDimens.spaceSm,
       ),
       decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppDimens.shapeMd),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,15 +174,18 @@ class _StillBuildingBanner extends StatelessWidget {
                   children: [
                     Text(
                       'Your data is still building',
-                      style:
-                          AppTextStyles.caption.copyWith(color: textColor),
+                      style: AppTextStyles.caption.copyWith(
+                        color: colors.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       'Connect more integrations or keep logging to unlock '
                       'deeper AI insights.',
-                      style: AppTextStyles.caption
-                          .copyWith(color: secondaryColor, fontSize: 10),
+                      style: AppTextStyles.caption.copyWith(
+                        color: colors.textSecondary,
+                        fontSize: 10,
+                      ),
                     ),
                   ],
                 ),
@@ -205,7 +199,7 @@ class _StillBuildingBanner extends StatelessWidget {
                     child: Icon(
                       Icons.close_rounded,
                       size: AppDimens.iconSm,
-                      color: secondaryColor,
+                      color: colors.textSecondary,
                     ),
                   ),
                 ),

@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/cards/zuralog_card.dart';
 
 // ── StreakHeroCard ────────────────────────────────────────────────────────────
 
@@ -44,18 +45,11 @@ class StreakHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-
-    return Container(
-      width: double.infinity,
+    return ZuralogCard(
+      variant: ZCardVariant.feature,
       padding: const EdgeInsets.symmetric(
         vertical: AppDimens.spaceLg,
         horizontal: AppDimens.spaceMd,
-      ),
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        border: Border.all(color: colors.border),
       ),
       child: streakDays == 0
           ? const _ZeroState()
