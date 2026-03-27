@@ -103,9 +103,9 @@ export function Card({
         const dy = (e.clientY - cy) / (rect.height / 2);
 
         // Scale tilt inversely with card size so all cards feel the same.
-        // A 150px card gets ~6deg, a 400px card gets ~3deg, a 900px card gets ~2deg.
+        // Small cards (~150px) get up to 10deg, large (~900px) get ~2deg.
         const diagonal = Math.sqrt(rect.width ** 2 + rect.height ** 2);
-        const maxTilt = Math.max(1.5, Math.min(6, 900 / diagonal));
+        const maxTilt = Math.max(2, Math.min(10, 1200 / diagonal));
 
         gsap.to(el, {
           rotateY: dx * maxTilt,

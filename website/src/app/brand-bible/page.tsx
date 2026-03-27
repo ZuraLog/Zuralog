@@ -276,7 +276,7 @@ export default function BrandBiblePage() {
         <SectionSub>Two accent colors anchor the entire palette. Sage for actions, Warm White for navigation.</SectionSub>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="relative overflow-hidden rounded-ds-lg h-32 bg-ds-sage flex items-end p-5">
+          <Card elevation="standard" className="!bg-ds-sage h-32 flex items-end !p-5">
             <PatternOverlay variant="sage" opacity={0.15} blend="color-burn" />
             <div className="relative z-10">
               <Text variant="title-md" color="on-sage">Sage</Text>
@@ -284,15 +284,15 @@ export default function BrandBiblePage() {
                 #CFE1B9 — Primary actions, buttons, toggles, links
               </Text>
             </div>
-          </div>
-          <div className="relative overflow-hidden rounded-ds-lg h-32 bg-ds-warm-white flex items-end p-5">
+          </Card>
+          <Card elevation="standard" className="!bg-ds-warm-white h-32 flex items-end !p-5">
             <div className="relative z-10">
               <Text variant="title-md" color="on-warm-white">Warm White</Text>
               <Text variant="body-sm" color="on-warm-white" className="opacity-70">
                 #F0EEE9 — Navigation, tabs, segmented controls
               </Text>
             </div>
-          </div>
+          </Card>
         </div>
       </RevealSection>
 
@@ -303,16 +303,16 @@ export default function BrandBiblePage() {
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { name: "Text Primary", color: "text-ds-text-primary", bg: "bg-ds-surface", hex: "#F0EEE9" },
-            { name: "Text Secondary", color: "text-ds-text-secondary", bg: "bg-ds-surface", hex: "#9B9894" },
-            { name: "On Sage", color: "text-ds-text-on-sage", bg: "bg-ds-sage", hex: "#1A2E22" },
-            { name: "On Warm White", color: "text-ds-text-on-warm-white", bg: "bg-ds-warm-white", hex: "#161618" },
+            { name: "Text Primary", color: "text-ds-text-primary", bg: "!bg-ds-surface", hex: "#F0EEE9" },
+            { name: "Text Secondary", color: "text-ds-text-secondary", bg: "!bg-ds-surface", hex: "#9B9894" },
+            { name: "On Sage", color: "text-ds-text-on-sage", bg: "!bg-ds-sage", hex: "#1A2E22" },
+            { name: "On Warm White", color: "text-ds-text-on-warm-white", bg: "!bg-ds-warm-white", hex: "#161618" },
           ].map((item) => (
-            <div key={item.name} className={`${item.bg} rounded-ds-md p-4`}>
+            <Card key={item.name} elevation="data" className={item.bg}>
               <span className={`${item.color} font-jakarta text-[1rem] font-medium block`}>Aa</span>
               <Text variant="label-sm" color="secondary" className="mt-2">{item.name}</Text>
               <Text variant="label-sm" color="secondary" className="font-mono">{item.hex}</Text>
-            </div>
+            </Card>
           ))}
         </div>
       </RevealSection>
@@ -324,14 +324,14 @@ export default function BrandBiblePage() {
 
         <div className="grid grid-cols-5 sm:grid-cols-10 gap-3 mb-8">
           {categoryColors.map((cat) => (
-            <div key={cat.key} className="flex flex-col items-center gap-1.5">
+            <Card key={cat.key} elevation="data" className="flex flex-col items-center !p-3">
               <div
                 className="w-10 h-10 rounded-full"
                 style={{ backgroundColor: cat.hex }}
               />
-              <Text variant="label-sm" color="primary">{cat.name}</Text>
+              <Text variant="label-sm" color="primary" className="mt-1.5">{cat.name}</Text>
               <Text variant="label-sm" color="secondary" className="font-mono">{cat.hex}</Text>
-            </div>
+            </Card>
           ))}
         </div>
 
