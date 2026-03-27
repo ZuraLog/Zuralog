@@ -1,8 +1,8 @@
-/// Zuralog Edge Agent — Combined Auth Screen (v3.2).
+/// Zuralog Edge Agent — Combined Auth Screen (v4.0 brand bible redesign).
 ///
-/// Replaces the separate [LoginScreen] and [RegisterScreen] with a single
-/// screen that uses a [TabBar] toggle to switch between Login and Create Account.
-/// Spring-animated tab content, AppTextField inputs, and ZuralogSpringButton CTAs.
+/// Uses [ZSegmentedControl] to switch between Login and Create Account.
+/// All UI elements use the shared design system components (ZButton,
+/// ZIconButton, AppTextField, ZSegmentedControl).
 ///
 /// **Backend wiring is 100% unchanged:**
 /// - Login: [authStateProvider.notifier.login(email, password)]
@@ -23,7 +23,7 @@ import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
-/// Combined login + register screen with a [TabBar] to switch between modes.
+/// Combined login + register screen with a [ZSegmentedControl] toggle.
 ///
 /// [initialTab]: 0 = Log in, 1 = Create account.
 /// The router sends both `/auth/login` and `/auth/register` here.
@@ -38,10 +38,9 @@ class AuthScreen extends ConsumerStatefulWidget {
   ConsumerState<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends ConsumerState<AuthScreen>
-    with SingleTickerProviderStateMixin {
-  // ── Tab controller ─────────────────────────────────────────────────────────
-  late final TabController _tabController;
+class _AuthScreenState extends ConsumerState<AuthScreen> {
+  // ── Segment selection ───────────────────────────────────────────────────────
+  late int _selectedIndex = widget.initialTab;
 
   // ── Shared form state ──────────────────────────────────────────────────────
   final GlobalKey<FormState> _loginFormKey = GlobalKey<FormState>();
@@ -57,18 +56,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   bool _isLoading = false;
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(
-      length: 2,
-      vsync: this,
-      initialIndex: widget.initialTab,
-    );
-  }
-
-  @override
   void dispose() {
-    _tabController.dispose();
     _loginEmailCtrl.dispose();
     _loginPasswordCtrl.dispose();
     _registerEmailCtrl.dispose();
@@ -112,14 +100,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 
     switch (result) {
       case AuthSuccess():
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'Password reset email sent — check your inbox',
-            ),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        if (mounted) {
+          ZToast.success(context, 'Password reset email sent — check your inbox');
+        }
       case AuthFailure(:final message):
         _showError(message);
     }
@@ -180,24 +163,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    if (!mounted) return;
+    ZToast.error(context, message);
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return ZuralogScaffold(
       body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Custom top bar (not AppBar) ────────────────────────────
+            // ── Custom top bar ────────────────────────────────────────
             _TopBar(onBack: () {
               if (context.canPop()) {
                 context.pop();
@@ -206,27 +182,24 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
               }
             }),
 
-            // ── TabBar ─────────────────────────────────────────────────
-            TabBar(
-              controller: _tabController,
-              tabs: const [
-                Tab(text: 'Log in'),
-                Tab(text: 'Create account'),
-              ],
-              indicatorColor: AppColors.primary,
-              indicatorWeight: 2,
-              labelStyle: AppTextStyles.titleMedium,
-              unselectedLabelStyle: AppTextStyles.bodyMedium,
-              labelColor: colorScheme.onSurface,
-              unselectedLabelColor: colorScheme.onSurfaceVariant,
-              dividerColor: Colors.transparent,
+            // ── Segmented control ────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.spaceLg,
+              ),
+              child: ZSegmentedControl(
+                selectedIndex: _selectedIndex,
+                onChanged: (i) => setState(() => _selectedIndex = i),
+                segments: const ['Log in', 'Create account'],
+              ),
             ),
 
-            // ── TabBarView ─────────────────────────────────────────────
+            const SizedBox(height: AppDimens.spaceSm),
+
+            // ── Form content (IndexedStack preserves form state) ─────
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                physics: const NeverScrollableScrollPhysics(),
+              child: IndexedStack(
+                index: _selectedIndex,
                 children: [
                   // Login tab
                   _LoginForm(
@@ -239,7 +212,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                         setState(() => _loginObscure = !_loginObscure),
                     onSubmit: _handleLogin,
                     onForgotPassword: _handleForgotPassword,
-                    onSwitchToRegister: () => _tabController.animateTo(1),
+                    onSwitchToRegister: () =>
+                        setState(() => _selectedIndex = 1),
                     validateEmail: _validateEmail,
                     validatePassword: _validatePassword,
                   ),
@@ -254,7 +228,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                     onToggleObscure: () =>
                         setState(() => _registerObscure = !_registerObscure),
                     onSubmit: _handleRegister,
-                    onSwitchToLogin: () => _tabController.animateTo(0),
+                    onSwitchToLogin: () =>
+                        setState(() => _selectedIndex = 0),
                     validateEmail: _validateEmail,
                     validatePassword: _validatePassword,
                   ),
@@ -284,22 +259,23 @@ class _TopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded),
-            iconSize: 20,
+          ZIconButton(
+            icon: Icons.arrow_back_ios_new_rounded,
             onPressed: onBack,
-            tooltip: 'Back',
+            filled: false,
           ),
           Expanded(
             child: Center(
               child: Text(
                 'Zuralog',
-                style: AppTextStyles.titleMedium.copyWith(color: AppColors.primary),
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: AppColors.primary,
+                ),
               ),
             ),
           ),
-          // Mirror of icon button width to keep wordmark centered.
-          const SizedBox(width: 48),
+          // Mirror of icon button width (44px) to keep wordmark centered.
+          const SizedBox(width: 44),
         ],
       ),
     );
@@ -346,14 +322,19 @@ class _LoginForm extends StatelessWidget {
           children: [
             const SizedBox(height: AppDimens.spaceLg),
 
-            Text('Welcome back.', style: AppTextStyles.displayLarge),
+            Text(
+              'Welcome back.',
+              style: AppTextStyles.displayLarge.copyWith(
+                color: AppColorsOf(context).textPrimary,
+              ),
+            ),
 
             const SizedBox(height: AppDimens.spaceSm),
 
             Text(
               'Sign in to continue.',
               style: AppTextStyles.bodyMedium.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: AppColorsOf(context).textSecondary,
               ),
             ),
 
@@ -376,35 +357,44 @@ class _LoginForm extends StatelessWidget {
               controller: passwordCtrl,
               validator: validatePassword,
               onSubmitted: onSubmit,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  obscurePassword
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                ),
+              suffixIcon: ZIconButton(
+                icon: obscurePassword
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
                 onPressed: onToggleObscure,
+                filled: false,
+                iconSize: 20,
               ),
             ),
 
             const SizedBox(height: AppDimens.spaceSm),
 
+            // "Forgot password?" — right-aligned Sage text link
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: isLoading ? null : onForgotPassword,
-                style: TextButton.styleFrom(
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimens.spaceSm,
-                    vertical: AppDimens.spaceXs,
-                  ),
-                  foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                child: Text(
-                  'Forgot password?',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+              child: Semantics(
+                button: true,
+                label: 'Forgot password',
+                child: GestureDetector(
+                  onTap: isLoading ? null : onForgotPassword,
+                  behavior: HitTestBehavior.opaque,
+                  child: SizedBox(
+                    height: AppDimens.touchTargetMin,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.spaceSm,
+                      ),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          'Forgot password?',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -412,57 +402,50 @@ class _LoginForm extends StatelessWidget {
 
             const SizedBox(height: AppDimens.spaceXl),
 
-            ZuralogSpringButton(
-              onTap: isLoading ? null : onSubmit,
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: isLoading ? null : onSubmit,
-                  child: isLoading
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: AppColors.primaryButtonText,
-                          ),
-                        )
-                      : const Text('Log In'),
-                ),
-              ),
+            // Primary CTA — Sage fill + pattern
+            ZButton(
+              label: 'Log In',
+              onPressed: isLoading ? null : onSubmit,
+              isLoading: isLoading,
             ),
 
             const SizedBox(height: AppDimens.spaceMd),
 
+            // Footer — switch to register
             Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    "Don't have an account? ",
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: onSwitchToRegister,
-                    style: TextButton.styleFrom(
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppDimens.spaceSm,
-                        vertical: AppDimens.spaceXs,
-                      ),
-                    ),
-                    child: Text(
-                      'Sign up',
+              child: SizedBox(
+                height: AppDimens.touchTargetMin,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "Don't have an account? ",
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
+                        color: AppColorsOf(context).textSecondary,
                       ),
                     ),
-                  ),
-                ],
+                    Semantics(
+                      button: true,
+                      label: 'Sign up for a new account',
+                      child: GestureDetector(
+                        onTap: onSwitchToRegister,
+                        behavior: HitTestBehavior.opaque,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppDimens.spaceSm,
+                          ),
+                          child: Text(
+                            'Sign up',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -510,14 +493,19 @@ class _RegisterForm extends StatelessWidget {
           children: [
             const SizedBox(height: AppDimens.spaceLg),
 
-            Text('Create account.', style: AppTextStyles.displayLarge),
+            Text(
+              'Create account.',
+              style: AppTextStyles.displayLarge.copyWith(
+                color: AppColorsOf(context).textPrimary,
+              ),
+            ),
 
             const SizedBox(height: AppDimens.spaceSm),
 
             Text(
               'Start your health journey.',
               style: AppTextStyles.bodyMedium.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: AppColorsOf(context).textSecondary,
               ),
             ),
 
@@ -540,69 +528,62 @@ class _RegisterForm extends StatelessWidget {
               controller: passwordCtrl,
               validator: validatePassword,
               onSubmitted: onSubmit,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  obscurePassword
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                ),
+              suffixIcon: ZIconButton(
+                icon: obscurePassword
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
                 onPressed: onToggleObscure,
+                filled: false,
+                iconSize: 20,
               ),
             ),
 
             const SizedBox(height: AppDimens.spaceXl),
 
-            ZuralogSpringButton(
-              onTap: isLoading ? null : onSubmit,
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: isLoading ? null : onSubmit,
-                  child: isLoading
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: AppColors.primaryButtonText,
-                          ),
-                        )
-                      : const Text('Create Account'),
-                ),
-              ),
+            // Primary CTA — Sage fill + pattern
+            ZButton(
+              label: 'Create Account',
+              onPressed: isLoading ? null : onSubmit,
+              isLoading: isLoading,
             ),
 
             const SizedBox(height: AppDimens.spaceMd),
 
+            // Footer — switch to login
             Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Already have an account? ',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: onSwitchToLogin,
-                    style: TextButton.styleFrom(
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppDimens.spaceSm,
-                        vertical: AppDimens.spaceXs,
-                      ),
-                    ),
-                    child: Text(
-                      'Log in',
+              child: SizedBox(
+                height: AppDimens.touchTargetMin,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Already have an account? ',
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
+                        color: AppColorsOf(context).textSecondary,
                       ),
                     ),
-                  ),
-                ],
+                    Semantics(
+                      button: true,
+                      label: 'Log in to existing account',
+                      child: GestureDetector(
+                        onTap: onSwitchToLogin,
+                        behavior: HitTestBehavior.opaque,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppDimens.spaceSm,
+                          ),
+                          child: Text(
+                            'Log in',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

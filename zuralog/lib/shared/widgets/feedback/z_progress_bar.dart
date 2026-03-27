@@ -95,7 +95,7 @@ class ZProgressBar extends StatelessWidget {
                     // Active track with pattern overlay.
                     AnimatedContainer(
                       duration: animate
-                          ? AppMotion.durationEntrance
+                          ? AppMotion.durationMedium
                           : Duration.zero,
                       curve: AppMotion.curveEntrance,
                       width: fillWidth,

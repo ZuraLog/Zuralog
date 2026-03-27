@@ -53,8 +53,8 @@ class _ZSearchBarState extends State<ZSearchBar> {
 
   @override
   void dispose() {
-    if (widget.controller == null) _controller.dispose();
     _controller.removeListener(_onTextChanged);
+    if (widget.controller == null) _controller.dispose();
     super.dispose();
   }
 
@@ -79,7 +79,17 @@ class _ZSearchBarState extends State<ZSearchBar> {
       borderRadius: BorderRadius.circular(AppDimens.shapeSm),
       child: Stack(
         children: [
-          // The text field.
+          // Pattern overlay on the background (bottom layer).
+          const Positioned.fill(
+            child: IgnorePointer(
+              child: ZPatternOverlay(
+                variant: ZPatternVariant.original,
+                opacity: 0.05,
+                blendMode: BlendMode.screen,
+              ),
+            ),
+          ),
+          // The text field (top layer, above the pattern).
           TextFormField(
             controller: _controller,
             cursorColor: AppColors.primary,
@@ -124,16 +134,6 @@ class _ZSearchBarState extends State<ZSearchBar> {
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppDimens.shapeSm),
                 borderSide: BorderSide(color: sageFocusBorder, width: 1.5),
-              ),
-            ),
-          ),
-          // Pattern overlay on the background.
-          const Positioned.fill(
-            child: IgnorePointer(
-              child: ZPatternOverlay(
-                variant: ZPatternVariant.original,
-                opacity: 0.05,
-                blendMode: BlendMode.screen,
               ),
             ),
           ),

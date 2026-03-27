@@ -69,7 +69,7 @@ class _ZToggleState extends State<ZToggle> with SingleTickerProviderStateMixin {
       end: AppColors.primary,
     ).animate(_controller);
     _thumbColor = ColorTween(
-      begin: AppColors.textSecondary,
+      begin: Colors.white,
       end: Colors.white,
     ).animate(_controller);
   }

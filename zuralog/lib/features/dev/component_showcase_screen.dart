@@ -869,17 +869,23 @@ class _ComponentShowcaseScreenState extends State<ComponentShowcaseScreen> {
         ),
 
         _label('Empty State'),
-        const ZEmptyState(
+        ZEmptyState(
           icon: Icons.bedtime_outlined,
           title: 'No sleep data yet',
           message:
               'Connect a sleep tracker or log your sleep manually to see insights here.',
           actionLabel: 'Log Sleep',
+          onAction: () {},
         ),
 
         _label('Error State'),
         const ZErrorState(
           message: 'We couldn\'t load your data. Please try again.',
+        ),
+        _gap(),
+        ZErrorState(
+          message: 'Connection lost',
+          onRetry: () {},
         ),
       ],
     );

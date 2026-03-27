@@ -20,6 +20,7 @@ import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 ///   child: Text('Trends hero content'),
 /// )
 /// ```
+@Deprecated('Use ZuralogCard(variant: ZCardVariant.feature) instead.')
 class ZTopographicCard extends StatelessWidget {
   /// The content widget rendered inside the card.
   final Widget child;
@@ -30,7 +31,7 @@ class ZTopographicCard extends StatelessWidget {
 
   /// Inner padding around [child].
   ///
-  /// Defaults to [AppDimens.spaceMd] (16px) on all sides.
+  /// Defaults to [AppDimens.spaceMdPlus] (20px) on all sides.
   final EdgeInsetsGeometry? padding;
 
   /// Creates a [ZTopographicCard].
@@ -44,7 +45,7 @@ class ZTopographicCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectivePadding =
-        padding ?? const EdgeInsets.all(AppDimens.spaceMd);
+        padding ?? const EdgeInsets.all(AppDimens.spaceMdPlus);
     final borderRadius = BorderRadius.circular(AppDimens.shapeLg);
 
     return ClipRRect(

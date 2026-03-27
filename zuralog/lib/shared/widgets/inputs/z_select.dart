@@ -21,6 +21,7 @@ class ZSelect extends StatelessWidget {
     required this.options,
     this.placeholder,
     this.label,
+    this.enabled = true,
   });
 
   /// Currently selected value, or null if nothing is selected.
@@ -37,6 +38,11 @@ class ZSelect extends StatelessWidget {
 
   /// Optional label shown above the trigger.
   final String? label;
+
+  /// Whether the select is interactive.
+  final bool enabled;
+
+  bool get _canOpen => enabled && onChanged != null && options.isNotEmpty;
 
   void _showOptions(BuildContext context) {
     showModalBottomSheet<String>(
@@ -59,7 +65,7 @@ class ZSelect extends StatelessWidget {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.textSecondary.withValues(alpha: 0.3),
+                    color: AppColors.textSecondary.withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -111,8 +117,10 @@ class ZSelect extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasValue = value != null && value!.isNotEmpty;
 
-    final trigger = GestureDetector(
-      onTap: onChanged != null ? () => _showOptions(context) : null,
+    final trigger = Opacity(
+      opacity: enabled ? 1.0 : 0.4,
+      child: GestureDetector(
+      onTap: _canOpen ? () => _showOptions(context) : null,
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: AppDimens.spaceMd,
@@ -142,6 +150,7 @@ class ZSelect extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
 
     if (label == null) return trigger;

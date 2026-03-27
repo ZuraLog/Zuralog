@@ -29,6 +29,7 @@ class ZRadioGroup<T> extends StatelessWidget {
     required this.value,
     this.onChanged,
     required this.options,
+    this.enabled = true,
   });
 
   /// Currently selected value, or null if nothing is selected.
@@ -40,21 +41,29 @@ class ZRadioGroup<T> extends StatelessWidget {
   /// The list of options to display.
   final List<ZRadioOption<T>> options;
 
+  /// Whether the radio group is interactive.
+  final bool enabled;
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (int i = 0; i < options.length; i++) ...[
-          if (i > 0) const SizedBox(height: AppDimens.spaceSm),
-          _ZRadioItem<T>(
-            option: options[i],
-            isSelected: options[i].value == value,
-            onTap: onChanged != null ? () => onChanged!(options[i].value) : null,
-          ),
+    return Opacity(
+      opacity: enabled ? 1.0 : 0.4,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (int i = 0; i < options.length; i++) ...[
+            if (i > 0) const SizedBox(height: AppDimens.spaceSm),
+            _ZRadioItem<T>(
+              option: options[i],
+              isSelected: options[i].value == value,
+              onTap: enabled && onChanged != null
+                  ? () => onChanged!(options[i].value)
+                  : null,
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }

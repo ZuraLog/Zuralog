@@ -60,6 +60,7 @@ class ZToast {
   }) {
     final overlay = Overlay.of(context);
     late final OverlayEntry entry;
+    var removed = false;
 
     entry = OverlayEntry(
       builder: (_) => _ZToastOverlay(
@@ -68,7 +69,10 @@ class ZToast {
         action: action,
         onAction: onAction,
         onDismissed: () {
-          entry.remove();
+          if (!removed) {
+            removed = true;
+            entry.remove();
+          }
         },
       ),
     );
@@ -105,6 +109,7 @@ class _ZToastOverlayState extends State<_ZToastOverlay>
   late final Animation<Offset> _slideOut;
   late final Animation<double> _fadeIn;
   late final Animation<double> _fadeOut;
+  bool _disposed = false;
 
   static const _enterDuration = Duration(milliseconds: 350);
   static const _exitDuration = Duration(milliseconds: 250);
@@ -132,7 +137,7 @@ class _ZToastOverlayState extends State<_ZToastOverlay>
     super.initState();
     _controller = AnimationController(vsync: this, duration: _totalDuration)
       ..addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
+        if (status == AnimationStatus.completed && !_disposed) {
           widget.onDismissed();
         }
       });
@@ -170,6 +175,7 @@ class _ZToastOverlayState extends State<_ZToastOverlay>
 
   @override
   void dispose() {
+    _disposed = true;
     _controller.dispose();
     super.dispose();
   }

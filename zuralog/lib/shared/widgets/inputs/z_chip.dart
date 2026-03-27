@@ -20,6 +20,7 @@ class ZChip extends StatelessWidget {
     this.isActive = false,
     this.onTap,
     this.icon,
+    this.enabled = true,
   });
 
   /// Text displayed inside the chip.
@@ -34,58 +35,64 @@ class ZChip extends StatelessWidget {
   /// Optional leading icon.
   final IconData? icon;
 
+  /// Whether the chip is interactive.
+  final bool enabled;
+
   @override
   Widget build(BuildContext context) {
     final sageTint = AppColors.primary.withValues(alpha: 0.15);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: AppMotion.durationFast,
-        curve: AppMotion.curveEntrance,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isActive ? sageTint : AppColors.surface,
-          borderRadius: BorderRadius.circular(AppDimens.shapePill),
-        ),
+    return Opacity(
+      opacity: enabled ? 1.0 : 0.4,
+      child: GestureDetector(
+        onTap: enabled ? onTap : null,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(AppDimens.shapePill),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Pattern overlay — only when active.
-              if (isActive)
-                const Positioned.fill(
-                  child: ZPatternOverlay(
-                    variant: ZPatternVariant.original,
-                    opacity: 0.08,
-                    blendMode: BlendMode.screen,
-                  ),
-                ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (icon != null) ...[
-                    Icon(
-                      icon,
-                      size: 16,
-                      color: isActive
-                          ? AppColors.primary
-                          : AppColors.textSecondary,
+          child: AnimatedContainer(
+            duration: AppMotion.durationFast,
+            curve: AppMotion.curveEntrance,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: isActive ? sageTint : AppColors.surface,
+              borderRadius: BorderRadius.circular(AppDimens.shapePill),
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Pattern overlay — only when active.
+                if (isActive)
+                  const Positioned.fill(
+                    child: ZPatternOverlay(
+                      variant: ZPatternVariant.original,
+                      opacity: 0.08,
+                      blendMode: BlendMode.screen,
                     ),
-                    const SizedBox(width: AppDimens.spaceXs),
+                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(
+                        icon,
+                        size: 16,
+                        color: isActive
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: AppDimens.spaceXs),
+                    ],
+                    Text(
+                      label,
+                      style: AppTextStyles.labelMedium.copyWith(
+                        color: isActive
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
+                      ),
+                    ),
                   ],
-                  Text(
-                    label,
-                    style: AppTextStyles.labelMedium.copyWith(
-                      color: isActive
-                          ? AppColors.primary
-                          : AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -45,6 +45,7 @@ class ZButton extends StatefulWidget {
     this.size = ZButtonSize.large,
     this.isLoading = false,
     this.icon,
+    this.leadingWidget,
     this.isFullWidth = true,
   });
 
@@ -65,6 +66,10 @@ class ZButton extends StatefulWidget {
 
   /// Optional leading icon.
   final IconData? icon;
+
+  /// Optional custom leading widget. Takes precedence over [icon] when both
+  /// are provided. Use this for non-icon content like a styled text glyph.
+  final Widget? leadingWidget;
 
   /// Whether the button expands to fill available width. Defaults to true.
   final bool isFullWidth;
@@ -108,6 +113,7 @@ class _ZButtonState extends State<ZButton> {
   Color _spinnerColor() {
     switch (widget.variant) {
       case ZButtonVariant.primary:
+        return AppColors.textOnSage;
       case ZButtonVariant.text:
         return AppColors.primary;
       case ZButtonVariant.destructive:
@@ -177,7 +183,10 @@ class _ZButtonState extends State<ZButton> {
       content = Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (widget.icon != null) ...[
+          if (widget.leadingWidget != null) ...[
+            widget.leadingWidget!,
+            const SizedBox(width: AppDimens.spaceSm),
+          ] else if (widget.icon != null) ...[
             Icon(widget.icon, size: 18, color: _foregroundColor()),
             const SizedBox(width: AppDimens.spaceSm),
           ],
@@ -229,26 +238,35 @@ class _ZButtonState extends State<ZButton> {
       );
     }
 
-    // ── Opacity for press/disabled states ────────────────────────────────
-    button = AnimatedOpacity(
+    // ── Scale + opacity for press/disabled states ──────────────────────
+    button = AnimatedScale(
       duration: const Duration(milliseconds: 100),
-      opacity: effectiveOpacity,
-      child: button,
+      scale: _isPressed ? 0.97 : 1.0,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 100),
+        opacity: effectiveOpacity,
+        child: button,
+      ),
     );
 
     // ── Gesture handling ────────────────────────────────────────────────
-    return GestureDetector(
-      onTapDown: _isDisabled ? null : (_) => setState(() => _isPressed = true),
-      onTapUp: _isDisabled
-          ? null
-          : (_) {
-              setState(() => _isPressed = false);
-              widget.onPressed?.call();
-            },
-      onTapCancel:
-          _isDisabled ? null : () => setState(() => _isPressed = false),
-      behavior: HitTestBehavior.opaque,
-      child: button,
+    return Semantics(
+      button: true,
+      enabled: !_isDisabled,
+      label: widget.label,
+      child: GestureDetector(
+        onTapDown: _isDisabled ? null : (_) => setState(() => _isPressed = true),
+        onTapUp: _isDisabled
+            ? null
+            : (_) {
+                setState(() => _isPressed = false);
+                widget.onPressed?.call();
+              },
+        onTapCancel:
+            _isDisabled ? null : () => setState(() => _isPressed = false),
+        behavior: HitTestBehavior.opaque,
+        child: button,
+      ),
     );
   }
 }

@@ -22,41 +22,45 @@ class ZLogFab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        width: 56,
-        height: 56,
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          color: AppColors.primary,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x4D000000), // rgba(0,0,0,0.3)
-              blurRadius: 12,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: ClipOval(
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Sage fill (already the container background)
-              const SizedBox.expand(),
-              // Pattern overlay
-              const ZPatternOverlay(
-                variant: ZPatternVariant.sage,
-                opacity: 0.18,
-                blendMode: BlendMode.colorBurn,
-              ),
-              // Icon
-              const Icon(
-                Icons.add_rounded,
-                size: 28,
-                color: AppColors.textOnSage,
+    return Semantics(
+      button: true,
+      label: 'Log new entry',
+      child: GestureDetector(
+        onTap: onPressed,
+        child: Container(
+          width: 56,
+          height: 56,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.primary,
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x4D000000), // rgba(0,0,0,0.3)
+                blurRadius: 12,
+                offset: Offset(0, 4),
               ),
             ],
+          ),
+          child: ClipOval(
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Sage fill (already the container background)
+                const SizedBox.expand(),
+                // Pattern overlay
+                const ZPatternOverlay(
+                  variant: ZPatternVariant.sage,
+                  opacity: 0.18,
+                  blendMode: BlendMode.colorBurn,
+                ),
+                // Icon
+                const Icon(
+                  Icons.add_rounded,
+                  size: AppDimens.iconMd,
+                  color: AppColors.textOnSage,
+                ),
+              ],
+            ),
           ),
         ),
       ),

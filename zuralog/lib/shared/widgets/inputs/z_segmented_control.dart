@@ -21,6 +21,7 @@ class ZSegmentedControl extends StatelessWidget {
     required this.selectedIndex,
     required this.onChanged,
     required this.segments,
+    this.enabled = true,
   });
 
   /// Index of the currently selected segment.
@@ -32,9 +33,14 @@ class ZSegmentedControl extends StatelessWidget {
   /// Labels for each segment.
   final List<String> segments;
 
+  /// Whether the segmented control is interactive.
+  final bool enabled;
+
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
+    return Opacity(
+      opacity: enabled ? 1.0 : 0.4,
+      child: LayoutBuilder(
       builder: (context, constraints) {
         final totalWidth = constraints.maxWidth;
         final padding = 4.0;
@@ -80,7 +86,7 @@ class ZSegmentedControl extends StatelessWidget {
                       for (int i = 0; i < segments.length; i++)
                         Expanded(
                           child: GestureDetector(
-                            onTap: () => onChanged(i),
+                            onTap: enabled ? () => onChanged(i) : null,
                             behavior: HitTestBehavior.opaque,
                             child: Center(
                               child: AnimatedDefaultTextStyle(
@@ -103,6 +109,7 @@ class ZSegmentedControl extends StatelessWidget {
           ),
         );
       },
+    ),
     );
   }
 }

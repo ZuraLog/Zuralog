@@ -79,12 +79,16 @@ class _ZCheckboxState extends State<ZCheckbox>
 
   @override
   Widget build(BuildContext context) {
-    final checkbox = Opacity(
-      opacity: widget.enabled ? 1.0 : 0.4,
-      child: GestureDetector(
-        onTap: _handleTap,
-        behavior: HitTestBehavior.opaque,
-        child: SizedBox(
+    final checkbox = Semantics(
+      checked: widget.value,
+      label: widget.label ?? '',
+      enabled: widget.enabled,
+      child: Opacity(
+        opacity: widget.enabled ? 1.0 : 0.4,
+        child: GestureDetector(
+          onTap: _handleTap,
+          behavior: HitTestBehavior.opaque,
+          child: SizedBox(
           width: 44,
           height: 44,
           child: Center(
@@ -147,6 +151,7 @@ class _ZCheckboxState extends State<ZCheckbox>
               },
             ),
           ),
+        ),
         ),
       ),
     );

@@ -118,22 +118,15 @@ class ZuralogCard extends StatelessWidget {
     if (_hasPattern) {
       body = Stack(
         children: [
-          // Background
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: borderRadius,
-              ),
-            ),
-          ),
           // Pattern overlay
-          ClipRRect(
-            borderRadius: borderRadius,
-            child: ZPatternOverlay(
-              variant: _patternVariant,
-              opacity: _patternOpacity,
-              blendMode: BlendMode.screen,
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: borderRadius,
+              child: ZPatternOverlay(
+                variant: _patternVariant,
+                opacity: _patternOpacity,
+                blendMode: BlendMode.screen,
+              ),
             ),
           ),
           // Content

@@ -2,12 +2,15 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:zuralog/core/theme/app_dimens.dart';
-import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/shared/widgets/buttons/z_button.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 
 /// Displays an icon, title, optional message, and optional action button
 /// when a screen has no content to show.
+///
+/// Uses a feature card treatment with a subtle pattern overlay, 36px icon,
+/// and centered layout per brand bible.
 ///
 /// Example:
 /// ```dart
@@ -37,41 +40,67 @@ class ZEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimens.spaceXl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 56, color: colorScheme.onSurfaceVariant),
-            const SizedBox(height: AppDimens.spaceMd),
-            Text(
-              title,
-              style: AppTextStyles.titleMedium.copyWith(
-                color: colorScheme.onSurface,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            if (message != null) ...[
-              const SizedBox(height: AppDimens.spaceSm),
-              Text(
-                message!,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: colorScheme.onSurfaceVariant,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppDimens.shapeLg),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppDimens.shapeLg),
+          ),
+          child: Stack(
+            children: [
+              // Pattern overlay (bottom layer).
+              const Positioned.fill(
+                child: IgnorePointer(
+                  child: ZPatternOverlay(
+                    opacity: 0.06,
+                    blendMode: BlendMode.screen,
+                  ),
                 ),
-                textAlign: TextAlign.center,
+              ),
+              // Content (top layer).
+              Padding(
+                padding: const EdgeInsets.all(AppDimens.spaceXl),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      icon,
+                      size: 36,
+                      color: AppColors.textSecondaryDark,
+                    ),
+                    const SizedBox(height: AppDimens.spaceMd),
+                    Text(
+                      title,
+                      style: AppTextStyles.titleMedium.copyWith(
+                        color: AppColors.textPrimaryDark,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (message != null) ...[
+                      const SizedBox(height: AppDimens.spaceSm),
+                      Text(
+                        message!,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textSecondaryDark,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                    if (actionLabel != null && onAction != null) ...[
+                      const SizedBox(height: AppDimens.spaceLg),
+                      ZButton(
+                        label: actionLabel!,
+                        onPressed: onAction,
+                        isFullWidth: false,
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ],
-            if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: AppDimens.spaceLg),
-              ZButton(
-                label: actionLabel!,
-                onPressed: onAction,
-                isFullWidth: false,
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );

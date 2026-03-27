@@ -11,7 +11,7 @@ import 'package:zuralog/core/theme/theme.dart';
 /// A compact icon button for toolbars, headers, and inline actions.
 ///
 /// Ensures a minimum 44x44px hit area for accessibility regardless of
-/// the 40px visual size.
+/// the 40px visual size. The entire 44px area is tappable.
 ///
 /// Example:
 /// ```dart
@@ -29,6 +29,7 @@ class ZIconButton extends StatelessWidget {
     this.isSage = false,
     this.size = 40,
     this.iconSize = 20,
+    this.semanticLabel,
   });
 
   /// The icon to display.
@@ -53,6 +54,9 @@ class ZIconButton extends StatelessWidget {
   /// Size of the icon. Defaults to 20px.
   final double iconSize;
 
+  /// Accessible label for screen readers.
+  final String? semanticLabel;
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
@@ -63,23 +67,27 @@ class ZIconButton extends StatelessWidget {
         : BoxShape.rectangle;
     final borderRadius = isCircle ? null : BorderRadius.circular(10);
 
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: Center(
-        child: GestureDetector(
-          onTap: onPressed,
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              color: bgColor,
-              shape: shape,
-              borderRadius: borderRadius,
-            ),
-            child: Center(
-              child: Icon(icon, size: iconSize, color: iconColor),
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: GestureDetector(
+        onTap: onPressed,
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: shape,
+                borderRadius: borderRadius,
+              ),
+              child: Center(
+                child: Icon(icon, size: iconSize, color: iconColor),
+              ),
             ),
           ),
         ),

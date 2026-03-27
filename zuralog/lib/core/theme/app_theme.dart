@@ -96,7 +96,7 @@ abstract final class AppTheme {
         systemOverlayStyle: isLight
             ? SystemUiOverlayStyle.dark
             : SystemUiOverlayStyle.light,
-        titleTextStyle: AppTextStyles.displaySmall.copyWith(
+        titleTextStyle: AppTextStyles.displayMedium.copyWith(
           color: isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark,
         ),
       ),
@@ -211,27 +211,29 @@ abstract final class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusInput),
-          borderSide: BorderSide(
-            color: isLight ? AppColors.borderLight : AppColors.borderDark,
-          ),
+          borderSide: isLight
+              ? BorderSide(color: AppColors.borderLight)
+              : BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusInput),
           borderSide: BorderSide(
-            color: isLight ? AppColors.primaryOnLight : AppColors.primary,
+            color: isLight
+                ? AppColors.primaryOnLight
+                : AppColors.primary.withValues(alpha: 0.3),
             width: 2,
           ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusInput),
           borderSide: BorderSide(
-            color: isLight ? AppColors.accentLight : AppColors.accentDark,
+            color: AppColors.error.withValues(alpha: 0.5),
           ),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusInput),
           borderSide: BorderSide(
-            color: isLight ? AppColors.accentLight : AppColors.accentDark,
+            color: AppColors.error,
             width: 2,
           ),
         ),
@@ -247,8 +249,8 @@ abstract final class AppTheme {
         ),
       ),
       dividerTheme: DividerThemeData(
-        color: isLight ? AppColors.borderLight : AppColors.borderDark,
-        thickness: 0.5,
+        color: isLight ? AppColors.borderLight : AppColors.dividerDefault,
+        thickness: 1,
         space: 0,
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
@@ -292,7 +294,7 @@ abstract final class AppTheme {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return isLight ? AppColors.surfaceLight : AppColors.surfaceDark;
+            return Colors.white;
           }
           return isLight ? AppColors.textSecondaryLight : AppColors.textSecondaryDark;
         }),
@@ -300,7 +302,7 @@ abstract final class AppTheme {
           if (states.contains(WidgetState.selected)) {
             return isLight ? AppColors.primaryOnLight : AppColors.primary;
           }
-          return isLight ? AppColors.borderLight : AppColors.borderDark;
+          return isLight ? AppColors.borderLight : AppColors.surfaceRaised;
         }),
       ),
       listTileTheme: ListTileThemeData(
@@ -329,8 +331,8 @@ abstract final class AppTheme {
       // Tooltip styling — used by OnboardingTooltip and system tooltips.
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
-          color: isLight ? AppColors.surfaceLight : AppColors.surfaceDark,
-          borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+          color: isLight ? AppColors.surfaceLight : AppColors.surfaceRaised,
+          borderRadius: BorderRadius.circular(AppDimens.shapeXs),
         ),
         textStyle: AppTextStyles.bodySmall.copyWith(
           color: isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark,
