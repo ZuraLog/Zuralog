@@ -125,38 +125,46 @@ class _WelcomeStepState extends State<WelcomeStep>
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceLg),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Logo card — spring scale entrance ─────────────────────────
+          // ── Logo card — spring scale entrance, pattern overlay ────
           Center(
             child: ScaleTransition(
               scale: _logoScale,
-              child: Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(AppDimens.shapeLg),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.40),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.all(18),
-                child: SvgPicture.asset(
-                  AppAssets.logoSvg,
-                  colorFilter: const ColorFilter.mode(
-                    AppColors.primaryButtonText,
-                    BlendMode.srcIn,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppDimens.shapeLg),
+                child: SizedBox(
+                  width: 80,
+                  height: 80,
+                  child: Stack(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius:
+                              BorderRadius.circular(AppDimens.shapeLg),
+                        ),
+                      ),
+                      const ZPatternOverlay(
+                        variant: ZPatternVariant.sage,
+                        opacity: 0.15,
+                        blendMode: BlendMode.colorBurn,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(18),
+                        child: SvgPicture.asset(
+                          AppAssets.logoSvg,
+                          colorFilter: const ColorFilter.mode(
+                            AppColors.primaryButtonText,
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -165,15 +173,15 @@ class _WelcomeStepState extends State<WelcomeStep>
 
           const SizedBox(height: AppDimens.spaceXl),
 
-          // ── Headline — 80ms stagger ────────────────────────────────────
+          // ── Headline — Sage color, displayLarge ──────────────────
           FadeTransition(
             opacity: _text1Opacity,
             child: SlideTransition(
               position: _text1Slide,
               child: Text(
                 'Hi, welcome\nto Zuralog.',
-                style: AppTextStyles.h1.copyWith(
-                  color: colorScheme.onSurface,
+                style: AppTextStyles.displayLarge.copyWith(
+                  color: AppColors.primary,
                   height: 1.1,
                 ),
               ),
@@ -182,15 +190,15 @@ class _WelcomeStepState extends State<WelcomeStep>
 
           const SizedBox(height: AppDimens.spaceMd),
 
-          // ── Sub-headline — 160ms stagger ──────────────────────────────
+          // ── Sub-headline — textSecondary, bodyLarge ──────────────
           FadeTransition(
             opacity: _text2Opacity,
             child: SlideTransition(
               position: _text2Slide,
               child: Text(
                 "Let's set up your AI health coach.",
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: colorScheme.onSurfaceVariant,
+                style: AppTextStyles.bodyLarge.copyWith(
+                  color: AppColors.textSecondaryDark,
                 ),
               ),
             ),
@@ -198,17 +206,14 @@ class _WelcomeStepState extends State<WelcomeStep>
 
           const SizedBox(height: AppDimens.spaceXxl),
 
-          // ── CTA button — 240ms stagger ────────────────────────────────
+          // ── CTA button — ZButton with pattern ────────────────────
           FadeTransition(
             opacity: _ctaOpacity,
             child: ZuralogSpringButton(
               onTap: widget.onNext,
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: widget.onNext,
-                  child: const Text("Let's go →"),
-                ),
+              child: ZButton(
+                label: "Let's go →",
+                onPressed: widget.onNext,
               ),
             ),
           ),

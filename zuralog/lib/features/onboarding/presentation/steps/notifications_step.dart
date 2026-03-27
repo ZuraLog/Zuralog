@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── Step Widget ────────────────────────────────────────────────────────────────
 
@@ -68,9 +69,6 @@ class NotificationsStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final colors = AppColorsOf(context);
-
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceLg,
@@ -84,8 +82,8 @@ class NotificationsStep extends StatelessWidget {
           // ── Heading ────────────────────────────────────────────────────
           Text(
             'Stay in the loop',
-            style: AppTextStyles.h1.copyWith(
-              color: colorScheme.onSurface,
+            style: AppTextStyles.displayLarge.copyWith(
+              color: AppColors.primary,
               height: 1.15,
             ),
           ),
@@ -93,7 +91,8 @@ class NotificationsStep extends StatelessWidget {
           Text(
             'Customise how Zuralog keeps you informed. '
             'You can change these any time in Settings.',
-            style: AppTextStyles.body.copyWith(color: colors.textSecondary),
+            style: AppTextStyles.bodyLarge
+                .copyWith(color: AppColors.textSecondaryDark),
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
@@ -124,7 +123,7 @@ class NotificationsStep extends StatelessWidget {
                         children: [
                           Text(
                             _formatTime(morningBriefingTime),
-                            style: AppTextStyles.caption.copyWith(
+                            style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.primary,
                               fontWeight: FontWeight.w600,
                             ),
@@ -198,93 +197,61 @@ class _NotificationRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final colors = AppColorsOf(context);
-
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
         color: isEnabled
             ? iconColor.withValues(alpha: 0.06)
-            : colorScheme.surface,
+            : AppColors.surface,
         borderRadius: BorderRadius.circular(AppDimens.shapeMd),
-        border: Border.all(
-          color: isEnabled
-              ? iconColor.withValues(alpha: 0.30)
-              : colors.border,
-        ),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppDimens.shapeMd),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 4px left accent bar — matching category color when active.
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 4,
-                color: isEnabled
-                    ? iconColor
-                    : iconColor.withValues(alpha: 0.20),
-              ),
-
-              // Content.
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppDimens.spaceMd),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Icon.
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: iconColor.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(icon, color: iconColor, size: 20),
-                      ),
-                      const SizedBox(width: AppDimens.spaceMd),
-                      // Text content.
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              title,
-                              style: AppTextStyles.h3
-                                  .copyWith(color: colorScheme.onSurface),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              description,
-                              style: AppTextStyles.bodyMedium
-                                  .copyWith(color: colors.textSecondary),
-                            ),
-                            if (trailing != null) ...[
-                              const SizedBox(height: AppDimens.spaceSm),
-                              trailing!,
-                            ],
-                          ],
-                        ),
-                      ),
-                      // Toggle switch.
-                      Switch(
-                        value: isEnabled,
-                        onChanged: onChanged,
-                        activeThumbColor: AppColors.primary,
-                        activeTrackColor:
-                            AppColors.primary.withValues(alpha: 0.3),
-                      ),
-                    ],
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Icon.
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: AppDimens.spaceMd),
+          // Text content.
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.titleMedium.copyWith(
+                    color: AppColors.textPrimaryDark,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondaryDark,
+                  ),
+                ),
+                if (trailing != null) ...[
+                  const SizedBox(height: AppDimens.spaceSm),
+                  trailing!,
+                ],
+              ],
+            ),
           ),
-        ),
+          const SizedBox(width: AppDimens.spaceSm),
+          // Brand toggle.
+          ZToggle(
+            value: isEnabled,
+            onChanged: onChanged,
+          ),
+        ],
       ),
     );
   }

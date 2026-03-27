@@ -76,8 +76,6 @@ class FitnessLevelStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceLg,
@@ -91,16 +89,16 @@ class FitnessLevelStep extends StatelessWidget {
           // ── Heading ───────────────────────────────────────────────────
           Text(
             'How active\nare you?',
-            style: AppTextStyles.h1.copyWith(
-              color: colorScheme.onSurface,
+            style: AppTextStyles.displayLarge.copyWith(
+              color: AppColors.primary,
               height: 1.1,
             ),
           ),
           const SizedBox(height: AppDimens.spaceXs),
           Text(
             'Helps your AI coach calibrate recommendations.',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: colorScheme.onSurfaceVariant,
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: AppColors.textSecondaryDark,
             ),
           ),
 
@@ -150,8 +148,6 @@ class _FitnessLevelTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return ZSelectableTile(
       isSelected: isSelected,
       onTap: onTap,
@@ -166,7 +162,7 @@ class _FitnessLevelTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: isSelected
                   ? AppColors.primary.withValues(alpha: 0.15)
-                  : colorScheme.onSurface.withValues(alpha: 0.06),
+                  : AppColors.surfaceRaised,
               borderRadius: BorderRadius.circular(AppDimens.shapeSm),
             ),
             child: Icon(
@@ -174,7 +170,7 @@ class _FitnessLevelTile extends StatelessWidget {
               size: 22,
               color: isSelected
                   ? AppColors.primary
-                  : colorScheme.onSurfaceVariant,
+                  : AppColors.textSecondaryDark,
             ),
           ),
 
@@ -187,17 +183,17 @@ class _FitnessLevelTile extends StatelessWidget {
               children: [
                 Text(
                   level.title,
-                  style: AppTextStyles.h3.copyWith(
+                  style: AppTextStyles.titleMedium.copyWith(
                     color: isSelected
                         ? AppColors.primary
-                        : colorScheme.onSurface,
+                        : AppColors.textPrimaryDark,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   level.subtitle,
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: colorScheme.onSurfaceVariant,
+                    color: AppColors.textSecondaryDark,
                   ),
                 ),
               ],

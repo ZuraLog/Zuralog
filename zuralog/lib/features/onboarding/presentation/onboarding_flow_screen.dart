@@ -376,37 +376,45 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   @override
   Widget build(BuildContext context) {
     return ZuralogScaffold(
-      body: Column(
-          children: [
-            // ── Top bar: back button + step dots + skip ────────────────
-            _OnboardingTopBar(
-              currentPage: _currentPage,
-              totalPages: _totalPages,
-              onBack: (_currentPage > 0 && !_isSubmitting) ? _handleBack : null,
-              onSkip: (_currentPage > 0 && !_isSubmitting) ? _handleNext : null,
+      body: Stack(
+        children: [
+          const Positioned.fill(
+            child: ZPatternOverlay(
+              variant: ZPatternVariant.original,
+              opacity: 0.10,
+              blendMode: BlendMode.screen,
             ),
-
-            // ── Page content ──────────────────────────────────────────
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                onPageChanged: (page) => setState(() => _currentPage = page),
-                children: _pages,
-              ),
-            ),
-
-            // ── Bottom navigation ─────────────────────────────────────
-            if (_currentPage > 0)
-              _OnboardingBottomNav(
+          ),
+          Column(
+            children: [
+              _OnboardingTopBar(
                 currentPage: _currentPage,
                 totalPages: _totalPages,
-                isSubmitting: _isSubmitting,
-                onBack: _handleBack,
-                onNext: _handleNext,
+                onBack:
+                    (_currentPage > 0 && !_isSubmitting) ? _handleBack : null,
+                onSkip:
+                    (_currentPage > 0 && !_isSubmitting) ? _handleNext : null,
               ),
-          ],
-        ),
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  onPageChanged: (page) => setState(() => _currentPage = page),
+                  children: _pages,
+                ),
+              ),
+              if (_currentPage > 0)
+                _OnboardingBottomNav(
+                  currentPage: _currentPage,
+                  totalPages: _totalPages,
+                  isSubmitting: _isSubmitting,
+                  onBack: _handleBack,
+                  onNext: _handleNext,
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -444,7 +452,7 @@ class _OnboardingTopBar extends StatelessWidget {
             child: onBack != null
                 ? IconButton(
                     icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    color: AppColors.textSecondaryDark,
                     onPressed: onBack,
                     tooltip: 'Back',
                     padding: EdgeInsets.zero,
@@ -468,7 +476,7 @@ class _OnboardingTopBar extends StatelessWidget {
                 ? TextButton(
                     onPressed: onSkip,
                     style: TextButton.styleFrom(
-                      foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                      foregroundColor: AppColors.textSecondaryDark,
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       padding: const EdgeInsets.symmetric(
@@ -496,8 +504,7 @@ class _StepDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final inactiveColor =
-        Theme.of(context).colorScheme.outline.withValues(alpha: 0.4);
+    const inactiveColor = AppColors.surfaceRaised;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -550,13 +557,19 @@ class _OnboardingBottomNav extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: SecondaryButton(label: 'Back', onPressed: onBack),
+            child: ZButton(
+              label: 'Back',
+              variant: ZButtonVariant.secondary,
+              size: ZButtonSize.medium,
+              onPressed: onBack,
+            ),
           ),
           const SizedBox(width: AppDimens.spaceMd),
           Expanded(
-            child: PrimaryButton(
+            child: ZButton(
               label: isLastPage ? 'Finish' : 'Next',
               isLoading: isSubmitting,
+              size: ZButtonSize.medium,
               onPressed: onNext,
             ),
           ),
