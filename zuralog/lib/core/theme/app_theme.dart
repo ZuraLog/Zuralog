@@ -19,14 +19,14 @@ import 'app_text_styles.dart';
 ///
 /// Design principles:
 /// - Light: Brand Cream (#FAFAF5) surfaces, soft diffusion shadows, dark text.
-/// - Dark: Dark Charcoal (#2D2D2D) background, bordered surfaces, no shadows, light text.
+/// - Dark: Canvas (#161618) background, borderless elevation via brightness, no shadows, light text.
 abstract final class AppTheme {
   // ── Public API ────────────────────────────────────────────────────────────
 
   /// Light theme — Brand Cream surfaces, soft shadows, dark text on light backgrounds.
   static ThemeData get light => _build(Brightness.light);
 
-  /// Dark theme — Dark Charcoal (#2D2D2D) background, bordered card surfaces, no shadows, light text.
+  /// Dark theme — Canvas (#161618) background, Surface (#1E1E20) cards, no borders, light text.
   static ThemeData get dark => _build(Brightness.dark);
 
   // ── Private Builder ───────────────────────────────────────────────────────

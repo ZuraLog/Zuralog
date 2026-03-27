@@ -269,16 +269,17 @@ abstract final class AppColors {
   static const Color brandMfp = Color(0xFF0070D1);
 
   // ── Progress Tab tokens — dark mode ──────────────────────────────────────
-  static const Color progressCanvas = Color(0xFF141E18);
-  static const Color progressSurface = Color(0xFF1E2E24);
-  static const Color progressSurfaceRaised = Color(0xFF253A2C);
-  static const Color progressTextPrimary = Color(0xFFE8EDE0);
-  static const Color progressTextSecondary = Color(0xFFCFE1B9);
+  // Redirected to unified brand bible tokens (v4.0).
+  static const Color progressCanvas = canvas;
+  static const Color progressSurface = surface;
+  static const Color progressSurfaceRaised = surfaceRaised;
+  static const Color progressTextPrimary = textPrimaryDark;
+  static const Color progressTextSecondary = primary;
   static const Color progressTextMuted = Color(0x66CFE1B9);
-  static const Color progressBorderDefault = Color(0x0FCFE1B9);
+  static const Color progressBorderDefault = dividerDefault;
   static const Color progressBorderStrong = Color(0x1FCFE1B9);
-  static const Color progressSage = Color(0xFFCFE1B9);
-  static const Color progressStreakWarm = Color(0xFFFF9500);
+  static const Color progressSage = primary;
+  static const Color progressStreakWarm = streakWarm;
 
   // ── Progress Tab tokens — light mode ─────────────────────────────────────
   static const Color progressCanvasLight = Color(0xFFF4F7F0);
@@ -293,15 +294,16 @@ abstract final class AppColors {
   static const Color progressStreakWarmLight = Color(0xFFFF9500);
 
   // -- Trends Tab tokens ---------------------------------------------------
-  static const Color trendsCanvas = Color(0xFF141E18);
-  static const Color trendsSurface = Color(0xFF1E2E24);
-  static const Color trendsSurfaceRaised = Color(0xFF253A2C);
-  static const Color trendsTextPrimary = Color(0xFFE8EDE0);
-  static const Color trendsTextSecondary = Color(0xFFCFE1B9);
+  // Redirected to unified brand bible tokens (v4.0).
+  static const Color trendsCanvas = canvas;
+  static const Color trendsSurface = surface;
+  static const Color trendsSurfaceRaised = surfaceRaised;
+  static const Color trendsTextPrimary = textPrimaryDark;
+  static const Color trendsTextSecondary = primary;
   static const Color trendsTextMuted = Color(0x66CFE1B9);
-  static const Color trendsBorderDefault = Color(0x0FCFE1B9);
+  static const Color trendsBorderDefault = dividerDefault;
   static const Color trendsBorderStrong = Color(0x1FCFE1B9);
-  static const Color trendsSage = Color(0xFFCFE1B9);
+  static const Color trendsSage = primary;
   static const Color trendsDeepForest = Color(0xFF344E41);
 
   // ── Legacy compatibility alias ────────────────────────────────────────────
