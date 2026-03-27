@@ -391,7 +391,6 @@ class _HealthScoreHero extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColorsOf(context);
     return ZuralogCard(
       variant: ZCardVariant.hero,
       padding: const EdgeInsets.symmetric(
@@ -421,11 +420,10 @@ class _HealthScoreHero extends ConsumerWidget {
           scoreAsync.when(
               // Provider never errors — this branch is a safety net only.
               error: (err, stack) => const HealthScoreZeroState(),
-              loading: () => SizedBox(
+              loading: () => const ZLoadingSkeleton(
+                width: double.infinity,
                 height: 120,
-                child: Center(
-                  child: CircularProgressIndicator(color: colors.primary),
-                ),
+                borderRadius: AppDimens.shapeLg,
               ),
               data: (data) {
                 // Three states based on data maturity:

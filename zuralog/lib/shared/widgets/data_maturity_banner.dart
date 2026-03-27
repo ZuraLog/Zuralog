@@ -117,7 +117,7 @@ class DataMaturityBanner extends StatelessWidget {
               value: progress,
               backgroundColor: colors.elevatedSurface,
               valueColor:
-                  const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  AlwaysStoppedAnimation<Color>(colors.primary),
               minHeight: 4,
             ),
           ),
@@ -212,10 +212,10 @@ class _StillBuildingBanner extends StatelessWidget {
               child: Text(
                 "Don't show again",
                 style: AppTextStyles.caption.copyWith(
-                  color: AppColors.primary,
+                  color: colors.primary,
                   fontSize: 10,
                   decoration: TextDecoration.underline,
-                  decorationColor: AppColors.primary,
+                  decorationColor: colors.primary,
                 ),
               ),
             ),

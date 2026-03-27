@@ -1,6 +1,8 @@
 /// Zuralog Design System — Fade + Slide Entrance Animation.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 /// Animates its child from a slight downward offset to its natural position
@@ -46,6 +48,8 @@ class _ZFadeSlideInState extends State<ZFadeSlideIn>
   late final AnimationController _controller;
   late final Animation<double> _opacity;
   late final Animation<double> _slide;
+  Timer? _delayTimer;
+  bool _reducedMotion = false;
 
   @override
   void initState() {
@@ -55,24 +59,44 @@ class _ZFadeSlideInState extends State<ZFadeSlideIn>
     _slide = Tween<double>(begin: widget.offset, end: 0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
+  }
 
-    if (widget.delay == Duration.zero) {
-      _controller.forward();
-    } else {
-      Future.delayed(widget.delay, () {
-        if (mounted) _controller.forward();
-      });
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reducedMotion = MediaQuery.of(context).disableAnimations;
+
+    // Skip animation entirely when the user requests reduced motion.
+    if (_reducedMotion) {
+      _delayTimer?.cancel();
+      _controller.value = 1.0;
+      return;
+    }
+
+    // Start animation (only once — controller already completed is a no-op).
+    if (!_controller.isAnimating && !_controller.isCompleted) {
+      if (widget.delay == Duration.zero) {
+        _controller.forward();
+      } else {
+        _delayTimer ??= Timer(widget.delay, () {
+          if (mounted) _controller.forward();
+        });
+      }
     }
   }
 
   @override
   void dispose() {
+    _delayTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // When reduced motion is enabled, render the child directly — no wrappers.
+    if (_reducedMotion) return widget.child;
+
     // FadeTransition is a ListenableBuilder internally and avoids the extra
     // per-frame Opacity widget rebuild. AnimatedBuilder handles the translate
     // and passes the already-fading subtree as its pre-built child.
