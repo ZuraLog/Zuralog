@@ -25,7 +25,7 @@ export function ScrollProgress() {
   }, []);
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 h-[2px] bg-transparent">
+    <div className="fixed top-0 left-0 right-0 z-50 h-[3px] bg-transparent">
       <div
         ref={barRef}
         className="h-full ds-pattern-drift"

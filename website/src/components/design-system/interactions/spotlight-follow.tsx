@@ -24,7 +24,7 @@ export function SpotlightFollow() {
 
     const tick = () => {
       if (spotRef.current) {
-        spotRef.current.style.background = `radial-gradient(300px circle at ${mouse.current.x}px ${mouse.current.y}px, rgba(207,225,185,0.04), transparent 70%)`;
+        spotRef.current.style.background = `radial-gradient(600px circle at ${mouse.current.x}px ${mouse.current.y}px, rgba(207,225,185,0.10), transparent 70%)`;
       }
       rafId.current = requestAnimationFrame(tick);
     };
