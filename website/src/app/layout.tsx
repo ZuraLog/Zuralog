@@ -72,8 +72,8 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: [{ url: "/logo/ZuraLog-Logo-Main.png", type: "image/png" }],
-    apple: [{ url: "/logo/ZuraLog-Logo-Main.png", type: "image/png" }],
+    icon: [{ url: "/logo/ZuraLog-Logo-Sage.png", type: "image/png" }],
+    apple: [{ url: "/logo/ZuraLog-Logo-Sage.png", type: "image/png" }],
   },
   manifest: "/site.webmanifest",
 };
