@@ -25,6 +25,9 @@ abstract final class AppDimens {
   /// 16px — medium spacing (standard padding inside cards).
   static const double spaceMd = 16;
 
+  /// 20px — medium-plus spacing (feature card padding, nav bar margin).
+  static const double spaceMdPlus = 20;
+
   /// 24px — large spacing (between sections).
   static const double spaceLg = 24;
 
@@ -65,14 +68,14 @@ abstract final class AppDimens {
   /// 12px — input fields, tooltips, snackbars.
   static const double shapeSm = 12;
 
-  /// 20px — standard cards, category cards (aliases radiusCard).
-  static const double shapeMd = 20;
+  /// 16px — metric tiles, compact cards, data cards.
+  static const double shapeMd = 16;
 
-  /// 28px — bottom sheets (top corners), modals, logo card, onboarding hero containers.
-  static const double shapeLg = 28;
+  /// 20px — feature cards, hero cards.
+  static const double shapeLg = 20;
 
-  /// 40px — onboarding slide image frames, large feature containers.
-  static const double shapeXl = 40;
+  /// 28px — bottom sheets (top corners), modals, dialogs.
+  static const double shapeXl = 28;
 
   /// 100px — all buttons: primary, secondary, ghost (aliases radiusButton).
   static const double shapePill = 100;
@@ -117,8 +120,14 @@ abstract final class AppDimens {
   /// Large icon container size — 72x72 (streak flame hero circle).
   static const double iconContainerLg = 72;
 
-  /// Avatar / profile circle diameter.
-  static const double avatarMd = 40;
+  /// Avatar — large (48px).
+  static const double avatarLg = 48;
+
+  /// Avatar — medium (36px).
+  static const double avatarMd = 36;
+
+  /// Avatar — small (24px).
+  static const double avatarSm = 24;
 
   /// Integration rail item width (pill-shaped cards).
   static const double integrationPillWidth = 120;

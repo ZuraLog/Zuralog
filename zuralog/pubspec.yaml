@@ -82,6 +82,9 @@ dependencies:
   screenshot: ^3.0.0
   share_plus: ^10.1.4
 
+  # Typography — Plus Jakarta Sans (brand bible font)
+  google_fonts: ^6.2.1
+
   # SVG rendering (for the Zuralog brand logo asset)
   flutter_svg: ^2.0.17
 
@@ -124,6 +127,7 @@ flutter:
     - assets/fonts/
     - assets/icons/
     - assets/images/
+    - assets/brand/pattern/
 
 flutter_launcher_icons:
   android: true
