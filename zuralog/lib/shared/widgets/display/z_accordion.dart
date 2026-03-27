@@ -55,9 +55,10 @@ class ZAccordion extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppDimens.shapeLg),
       ),
       child: ClipRRect(
@@ -144,7 +145,7 @@ class _AccordionSectionState extends State<_AccordionSection>
                   child: Text(
                     widget.item.title,
                     style: AppTextStyles.titleMedium.copyWith(
-                      color: AppColors.textPrimaryDark,
+                      color: AppColorsOf(context).textPrimary,
                     ),
                   ),
                 ),

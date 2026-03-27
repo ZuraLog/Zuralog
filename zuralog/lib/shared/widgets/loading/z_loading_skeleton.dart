@@ -69,16 +69,11 @@ class _ZLoadingSkeletonState extends State<ZLoadingSkeleton>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
-        // Compute strictly-increasing gradient stops to avoid the debug
-        // assertion crash that fires when two stops share the same value.
-        // The sweep window slides from [-w, 0+w] to [1-w, 1+w] across the
-        // normalised [0, 1] range. Each stop is clamped then nudged so that
-        // stop[n] is always strictly less than stop[n+1].
-        const w = 0.3;
-        final t = _controller.value * (1.0 + 2 * w) - w;
-        final stop0 = (t - w).clamp(0.0, 0.999);
-        final stop1 = t.clamp(stop0 + 0.001, 0.999);
-        final stop2 = (t + w).clamp(stop1 + 0.001, 1.0);
+        // Simple shimmer: slide a highlight band across the widget.
+        // Use AlignmentGeometry lerp to avoid gradient stop math entirely.
+        final t = _controller.value;
+        final begin = Alignment(-1.0 + 2.0 * t, 0.0);
+        final end = Alignment(1.0 + 2.0 * t, 0.0);
 
         return Container(
           width: widget.width,
@@ -86,10 +81,9 @@ class _ZLoadingSkeletonState extends State<ZLoadingSkeleton>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(widget.borderRadius),
             gradient: LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
+              begin: begin,
+              end: end,
               colors: [baseColor, highlightColor, baseColor],
-              stops: [stop0, stop1, stop2],
             ),
           ),
         );

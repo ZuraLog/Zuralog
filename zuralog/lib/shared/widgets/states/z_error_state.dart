@@ -32,7 +32,7 @@ class ZErrorState extends StatelessWidget {
     return Center(
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColorsOf(context).surface,
           borderRadius: BorderRadius.circular(AppDimens.shapeLg),
         ),
         child: Padding(
@@ -49,7 +49,7 @@ class ZErrorState extends StatelessWidget {
               Text(
                 message,
                 style: AppTextStyles.bodyLarge.copyWith(
-                  color: AppColors.textPrimaryDark,
+                  color: AppColorsOf(context).textPrimary,
                 ),
                 textAlign: TextAlign.center,
               ),

@@ -240,10 +240,11 @@ class _ZButtonState extends State<ZButton> {
 
     // ── Scale + opacity for press/disabled states ──────────────────────
     button = AnimatedScale(
-      duration: const Duration(milliseconds: 100),
-      scale: _isPressed ? 0.97 : 1.0,
+      duration: AppMotion.durationFast,
+      curve: AppMotion.curveEntrance,
+      scale: _isPressed ? 0.95 : 1.0,
       child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 100),
+        duration: AppMotion.durationFast,
         opacity: effectiveOpacity,
         child: button,
       ),

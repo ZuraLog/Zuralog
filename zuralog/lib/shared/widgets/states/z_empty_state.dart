@@ -45,7 +45,7 @@ class ZEmptyState extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppDimens.shapeLg),
         child: Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColorsOf(context).surface,
             borderRadius: BorderRadius.circular(AppDimens.shapeLg),
           ),
           child: Stack(
@@ -68,13 +68,13 @@ class ZEmptyState extends StatelessWidget {
                     Icon(
                       icon,
                       size: 36,
-                      color: AppColors.textSecondaryDark,
+                      color: AppColorsOf(context).textSecondary,
                     ),
                     const SizedBox(height: AppDimens.spaceMd),
                     Text(
                       title,
                       style: AppTextStyles.titleMedium.copyWith(
-                        color: AppColors.textPrimaryDark,
+                        color: AppColorsOf(context).textPrimary,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -83,7 +83,7 @@ class ZEmptyState extends StatelessWidget {
                       Text(
                         message!,
                         style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.textSecondaryDark,
+                          color: AppColorsOf(context).textSecondary,
                         ),
                         textAlign: TextAlign.center,
                       ),

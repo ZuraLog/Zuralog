@@ -83,7 +83,7 @@ class ZContextMenu extends StatelessWidget {
     final result = await showMenu<int>(
       context: context,
       position: position,
-      color: AppColors.surfaceRaised,
+      color: AppColorsOf(context).surfaceRaised,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimens.shapeSm),
       ),
@@ -104,7 +104,7 @@ class ZContextMenu extends StatelessWidget {
                     size: 20,
                     color: items[i].isDestructive
                         ? AppColors.error
-                        : AppColors.textPrimaryDark,
+                        : AppColorsOf(context).textPrimary,
                   ),
                   const SizedBox(width: AppDimens.spaceSm),
                 ],
@@ -113,7 +113,7 @@ class ZContextMenu extends StatelessWidget {
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: items[i].isDestructive
                         ? AppColors.error
-                        : AppColors.textPrimaryDark,
+                        : AppColorsOf(context).textPrimary,
                   ),
                 ),
               ],
