@@ -54,7 +54,7 @@ export function DSTabsTrigger({
       className={cn(
         "px-3 py-1.5",
         "text-[0.8125rem] font-medium font-jakarta",
-        "transition-colors duration-200",
+        "transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]",
         "text-ds-text-secondary bg-transparent",
         "cursor-pointer",
         "data-[selected]:bg-ds-warm-white data-[selected]:text-ds-text-on-warm-white data-[selected]:rounded-[9px]",

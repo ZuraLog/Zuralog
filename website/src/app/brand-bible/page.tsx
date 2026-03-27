@@ -1,5 +1,6 @@
 "use client";
 
+import { type ReactNode } from "react";
 import {
   PatternOverlay,
   Text,
@@ -51,6 +52,30 @@ import {
   Settings,
   User,
 } from "lucide-react";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { useScrambleNumber } from "@/hooks/use-scramble-number";
+import { ScrollDivider } from "@/components/design-system/interactions/scroll-divider";
+import { TypingText } from "@/components/design-system/interactions/typing-text";
+import { sageConfetti } from "@/components/design-system/interactions/confetti";
+
+/* ── Scroll-reveal section wrapper ───────────────────────────────────── */
+
+function RevealSection({
+  children,
+  className,
+  stagger = 0.06,
+}: {
+  children: ReactNode;
+  className?: string;
+  stagger?: number;
+}) {
+  const ref = useScrollReveal<HTMLElement>({ stagger });
+  return (
+    <section ref={ref} className={className}>
+      {children}
+    </section>
+  );
+}
 
 /* ── Section helpers ─────────────────────────────────────────────────── */
 
@@ -144,6 +169,10 @@ const patternTable = [
 /* ── Page ────────────────────────────────────────────────────────────── */
 
 export default function BrandBiblePage() {
+  /* ── Text animation refs ─────────────────────────────────────── */
+  const heroScoreRef = useScrambleNumber<HTMLSpanElement>({ finalValue: "78", duration: 1.2 });
+  const stepsRef = useScrambleNumber<HTMLSpanElement>({ finalValue: "8,432", duration: 1.0 });
+
   return (
     <main className="max-w-[960px] mx-auto px-6 py-12 pb-24">
       {/* ── 1. Header ──────────────────────────────────────────────── */}
@@ -158,7 +187,7 @@ export default function BrandBiblePage() {
       </header>
 
       {/* ── 2. Canvas & Elevation ──────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Canvas &amp; Elevation</SectionTitle>
         <SectionSub>Four surface levels create depth without drop shadows. Every layer lifts content closer to the user.</SectionSub>
 
@@ -180,10 +209,10 @@ export default function BrandBiblePage() {
             </Card>
           ))}
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 3. Typography ──────────────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Typography</SectionTitle>
         <SectionSub>Plus Jakarta Sans across all sizes. Metric numbers for health data, warm weight for readability.</SectionSub>
 
@@ -202,10 +231,10 @@ export default function BrandBiblePage() {
             ))}
           </div>
         </Card>
-      </section>
+      </RevealSection>
 
       {/* ── 3b. Pattern Typography ──────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Pattern Typography</SectionTitle>
         <SectionSub>Bold display text gets a drifting topographic fill. Semibold headings get a static fill. Body text stays solid.</SectionSub>
 
@@ -237,15 +266,17 @@ export default function BrandBiblePage() {
             <Text variant="body-lg" color="primary" className="mt-2">Body text always stays solid and readable — patterns only appear on display-size headings where the letterforms are large enough to show the texture.</Text>
           </Card>
         </div>
-      </section>
+      </RevealSection>
+
+      <ScrollDivider />
 
       {/* ── 4. Accent Colors ───────────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Accent Colors</SectionTitle>
         <SectionSub>Two accent colors anchor the entire palette. Sage for actions, Warm White for navigation.</SectionSub>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="relative overflow-hidden rounded-ds-lg h-32 bg-ds-sage flex items-end p-5">
+          <Card elevation="standard" className="!bg-ds-sage h-32 flex items-end !p-5">
             <PatternOverlay variant="sage" opacity={0.15} blend="color-burn" />
             <div className="relative z-10">
               <Text variant="title-md" color="on-sage">Sage</Text>
@@ -253,54 +284,54 @@ export default function BrandBiblePage() {
                 #CFE1B9 — Primary actions, buttons, toggles, links
               </Text>
             </div>
-          </div>
-          <div className="relative overflow-hidden rounded-ds-lg h-32 bg-ds-warm-white flex items-end p-5">
+          </Card>
+          <Card elevation="standard" className="!bg-ds-warm-white h-32 flex items-end !p-5">
             <div className="relative z-10">
               <Text variant="title-md" color="on-warm-white">Warm White</Text>
               <Text variant="body-sm" color="on-warm-white" className="opacity-70">
                 #F0EEE9 — Navigation, tabs, segmented controls
               </Text>
             </div>
-          </div>
+          </Card>
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 5. Text Colors ─────────────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Text Colors</SectionTitle>
         <SectionSub>Four text roles mapped to surface context. Always use the right pairing for contrast.</SectionSub>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { name: "Text Primary", color: "text-ds-text-primary", bg: "bg-ds-surface", hex: "#F0EEE9" },
-            { name: "Text Secondary", color: "text-ds-text-secondary", bg: "bg-ds-surface", hex: "#9B9894" },
-            { name: "On Sage", color: "text-ds-text-on-sage", bg: "bg-ds-sage", hex: "#1A2E22" },
-            { name: "On Warm White", color: "text-ds-text-on-warm-white", bg: "bg-ds-warm-white", hex: "#161618" },
+            { name: "Text Primary", color: "text-ds-text-primary", bg: "!bg-ds-surface", hex: "#F0EEE9" },
+            { name: "Text Secondary", color: "text-ds-text-secondary", bg: "!bg-ds-surface", hex: "#9B9894" },
+            { name: "On Sage", color: "text-ds-text-on-sage", bg: "!bg-ds-sage", hex: "#1A2E22" },
+            { name: "On Warm White", color: "text-ds-text-on-warm-white", bg: "!bg-ds-warm-white", hex: "#161618" },
           ].map((item) => (
-            <div key={item.name} className={`${item.bg} rounded-ds-md p-4`}>
+            <Card key={item.name} elevation="data" className={item.bg}>
               <span className={`${item.color} font-jakarta text-[1rem] font-medium block`}>Aa</span>
               <Text variant="label-sm" color="secondary" className="mt-2">{item.name}</Text>
               <Text variant="label-sm" color="secondary" className="font-mono">{item.hex}</Text>
-            </div>
+            </Card>
           ))}
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 6. Health Category Colors ──────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Health Categories</SectionTitle>
         <SectionSub>Ten distinct hues, one per health domain. Each category gets its own pattern tint on feature cards.</SectionSub>
 
         <div className="grid grid-cols-5 sm:grid-cols-10 gap-3 mb-8">
           {categoryColors.map((cat) => (
-            <div key={cat.key} className="flex flex-col items-center gap-1.5">
+            <Card key={cat.key} elevation="data" className="flex flex-col items-center !p-3">
               <div
                 className="w-10 h-10 rounded-full"
                 style={{ backgroundColor: cat.hex }}
               />
-              <Text variant="label-sm" color="primary">{cat.name}</Text>
+              <Text variant="label-sm" color="primary" className="mt-1.5">{cat.name}</Text>
               <Text variant="label-sm" color="secondary" className="font-mono">{cat.hex}</Text>
-            </div>
+            </Card>
           ))}
         </div>
 
@@ -325,10 +356,10 @@ export default function BrandBiblePage() {
             </Card>
           ))}
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 7. Semantic / Status Colors ────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Status Colors</SectionTitle>
         <SectionSub>Semantic signals for success, warning, error, and sync states.</SectionSub>
 
@@ -351,10 +382,10 @@ export default function BrandBiblePage() {
             </div>
           ))}
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 8. Spacing ─────────────────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Spacing</SectionTitle>
         <SectionSub>Consistent spacing tokens from 2px to 48px. Every margin and padding uses this scale.</SectionSub>
 
@@ -372,10 +403,10 @@ export default function BrandBiblePage() {
             ))}
           </div>
         </Card>
-      </section>
+      </RevealSection>
 
       {/* ── 9. Shape (Border Radius) ───────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Shape</SectionTitle>
         <SectionSub>Six radius tokens from sharp to pill. Cards use LG, buttons use Pill, inputs use SM.</SectionSub>
 
@@ -391,10 +422,10 @@ export default function BrandBiblePage() {
             </div>
           ))}
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 10. Buttons ────────────────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Buttons</SectionTitle>
         <SectionSub>Four intents, three sizes. Primary and destructive get the topographic pattern overlay.</SectionSub>
 
@@ -427,17 +458,19 @@ export default function BrandBiblePage() {
             <DSButton intent="destructive" disabled>Disabled</DSButton>
           </div>
         </Card>
-      </section>
+      </RevealSection>
+
+      <ScrollDivider />
 
       {/* ── 11. Cards ──────────────────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Cards</SectionTitle>
         <SectionSub>Three elevation levels plus category feature cards. Hero and feature cards get pattern overlays.</SectionSub>
 
         <div className="grid gap-4">
           <Card elevation="hero">
             <Text variant="body-sm" color="secondary">Health Score</Text>
-            <Text variant="display-lg" color="sage" pattern="sage" className="mt-1">78</Text>
+            <Text ref={heroScoreRef} variant="display-lg" color="sage" pattern="sage" className="mt-1">78</Text>
             <Text variant="body-md" color="secondary" className="mt-1">
               Your overall health is trending up this week.
             </Text>
@@ -450,13 +483,16 @@ export default function BrandBiblePage() {
                 <Text variant="label-md" color="sage">AI Insight</Text>
               </div>
               <Text variant="body-md" color="primary">
-                Your HRV is 18% higher on nights with 7+ hours of sleep. Try a consistent 10:30pm bedtime.
+                <TypingText
+                  text="Your HRV is 18% higher on nights with 7+ hours of sleep. Try a consistent 10:30pm bedtime."
+                  speed={25}
+                />
               </Text>
             </Card>
 
             <Card elevation="data">
               <Text variant="label-md" color="secondary">Steps</Text>
-              <Text variant="display-md" color="primary" className="mt-1">8,432</Text>
+              <Text ref={stepsRef} variant="display-md" color="primary" className="mt-1">8,432</Text>
               <Text variant="body-sm" color="secondary" className="mt-0.5">67% of daily goal</Text>
             </Card>
           </div>
@@ -476,10 +512,10 @@ export default function BrandBiblePage() {
             </Card>
           </div>
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 12. Inputs & Selection ─────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Inputs &amp; Selection</SectionTitle>
         <SectionSub>Every form control uses the surface-raised palette with sage accents on interaction.</SectionSub>
 
@@ -577,10 +613,12 @@ export default function BrandBiblePage() {
             </div>
           </Card>
         </div>
-      </section>
+      </RevealSection>
+
+      <ScrollDivider />
 
       {/* ── 13. Feedback ───────────────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Feedback</SectionTitle>
         <SectionSub>Toasts, dialogs, badges, tooltips, and loading states give the user clear signals.</SectionSub>
 
@@ -700,10 +738,10 @@ export default function BrandBiblePage() {
             </div>
           </Card>
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 14. Display Components ─────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Display Components</SectionTitle>
         <SectionSub>List items, avatars, dividers, and accordions for structuring content.</SectionSub>
 
@@ -791,10 +829,12 @@ export default function BrandBiblePage() {
             </DSAccordion>
           </Card>
         </div>
-      </section>
+      </RevealSection>
+
+      <ScrollDivider />
 
       {/* ── 15. Special Surfaces ───────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Special Surfaces</SectionTitle>
         <SectionSub>Empty states, onboarding, and floating actions use patterned surfaces to draw attention.</SectionSub>
 
@@ -843,10 +883,10 @@ export default function BrandBiblePage() {
             </div>
           </Card>
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 16. Navigation Mockup ──────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Navigation</SectionTitle>
         <SectionSub>Top bar with avatar, bottom nav with pill-shaped active indicator.</SectionSub>
 
@@ -884,10 +924,10 @@ export default function BrandBiblePage() {
             ))}
           </div>
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 17. Pattern Reference Table ────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Pattern Reference</SectionTitle>
         <SectionSub>Every component that gets the topographic pattern treatment, with its variant and blend mode.</SectionSub>
 
@@ -925,9 +965,19 @@ export default function BrandBiblePage() {
             </table>
           </div>
         </Card>
-      </section>
+      </RevealSection>
 
-      {/* ── 18. Footer ─────────────────────────────────────────────── */}
+      {/* ── 18. Confetti Demo ────────────────────────────────────────── */}
+      <RevealSection className="mt-16 text-center">
+        <Text variant="body-md" color="secondary" className="mb-4">
+          That&rsquo;s the full system. Celebrate finishing the tour.
+        </Text>
+        <DSButton intent="primary" size="md" onClick={() => sageConfetti()}>
+          Try Confetti
+        </DSButton>
+      </RevealSection>
+
+      {/* ── 19. Footer ─────────────────────────────────────────────── */}
       <footer className="mt-16 text-center">
         <Divider className="mb-6" />
         <Text variant="body-sm" color="secondary">

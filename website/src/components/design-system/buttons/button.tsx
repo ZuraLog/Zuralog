@@ -47,8 +47,8 @@ const buttonVariants = cva(
   {
     variants: {
       intent: {
-        primary: "text-ds-text-on-sage ds-pattern-drift",
-        destructive: "text-white ds-pattern-drift",
+        primary: "text-ds-text-on-sage ds-pattern-drift active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]",
+        destructive: "text-white ds-pattern-drift active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]",
         secondary:
           "bg-transparent border-[1.5px] border-[rgba(240,238,233,0.2)] text-ds-warm-white",
         text: "bg-transparent text-ds-sage font-semibold",

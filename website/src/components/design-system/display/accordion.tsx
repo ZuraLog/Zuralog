@@ -64,7 +64,7 @@ export function DSAccordionTrigger({
         <ChevronDown
           className={cn(
             "size-4 text-ds-sage shrink-0 ml-2",
-            "transition-transform duration-250",
+            "transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
             "group-data-[panel-open]:rotate-180",
           )}
           aria-hidden="true"
