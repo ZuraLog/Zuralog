@@ -322,15 +322,17 @@ export default function BrandBiblePage() {
         <SectionTitle>Health Categories</SectionTitle>
         <SectionSub>Ten distinct hues, one per health domain. Each category gets its own pattern tint on feature cards.</SectionSub>
 
-        <div className="grid grid-cols-5 sm:grid-cols-10 gap-3 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
           {categoryColors.map((cat) => (
-            <Card key={cat.key} elevation="data" className="flex flex-col items-center !p-3">
+            <Card key={cat.key} elevation="data" className="flex items-center gap-3">
               <div
-                className="w-10 h-10 rounded-full"
+                className="w-8 h-8 rounded-full shrink-0"
                 style={{ backgroundColor: cat.hex }}
               />
-              <Text variant="label-sm" color="primary" className="mt-1.5">{cat.name}</Text>
-              <Text variant="label-sm" color="secondary" className="font-mono">{cat.hex}</Text>
+              <div className="min-w-0">
+                <Text variant="label-sm" color="primary">{cat.name}</Text>
+                <Text variant="label-sm" color="secondary" className="font-mono">{cat.hex}</Text>
+              </div>
             </Card>
           ))}
         </div>
