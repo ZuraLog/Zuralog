@@ -118,22 +118,28 @@ class ZuralogCard extends StatelessWidget {
     // Build the card body with optional pattern overlay
     Widget body;
     if (_hasPattern) {
-      body = Stack(
-        children: [
-          // Pattern overlay
-          Positioned.fill(
-            child: ClipRRect(
-              borderRadius: borderRadius,
-              child: ZPatternOverlay(
-                variant: _patternVariant,
-                opacity: _patternOpacity,
-                animate: _patternAnimated,
-              ),
-            ),
+      body = ClipRRect(
+        borderRadius: borderRadius,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: borderRadius,
           ),
-          // Content
-          Padding(padding: effectivePadding, child: child),
-        ],
+          child: Stack(
+            children: [
+              // Pattern overlay on top of solid surface
+              Positioned.fill(
+                child: ZPatternOverlay(
+                  variant: _patternVariant,
+                  opacity: _patternOpacity,
+                  animate: _patternAnimated,
+                ),
+              ),
+              // Content
+              Padding(padding: effectivePadding, child: child),
+            ],
+          ),
+        ),
       );
     } else {
       body = Container(
