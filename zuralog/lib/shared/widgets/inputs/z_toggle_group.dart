@@ -62,7 +62,7 @@ class ZToggleGroup<T> extends StatelessWidget {
         opacity: enabled ? 1.0 : 0.4,
         child: Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColorsOf(context).surface,
             borderRadius: BorderRadius.circular(AppDimens.shapeSm),
           ),
           padding: const EdgeInsets.all(4),
@@ -116,6 +116,7 @@ class _ToggleButton<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final reduceMotion = MediaQuery.of(context).disableAnimations;
     final duration =
         reduceMotion ? Duration.zero : AppMotion.durationMedium;
@@ -145,7 +146,7 @@ class _ToggleButton<T> extends StatelessWidget {
               style: AppTextStyles.labelMedium.copyWith(
                 color: isSelected
                     ? AppColors.textOnWarmWhite
-                    : AppColors.textSecondary,
+                    : colors.textSecondary,
               ),
               child: Text(item.label, maxLines: 1, overflow: TextOverflow.ellipsis),
             ),

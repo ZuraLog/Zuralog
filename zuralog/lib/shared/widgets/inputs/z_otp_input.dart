@@ -172,9 +172,10 @@ class _ZOtpInputState extends State<ZOtpInput> {
 
               // ── Hidden TextField that drives keyboard input ──────────
               Positioned.fill(
-                child: Opacity(
-                  opacity: 0,
-                  child: TextField(
+                child: ExcludeSemantics(
+                  child: Opacity(
+                    opacity: 0,
+                    child: TextField(
                     controller: _controller,
                     focusNode: _focusNode,
                     keyboardType: TextInputType.number,
@@ -195,6 +196,7 @@ class _ZOtpInputState extends State<ZOtpInput> {
                       color: Colors.transparent,
                       height: 0.01,
                       fontSize: 1,
+                    ),
                     ),
                   ),
                 ),
@@ -296,7 +298,20 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
     _anim = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
-    )..repeat(reverse: true);
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
+    if (reduceMotion) {
+      _anim
+        ..stop()
+        ..value = 1.0;
+    } else if (!_anim.isAnimating) {
+      _anim.repeat(reverse: true);
+    }
   }
 
   @override

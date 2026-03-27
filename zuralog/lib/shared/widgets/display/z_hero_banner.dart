@@ -113,7 +113,7 @@ class ZHeroBanner extends StatelessWidget {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          Colors.black.withValues(alpha: 0.60),
+                          AppColors.canvas.withValues(alpha: 0.85),
                         ],
                       ),
                     ),

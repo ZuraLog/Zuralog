@@ -215,6 +215,7 @@ class _FrostedNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final bottomSafeArea = MediaQuery.of(context).padding.bottom;
 
     return Padding(
@@ -237,7 +238,7 @@ class _FrostedNavigationBar extends StatelessWidget {
             decoration: BoxDecoration(
               // Surface background at 0.92 opacity — translucent enough for
               // the blur to show through but solid enough to read the labels.
-              color: AppColors.surface.withValues(alpha: 0.92),
+              color: colors.surface.withValues(alpha: 0.92),
               borderRadius: BorderRadius.circular(AppDimens.shapePill),
             ),
             child: Row(
@@ -277,16 +278,16 @@ class _FrostedNavigationBar extends StatelessWidget {
                                   isActive ? tab.activeIcon : tab.icon,
                                   size: 22,
                                   color: isActive
-                                      ? AppColors.primary
-                                      : AppColors.textSecondaryDark,
+                                      ? colors.primary
+                                      : colors.textSecondary,
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   tab.label,
                                   style: AppTextStyles.labelMedium.copyWith(
                                     color: isActive
-                                        ? AppColors.primary
-                                        : AppColors.textSecondaryDark,
+                                        ? colors.primary
+                                        : colors.textSecondary,
                                     // Scaled down from 13pt to 11pt so all 5
                                     // labels (including "Progress") fit inside
                                     // the pill without clipping.

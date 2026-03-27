@@ -55,7 +55,7 @@ class _ZPasswordFieldState extends State<ZPasswordField> {
 
   @override
   Widget build(BuildContext context) {
-    return AppTextField(
+    final field = AppTextField(
       controller: widget.controller,
       labelText: widget.label,
       hintText: widget.hint,
@@ -66,9 +66,17 @@ class _ZPasswordFieldState extends State<ZPasswordField> {
           _obscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
           color: AppColors.textSecondaryDark,
         ),
-        onPressed: _toggleVisibility,
+        onPressed: widget.enabled ? _toggleVisibility : null,
         tooltip: _obscured ? 'Show password' : 'Hide password',
       ),
     );
+
+    if (!widget.enabled) {
+      return IgnorePointer(
+        child: Opacity(opacity: 0.4, child: field),
+      );
+    }
+
+    return field;
   }
 }

@@ -63,6 +63,21 @@ class _ZCalendarState extends State<ZCalendar> {
     'Su',
   ];
 
+  static const List<String> _monthNames = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+
   // ── Sizing ───────────────────────────────────────────────────────────────
   static const double _daySize = 36;
   static const double _touchTarget = 44;
@@ -165,23 +180,8 @@ class _ZCalendarState extends State<ZCalendar> {
 
   // ── Month name ──────────────────────────────────────────────────────────
 
-  String get _monthYearLabel {
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    return '${months[_displayedMonth.month - 1]} ${_displayedMonth.year}';
-  }
+  String get _monthYearLabel =>
+      '${_monthNames[_displayedMonth.month - 1]} ${_displayedMonth.year}';
 
   // ── Build ────────────────────────────────────────────────────────────────
 
@@ -315,21 +315,7 @@ class _ZCalendarState extends State<ZCalendar> {
     final bool tappable = inMonth && enabled;
 
     // Semantic label like "March 15" or "March 15, selected".
-    final monthNames = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    final semanticDate = '${monthNames[date.month - 1]} ${date.day}';
+    final semanticDate = '${_monthNames[date.month - 1]} ${date.day}';
     final semanticSuffix = selected ? ', selected' : '';
 
     return Semantics(
