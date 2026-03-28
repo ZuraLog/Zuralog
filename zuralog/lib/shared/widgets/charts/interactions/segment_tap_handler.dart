@@ -57,6 +57,15 @@ class _SegmentTapHandlerState extends State<SegmentTapHandler> {
   }
 
   @override
+  void didUpdateWidget(SegmentTapHandler oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.notifier != widget.notifier) {
+      oldWidget.notifier.removeListener(_onNotifierChange);
+      widget.notifier.addListener(_onNotifierChange);
+    }
+  }
+
+  @override
   void dispose() {
     _dismissTimer?.cancel();
     widget.notifier.removeListener(_onNotifierChange);
