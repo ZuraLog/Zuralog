@@ -23,6 +23,7 @@ class ZCheckbox extends StatefulWidget {
     this.onChanged,
     this.enabled = true,
     this.label,
+    this.semanticLabel,
   });
 
   /// Whether the checkbox is checked.
@@ -36,6 +37,10 @@ class ZCheckbox extends StatefulWidget {
 
   /// Optional label shown to the right of the checkbox.
   final String? label;
+
+  /// Accessibility label for screen readers. Falls back to [label] if not provided.
+  /// Provide this when using a standalone checkbox with no visible label.
+  final String? semanticLabel;
 
   @override
   State<ZCheckbox> createState() => _ZCheckboxState();
@@ -150,7 +155,7 @@ class _ZCheckboxState extends State<ZCheckbox>
       // No label: single GestureDetector wrapping the 44×44 hit area.
       return Semantics(
         checked: widget.value,
-        label: widget.label,
+        label: widget.semanticLabel ?? widget.label,
         enabled: widget.enabled,
         onTap: widget.enabled ? _handleTap : null,
         child: GestureDetector(
