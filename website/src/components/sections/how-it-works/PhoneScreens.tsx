@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   Zap, Moon, Heart, Flame, Footprints, Activity,
   Droplets, Dumbbell, Brain, TrendingUp, MessageCircle,
@@ -258,7 +259,7 @@ function TrendsScreen() {
 }
 
 /* ─── Lookup ──────────────────────────────────────────────── */
-export const PHONE_SCREENS: Record<string, () => JSX.Element> = {
+export const PHONE_SCREENS: Record<string, () => React.ReactElement> = {
   connect: ConnectScreen,
   today: TodayScreen,
   data: DataScreen,
