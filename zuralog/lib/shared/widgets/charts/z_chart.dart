@@ -20,8 +20,8 @@ import 'package:zuralog/shared/widgets/charts/z_chart_empty_state.dart';
 /// [ChartMode] with entrance animation, accessibility semantics, and
 /// optional tap handling.
 ///
-/// Modes that are not yet implemented (full, sparkline, widget, comparison,
-/// mini) fall back to the square tile layout with a debug message.
+/// All [ChartMode] values are routed to their respective shell widgets.
+/// Unsupported config types and mode/config mismatches fail with an assert.
 class ZChart extends StatefulWidget {
   const ZChart({
     super.key,
@@ -71,7 +71,6 @@ class _ZChartState extends State<ZChart>
         false,
         'ZChart: unsupported config type: ${config.runtimeType}',
       );
-      debugPrint('ZChart: unsupported config type: ${config.runtimeType}');
       return const SizedBox.shrink();
     }
 
@@ -173,9 +172,6 @@ class _ZChartState extends State<ZChart>
         // Unsupported config type for mini mode.
         assert(
           false,
-          'ZChart: mini mode not supported for ${config.runtimeType}',
-        );
-        debugPrint(
           'ZChart: mini mode not supported for ${config.runtimeType}',
         );
         return const SizedBox.shrink();
