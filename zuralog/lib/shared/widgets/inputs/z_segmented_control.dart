@@ -22,7 +22,11 @@ class ZSegmentedControl extends StatelessWidget {
     required this.onChanged,
     required this.segments,
     this.enabled = true,
-  });
+  }) : assert(
+          segments.length == 0 ||
+              (selectedIndex >= 0 && selectedIndex < segments.length),
+          'selectedIndex must be a valid index into segments',
+        );
 
   /// Index of the currently selected segment.
   final int selectedIndex;
@@ -38,6 +42,7 @@ class ZSegmentedControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (segments.isEmpty) return const SizedBox.shrink();
     final colors = AppColorsOf(context);
     return IgnorePointer(
       ignoring: !enabled,

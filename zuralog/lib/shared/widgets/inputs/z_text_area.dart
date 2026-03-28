@@ -21,6 +21,8 @@ class ZTextArea extends StatelessWidget {
     this.label,
     this.errorText,
     this.maxLines = 5,
+    this.minLines = 4,
+    this.maxLength,
     this.enabled = true,
   });
 
@@ -39,6 +41,12 @@ class ZTextArea extends StatelessWidget {
   /// Maximum number of visible lines before scrolling.
   final int maxLines;
 
+  /// Minimum number of visible lines (controls initial height).
+  final int minLines;
+
+  /// Optional character limit. Shows a counter below the field when set.
+  final int? maxLength;
+
   /// Whether the text area accepts input.
   final bool enabled;
 
@@ -55,7 +63,8 @@ class ZTextArea extends StatelessWidget {
         controller: controller,
         enabled: enabled,
         maxLines: maxLines,
-        minLines: 4,
+        minLines: minLines,
+        maxLength: maxLength,
         cursorColor: colors.primary,
         style: AppTextStyles.bodyMedium.copyWith(
           color: colors.textPrimary,
