@@ -7,7 +7,6 @@
 /// metric name pre-loaded as context.
 library;
 
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +19,8 @@ import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/data/domain/category_color.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_models.dart';
+import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
+import 'package:zuralog/shared/widgets/charts/charts.dart';
 import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
@@ -179,11 +180,8 @@ class _MetricDetailScreenState extends ConsumerState<MetricDetailScreen> {
 
 /// Body widget for the metric detail screen.
 ///
-/// Must be a [ConsumerStatefulWidget] for two reasons:
-/// 1. It owns an [AnimationController] via [SingleTickerProviderStateMixin] —
-///    cannot be stateless.
-/// 2. It reads [unitsSystemProvider] via `ref.watch` — requires a Riverpod
-///    Consumer.
+/// Must be a [ConsumerStatefulWidget] because it reads [unitsSystemProvider]
+/// via `ref.watch` — requires a Riverpod Consumer.
 class _MetricDetailBody extends ConsumerStatefulWidget {
   const _MetricDetailBody({
     super.key,
@@ -208,43 +206,7 @@ class _MetricDetailBody extends ConsumerStatefulWidget {
   ConsumerState<_MetricDetailBody> createState() => _MetricDetailBodyState();
 }
 
-class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _chartOpacity;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-    _chartOpacity = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    );
-    _controller.forward();
-  }
-
-  @override
-  void didUpdateWidget(_MetricDetailBody old) {
-    super.didUpdateWidget(old);
-    // LOW-04: also replay animation when custom date range changes
-    if (old.selectedRange != widget.selectedRange ||
-        old.customRange != widget.customRange) {
-      _controller
-        ..reset()
-        ..forward();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
+class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody> {
   @override
   Widget build(BuildContext context) {
     final series = widget.detail.series;
@@ -260,10 +222,17 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
     final unitsSystem = ref.watch(unitsSystemProvider);
     final unitLabel = displayUnit(series.unit, unitsSystem);
 
-    final spots = [
-      for (var i = 0; i < series.dataPoints.length; i++)
-        FlSpot(i.toDouble(), series.dataPoints[i].value),
-    ];
+    final lineConfig = LineChartConfig(
+      points: series.dataPoints.map((dp) {
+        DateTime date;
+        try {
+          date = DateTime.parse(dp.timestamp).toLocal();
+        } catch (_) {
+          date = DateTime.now();
+        }
+        return ChartPoint(date: date, value: dp.value);
+      }).toList(),
+    );
 
     return ListView(
       padding: EdgeInsets.fromLTRB(
@@ -283,54 +252,36 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
 
         const SizedBox(height: AppDimens.spaceMd),
 
+        // ── Hero chart ───────────────────────────────────────────────────────
+        if (series.dataPoints.length >= 2)
+          ZChart(
+            config: lineConfig,
+            mode: ChartMode.full,
+            color: color,
+            unit: unitLabel,
+          )
+        else
+          MetricDetailEmptyState(
+            pointCount: series.dataPoints.isEmpty ? 0 : 1,
+            onExpandRange: () => widget.onRangeChanged(TimeRange.days30),
+          ),
+
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // ── AI insight ───────────────────────────────────────────────────────
+        if (widget.detail.aiInsight != null) ...[
+          _AiInsightCard(insight: widget.detail.aiInsight!),
+          const SizedBox(height: AppDimens.spaceMd),
+        ],
+
         // ── Stats row ────────────────────────────────────────────────────────
         _StatsRow(series: series, color: color, displayUnit: unitLabel),
 
-        const SizedBox(height: AppDimens.spaceMd),
-
-        // ── Chart ────────────────────────────────────────────────────────────
-        if (spots.length >= 2) ...[
-          _ChartCard(
-            spots: spots,
-            color: color,
-            opacity: _chartOpacity,
-            series: series,
-            displayUnit: unitLabel,
-          ),
-          const SizedBox(height: 6),
-          Center(
-            child: Text(
-              'Pinch to zoom · drag to pan',
-              style: AppTextStyles.labelSmall.copyWith(
-                color: AppColors.textTertiary,
-              ),
-            ),
-          ),
-        ],
-
-        if (spots.length == 1)
-          MetricDetailEmptyState(
-            pointCount: 1,
-            onExpandRange: () => widget.onRangeChanged(TimeRange.days30),
-          ),
-
-        if (spots.isEmpty)
-          MetricDetailEmptyState(
-            pointCount: 0,
-            onExpandRange: () => widget.onRangeChanged(TimeRange.days30),
-          ),
+        // HISTORY section hidden — collapse rule applies (hero is always line chart)
 
         const SizedBox(height: AppDimens.spaceMd),
 
-        // ── AI Insight ───────────────────────────────────────────────────────
-        if (widget.detail.aiInsight != null) ...[
-          const SizedBox(height: AppDimens.spaceMd),
-          _AiInsightCard(insight: widget.detail.aiInsight!),
-        ],
-
-        const SizedBox(height: AppDimens.spaceMd),
-
-        // ── Raw data table toggle ────────────────────────────────────────────
+        // ── Raw data table ───────────────────────────────────────────────────
         if (series.dataPoints.isNotEmpty) ...[
           _RawTableToggle(
             isExpanded: widget.showRawTable,
@@ -456,142 +407,6 @@ class _VerticalDivider extends StatelessWidget {
       width: 1,
       height: 36,
       color: colors.border.withValues(alpha: 0.5),
-    );
-  }
-}
-
-// ── _ChartCard ────────────────────────────────────────────────────────────────
-
-class _ChartCard extends StatelessWidget {
-  const _ChartCard({
-    required this.spots,
-    required this.color,
-    required this.opacity,
-    required this.series,
-    required this.displayUnit,
-  });
-
-  final List<FlSpot> spots;
-  final Color color;
-  final Animation<double> opacity;
-  final MetricSeries series;
-  final String displayUnit;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    final values = spots.map((s) => s.y).toList();
-    final minY = values.reduce((a, b) => a < b ? a : b);
-    final maxY = values.reduce((a, b) => a > b ? a : b);
-    final padding = (maxY - minY) == 0 ? 1.0 : (maxY - minY) * 0.15;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceMd,
-        AppDimens.spaceXs,
-        AppDimens.spaceSm,
-      ),
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: FadeTransition(
-        opacity: opacity,
-        child: InteractiveViewer(
-          boundaryMargin: const EdgeInsets.all(double.infinity),
-          minScale: 1.0,
-          maxScale: 4.0,
-          child: SizedBox(
-            height: 180,
-            child: LineChart(
-              LineChartData(
-                minY: minY - padding,
-                maxY: maxY + padding,
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: ((maxY - minY) / 4).clamp(0.1, 1e9),
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: colors.border.withValues(alpha: 0.4),
-                    strokeWidth: 0.5,
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 44,
-                      getTitlesWidget: (val, meta) => Text(
-                        val.toStringAsFixed(
-                            val.abs() >= 100 ? 0 : 1),
-                         style: AppTextStyles.labelSmall.copyWith(
-                             color: AppColors.textTertiary),
-                      ),
-                    ),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                ),
-                lineTouchData: LineTouchData(
-                  touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (_) => colors.surface,
-                    getTooltipItems: (touchedSpots) => touchedSpots
-                        .map((s) => LineTooltipItem(
-                              '${s.y.toStringAsFixed(1)} $displayUnit',
-                               AppTextStyles.bodySmall.copyWith(
-                                 color: color,
-                                 fontWeight: FontWeight.w600,
-                               ),
-                            ))
-                        .toList(),
-                  ),
-                ),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: spots,
-                    isCurved: true,
-                    preventCurveOverShooting: true,
-                    color: color,
-                    barWidth: 2.5,
-                    dotData: FlDotData(
-                      show: spots.length <= 14,
-                      getDotPainter: (spot, xPercentage, bar, index) =>
-                          FlDotCirclePainter(
-                        radius: 3,
-                        color: color,
-                        strokeColor: colors.background,
-                        strokeWidth: 1.5,
-                      ),
-                    ),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          color.withValues(alpha: 0.15),
-                          color.withValues(alpha: 0.0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeOutCubic,
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
