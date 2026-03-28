@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { CustomCursor } from "./custom-cursor";
 import { SoundToggle } from "./sound-toggle";
+import { ThemeToggle } from "./theme-toggle";
 import { useSoundContext } from "./sound-provider";
 import { SpotlightFollow } from "./spotlight-follow";
 import { ScrollProgress } from "./scroll-progress";
@@ -76,6 +77,7 @@ export function BrandBibleInteractions() {
       <ScrollProgress />
       <CustomCursor />
       <SoundToggle />
+      <ThemeToggle />
     </>
   );
 }
