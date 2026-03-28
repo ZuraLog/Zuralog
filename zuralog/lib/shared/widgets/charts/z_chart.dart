@@ -6,6 +6,7 @@ import 'package:zuralog/shared/widgets/charts/animations/chart_entrance_controll
 import 'package:zuralog/shared/widgets/charts/chart_mode.dart';
 import 'package:zuralog/shared/widgets/charts/chart_render_context.dart';
 import 'package:zuralog/shared/widgets/charts/modes/full_chart_shell.dart';
+import 'package:zuralog/shared/widgets/charts/modes/mini_progress.dart';
 import 'package:zuralog/shared/widgets/charts/modes/sparkline_shell.dart';
 import 'package:zuralog/shared/widgets/charts/modes/tile_chart_shell.dart';
 import 'package:zuralog/shared/widgets/charts/z_chart_empty_state.dart';
@@ -27,6 +28,7 @@ class ZChart extends StatefulWidget {
     required this.color,
     this.onTap,
     this.unit = '',
+    this.goalValue,
   });
 
   final TileVisualizationConfig config;
@@ -34,6 +36,7 @@ class ZChart extends StatefulWidget {
   final Color color;
   final VoidCallback? onTap;
   final String unit;
+  final double? goalValue;
 
   @override
   State<ZChart> createState() => _ZChartState();
@@ -107,7 +110,6 @@ class _ZChartState extends State<ZChart>
         );
       case ChartMode.widget:
       case ChartMode.comparison:
-      case ChartMode.mini:
         assert(() {
           debugPrint('ZChart: ${widget.mode.name} mode not yet implemented');
           return true;
@@ -121,6 +123,39 @@ class _ZChartState extends State<ZChart>
             animationProgress: animationProgress,
           ),
         );
+      case ChartMode.mini:
+        // Mini mode only applies to RingConfig and FillGaugeConfig.
+        if (config is RingConfig) {
+          return Semantics(
+            label: _semanticsLabel(config),
+            child: ZMiniProgress(
+              value: config.value,
+              goal: widget.goalValue ?? config.maxValue,
+              color: widget.color,
+              variant: MiniProgressVariant.ring,
+            ),
+          );
+        }
+        if (config is FillGaugeConfig) {
+          return Semantics(
+            label: _semanticsLabel(config),
+            child: ZMiniProgress(
+              value: config.value,
+              goal: widget.goalValue ?? config.maxValue,
+              color: widget.color,
+              variant: MiniProgressVariant.linear,
+            ),
+          );
+        }
+        // Unsupported config type for mini mode.
+        assert(
+          false,
+          'ZChart: mini mode not supported for ${config.runtimeType}',
+        );
+        debugPrint(
+          'ZChart: mini mode not supported for ${config.runtimeType}',
+        );
+        return const SizedBox.shrink();
     }
 
     // ── Wrap with semantics ─────────────────────────────────────────────
