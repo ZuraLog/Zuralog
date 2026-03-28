@@ -528,7 +528,9 @@ class _StatCell extends StatelessWidget {
         Text(
           label.toUpperCase(),
           style: AppTextStyles.labelSmall.copyWith(
-            color: AppColors.warmWhite.withValues(alpha: 0.4),
+            color: color != null
+                ? color!.withValues(alpha: 0.7)
+                : AppColors.warmWhite.withValues(alpha: 0.4),
             letterSpacing: 0.5,
           ),
         ),
