@@ -266,6 +266,7 @@ class _TopBar extends StatelessWidget {
             icon: Icons.arrow_back_ios_new_rounded,
             onPressed: onBack,
             filled: false,
+            semanticLabel: 'Back',
           ),
           Expanded(
             child: Center(
@@ -372,6 +373,7 @@ class _LoginForm extends StatelessWidget {
                 onPressed: onToggleObscure,
                 filled: false,
                 iconSize: 20,
+                semanticLabel: 'Toggle password visibility',
               ),
             ),
 
@@ -543,6 +545,7 @@ class _RegisterForm extends StatelessWidget {
                 onPressed: onToggleObscure,
                 filled: false,
                 iconSize: 20,
+                semanticLabel: 'Toggle password visibility',
               ),
             ),
 

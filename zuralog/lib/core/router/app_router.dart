@@ -380,22 +380,24 @@ List<RouteBase> _buildRoutes() {
     ),
 
     // ── Developer Tools ───────────────────────────────────────────────────
-    GoRoute(
-      path: RouteNames.debugCatalogPath,
-      name: RouteNames.debugCatalog,
-      builder: (context, state) => const SentryErrorBoundary(
-        module: 'dev.catalog',
-        child: CatalogScreen(),
+    if (kDebugMode) ...[
+      GoRoute(
+        path: RouteNames.debugCatalogPath,
+        name: RouteNames.debugCatalog,
+        builder: (context, state) => const SentryErrorBoundary(
+          module: 'dev.catalog',
+          child: CatalogScreen(),
+        ),
       ),
-    ),
-    GoRoute(
-      path: RouteNames.componentShowcasePath,
-      name: RouteNames.componentShowcase,
-      builder: (context, state) => const SentryErrorBoundary(
-        module: 'dev.components',
-        child: ComponentShowcaseScreen(),
+      GoRoute(
+        path: RouteNames.componentShowcasePath,
+        name: RouteNames.componentShowcase,
+        builder: (context, state) => const SentryErrorBoundary(
+          module: 'dev.components',
+          child: ComponentShowcaseScreen(),
+        ),
       ),
-    ),
+    ],
 
     // ── Log Screens (pushed over shell — no bottom nav visible) ──────────
     GoRoute(

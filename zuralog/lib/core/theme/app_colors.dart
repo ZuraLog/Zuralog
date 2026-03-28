@@ -307,11 +307,16 @@ abstract final class AppColors {
   static const Color trendsSage = primary;
   static const Color trendsDeepForest = Color(0xFF344E41);
 
+  /// Muted trends text — light mode static constant (Deep Forest at 40% opacity).
+  ///
+  /// Pre-computed to avoid calling [Color.withValues] at runtime.
+  static const Color trendsTextMutedLight = Color(0x66354E42);
+
   // ── Legacy compatibility alias ────────────────────────────────────────────
   // Kept to avoid breaking existing widgets that reference the old `nutrition`
   // constant. New code should use [categoryNutrition] for consistency.
 
-  /// @deprecated Use [categoryNutrition] instead.
+  @Deprecated('Use categoryNutrition instead')
   static const Color nutrition = categoryNutrition;
 
   // ── Shimmer / skeleton loading ────────────────────────────────────────────
@@ -406,15 +411,15 @@ class AppColorsOf {
   Color get progressSage => _isDark ? AppColors.progressSage : AppColors.progressSageLight;
   Color get progressStreakWarm => _isDark ? AppColors.progressStreakWarm : AppColors.progressStreakWarmLight;
 
-  // -- Trends ---------------------------------------------------------------
-  Color get trendsCanvas => AppColors.trendsCanvas;
-  Color get trendsSurface => AppColors.trendsSurface;
-  Color get trendsSurfaceRaised => AppColors.trendsSurfaceRaised;
-  Color get trendsTextPrimary => AppColors.trendsTextPrimary;
-  Color get trendsTextSecondary => AppColors.trendsTextSecondary;
-  Color get trendsTextMuted => AppColors.trendsTextMuted;
-  Color get trendsBorderDefault => AppColors.trendsBorderDefault;
-  Color get trendsBorderStrong => AppColors.trendsBorderStrong;
-  Color get trendsSage => AppColors.trendsSage;
+  // ── Trends ────────────────────────────────────────────────────────────────
+  Color get trendsCanvas => _isDark ? AppColors.canvas : AppColors.backgroundLight;
+  Color get trendsSurface => _isDark ? AppColors.surface : AppColors.surfaceLight;
+  Color get trendsSurfaceRaised => _isDark ? AppColors.surfaceRaised : AppColors.elevatedSurfaceLight;
+  Color get trendsTextPrimary => _isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+  Color get trendsTextSecondary => _isDark ? AppColors.primary : AppColors.primaryOnLight;
+  Color get trendsTextMuted => _isDark ? AppColors.trendsTextMuted : AppColors.trendsTextMutedLight;
+  Color get trendsBorderDefault => _isDark ? AppColors.dividerDefault : AppColors.borderLight;
+  Color get trendsBorderStrong => _isDark ? const Color(0x1FCFE1B9) : AppColors.borderLight;
+  Color get trendsSage => _isDark ? AppColors.primary : AppColors.primaryOnLight;
   Color get trendsDeepForest => AppColors.trendsDeepForest;
 }

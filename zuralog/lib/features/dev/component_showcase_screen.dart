@@ -69,6 +69,7 @@ class _ComponentShowcaseScreenState
                                 ? Icons.light_mode
                                 : Icons.dark_mode,
                             isSage: true,
+                            semanticLabel: isDark ? 'Switch to light mode' : 'Switch to dark mode',
                             onPressed: () {
                               final newMode =
                                   isDark ? ThemeMode.light : ThemeMode.dark;
@@ -559,13 +560,13 @@ class _ComponentShowcaseScreenState
         _label('Icon Button'),
         Row(
           children: [
-            ZIconButton(icon: Icons.favorite, onPressed: () {}),
+            ZIconButton(icon: Icons.favorite, onPressed: () {}, semanticLabel: 'Like'),
             const SizedBox(width: AppDimens.spaceSm),
             ZIconButton(
-                icon: Icons.share, onPressed: () {}, isSage: true),
+                icon: Icons.share, onPressed: () {}, isSage: true, semanticLabel: 'Share'),
             const SizedBox(width: AppDimens.spaceSm),
             ZIconButton(
-                icon: Icons.more_vert, onPressed: () {}, filled: false),
+                icon: Icons.more_vert, onPressed: () {}, filled: false, semanticLabel: 'More options'),
           ],
         ),
 

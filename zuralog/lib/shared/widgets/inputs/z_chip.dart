@@ -4,6 +4,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart'
@@ -41,17 +42,29 @@ class ZChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: enabled ? 1.0 : 0.4,
-      child: GestureDetector(
-        onTap: enabled ? onTap : null,
-        child: AnimatedContainer(
+    final colors = AppColorsOf(context);
+    return Semantics(
+      checked: isActive,
+      label: label,
+      button: true,
+      child: IgnorePointer(
+        ignoring: !enabled,
+        child: Opacity(
+        opacity: enabled ? 1.0 : AppDimens.disabledOpacity,
+        child: GestureDetector(
+          onTap: enabled && onTap != null
+              ? () {
+                  HapticFeedback.selectionClick();
+                  onTap!();
+                }
+              : null,
+          child: AnimatedContainer(
           duration: AppMotion.durationFast,
           curve: AppMotion.curveEntrance,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppDimens.shapePill),
-            color: isActive ? null : AppColors.surface,
+            color: isActive ? null : colors.surface,
             image: isActive
                 ? DecorationImage(
                     image: AssetImage(ZPatternVariant.sage.assetPath),
@@ -68,7 +81,7 @@ class ZChip extends StatelessWidget {
                   size: 16,
                   color: isActive
                       ? AppColors.textOnSage
-                      : AppColors.textSecondary,
+                      : colors.textSecondary,
                 ),
                 const SizedBox(width: AppDimens.spaceXs),
               ],
@@ -77,11 +90,13 @@ class ZChip extends StatelessWidget {
                 style: AppTextStyles.labelMedium.copyWith(
                   color: isActive
                       ? AppColors.textOnSage
-                      : AppColors.textSecondary,
+                      : colors.textSecondary,
                 ),
               ),
             ],
           ),
+          ),
+        ),
         ),
       ),
     );

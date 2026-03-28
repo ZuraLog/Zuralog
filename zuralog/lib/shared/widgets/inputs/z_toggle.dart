@@ -5,6 +5,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart'
@@ -45,8 +46,6 @@ class ZToggle extends StatefulWidget {
 class _ZToggleState extends State<ZToggle> with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _position;
-  late final Animation<Color?> _thumbColor;
-
   static const _trackWidth = 44.0;
   static const _trackHeight = 26.0;
   static const _thumbDiameter = 22.0;
@@ -64,10 +63,6 @@ class _ZToggleState extends State<ZToggle> with SingleTickerProviderStateMixin {
       begin: _thumbPadding,
       end: _trackWidth - _thumbDiameter - _thumbPadding,
     ).animate(CurvedAnimation(parent: _controller, curve: AppMotion.curveEntrance));
-    _thumbColor = ColorTween(
-      begin: Colors.white,
-      end: Colors.white,
-    ).animate(_controller);
   }
 
   @override
@@ -90,99 +85,115 @@ class _ZToggleState extends State<ZToggle> with SingleTickerProviderStateMixin {
 
   void _handleTap() {
     if (!widget.enabled || widget.onChanged == null) return;
+    HapticFeedback.lightImpact();
     widget.onChanged!(!widget.value);
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
+    // Track visual, wrapped in a 48px tap target.
+    final trackVisual = AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        return SizedBox(
+          width: _trackWidth,
+          height: _trackHeight,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(_trackHeight / 2),
+            child: Stack(
+              children: [
+                // Track background — sage pattern when ON, surfaceRaised when OFF.
+                Container(
+                  decoration: BoxDecoration(
+                    color: _controller.value < 1.0
+                        ? colors.surfaceRaised
+                        : null,
+                    borderRadius: BorderRadius.circular(_trackHeight / 2),
+                    image: _controller.value > 0.0
+                        ? DecorationImage(
+                            image: AssetImage(
+                                ZPatternVariant.sage.assetPath),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                ),
+                // Cross-fade: dim the pattern at the surfaceRaised opacity
+                // during the transition so it fades in smoothly.
+                if (_controller.value > 0.0 && _controller.value < 1.0)
+                  Opacity(
+                    opacity: 1.0 - _controller.value,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: colors.surfaceRaised,
+                        borderRadius:
+                            BorderRadius.circular(_trackHeight / 2),
+                      ),
+                    ),
+                  ),
+                // Thumb.
+                Positioned(
+                  left: _position.value,
+                  top: _thumbPadding,
+                  child: Container(
+                    width: _thumbDiameter,
+                    height: _thumbDiameter,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    // 48×48 tap target with track centered inside.
+    final tapTarget = SizedBox(
+      width: 48,
+      height: 48,
+      child: Center(child: trackVisual),
+    );
+
     final toggle = Semantics(
       toggled: widget.value,
       label: widget.label ?? 'Toggle',
       enabled: widget.enabled,
-      child: Opacity(
-        opacity: widget.enabled ? 1.0 : 0.4,
-        child: GestureDetector(
-          onTap: _handleTap,
-          child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, _) {
-            return SizedBox(
-              width: _trackWidth,
-              height: _trackHeight,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(_trackHeight / 2),
-                child: Stack(
-                  children: [
-                    // Track background — sage pattern when ON, surfaceRaised when OFF.
-                    Container(
-                      decoration: BoxDecoration(
-                        color: _controller.value < 1.0
-                            ? AppColors.surfaceRaised
-                            : null,
-                        borderRadius: BorderRadius.circular(_trackHeight / 2),
-                        image: _controller.value > 0.0
-                            ? DecorationImage(
-                                image: AssetImage(
-                                    ZPatternVariant.sage.assetPath),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
-                      ),
-                    ),
-                    // Cross-fade: dim the pattern at the surfaceRaised opacity
-                    // during the transition so it fades in smoothly.
-                    if (_controller.value > 0.0 && _controller.value < 1.0)
-                      Opacity(
-                        opacity: 1.0 - _controller.value,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceRaised,
-                            borderRadius:
-                                BorderRadius.circular(_trackHeight / 2),
-                          ),
-                        ),
-                      ),
-                    // Thumb.
-                    Positioned(
-                      left: _position.value,
-                      top: _thumbPadding,
-                      child: Container(
-                        width: _thumbDiameter,
-                        height: _thumbDiameter,
-                        decoration: BoxDecoration(
-                          color: _thumbColor.value,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
+      child: IgnorePointer(
+        ignoring: widget.onChanged == null,
+        child: Opacity(
+          opacity: widget.onChanged != null
+              ? 1.0
+              : AppDimens.disabledOpacity,
+          child: GestureDetector(
+            onTap: _handleTap,
+            child: tapTarget,
+          ),
         ),
-      ),
       ),
     );
 
     if (widget.label == null) return toggle;
 
-    return GestureDetector(
-      onTap: _handleTap,
-      behavior: HitTestBehavior.opaque,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            widget.label!,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textPrimaryDark,
-            ),
+    // When a label is present, the single outer GestureDetector in the
+    // Semantics subtree covers the whole row — no second GestureDetector.
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          widget.label!,
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: colors.textPrimary,
           ),
-          const SizedBox(width: AppDimens.spaceSm),
-          toggle,
-        ],
-      ),
+        ),
+        const SizedBox(width: AppDimens.spaceSm),
+        toggle,
+      ],
     );
   }
 }

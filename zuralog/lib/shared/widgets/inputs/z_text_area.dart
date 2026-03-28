@@ -21,6 +21,8 @@ class ZTextArea extends StatelessWidget {
     this.label,
     this.errorText,
     this.maxLines = 5,
+    this.minLines = 4,
+    this.maxLength,
     this.enabled = true,
   });
 
@@ -39,31 +41,41 @@ class ZTextArea extends StatelessWidget {
   /// Maximum number of visible lines before scrolling.
   final int maxLines;
 
+  /// Minimum number of visible lines (controls initial height).
+  final int minLines;
+
+  /// Optional character limit. Shows a counter below the field when set.
+  final int? maxLength;
+
   /// Whether the text area accepts input.
   final bool enabled;
 
   @override
   Widget build(BuildContext context) {
-    final sageFocusBorder = AppColors.primary.withValues(alpha: 0.3);
+    final colors = AppColorsOf(context);
+    final sageFocusBorder = colors.primary.withValues(alpha: 0.3);
 
-    final field = Opacity(
-      opacity: enabled ? 1.0 : 0.4,
+    final field = IgnorePointer(
+      ignoring: !enabled,
+      child: Opacity(
+      opacity: enabled ? 1.0 : AppDimens.disabledOpacity,
       child: TextFormField(
         controller: controller,
         enabled: enabled,
         maxLines: maxLines,
-        minLines: 4,
-        cursorColor: AppColors.primary,
+        minLines: minLines,
+        maxLength: maxLength,
+        cursorColor: colors.primary,
         style: AppTextStyles.bodyMedium.copyWith(
-          color: AppColors.textPrimaryDark,
+          color: colors.textPrimary,
         ),
         decoration: InputDecoration(
           hintText: placeholder,
           hintStyle: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
+            color: colors.textSecondary,
           ),
           filled: true,
-          fillColor: AppColors.surface,
+          fillColor: colors.surface,
           contentPadding: const EdgeInsets.all(AppDimens.spaceMd),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppDimens.shapeSm),
@@ -92,6 +104,7 @@ class ZTextArea extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 120),
         ),
       ),
+      ),
     );
 
     if (label == null) return field;
@@ -103,7 +116,7 @@ class ZTextArea extends StatelessWidget {
         Text(
           label!,
           style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textPrimaryDark,
+            color: colors.textPrimary,
           ),
         ),
         const SizedBox(height: AppDimens.spaceXs),

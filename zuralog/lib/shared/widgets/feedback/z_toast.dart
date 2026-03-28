@@ -4,6 +4,8 @@
 /// and slide-from-top animation. Does not depend on ScaffoldMessenger.
 library;
 
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
@@ -28,57 +30,103 @@ enum ZToastVariant {
 ///
 /// The toast slides in from the top over 350ms (easeOut), stays visible
 /// for 3.5 seconds, then slides out over 250ms (easeIn).
+///
+/// Rapid calls are queued — at most [_maxQueueSize] toasts will wait.
+/// Extra requests are silently dropped. Only one toast is visible at a time.
 class ZToast {
   ZToast._();
 
+  static final Queue<_ToastRequest> _queue = Queue<_ToastRequest>();
+  static bool _isShowing = false;
+  static const int _maxQueueSize = 3;
+
   /// Shows a success toast with a green status dot.
   static void success(BuildContext context, String message, {String? action, VoidCallback? onAction}) {
-    _show(context, message, ZToastVariant.success, action: action, onAction: onAction);
+    _enqueue(_ToastRequest(context: context, message: message, variant: ZToastVariant.success, action: action, onAction: onAction));
   }
 
   /// Shows an error toast with a red status dot.
   static void error(BuildContext context, String message, {String? action, VoidCallback? onAction}) {
-    _show(context, message, ZToastVariant.error, action: action, onAction: onAction);
+    _enqueue(_ToastRequest(context: context, message: message, variant: ZToastVariant.error, action: action, onAction: onAction));
   }
 
   /// Shows a warning toast with an amber status dot.
   static void warning(BuildContext context, String message, {String? action, VoidCallback? onAction}) {
-    _show(context, message, ZToastVariant.warning, action: action, onAction: onAction);
+    _enqueue(_ToastRequest(context: context, message: message, variant: ZToastVariant.warning, action: action, onAction: onAction));
   }
 
   /// Shows an info toast with a blue status dot.
   static void info(BuildContext context, String message, {String? action, VoidCallback? onAction}) {
-    _show(context, message, ZToastVariant.info, action: action, onAction: onAction);
+    _enqueue(_ToastRequest(context: context, message: message, variant: ZToastVariant.info, action: action, onAction: onAction));
   }
 
-  static void _show(
-    BuildContext context,
-    String message,
-    ZToastVariant variant, {
-    String? action,
-    VoidCallback? onAction,
-  }) {
-    final overlay = Overlay.of(context);
+  static void _enqueue(_ToastRequest request) {
+    if (_queue.length >= _maxQueueSize) return; // drop when full
+    _queue.add(request);
+    _showNext();
+  }
+
+  static void _showNext() {
+    if (_isShowing || _queue.isEmpty) return;
+
+    final request = _queue.removeFirst();
+
+    // Guard: if the context is no longer valid (e.g. after navigation), skip
+    // and try the next item.
+    if (!request.context.mounted) {
+      _showNext();
+      return;
+    }
+
+    _isShowing = true;
+
+    final overlay = Overlay.of(request.context);
     late final OverlayEntry entry;
     var removed = false;
 
+    void dismiss() {
+      if (removed) return;
+      removed = true;
+      try {
+        entry.remove();
+      } catch (_) {
+        // Overlay may already be gone after a navigation event — safe to ignore.
+      } finally {
+        _isShowing = false;
+        _showNext();
+      }
+    }
+
     entry = OverlayEntry(
       builder: (_) => _ZToastOverlay(
-        message: message,
-        variant: variant,
-        action: action,
-        onAction: onAction,
-        onDismissed: () {
-          if (!removed) {
-            removed = true;
-            entry.remove();
-          }
-        },
+        message: request.message,
+        variant: request.variant,
+        action: request.action,
+        onAction: request.onAction,
+        onDismissed: dismiss,
       ),
     );
 
     overlay.insert(entry);
   }
+}
+
+// ── Private request data class ──────────────────────────────────────────────
+
+class _ToastRequest {
+  const _ToastRequest({
+    required this.context,
+    required this.message,
+    required this.variant,
+    this.action,
+    this.onAction,
+  });
+
+  final BuildContext context;
+  final String message;
+  final ZToastVariant variant;
+  final String? action;
+  final VoidCallback? onAction;
 }
 
 // ── Private overlay widget ──────────────────────────────────────────────────
@@ -220,7 +268,7 @@ class _ZToastOverlayState extends State<_ZToastOverlay>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.surfaceRaised,
+          color: colors.surfaceRaised,
           borderRadius: BorderRadius.circular(AppDimens.shapePill),
         ),
         child: Row(
@@ -255,7 +303,7 @@ class _ZToastOverlayState extends State<_ZToastOverlay>
                 child: Text(
                   widget.action!,
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.primary,
+                    color: colors.primary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
