@@ -6,15 +6,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 import 'package:zuralog/features/data/presentation/widgets/tile_visualizations.dart';
-import 'package:zuralog/features/data/presentation/widgets/viz/bar_chart_viz.dart';
-import 'package:zuralog/features/data/presentation/widgets/viz/line_chart_viz.dart';
 import 'package:zuralog/features/data/presentation/widgets/viz/stat_card_viz.dart';
-import 'package:zuralog/features/data/presentation/widgets/viz/ring_viz.dart';
 import 'package:zuralog/features/data/presentation/widgets/viz/dual_value_viz.dart';
+import 'package:zuralog/shared/widgets/charts/z_chart.dart';
 
 void main() {
   group('buildTileVisualization factory', () {
-    test('returns BarChartViz for BarChartConfig', () {
+    test('returns ZChart for BarChartConfig', () {
       // Non-empty bars required — empty bars → hasChartData=false → _VizEmptyPlaceholder
       final config = BarChartConfig(
         bars: [BarPoint(label: 'Mon', value: 8000, isToday: false)],
@@ -25,7 +23,7 @@ void main() {
         categoryColor: Colors.blue,
         size: TileSize.square,
       );
-      expect(widget, isA<BarChartViz>());
+      expect(widget, isA<ZChart>());
     });
 
     test('returns StatCardViz for StatCardConfig', () {
@@ -38,14 +36,14 @@ void main() {
       expect(widget, isA<StatCardViz>());
     });
 
-    test('returns RingViz for RingConfig', () {
+    test('returns ZChart for RingConfig', () {
       final config = RingConfig(value: 7500, maxValue: 10000, unit: 'steps');
       final widget = buildTileVisualization(
         config: config,
         categoryColor: Colors.green,
         size: TileSize.square,
       );
-      expect(widget, isA<RingViz>());
+      expect(widget, isA<ZChart>());
     });
 
     test('returns DualValueViz for DualValueConfig', () {
@@ -58,25 +56,26 @@ void main() {
       expect(widget, isA<DualValueViz>());
     });
 
-    test('returns _VizEmptyPlaceholder for empty LineChartConfig', () {
+    test('returns ZChart for empty LineChartConfig (ZChart handles its own empty state)', () {
       const config = LineChartConfig(points: []);
       final widget = buildTileVisualization(
         config: config,
         categoryColor: Colors.blue,
         size: TileSize.square,
       );
-      // The exact type is private, so we check it is NOT a LineChartViz
-      expect(widget, isNot(isA<LineChartViz>()));
+      // ZChart is returned even for empty data — it handles its own empty state internally
+      expect(widget, isA<ZChart>());
     });
 
-    test('returns _VizEmptyPlaceholder for empty BarChartConfig', () {
+    test('returns ZChart for empty BarChartConfig (ZChart handles its own empty state)', () {
       const config = BarChartConfig(bars: []);
       final widget = buildTileVisualization(
         config: config,
         categoryColor: Colors.blue,
         size: TileSize.square,
       );
-      expect(widget, isNot(isA<BarChartViz>()));
+      // ZChart is returned even for empty data — it handles its own empty state internally
+      expect(widget, isA<ZChart>());
     });
   });
 }

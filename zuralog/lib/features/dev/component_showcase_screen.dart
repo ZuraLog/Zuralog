@@ -7,6 +7,9 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/features/data/domain/data_models.dart';
+import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
+import 'package:zuralog/features/data/presentation/widgets/tile_visualizations.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 class ComponentShowcaseScreen extends ConsumerStatefulWidget {
@@ -1306,8 +1309,766 @@ class _ComponentShowcaseScreenState
           ],
         ),
 
+        // ── 8. CHART VISUALIZATIONS ────────────────────────────────────────
+        _gap(AppDimens.spaceLg),
+        Text(
+          '8. ZChart System',
+          style: AppTextStyles.displaySmall.copyWith(color: AppColors.warmWhite),
+        ),
+        _gap(),
+        Text(
+          'All 7 chart types shown in all 3 tile sizes. '
+          'Each has a "Full" variant with data and an "Empty" variant with no data.',
+          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark),
+        ),
+
+        // ── Line Chart ──────────────────────────────────────────────────
+        _label('Line Chart — Full'),
+        _ChartShowcaseRow(
+          color: AppColors.categoryHeart,
+          configs: [
+            (TileSize.square, _kLineChartFull),
+            (TileSize.wide, _kLineChartFull),
+            (TileSize.tall, _kLineChartFull),
+          ],
+        ),
+        _label('Line Chart — Empty'),
+        _ChartShowcaseRow(
+          color: AppColors.categoryHeart,
+          configs: [
+            (TileSize.square, _kLineChartEmpty),
+            (TileSize.wide, _kLineChartEmpty),
+            (TileSize.tall, _kLineChartEmpty),
+          ],
+        ),
+
+        // ── Bar Chart ───────────────────────────────────────────────────
+        _label('Bar Chart — Full'),
+        _ChartShowcaseRow(
+          color: AppColors.categoryActivity,
+          configs: [
+            (TileSize.square, _kBarChartFull),
+            (TileSize.wide, _kBarChartFull),
+            (TileSize.tall, _kBarChartFull),
+          ],
+        ),
+        _label('Bar Chart — Empty'),
+        _ChartShowcaseRow(
+          color: AppColors.categoryActivity,
+          configs: [
+            (TileSize.square, _kBarChartEmpty),
+            (TileSize.wide, _kBarChartEmpty),
+            (TileSize.tall, _kBarChartEmpty),
+          ],
+        ),
+
+        // ── Area Chart ──────────────────────────────────────────────────
+        _label('Area Chart — Full'),
+        _ChartShowcaseRow(
+          color: AppColors.categorySleep,
+          configs: [
+            (TileSize.square, _kAreaChartFull),
+            (TileSize.wide, _kAreaChartFull),
+            (TileSize.tall, _kAreaChartFull),
+          ],
+        ),
+        _label('Area Chart — Empty'),
+        _ChartShowcaseRow(
+          color: AppColors.categorySleep,
+          configs: [
+            (TileSize.square, _kAreaChartEmpty),
+            (TileSize.wide, _kAreaChartEmpty),
+            (TileSize.tall, _kAreaChartEmpty),
+          ],
+        ),
+
+        // ── Ring / Donut ────────────────────────────────────────────────
+        _label('Ring Chart — Full'),
+        _ChartShowcaseRow(
+          color: AppColors.categoryActivity,
+          configs: [
+            (TileSize.square, _kRingFull),
+            (TileSize.wide, _kRingFull),
+            (TileSize.tall, _kRingFullWithBars),
+          ],
+        ),
+        _label('Ring Chart — Empty (0%)'),
+        _ChartShowcaseRow(
+          color: AppColors.categoryActivity,
+          configs: [
+            (TileSize.square, _kRingEmpty),
+            (TileSize.wide, _kRingEmpty),
+            (TileSize.tall, _kRingEmpty),
+          ],
+        ),
+
+        // ── Gauge ───────────────────────────────────────────────────────
+        _label('Gauge — Full'),
+        _ChartShowcaseRow(
+          color: AppColors.categoryHeart,
+          configs: [
+            (TileSize.square, _kGaugeFull),
+            (TileSize.wide, _kGaugeFull),
+            (TileSize.tall, _kGaugeFull),
+          ],
+        ),
+        _label('Gauge — Empty (min value)'),
+        _ChartShowcaseRow(
+          color: AppColors.categoryHeart,
+          configs: [
+            (TileSize.square, _kGaugeEmpty),
+            (TileSize.wide, _kGaugeEmpty),
+            (TileSize.tall, _kGaugeEmpty),
+          ],
+        ),
+
+        // ── Fill Gauge ──────────────────────────────────────────────────
+        _label('Fill Gauge — Full'),
+        _ChartShowcaseRow(
+          color: AppColors.categoryBody,
+          configs: [
+            (TileSize.square, _kFillGaugeFull),
+            (TileSize.wide, _kFillGaugeFullWide),
+            (TileSize.tall, _kFillGaugeFullTall),
+          ],
+        ),
+        _label('Fill Gauge — Empty (0)'),
+        _ChartShowcaseRow(
+          color: AppColors.categoryBody,
+          configs: [
+            (TileSize.square, _kFillGaugeEmpty),
+            (TileSize.wide, _kFillGaugeEmpty),
+            (TileSize.tall, _kFillGaugeEmpty),
+          ],
+        ),
+
+        // ── Segmented Bar ───────────────────────────────────────────────
+        _label('Segmented Bar — Full'),
+        _ChartShowcaseRow(
+          color: AppColors.categorySleep,
+          configs: [
+            (TileSize.square, _kSegBarFull),
+            (TileSize.wide, _kSegBarFull),
+            (TileSize.tall, _kSegBarFull),
+          ],
+        ),
+        _label('Segmented Bar — Empty'),
+        _ChartShowcaseRow(
+          color: AppColors.categorySleep,
+          configs: [
+            (TileSize.square, _kSegBarEmpty),
+            (TileSize.wide, _kSegBarEmpty),
+            (TileSize.tall, _kSegBarEmpty),
+          ],
+        ),
+
         _gap(AppDimens.spaceXxl),
+
+        // ── 9. CHART — NEW MODES ─────────────────────────────────────────
+        _gap(AppDimens.spaceLg),
+        Text(
+          '9. Chart — New Modes',
+          style: AppTextStyles.displaySmall.copyWith(color: AppColors.warmWhite),
+        ),
+        _gap(),
+        Text(
+          'Sparkline, mini progress, full-mode hero chart, and comparison overlay.',
+          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark),
+        ),
+        _buildChartNewModes(),
+      ],
+    );
+  }
+
+  // ── 8b. CHART — NEW MODES ───────────────────────────────────────────────
+
+  Widget _buildChartNewModes() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Sparkline ─────────────────────────────────────────────────────
+        _label('Sparkline — inline trend shape (16px, no chrome)'),
+        Row(
+          children: [
+            _sparklineCell('Line', _kSparkLine, AppColors.categoryHeart),
+            const SizedBox(width: AppDimens.spaceXs),
+            _sparklineCell('Area', _kSparkArea, AppColors.categorySleep),
+            const SizedBox(width: AppDimens.spaceXs),
+            _sparklineCell('Bar', _kSparkBar, AppColors.categoryActivity),
+            const SizedBox(width: AppDimens.spaceXs),
+            _sparklineCell('Seg Bar', _kSparkSeg, AppColors.categoryWellness),
+          ],
+        ),
+
+        // ── Mini Progress ─────────────────────────────────────────────────
+        _label('Mini Progress — ring (24 / 28 / 32px) + linear'),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            ZMiniProgress(
+              value: 6240,
+              goal: 10000,
+              color: AppColors.categoryActivity,
+              variant: MiniProgressVariant.ring,
+              size: 24,
+            ),
+            const SizedBox(width: AppDimens.spaceMd),
+            ZMiniProgress(
+              value: 6240,
+              goal: 10000,
+              color: AppColors.categoryActivity,
+              variant: MiniProgressVariant.ring,
+              size: 28,
+            ),
+            const SizedBox(width: AppDimens.spaceMd),
+            ZMiniProgress(
+              value: 6240,
+              goal: 10000,
+              color: AppColors.categoryActivity,
+              variant: MiniProgressVariant.ring,
+              size: 32,
+            ),
+            const SizedBox(width: AppDimens.spaceLg),
+            Expanded(
+              child: ZMiniProgress(
+                value: 1.8,
+                goal: 2.5,
+                color: AppColors.categoryBody,
+                variant: MiniProgressVariant.linear,
+              ),
+            ),
+          ],
+        ),
+
+        // ── Full Mode — Line ──────────────────────────────────────────────
+        _label('Full Mode — line chart with scrub crosshair'),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColorsOf(context).surface,
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceSm),
+          child: ZChart(
+            config: _kFullLineChart,
+            mode: ChartMode.full,
+            color: AppColors.categoryHeart,
+            unit: 'bpm',
+          ),
+        ),
+
+        // ── Full Mode — Bar ───────────────────────────────────────────────
+        _label('Full Mode — bar chart with tap-to-tooltip'),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColorsOf(context).surface,
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceSm),
+          child: ZChart(
+            config: _kBarChartFull,
+            mode: ChartMode.full,
+            color: AppColors.categoryActivity,
+            unit: 'steps',
+          ),
+        ),
+
+        // ── Full Mode — Area ──────────────────────────────────────────────
+        _label('Full Mode — area chart'),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColorsOf(context).surface,
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceSm),
+          child: ZChart(
+            config: _kAreaChartFull,
+            mode: ChartMode.full,
+            color: AppColors.categorySleep,
+            unit: 'h',
+          ),
+        ),
+
+        // ── Full Mode — Ring ──────────────────────────────────────────────
+        _label('Full Mode — ring / donut'),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColorsOf(context).surface,
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceSm),
+          child: ZChart(
+            config: _kRingFull,
+            mode: ChartMode.full,
+            color: AppColors.categoryActivity,
+            unit: 'steps',
+          ),
+        ),
+
+        // ── Full Mode — Gauge ─────────────────────────────────────────────
+        _label('Full Mode — gauge'),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColorsOf(context).surface,
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceSm),
+          child: ZChart(
+            config: _kGaugeFull,
+            mode: ChartMode.full,
+            color: AppColors.categoryHeart,
+            unit: 'bpm',
+          ),
+        ),
+
+        // ── Full Mode — Fill Gauge ────────────────────────────────────────
+        _label('Full Mode — fill gauge (tank)'),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColorsOf(context).surface,
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceSm),
+          child: ZChart(
+            config: _kFillGaugeFull,
+            mode: ChartMode.full,
+            color: AppColors.categoryBody,
+            unit: 'L',
+          ),
+        ),
+
+        // ── Full Mode — Segmented Bar ─────────────────────────────────────
+        _label('Full Mode — segmented bar (tap a segment)'),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColorsOf(context).surface,
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceSm),
+          child: ZChart(
+            config: _kSegBarFull,
+            mode: ChartMode.full,
+            color: AppColors.categorySleep,
+          ),
+        ),
+
+        // ── Full Mode — Empty state ───────────────────────────────────────
+        _label('Full Mode — empty state (no data)'),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColorsOf(context).surface,
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceSm),
+          child: SizedBox(
+            height: 200,
+            child: ZChart(
+              config: _kLineChartEmpty,
+              mode: ChartMode.full,
+              color: AppColors.categoryHeart,
+            ),
+          ),
+        ),
+
+        // ── Comparison Mode — Line ────────────────────────────────────────
+        _label('Comparison Mode — two periods overlaid'),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColorsOf(context).surface,
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceSm),
+          child: ZChart(
+            config: _kComparisonPrimary,
+            mode: ChartMode.comparison,
+            color: AppColors.categoryHeart,
+            unit: 'bpm',
+            comparisonConfig: _kComparisonSecondary,
+          ),
+        ),
+
+        // ── Mini — via ZChart ─────────────────────────────────────────────
+        _label('Mini Mode — ZChart.mini on RingConfig and FillGaugeConfig'),
+        Row(
+          children: [
+            ZChart(
+              config: _kRingFull,
+              mode: ChartMode.mini,
+              color: AppColors.categoryActivity,
+            ),
+            const SizedBox(width: AppDimens.spaceLg),
+            Expanded(
+              child: ZChart(
+                config: _kFillGaugeFull,
+                mode: ChartMode.mini,
+                color: AppColors.categoryBody,
+              ),
+            ),
+          ],
+        ),
+
+        _gap(AppDimens.spaceLg),
+      ],
+    );
+  }
+
+  Widget _sparklineCell(
+    String label,
+    TileVisualizationConfig config,
+    Color color,
+  ) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColorsOf(context).textSecondary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            height: 32,
+            decoration: BoxDecoration(
+              color: AppColorsOf(context).surface,
+              borderRadius: BorderRadius.circular(AppDimens.shapeXs),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            child: ZChart(
+              config: config,
+              mode: ChartMode.sparkline,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Chart Showcase Helpers
+// ══════════════════════════════════════════════════════════════════════════════
+
+/// Renders a row of 3 tile sizes for a given chart config.
+class _ChartShowcaseRow extends StatelessWidget {
+  const _ChartShowcaseRow({
+    required this.color,
+    required this.configs,
+  });
+
+  final Color color;
+  final List<(TileSize, TileVisualizationConfig)> configs;
+
+  static const _sizeLabels = {
+    TileSize.square: 'Square',
+    TileSize.wide: 'Wide',
+    TileSize.tall: 'Tall',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < configs.length; i++) ...[
+          if (i > 0) const SizedBox(width: AppDimens.spaceSm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _sizeLabels[configs[i].$1] ?? '',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: AppDimens.spaceXs),
+                Container(
+                  height: configs[i].$1 == TileSize.tall ? 180 : 100,
+                  decoration: BoxDecoration(
+                    color: colors.surface,
+                    borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+                  ),
+                  padding: const EdgeInsets.all(AppDimens.spaceSm),
+                  child: buildTileVisualization(
+                    config: configs[i].$2,
+                    categoryColor: color,
+                    size: configs[i].$1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Mock Chart Data — Full (with data)
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Helper dates for mock data (DateTime isn't const-constructible with arithmetic).
+final _kD7 = DateTime(2026, 3, 22);
+final _kD6 = DateTime(2026, 3, 23);
+final _kD5 = DateTime(2026, 3, 24);
+final _kD4 = DateTime(2026, 3, 25);
+final _kD3 = DateTime(2026, 3, 26);
+final _kD2 = DateTime(2026, 3, 27);
+final _kD1 = DateTime(2026, 3, 28);
+
+final _kLineChartFull = LineChartConfig(
+  points: [
+    ChartPoint(date: _kD7, value: 68),
+    ChartPoint(date: _kD6, value: 72),
+    ChartPoint(date: _kD5, value: 65),
+    ChartPoint(date: _kD4, value: 78),
+    ChartPoint(date: _kD3, value: 74),
+    ChartPoint(date: _kD2, value: 71),
+    ChartPoint(date: _kD1, value: 76),
+  ],
+  referenceLine: 72,
+  rangeMin: 60,
+  rangeMax: 85,
+);
+
+const _kBarChartFull = BarChartConfig(
+  bars: [
+    BarPoint(label: 'M', value: 8432, isToday: false),
+    BarPoint(label: 'T', value: 6218, isToday: false),
+    BarPoint(label: 'W', value: 9105, isToday: false),
+    BarPoint(label: 'T', value: 7340, isToday: false),
+    BarPoint(label: 'F', value: 10230, isToday: false),
+    BarPoint(label: 'S', value: 5621, isToday: false),
+    BarPoint(label: 'S', value: 8910, isToday: true),
+  ],
+  goalValue: 10000,
+  showAvgLine: true,
+);
+
+final _kAreaChartFull = AreaChartConfig(
+  points: [
+    ChartPoint(date: _kD7, value: 7.2),
+    ChartPoint(date: _kD6, value: 6.8),
+    ChartPoint(date: _kD5, value: 8.1),
+    ChartPoint(date: _kD4, value: 7.5),
+    ChartPoint(date: _kD3, value: 6.9),
+    ChartPoint(date: _kD2, value: 7.8),
+    ChartPoint(date: _kD1, value: 7.4),
+  ],
+  targetLine: 8.0,
+  fillOpacity: 0.15,
+  delta: 0.03,
+  positiveIsUp: true,
+);
+
+const _kRingFull = RingConfig(
+  value: 6240,
+  maxValue: 8000,
+  unit: 'steps',
+);
+
+const _kRingFullWithBars = RingConfig(
+  value: 6240,
+  maxValue: 8000,
+  unit: 'steps',
+  weeklyBars: [
+    BarPoint(label: 'M', value: 7200, isToday: false),
+    BarPoint(label: 'T', value: 5800, isToday: false),
+    BarPoint(label: 'W', value: 8400, isToday: false),
+    BarPoint(label: 'T', value: 6100, isToday: false),
+    BarPoint(label: 'F', value: 9200, isToday: false),
+    BarPoint(label: 'S', value: 4300, isToday: false),
+    BarPoint(label: 'S', value: 6240, isToday: true),
+  ],
+);
+
+const _kGaugeFull = GaugeConfig(
+  value: 72,
+  minValue: 40,
+  maxValue: 120,
+  zones: [
+    GaugeZone(min: 40, max: 60, label: 'Low', color: Color(0xFF5E5CE6)),
+    GaugeZone(min: 60, max: 80, label: 'Normal', color: Color(0xFF30D158)),
+    GaugeZone(min: 80, max: 100, label: 'Elevated', color: Color(0xFFFF9F0A)),
+    GaugeZone(min: 100, max: 120, label: 'High', color: Color(0xFFFF375F)),
+  ],
+);
+
+const _kFillGaugeFull = FillGaugeConfig(
+  value: 1.8,
+  maxValue: 2.5,
+  unit: 'L',
+);
+
+const _kFillGaugeFullWide = FillGaugeConfig(
+  value: 1.8,
+  maxValue: 2.5,
+  unit: 'L',
+  unitIcon: '💧',
+  unitSize: 0.3,
+);
+
+const _kFillGaugeFullTall = FillGaugeConfig(
+  value: 1.8,
+  maxValue: 2.5,
+  unit: 'L',
+  unitIcon: '💧',
+  unitSize: 0.3,
+);
+
+const _kSegBarFull = SegmentedBarConfig(
+  totalLabel: '7h 22m',
+  segments: [
+    Segment(label: 'Deep', value: 95, color: Color(0xFF3634A3)),
+    Segment(label: 'Core', value: 210, color: Color(0xFF5E5CE6)),
+    Segment(label: 'REM', value: 82, color: Color(0xFF8E8CE8)),
+    Segment(label: 'Awake', value: 55, color: Color(0xFFBFBEF0)),
+  ],
+);
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Mock Chart Data — Empty (no data)
+// ══════════════════════════════════════════════════════════════════════════════
+
+const _kLineChartEmpty = LineChartConfig(points: []);
+
+const _kBarChartEmpty = BarChartConfig(bars: []);
+
+const _kAreaChartEmpty = AreaChartConfig(points: []);
+
+const _kRingEmpty = RingConfig(value: 0, maxValue: 8000, unit: 'steps');
+
+const _kGaugeEmpty = GaugeConfig(
+  value: 40,
+  minValue: 40,
+  maxValue: 120,
+  zones: [
+    GaugeZone(min: 40, max: 60, label: 'Low', color: Color(0xFF5E5CE6)),
+    GaugeZone(min: 60, max: 80, label: 'Normal', color: Color(0xFF30D158)),
+    GaugeZone(min: 80, max: 100, label: 'Elevated', color: Color(0xFFFF9F0A)),
+    GaugeZone(min: 100, max: 120, label: 'High', color: Color(0xFFFF375F)),
+  ],
+);
+
+const _kFillGaugeEmpty = FillGaugeConfig(value: 0, maxValue: 2.5, unit: 'L');
+
+const _kSegBarEmpty = SegmentedBarConfig(totalLabel: '—', segments: []);
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Mock Chart Data — Extended Modes (sparkline, full, comparison)
+// ══════════════════════════════════════════════════════════════════════════════
+
+// 30-day heart rate data for full-mode and sparkline demos.
+final _kFullLineChart = LineChartConfig(
+  points: [
+    ChartPoint(date: DateTime(2026, 2, 27), value: 68),
+    ChartPoint(date: DateTime(2026, 2, 28), value: 71),
+    ChartPoint(date: DateTime(2026, 3, 1), value: 74),
+    ChartPoint(date: DateTime(2026, 3, 2), value: 70),
+    ChartPoint(date: DateTime(2026, 3, 3), value: 72),
+    ChartPoint(date: DateTime(2026, 3, 4), value: 69),
+    ChartPoint(date: DateTime(2026, 3, 5), value: 73),
+    ChartPoint(date: DateTime(2026, 3, 6), value: 76),
+    ChartPoint(date: DateTime(2026, 3, 7), value: 74),
+    ChartPoint(date: DateTime(2026, 3, 8), value: 71),
+    ChartPoint(date: DateTime(2026, 3, 9), value: 68),
+    ChartPoint(date: DateTime(2026, 3, 10), value: 72),
+    ChartPoint(date: DateTime(2026, 3, 11), value: 75),
+    ChartPoint(date: DateTime(2026, 3, 12), value: 73),
+    ChartPoint(date: DateTime(2026, 3, 13), value: 70),
+    ChartPoint(date: DateTime(2026, 3, 14), value: 67),
+    ChartPoint(date: DateTime(2026, 3, 15), value: 71),
+    ChartPoint(date: DateTime(2026, 3, 16), value: 74),
+    ChartPoint(date: DateTime(2026, 3, 17), value: 76),
+    ChartPoint(date: DateTime(2026, 3, 18), value: 72),
+    ChartPoint(date: DateTime(2026, 3, 19), value: 69),
+    ChartPoint(date: DateTime(2026, 3, 20), value: 73),
+    ChartPoint(date: DateTime(2026, 3, 21), value: 75),
+    ChartPoint(date: DateTime(2026, 3, 22), value: 71),
+    ChartPoint(date: DateTime(2026, 3, 23), value: 68),
+    ChartPoint(date: DateTime(2026, 3, 24), value: 74),
+    ChartPoint(date: DateTime(2026, 3, 25), value: 77),
+    ChartPoint(date: DateTime(2026, 3, 26), value: 73),
+    ChartPoint(date: DateTime(2026, 3, 27), value: 71),
+    ChartPoint(date: DateTime(2026, 3, 28), value: 76),
+  ],
+  referenceLine: 72,
+);
+
+// Comparison primary: this week's heart rate.
+final _kComparisonPrimary = LineChartConfig(
+  points: [
+    ChartPoint(date: DateTime(2026, 3, 22), value: 68),
+    ChartPoint(date: DateTime(2026, 3, 23), value: 72),
+    ChartPoint(date: DateTime(2026, 3, 24), value: 65),
+    ChartPoint(date: DateTime(2026, 3, 25), value: 78),
+    ChartPoint(date: DateTime(2026, 3, 26), value: 74),
+    ChartPoint(date: DateTime(2026, 3, 27), value: 71),
+    ChartPoint(date: DateTime(2026, 3, 28), value: 76),
+  ],
+);
+
+// Comparison secondary: previous week's heart rate.
+final _kComparisonSecondary = LineChartConfig(
+  points: [
+    ChartPoint(date: DateTime(2026, 3, 15), value: 74),
+    ChartPoint(date: DateTime(2026, 3, 16), value: 69),
+    ChartPoint(date: DateTime(2026, 3, 17), value: 73),
+    ChartPoint(date: DateTime(2026, 3, 18), value: 77),
+    ChartPoint(date: DateTime(2026, 3, 19), value: 70),
+    ChartPoint(date: DateTime(2026, 3, 20), value: 68),
+    ChartPoint(date: DateTime(2026, 3, 21), value: 72),
+  ],
+);
+
+// Sparkline configs — 7 data points, no labels, just shape.
+final _kSparkLine = LineChartConfig(
+  points: [
+    ChartPoint(date: DateTime(2026, 3, 22), value: 68),
+    ChartPoint(date: DateTime(2026, 3, 23), value: 72),
+    ChartPoint(date: DateTime(2026, 3, 24), value: 65),
+    ChartPoint(date: DateTime(2026, 3, 25), value: 78),
+    ChartPoint(date: DateTime(2026, 3, 26), value: 74),
+    ChartPoint(date: DateTime(2026, 3, 27), value: 71),
+    ChartPoint(date: DateTime(2026, 3, 28), value: 76),
+  ],
+);
+
+final _kSparkArea = AreaChartConfig(
+  points: [
+    ChartPoint(date: DateTime(2026, 3, 22), value: 7.2),
+    ChartPoint(date: DateTime(2026, 3, 23), value: 6.8),
+    ChartPoint(date: DateTime(2026, 3, 24), value: 8.1),
+    ChartPoint(date: DateTime(2026, 3, 25), value: 7.5),
+    ChartPoint(date: DateTime(2026, 3, 26), value: 6.9),
+    ChartPoint(date: DateTime(2026, 3, 27), value: 7.8),
+    ChartPoint(date: DateTime(2026, 3, 28), value: 7.4),
+  ],
+  fillOpacity: 0.15,
+);
+
+const _kSparkBar = BarChartConfig(
+  bars: [
+    BarPoint(label: 'M', value: 8432, isToday: false),
+    BarPoint(label: 'T', value: 6218, isToday: false),
+    BarPoint(label: 'W', value: 9105, isToday: false),
+    BarPoint(label: 'T', value: 7340, isToday: false),
+    BarPoint(label: 'F', value: 10230, isToday: false),
+    BarPoint(label: 'S', value: 5621, isToday: false),
+    BarPoint(label: 'S', value: 8910, isToday: true),
+  ],
+);
+
+const _kSparkSeg = SegmentedBarConfig(
+  totalLabel: '7h 22m',
+  segments: [
+    Segment(label: 'Deep', value: 95, color: Color(0xFF3634A3)),
+    Segment(label: 'Core', value: 210, color: Color(0xFF5E5CE6)),
+    Segment(label: 'REM', value: 82, color: Color(0xFF8E8CE8)),
+    Segment(label: 'Awake', value: 55, color: Color(0xFFBFBEF0)),
+  ],
+);

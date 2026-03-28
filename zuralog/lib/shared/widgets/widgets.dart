@@ -2,6 +2,7 @@
 library;
 
 export 'animations/z_fade_slide_in.dart';
+export 'charts/charts.dart';
 export 'animations/z_staggered_list.dart';
 export 'buttons/primary_button.dart';
 export 'buttons/secondary_button.dart';
@@ -22,7 +23,7 @@ export 'cards/z_onboarding_card.dart';
 export 'display/z_accordion.dart';
 export 'display/z_carousel.dart';
 export 'display/z_collapsible.dart';
-export 'display/z_chart_container.dart';
+export 'display/z_chart_container.dart' hide ZChartTooltip;
 export 'display/z_context_menu.dart';
 export 'display/z_hero_banner.dart';
 export 'display/z_data_table.dart';

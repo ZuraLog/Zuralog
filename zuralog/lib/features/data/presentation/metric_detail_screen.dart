@@ -7,7 +7,6 @@
 /// metric name pre-loaded as context.
 library;
 
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +19,8 @@ import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/data/domain/category_color.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_models.dart';
+import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
+import 'package:zuralog/shared/widgets/charts/charts.dart';
 import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
@@ -31,6 +32,9 @@ import 'package:zuralog/shared/widgets/time_range_selector.dart';
 
 /// Maximum number of rows shown in the raw data table.
 const int _kRawTableMaxRows = 30;
+
+/// Number of rows shown before the "Show all" button.
+const int _kRawTablePreviewRows = 5;
 
 /// Maximum character length for the coach prefill string.
 const int _kCoachPrefillMaxLength = 500;
@@ -120,9 +124,28 @@ class _MetricDetailScreenState extends ConsumerState<MetricDetailScreen> {
     // Resolve canonical display name from TileId — works in all async states.
     final displayName = formatMetricIdForDisplay(widget.metricId);
 
+    // Extract source label from loaded data — null during loading/error states.
+    final sourceSubtitle = detailAsync.maybeWhen(
+      data: (d) => _sourceLabel(d.series.sourceIntegration),
+      orElse: () => null,
+    );
+
     return ZuralogScaffold(
       appBar: AppBar(
-        title: Text(displayName, style: AppTextStyles.displaySmall),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(displayName, style: AppTextStyles.displaySmall),
+            if (sourceSubtitle != null)
+              Text(
+                sourceSubtitle,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.textTertiary,
+                ),
+              ),
+          ],
+        ),
       ),
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
@@ -160,11 +183,8 @@ class _MetricDetailScreenState extends ConsumerState<MetricDetailScreen> {
 
 /// Body widget for the metric detail screen.
 ///
-/// Must be a [ConsumerStatefulWidget] for two reasons:
-/// 1. It owns an [AnimationController] via [SingleTickerProviderStateMixin] —
-///    cannot be stateless.
-/// 2. It reads [unitsSystemProvider] via `ref.watch` — requires a Riverpod
-///    Consumer.
+/// Must be a [ConsumerStatefulWidget] because it reads [unitsSystemProvider]
+/// via `ref.watch` — requires a Riverpod Consumer.
 class _MetricDetailBody extends ConsumerStatefulWidget {
   const _MetricDetailBody({
     super.key,
@@ -189,43 +209,7 @@ class _MetricDetailBody extends ConsumerStatefulWidget {
   ConsumerState<_MetricDetailBody> createState() => _MetricDetailBodyState();
 }
 
-class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _chartOpacity;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-    _chartOpacity = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    );
-    _controller.forward();
-  }
-
-  @override
-  void didUpdateWidget(_MetricDetailBody old) {
-    super.didUpdateWidget(old);
-    // LOW-04: also replay animation when custom date range changes
-    if (old.selectedRange != widget.selectedRange ||
-        old.customRange != widget.customRange) {
-      _controller
-        ..reset()
-        ..forward();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
+class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody> {
   @override
   Widget build(BuildContext context) {
     final series = widget.detail.series;
@@ -241,10 +225,17 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
     final unitsSystem = ref.watch(unitsSystemProvider);
     final unitLabel = displayUnit(series.unit, unitsSystem);
 
-    final spots = [
-      for (var i = 0; i < series.dataPoints.length; i++)
-        FlSpot(i.toDouble(), series.dataPoints[i].value),
-    ];
+    final lineConfig = LineChartConfig(
+      points: series.dataPoints.map((dp) {
+        DateTime date;
+        try {
+          date = DateTime.parse(dp.timestamp).toLocal();
+        } catch (_) {
+          date = DateTime.now();
+        }
+        return ChartPoint(date: date, value: dp.value);
+      }).toList(),
+    );
 
     return ListView(
       padding: EdgeInsets.fromLTRB(
@@ -264,57 +255,36 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
 
         const SizedBox(height: AppDimens.spaceMd),
 
+        // ── Hero chart ───────────────────────────────────────────────────────
+        if (series.dataPoints.length >= 2)
+          ZChart(
+            config: lineConfig,
+            mode: ChartMode.full,
+            color: color,
+            unit: unitLabel,
+          )
+        else
+          MetricDetailEmptyState(
+            pointCount: series.dataPoints.isEmpty ? 0 : 1,
+            onExpandRange: () => widget.onRangeChanged(TimeRange.days30),
+          ),
+
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // ── AI insight ───────────────────────────────────────────────────────
+        if (widget.detail.aiInsight != null) ...[
+          _AiInsightCard(insight: widget.detail.aiInsight!),
+          const SizedBox(height: AppDimens.spaceMd),
+        ],
+
         // ── Stats row ────────────────────────────────────────────────────────
         _StatsRow(series: series, color: color, displayUnit: unitLabel),
 
-        const SizedBox(height: AppDimens.spaceMd),
-
-        // ── Chart ────────────────────────────────────────────────────────────
-        if (spots.length >= 2) ...[
-          _ChartCard(
-            spots: spots,
-            color: color,
-            opacity: _chartOpacity,
-            series: series,
-            displayUnit: unitLabel,
-          ),
-          const SizedBox(height: 6),
-          Center(
-            child: Text(
-              'Pinch to zoom · drag to pan',
-              style: AppTextStyles.labelSmall.copyWith(
-                color: AppColors.textTertiary,
-              ),
-            ),
-          ),
-        ],
-
-        if (spots.length == 1)
-          MetricDetailEmptyState(
-            pointCount: 1,
-            onExpandRange: () => widget.onRangeChanged(TimeRange.days30),
-          ),
-
-        if (spots.isEmpty)
-          MetricDetailEmptyState(
-            pointCount: 0,
-            onExpandRange: () => widget.onRangeChanged(TimeRange.days30),
-          ),
+        // HISTORY section hidden — collapse rule applies (hero is always line chart)
 
         const SizedBox(height: AppDimens.spaceMd),
 
-        // ── Source attribution ───────────────────────────────────────────────
-        _SourceAttribution(source: series.sourceIntegration),
-
-        // ── AI Insight ───────────────────────────────────────────────────────
-        if (widget.detail.aiInsight != null) ...[
-          const SizedBox(height: AppDimens.spaceMd),
-          _AiInsightCard(insight: widget.detail.aiInsight!),
-        ],
-
-        const SizedBox(height: AppDimens.spaceMd),
-
-        // ── Raw data table toggle ────────────────────────────────────────────
+        // ── Raw data table ───────────────────────────────────────────────────
         if (series.dataPoints.isNotEmpty) ...[
           _RawTableToggle(
             isExpanded: widget.showRawTable,
@@ -406,7 +376,7 @@ class _StatCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final textColor =
-        color ?? Theme.of(context).colorScheme.onSurface;
+        color ?? colors.textPrimary;
     return Expanded(
       child: Column(
         children: [
@@ -440,172 +410,6 @@ class _VerticalDivider extends StatelessWidget {
       width: 1,
       height: 36,
       color: colors.border.withValues(alpha: 0.5),
-    );
-  }
-}
-
-// ── _ChartCard ────────────────────────────────────────────────────────────────
-
-class _ChartCard extends StatelessWidget {
-  const _ChartCard({
-    required this.spots,
-    required this.color,
-    required this.opacity,
-    required this.series,
-    required this.displayUnit,
-  });
-
-  final List<FlSpot> spots;
-  final Color color;
-  final Animation<double> opacity;
-  final MetricSeries series;
-  final String displayUnit;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    final values = spots.map((s) => s.y).toList();
-    final minY = values.reduce((a, b) => a < b ? a : b);
-    final maxY = values.reduce((a, b) => a > b ? a : b);
-    final padding = (maxY - minY) == 0 ? 1.0 : (maxY - minY) * 0.15;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceMd,
-        AppDimens.spaceXs,
-        AppDimens.spaceSm,
-      ),
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: FadeTransition(
-        opacity: opacity,
-        child: InteractiveViewer(
-          boundaryMargin: const EdgeInsets.all(double.infinity),
-          minScale: 1.0,
-          maxScale: 4.0,
-          child: SizedBox(
-            height: 180,
-            child: LineChart(
-              LineChartData(
-                minY: minY - padding,
-                maxY: maxY + padding,
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: ((maxY - minY) / 4).clamp(0.1, 1e9),
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: colors.border.withValues(alpha: 0.4),
-                    strokeWidth: 0.5,
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 44,
-                      getTitlesWidget: (val, meta) => Text(
-                        val.toStringAsFixed(
-                            val.abs() >= 100 ? 0 : 1),
-                         style: AppTextStyles.labelSmall.copyWith(
-                             color: AppColors.textTertiary),
-                      ),
-                    ),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                ),
-                lineTouchData: LineTouchData(
-                  touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (_) => colors.surface,
-                    getTooltipItems: (touchedSpots) => touchedSpots
-                        .map((s) => LineTooltipItem(
-                              '${s.y.toStringAsFixed(1)} $displayUnit',
-                               AppTextStyles.bodySmall.copyWith(
-                                 color: color,
-                                 fontWeight: FontWeight.w600,
-                               ),
-                            ))
-                        .toList(),
-                  ),
-                ),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: spots,
-                    isCurved: true,
-                    preventCurveOverShooting: true,
-                    color: color,
-                    barWidth: 2.5,
-                    dotData: FlDotData(
-                      show: spots.length <= 14,
-                      getDotPainter: (spot, xPercentage, bar, index) =>
-                          FlDotCirclePainter(
-                        radius: 3,
-                        color: color,
-                        strokeColor: colors.background,
-                        strokeWidth: 1.5,
-                      ),
-                    ),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          color.withValues(alpha: 0.15),
-                          color.withValues(alpha: 0.0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeOutCubic,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── _SourceAttribution ────────────────────────────────────────────────────────
-
-class _SourceAttribution extends StatelessWidget {
-  const _SourceAttribution({required this.source});
-  final String? source;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(
-          Icons.sensors_rounded,
-          size: 14,
-          color: AppColors.textTertiary,
-        ),
-        const SizedBox(width: AppDimens.spaceXs),
-        Flexible(
-          child: Text(
-            _sourceLabel(source),
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textTertiary,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -645,7 +449,7 @@ class _AiInsightCard extends StatelessWidget {
                        child: Text(
                          insight,
                          style: AppTextStyles.bodySmall.copyWith(
-                           color: Theme.of(context).colorScheme.onSurface,
+                           color: AppColorsOf(context).textPrimary,
                          ),
                        ),
                     ),
@@ -662,7 +466,7 @@ class _AiInsightCard extends StatelessWidget {
 
 // ── _RawTableToggle ───────────────────────────────────────────────────────────
 
-class _RawTableToggle extends StatelessWidget {
+class _RawTableToggle extends StatefulWidget {
   const _RawTableToggle({
     required this.isExpanded,
     required this.onToggle,
@@ -676,106 +480,22 @@ class _RawTableToggle extends StatelessWidget {
   final String displayUnit;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
+  State<_RawTableToggle> createState() => _RawTableToggleState();
+}
 
-    return GestureDetector(
-      onTap: onToggle,
-      child: Container(
-        padding: const EdgeInsets.all(AppDimens.spaceMd),
-        decoration: BoxDecoration(
-          color: colors.cardBackground,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                 Text(
-                   'Raw Data',
-                   style: AppTextStyles.titleMedium,
-                 ),
-                const Spacer(),
-                Icon(
-                  isExpanded
-                      ? Icons.keyboard_arrow_up_rounded
-                      : Icons.keyboard_arrow_down_rounded,
-                  color: AppColors.textTertiary,
-                ),
-              ],
-            ),
-            if (isExpanded) ...[
-              const SizedBox(height: AppDimens.spaceMd),
-              // Table header
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                     child: Text(
-                       'Date',
-                       style: AppTextStyles.bodySmall.copyWith(
-                         color: colors.textSecondary,
-                         fontWeight: FontWeight.w600,
-                       ),
-                     ),
-                   ),
-                   Expanded(
-                     flex: 2,
-                     child: Text(
-                       'Value',
-                       textAlign: TextAlign.right,
-                       style: AppTextStyles.bodySmall.copyWith(
-                         color: colors.textSecondary,
-                         fontWeight: FontWeight.w600,
-                       ),
-                     ),
-                   ),
-                ],
-              ),
-              const Divider(height: 16),
-              // Table rows (latest first, max _kRawTableMaxRows)
-              ...series.dataPoints.reversed
-                  .take(_kRawTableMaxRows)
-                  .map(
-                    (dp) => Padding(
-                      padding:
-                          const EdgeInsets.symmetric(vertical: 3),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            flex: 3,
-                            child: Text(
-                              _formatDate(dp.timestamp),
-                             style: AppTextStyles.bodySmall.copyWith(
-                                 color: colors.textSecondary,
-                               ),
-                             ),
-                           ),
-                           Expanded(
-                             flex: 2,
-                             child: Text(
-                               '${dp.value.toStringAsFixed(1)} $displayUnit',
-                               textAlign: TextAlign.right,
-                               style: AppTextStyles.bodySmall.copyWith(
-                                 color: Theme.of(context)
-                                     .colorScheme
-                                     .onSurface,
-                                 fontWeight: FontWeight.w600,
-                               ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-            ],
-          ],
-        ),
-      ),
-    );
+class _RawTableToggleState extends State<_RawTableToggle> {
+  bool _showAll = false;
+
+  @override
+  void didUpdateWidget(_RawTableToggle old) {
+    super.didUpdateWidget(old);
+    // Reset "show all" whenever the table is collapsed.
+    if (!widget.isExpanded && old.isExpanded) {
+      _showAll = false;
+    }
   }
 
-  static String _formatDate(String iso) {
+  String _formatDate(String iso) {
     if (iso.isEmpty) return 'Unknown date';
     try {
       final dt = DateTime.parse(iso).toLocal();
@@ -787,6 +507,127 @@ class _RawTableToggle extends StatelessWidget {
     } catch (_) {
       return iso;
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
+    return GestureDetector(
+      onTap: widget.onToggle,
+      child: Container(
+        padding: const EdgeInsets.all(AppDimens.spaceMd),
+        decoration: BoxDecoration(
+          color: colors.cardBackground,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Raw Data',
+                  style: AppTextStyles.titleMedium,
+                ),
+                const Spacer(),
+                Icon(
+                  widget.isExpanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  color: AppColors.textTertiary,
+                ),
+              ],
+            ),
+            if (widget.isExpanded) ...[
+              const SizedBox(height: AppDimens.spaceMd),
+              // Table header
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      'Date',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: colors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      'Value',
+                      textAlign: TextAlign.right,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: colors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 16),
+              // Table rows — preview first 5, "Show all" expands to 30.
+              Builder(
+                builder: (context) {
+                  final allRows = widget.series.dataPoints.reversed.toList();
+                  final visibleRows = _showAll
+                      ? allRows.take(_kRawTableMaxRows).toList()
+                      : allRows.take(_kRawTablePreviewRows).toList();
+                  final remaining = allRows.length - visibleRows.length;
+                  return Column(
+                    children: [
+                      ...visibleRows.map(
+                        (dp) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 3),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: Text(
+                                  _formatDate(dp.timestamp),
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: AppColorsOf(context).textSecondary,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  '${dp.value.toStringAsFixed(1)} ${widget.displayUnit}',
+                                  textAlign: TextAlign.right,
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: AppColorsOf(context).textPrimary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (!_showAll && remaining > 0) ...[
+                        const SizedBox(height: AppDimens.spaceSm),
+                        GestureDetector(
+                          onTap: () => setState(() => _showAll = true),
+                          child: Text(
+                            'Show all ($remaining more)',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  );
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
 
