@@ -160,15 +160,11 @@ class ZuralogCard extends StatelessWidget {
       return ClipRRect(
         borderRadius: borderRadius,
         child: Material(
-          color: colors.cardBackground,
+          color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            child: _hasPattern
-                ? body
-                : Padding(
-                    padding: effectivePadding,
-                    child: child,
-                  ),
+            borderRadius: borderRadius,
+            child: body,
           ),
         ),
       );
