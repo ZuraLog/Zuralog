@@ -4,7 +4,7 @@ import { ScrollProgress } from "@/components/layout/ScrollProgress";
 import { HeroSection } from "@/components/sections/HeroSection";
 import { MobileSection } from "@/components/sections/MobileSection";
 import { HowItWorksSection } from "@/components/sections/HowItWorksSection";
-import { BentoSection } from "@/components/sections/BentoSection";
+import { MetricsSection } from "@/components/sections/metrics/MetricsSection";
 import { WaitlistSection } from "@/components/sections/WaitlistSection";
 import { PhoneMockupSection } from "@/components/sections/PhoneMockupSection";
 import { ClientShellGate } from "@/components/ClientShellGate";
@@ -22,7 +22,7 @@ export default function Home() {
                 <HeroSection />
                 <MobileSection />
                 <HowItWorksSection />
-                <BentoSection />
+                <MetricsSection />
                 <PhoneMockupSection />
                 <WaitlistSection />
             </main>
