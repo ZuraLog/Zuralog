@@ -80,7 +80,7 @@ export function HowItWorksSection() {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "linear-gradient(to bottom, transparent 0%, #344E41 15%, #1A2E22 30%, #161618 50%, #161618 100%)",
+            "linear-gradient(to bottom, transparent 0%, #344E41 12%, #1A2E22 25%, #161618 40%, #161618 60%, #1A2E22 75%, #344E41 88%, transparent 100%)",
         }}
       />
 
@@ -93,8 +93,8 @@ export function HowItWorksSection() {
           backgroundRepeat: "repeat",
           opacity: 0.04,
           mixBlendMode: "screen",
-          maskImage: "linear-gradient(to bottom, transparent 0%, black 30%, black 100%)",
-          WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 30%, black 100%)",
+          maskImage: "linear-gradient(to bottom, transparent 0%, black 25%, black 75%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 25%, black 75%, transparent 100%)",
         }}
       />
 
