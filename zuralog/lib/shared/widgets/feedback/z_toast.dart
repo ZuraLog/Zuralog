@@ -220,7 +220,7 @@ class _ZToastOverlayState extends State<_ZToastOverlay>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.surfaceRaised,
+          color: colors.surfaceRaised,
           borderRadius: BorderRadius.circular(AppDimens.shapePill),
         ),
         child: Row(
@@ -255,7 +255,7 @@ class _ZToastOverlayState extends State<_ZToastOverlay>
                 child: Text(
                   widget.action!,
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.primary,
+                    color: colors.primary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

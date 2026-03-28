@@ -112,6 +112,7 @@ class ZuralogCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final colors = AppColorsOf(context);
     final borderRadius = BorderRadius.circular(_radius);
     final effectivePadding = padding ?? _defaultPadding;
 
@@ -122,7 +123,7 @@ class ZuralogCard extends StatelessWidget {
         borderRadius: borderRadius,
         child: Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: colors.cardBackground,
             borderRadius: borderRadius,
           ),
           child: Stack(
@@ -160,7 +161,7 @@ class ZuralogCard extends StatelessWidget {
         borderRadius: borderRadius,
         child: Material(
           color: _hasPattern
-              ? AppColors.surface
+              ? colors.cardBackground
               : (isDark ? AppColors.surface : theme.colorScheme.surface),
           child: InkWell(
             onTap: onTap,

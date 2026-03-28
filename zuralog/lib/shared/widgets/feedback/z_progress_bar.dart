@@ -64,7 +64,7 @@ class ZProgressBar extends StatelessWidget {
                 Text(
                   valueLabel!,
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.primary,
+                    color: colors.primary,
                   ),
                 )
               else
@@ -91,7 +91,7 @@ class ZProgressBar extends StatelessWidget {
                       width: totalWidth,
                       height: 6,
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceRaised,
+                        color: colors.surfaceRaised,
                         borderRadius: BorderRadius.circular(3),
                       ),
                     ),
