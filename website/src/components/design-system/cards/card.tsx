@@ -5,6 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import gsap from "gsap";
 import { PatternOverlay } from "@/components/design-system/primitives/pattern-overlay";
+import { useBrandBibleThemeOptional } from "@/components/design-system/interactions/brand-bible-theme";
 
 /* ------------------------------------------------------------------ */
 /*  Category → pattern variant mapping                                 */
@@ -83,6 +84,9 @@ export function Card({
       ? CATEGORY_PATTERN[category]
       : "original";
 
+  const themeCtx = useBrandBibleThemeOptional();
+  const blend = themeCtx?.isLight ? "color-burn" as const : "screen" as const;
+
   // 3D tilt effect — applied to all cards unless noTilt is set
   useEffect(() => {
     const el = cardRef.current;
@@ -148,11 +152,11 @@ export function Card({
       style={{ willChange: "transform", transformStyle: "preserve-3d" }}
     >
       {showHeroPattern && (
-        <PatternOverlay variant="original" opacity={0.18} blend="screen" />
+        <PatternOverlay variant="original" opacity={0.18} blend={blend} />
       )}
 
       {showFeaturePattern && (
-        <PatternOverlay variant={featureVariant} opacity={0.15} blend="screen" />
+        <PatternOverlay variant={featureVariant} opacity={0.15} blend={blend} />
       )}
 
       <div className="relative z-10">{children}</div>
