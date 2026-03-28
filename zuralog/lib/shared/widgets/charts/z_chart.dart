@@ -5,6 +5,7 @@ import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 import 'package:zuralog/shared/widgets/charts/animations/chart_entrance_controller.dart';
 import 'package:zuralog/shared/widgets/charts/chart_mode.dart';
 import 'package:zuralog/shared/widgets/charts/chart_render_context.dart';
+import 'package:zuralog/shared/widgets/charts/modes/comparison_chart_shell.dart';
 import 'package:zuralog/shared/widgets/charts/modes/full_chart_shell.dart';
 import 'package:zuralog/shared/widgets/charts/modes/mini_progress.dart';
 import 'package:zuralog/shared/widgets/charts/modes/sparkline_shell.dart';
@@ -28,6 +29,7 @@ class ZChart extends StatefulWidget {
     required this.color,
     this.onTap,
     this.unit = '',
+    this.comparisonConfig,
     this.goalValue,
   });
 
@@ -36,6 +38,11 @@ class ZChart extends StatefulWidget {
   final Color color;
   final VoidCallback? onTap;
   final String unit;
+
+  /// Secondary dataset for [ChartMode.comparison]. When provided, the chart
+  /// renders both datasets overlaid on a shared Y axis.
+  final TileVisualizationConfig? comparisonConfig;
+
   final double? goalValue;
 
   @override
@@ -109,9 +116,8 @@ class _ZChartState extends State<ZChart>
           renderCtx: renderCtx,
         );
       case ChartMode.widget:
-      case ChartMode.comparison:
         assert(() {
-          debugPrint('ZChart: ${widget.mode.name} mode not yet implemented');
+          debugPrint('ZChart: widget mode not yet implemented');
           return true;
         }());
         chart = TileChartShell(
@@ -123,6 +129,30 @@ class _ZChartState extends State<ZChart>
             animationProgress: animationProgress,
           ),
         );
+      case ChartMode.comparison:
+        if (widget.comparisonConfig != null) {
+          chart = ComparisonChartShell(
+            config: config,
+            comparisonConfig: widget.comparisonConfig!,
+            color: widget.color,
+            renderCtx: renderCtx,
+            unit: widget.unit,
+          );
+        } else {
+          assert(
+            false,
+            'ZChart: comparison mode requires comparisonConfig to be set',
+          );
+          chart = FullChartShell(
+            config: config,
+            color: widget.color,
+            renderCtx: ChartRenderContext.fromMode(
+              ChartMode.full,
+              animationProgress: animationProgress,
+            ),
+            unit: widget.unit,
+          );
+        }
       case ChartMode.mini:
         // Mini mode only applies to RingConfig and FillGaugeConfig.
         if (config is RingConfig) {
