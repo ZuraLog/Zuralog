@@ -82,6 +82,7 @@ class ZSelect extends StatelessWidget {
                   },
                   child: Container(
                     height: 48,
+                    color: sheetColors.surface,
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppDimens.spaceMd,
                     ),

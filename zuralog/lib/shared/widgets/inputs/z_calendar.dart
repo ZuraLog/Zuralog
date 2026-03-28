@@ -377,7 +377,7 @@ class _NavArrow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = enabled
-        ? AppColors.primary
+        ? colors.primary
         : colors.textPrimary.withValues(alpha: 0.3);
 
     return Semantics(
