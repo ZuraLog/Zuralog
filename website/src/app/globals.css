@@ -101,6 +101,8 @@
   --color-ds-surface-overlay: #D4D0CA;
   --color-ds-text-primary: #161618;
   --color-ds-text-secondary: #6B6864;
+  --color-ds-sage: #344E41;
+  --color-ds-text-on-sage: #E8EDE0;
 }
 
 :root {
