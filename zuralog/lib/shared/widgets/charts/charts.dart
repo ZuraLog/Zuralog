@@ -12,3 +12,4 @@ export 'modes/comparison_chart_shell.dart';
 export 'modes/full_chart_shell.dart';
 export 'modes/mini_progress.dart';
 export 'modes/sparkline_shell.dart';
+export 'modes/widget_chart_shell.dart';

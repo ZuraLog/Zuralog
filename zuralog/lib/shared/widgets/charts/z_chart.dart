@@ -10,6 +10,7 @@ import 'package:zuralog/shared/widgets/charts/modes/full_chart_shell.dart';
 import 'package:zuralog/shared/widgets/charts/modes/mini_progress.dart';
 import 'package:zuralog/shared/widgets/charts/modes/sparkline_shell.dart';
 import 'package:zuralog/shared/widgets/charts/modes/tile_chart_shell.dart';
+import 'package:zuralog/shared/widgets/charts/modes/widget_chart_shell.dart';
 import 'package:zuralog/shared/widgets/charts/z_chart_empty_state.dart';
 
 /// Unified entry point for all chart visualizations in Zuralog.
@@ -116,18 +117,10 @@ class _ZChartState extends State<ZChart>
           renderCtx: renderCtx,
         );
       case ChartMode.widget:
-        assert(() {
-          debugPrint('ZChart: widget mode not yet implemented');
-          return true;
-        }());
-        chart = TileChartShell(
+        chart = WidgetChartShell(
           config: config,
           color: widget.color,
-          mode: ChartMode.square,
-          renderCtx: ChartRenderContext.fromMode(
-            ChartMode.square,
-            animationProgress: animationProgress,
-          ),
+          renderCtx: renderCtx,
         );
       case ChartMode.comparison:
         if (widget.comparisonConfig != null) {
