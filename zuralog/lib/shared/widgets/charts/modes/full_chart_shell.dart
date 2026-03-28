@@ -1,5 +1,6 @@
 library;
 
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -69,6 +70,7 @@ class _FullChartShellState extends State<FullChartShell>
 
   // Bar tap state
   final _barTapNotifier = ValueNotifier<_BarTapInfo?>(null);
+  Timer? _barDismissTimer;
 
   @override
   void initState() {
@@ -84,6 +86,7 @@ class _FullChartShellState extends State<FullChartShell>
 
   @override
   void dispose() {
+    _barDismissTimer?.cancel();
     _scrubController.removeListener(_onScrubChange);
     _scrubController.dispose();
     _fadeCtrl.dispose();
@@ -101,8 +104,9 @@ class _FullChartShellState extends State<FullChartShell>
   }
 
   void _onBarTap(int barIndex, double value, String label) {
+    _barDismissTimer?.cancel();
     _barTapNotifier.value = _BarTapInfo(value: value, label: label);
-    Future.delayed(const Duration(seconds: 3), () {
+    _barDismissTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) _barTapNotifier.value = null;
     });
   }
