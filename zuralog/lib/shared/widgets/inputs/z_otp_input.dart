@@ -64,6 +64,9 @@ class _ZOtpInputState extends State<ZOtpInput> {
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
 
+  /// Guards against firing [onCompleted] more than once per full entry.
+  bool _hasCompleted = false;
+
   /// Slot dimensions from the brand bible spec.
   static const double _slotWidth = 48;
   static const double _slotHeight = 56;
@@ -92,6 +95,10 @@ class _ZOtpInputState extends State<ZOtpInput> {
     if (widget.enabled && !oldWidget.enabled) {
       _focusNode.requestFocus();
     }
+    // If disabled, release focus immediately.
+    if (!widget.enabled && oldWidget.enabled) {
+      _focusNode.unfocus();
+    }
   }
 
   @override
@@ -109,7 +116,12 @@ class _ZOtpInputState extends State<ZOtpInput> {
     final text = _controller.text;
     widget.onChanged?.call(text);
 
-    if (text.length == widget.length) {
+    if (text.length < widget.length) {
+      // Reset the guard whenever the user deletes a character.
+      _hasCompleted = false;
+    } else if (!_hasCompleted) {
+      // Fire onCompleted exactly once per complete entry.
+      _hasCompleted = true;
       widget.onCompleted?.call(text);
     }
 
@@ -171,33 +183,38 @@ class _ZOtpInputState extends State<ZOtpInput> {
               ),
 
               // ── Hidden TextField that drives keyboard input ──────────
+              // IgnorePointer blocks OS paste popups from intercepting
+              // touches through the invisible overlay.
               Positioned.fill(
-                child: ExcludeSemantics(
-                  child: Opacity(
-                    opacity: 0,
-                    child: TextField(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    keyboardType: TextInputType.number,
-                    textInputAction: TextInputAction.done,
-                    maxLength: widget.length,
-                    enableSuggestions: false,
-                    autocorrect: false,
-                    showCursor: false,
-                    decoration: const InputDecoration(
-                      counterText: '',
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp('[0-9]')),
-                      LengthLimitingTextInputFormatter(widget.length),
-                    ],
-                    style: const TextStyle(
-                      color: Colors.transparent,
-                      height: 0.01,
-                      fontSize: 1,
-                    ),
+                child: IgnorePointer(
+                  child: ExcludeSemantics(
+                    child: Opacity(
+                      opacity: 0,
+                      child: TextField(
+                        controller: _controller,
+                        focusNode: _focusNode,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.done,
+                        maxLength: widget.length,
+                        enableSuggestions: false,
+                        autocorrect: false,
+                        showCursor: false,
+                        onSubmitted: (_) => _focusNode.unfocus(),
+                        decoration: const InputDecoration(
+                          counterText: '',
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp('[0-9]')),
+                          LengthLimitingTextInputFormatter(widget.length),
+                        ],
+                        style: const TextStyle(
+                          color: Colors.transparent,
+                          height: 0.01,
+                          fontSize: 1,
+                        ),
+                      ),
                     ),
                   ),
                 ),
