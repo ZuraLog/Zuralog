@@ -85,10 +85,10 @@ class _ZButtonState extends State<ZButton> {
 
   // ── Colors ──────────────────────────────────────────────────────────────
 
-  Color _backgroundColor() {
+  Color _backgroundColor(AppColorsOf colors) {
     switch (widget.variant) {
       case ZButtonVariant.primary:
-        return AppColors.primary;
+        return colors.primary;
       case ZButtonVariant.destructive:
         return AppColors.error;
       case ZButtonVariant.secondary:
@@ -97,29 +97,29 @@ class _ZButtonState extends State<ZButton> {
     }
   }
 
-  Color _foregroundColor() {
+  Color _foregroundColor(AppColorsOf colors) {
     switch (widget.variant) {
       case ZButtonVariant.primary:
         return AppColors.textOnSage;
       case ZButtonVariant.destructive:
         return Colors.white;
       case ZButtonVariant.secondary:
-        return AppColors.warmWhite;
+        return colors.textPrimary;
       case ZButtonVariant.text:
-        return AppColors.primary;
+        return colors.primary;
     }
   }
 
-  Color _spinnerColor() {
+  Color _spinnerColor(AppColorsOf colors) {
     switch (widget.variant) {
       case ZButtonVariant.primary:
         return AppColors.textOnSage;
       case ZButtonVariant.text:
-        return AppColors.primary;
+        return colors.primary;
       case ZButtonVariant.destructive:
         return Colors.white;
       case ZButtonVariant.secondary:
-        return AppColors.warmWhite;
+        return colors.textPrimary;
     }
   }
 
@@ -136,10 +136,10 @@ class _ZButtonState extends State<ZButton> {
 
   // ── Border ──────────────────────────────────────────────────────────────
 
-  BoxBorder? _border() {
+  BoxBorder? _border(AppColorsOf colors) {
     if (widget.variant == ZButtonVariant.secondary) {
       return Border.all(
-        color: const Color(0x33F0EEE9), // rgba(240,238,233,0.2)
+        color: colors.isDark ? const Color(0x33F0EEE9) : colors.border,
         width: 1.5,
       );
     }
@@ -148,12 +148,12 @@ class _ZButtonState extends State<ZButton> {
 
   // ── Text style ─────────────────────────────────────────────────────────
 
-  TextStyle _textStyle() {
+  TextStyle _textStyle(AppColorsOf colors) {
     final baseStyle = widget.size == ZButtonSize.small
         ? AppTextStyles.labelMedium
         : AppTextStyles.labelLarge;
 
-    final color = _foregroundColor();
+    final color = _foregroundColor(colors);
 
     // Secondary and text variants use SemiBold 600 (which is already the
     // default for labelLarge/labelMedium), so no extra weight override needed.
@@ -162,6 +162,7 @@ class _ZButtonState extends State<ZButton> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final height = widget.size.height;
     final hPadding = widget.size.hPadding;
     final borderRadius = BorderRadius.circular(AppDimens.shapePill);
@@ -176,7 +177,7 @@ class _ZButtonState extends State<ZButton> {
         width: 20,
         child: CircularProgressIndicator(
           strokeWidth: 2.5,
-          valueColor: AlwaysStoppedAnimation<Color>(_spinnerColor()),
+          valueColor: AlwaysStoppedAnimation<Color>(_spinnerColor(colors)),
         ),
       );
     } else {
@@ -187,10 +188,10 @@ class _ZButtonState extends State<ZButton> {
             widget.leadingWidget!,
             const SizedBox(width: AppDimens.spaceSm),
           ] else if (widget.icon != null) ...[
-            Icon(widget.icon, size: 18, color: _foregroundColor()),
+            Icon(widget.icon, size: 18, color: _foregroundColor(colors)),
             const SizedBox(width: AppDimens.spaceSm),
           ],
-          Text(widget.label, style: _textStyle()),
+          Text(widget.label, style: _textStyle(colors)),
         ],
       );
     }
@@ -212,9 +213,9 @@ class _ZButtonState extends State<ZButton> {
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
-                  color: _backgroundColor(),
+                  color: _backgroundColor(colors),
                   borderRadius: borderRadius,
-                  border: _border(),
+                  border: _border(colors),
                 ),
               ),
             ),
