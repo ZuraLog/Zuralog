@@ -4,6 +4,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart'
@@ -49,7 +50,12 @@ class ZChip extends StatelessWidget {
       child: Opacity(
         opacity: enabled ? 1.0 : 0.4,
         child: GestureDetector(
-          onTap: enabled ? onTap : null,
+          onTap: enabled && onTap != null
+              ? () {
+                  HapticFeedback.selectionClick();
+                  onTap!();
+                }
+              : null,
           child: AnimatedContainer(
           duration: AppMotion.durationFast,
           curve: AppMotion.curveEntrance,

@@ -5,6 +5,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart'
@@ -84,6 +85,7 @@ class _ZToggleState extends State<ZToggle> with SingleTickerProviderStateMixin {
 
   void _handleTap() {
     if (!widget.enabled || widget.onChanged == null) return;
+    HapticFeedback.lightImpact();
     widget.onChanged!(!widget.value);
   }
 

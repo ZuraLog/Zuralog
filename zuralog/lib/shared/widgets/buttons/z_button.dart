@@ -6,6 +6,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
@@ -270,6 +271,7 @@ class _ZButtonState extends State<ZButton> {
             ? null
             : (_) {
                 setState(() => _isPressed = false);
+                HapticFeedback.lightImpact();
                 widget.onPressed?.call();
               },
         onTapCancel:

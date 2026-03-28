@@ -7,6 +7,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 
@@ -43,13 +44,19 @@ class ZNumberStepper extends StatelessWidget {
   void _decrement() {
     if (onChanged == null) return;
     final next = (value - step).clamp(min, max);
-    if (next != value) onChanged!(next);
+    if (next != value) {
+      HapticFeedback.lightImpact();
+      onChanged!(next);
+    }
   }
 
   void _increment() {
     if (onChanged == null) return;
     final next = (value + step).clamp(min, max);
-    if (next != value) onChanged!(next);
+    if (next != value) {
+      HapticFeedback.lightImpact();
+      onChanged!(next);
+    }
   }
 
   @override

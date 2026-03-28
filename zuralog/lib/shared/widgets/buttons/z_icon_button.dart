@@ -5,6 +5,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 
@@ -71,7 +72,12 @@ class ZIconButton extends StatelessWidget {
       button: true,
       label: semanticLabel,
       child: GestureDetector(
-        onTap: onPressed,
+        onTap: onPressed == null
+            ? null
+            : () {
+                HapticFeedback.lightImpact();
+                onPressed!();
+              },
         behavior: HitTestBehavior.opaque,
         child: SizedBox(
           width: 44,

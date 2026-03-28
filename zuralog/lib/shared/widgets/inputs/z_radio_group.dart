@@ -4,6 +4,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 
@@ -60,7 +61,10 @@ class ZRadioGroup<T> extends StatelessWidget {
               option: options[i],
               isSelected: options[i].value == value,
               onTap: enabled && onChanged != null
-                  ? () => onChanged!(options[i].value)
+                  ? () {
+                      HapticFeedback.selectionClick();
+                      onChanged!(options[i].value);
+                    }
                   : null,
             ),
           ],
