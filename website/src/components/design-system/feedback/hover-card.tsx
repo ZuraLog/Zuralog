@@ -38,7 +38,7 @@ export function DSHoverCardContent({
     <BaseContent
       className={cn(
         "bg-ds-surface-raised rounded-ds-sm p-4",
-        "border border-[rgba(240,238,233,0.06)]",
+        "border border-[var(--color-ds-border-subtle)]",
         "shadow-lg shadow-black/20",
         "font-jakarta text-ds-text-primary",
         className,

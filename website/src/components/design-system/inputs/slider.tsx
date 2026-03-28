@@ -50,7 +50,7 @@ export function DSSlider({
         <SliderPrimitive.Track className="relative w-full h-[6px] rounded-full bg-ds-surface-raised overflow-hidden">
           <SliderPrimitive.Indicator
             className="h-full rounded-full ds-pattern-drift"
-            style={{ backgroundImage: "url('/patterns/sage.png')" }}
+            style={{ backgroundImage: "var(--ds-pattern-sage)" }}
           />
         </SliderPrimitive.Track>
 
@@ -62,7 +62,7 @@ export function DSSlider({
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-sage focus-visible:ring-offset-2 focus-visible:ring-offset-ds-canvas",
               "after:absolute after:-inset-2",
             )}
-            style={{ backgroundImage: "url('/patterns/sage.png')", backgroundSize: "80px auto" }}
+            style={{ backgroundImage: "var(--ds-pattern-sage)", backgroundSize: "80px auto" }}
           />
         ))}
       </SliderPrimitive.Control>

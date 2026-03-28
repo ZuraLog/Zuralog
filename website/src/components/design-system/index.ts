@@ -195,6 +195,7 @@ export {
   DS_CHART_THEME,
   DSChartContainer,
   DSChartTooltip,
+  useDSChartTheme,
 } from "./data/chart";
 export {
   DSTable,

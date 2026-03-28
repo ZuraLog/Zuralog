@@ -96,7 +96,14 @@ export function Text({
   };
 
   if (usePattern) {
-    props.style = { backgroundImage: `url('/patterns/${pattern}.png')` };
+    // Sage pattern uses a CSS variable so the file swaps automatically in light mode
+    // (dark mode: sage.png, light mode: original.png via [data-theme="light"] override)
+    props.style = {
+      backgroundImage:
+        pattern === "sage"
+          ? "var(--ds-pattern-sage)"
+          : `url('/patterns/${pattern}.png')`,
+    };
   }
 
   return <Tag {...props}>{children}</Tag>;

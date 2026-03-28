@@ -51,7 +51,7 @@ const buttonVariants = cva(
         primary: "text-ds-text-on-sage ds-pattern-drift active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]",
         destructive: "text-white ds-pattern-drift active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]",
         secondary:
-          "bg-transparent border-[1.5px] border-[rgba(240,238,233,0.2)] text-ds-warm-white",
+          "bg-transparent border-[1.5px] border-[var(--color-ds-secondary-border)] text-ds-text-primary",
         text: "bg-transparent text-ds-sage font-semibold",
       },
       size: {
@@ -85,8 +85,8 @@ const HOVER_GLOW: Record<string, string> = {
 const SPINNER_COLOR: Record<string, string> = {
   primary: "text-ds-text-on-sage",
   destructive: "text-white",
-  secondary: "text-ds-warm-white",
-  text: "text-ds-warm-white",
+  secondary: "text-ds-text-primary",
+  text: "text-ds-text-primary",
 };
 
 /* ------------------------------------------------------------------ */
@@ -129,7 +129,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const isDisabled = disabled || loading;
     const bgImage =
       resolvedIntent === "primary"
-        ? "url('/patterns/sage.png')"
+        ? "var(--ds-pattern-sage)"
         : resolvedIntent === "destructive"
           ? "url('/patterns/crimson.png')"
           : undefined;

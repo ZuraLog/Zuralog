@@ -53,7 +53,7 @@ export function DSInputOTPSlot({
       className={cn(
         "bg-ds-surface rounded-ds-sm w-10 h-12",
         "text-ds-text-primary text-[1.25rem] font-semibold font-jakarta",
-        "border-none",
+        "ring-1 ring-[var(--color-ds-border-subtle)]",
         "data-[active=true]:ring-2 data-[active=true]:ring-ds-sage",
         className,
       )}

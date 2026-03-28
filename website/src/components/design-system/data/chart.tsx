@@ -2,6 +2,7 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
+import { useBrandBibleThemeOptional } from "@/components/design-system/interactions/brand-bible-theme";
 
 /* ------------------------------------------------------------------ */
 /*  Chart color palette — maps health categories to hex colors          */
@@ -32,6 +33,20 @@ export const DS_CHART_THEME = {
   fontSize: 11,
   fontFamily: "var(--font-jakarta), system-ui, sans-serif",
 } as const;
+
+/* ------------------------------------------------------------------ */
+/*  useDSChartTheme — theme-aware chart colors for brand bible page     */
+/* ------------------------------------------------------------------ */
+
+export function useDSChartTheme() {
+  const themeCtx = useBrandBibleThemeOptional();
+  const isLight = themeCtx?.isLight ?? false;
+  return {
+    sage: isLight ? "#344E41" : CHART_COLORS.sage,
+    gridColor: isLight ? "rgba(22, 22, 24, 0.06)" : DS_CHART_THEME.gridColor,
+    textColor: isLight ? "#6B6864" : DS_CHART_THEME.textColor,
+  };
+}
 
 /* ------------------------------------------------------------------ */
 /*  DSChartContainer — surface wrapper with responsive aspect ratio     */

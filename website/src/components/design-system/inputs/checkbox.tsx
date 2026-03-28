@@ -72,7 +72,7 @@ export function DSCheckbox({
             : "border-2 border-ds-text-secondary bg-transparent",
           disabled && "opacity-40 cursor-not-allowed",
         )}
-        style={isChecked ? { backgroundImage: "url('/patterns/sage.png')" } : undefined}
+        style={isChecked ? { backgroundImage: "var(--ds-pattern-sage)" } : undefined}
       >
         <CheckboxPrimitive.Indicator className="ds-check-draw relative z-[2] text-ds-text-on-sage flex items-center justify-center">
           <CheckIcon />

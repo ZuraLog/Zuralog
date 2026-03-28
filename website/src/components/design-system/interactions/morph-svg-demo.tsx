@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
 import { MorphSVGPlugin } from "gsap/MorphSVGPlugin";
+import { useBrandBibleThemeOptional } from "@/components/design-system/interactions/brand-bible-theme";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(MorphSVGPlugin);
@@ -45,6 +46,10 @@ export function MorphSvgDemo() {
   const pathRef = useRef<SVGPathElement>(null);
   const [active, setActive] = useState<string>("circle");
   const tweenRef = useRef<gsap.core.Tween | null>(null);
+  const themeCtx = useBrandBibleThemeOptional();
+  const patternSrc = themeCtx?.isLight
+    ? "/patterns/original.png"
+    : "/patterns/sage.png";
 
   /* Morph to the selected shape */
   useEffect(() => {
@@ -94,7 +99,7 @@ export function MorphSvgDemo() {
               height="300"
             >
               <image
-                href="/patterns/sage.png"
+                href={patternSrc}
                 width="300"
                 height="300"
                 preserveAspectRatio="xMidYMid slice"
@@ -124,7 +129,7 @@ export function MorphSvgDemo() {
               ${
                 active === key
                   ? "bg-ds-sage/20 text-ds-sage ring-1 ring-ds-sage/30"
-                  : "bg-ds-elevated text-ds-secondary hover:text-ds-primary hover:bg-ds-elevated/80"
+                  : "bg-ds-surface-raised text-ds-text-secondary hover:text-ds-text-primary hover:bg-ds-surface-overlay"
               }
             `}
           >

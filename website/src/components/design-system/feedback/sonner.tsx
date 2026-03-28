@@ -1,23 +1,45 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Toaster as SonnerToaster } from "sonner";
 import { toast } from "sonner";
 
 /* ------------------------------------------------------------------ */
-/*  DSToaster — themed Sonner toaster for Zuralog dark mode             */
+/*  DSToaster — themed Sonner toaster for Zuralog                      */
+/*                                                                      */
+/*  Watches document.body for data-theme changes so it automatically   */
+/*  adapts when BrandBibleThemeProvider sets light mode.               */
 /* ------------------------------------------------------------------ */
 
 export function DSToaster() {
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  useEffect(() => {
+    // Read initial value
+    const read = () =>
+      document.body.getAttribute("data-theme") === "light" ? "light" : "dark";
+    setTheme(read());
+
+    // Watch for changes (BrandBibleThemeProvider sets/removes data-theme on body)
+    const observer = new MutationObserver(() => setTheme(read()));
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <SonnerToaster
-      theme="dark"
+      theme={theme}
       position="top-center"
       toastOptions={{
         className: "font-jakarta",
         style: {
-          background: "#272729",
-          border: "1px solid rgba(240, 238, 233, 0.06)",
-          color: "#F0EEE9",
+          // CSS variable references cascade from [data-theme="light"] on body
+          background: "var(--color-ds-surface-raised, #272729)",
+          border: "1px solid var(--color-ds-border-subtle, rgba(240,238,233,0.06))",
+          color: "var(--color-ds-text-primary, #F0EEE9)",
           borderRadius: "12px",
           fontSize: "0.875rem",
         },

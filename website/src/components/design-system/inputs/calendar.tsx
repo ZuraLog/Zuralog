@@ -34,7 +34,7 @@ export function DSCalendar({
       )}
       style={
         {
-          "--ds-calendar-sage-bg": "url('/patterns/sage.png')",
+          "--ds-calendar-sage-bg": "var(--ds-pattern-sage)",
         } as React.CSSProperties
       }
       classNames={{

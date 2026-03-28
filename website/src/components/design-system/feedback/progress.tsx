@@ -55,7 +55,7 @@ export function DSProgress({
           )}
           style={{
             width: `${clampedValue}%`,
-            backgroundImage: "url(/patterns/sage.png)",
+            backgroundImage: "var(--ds-pattern-sage)",
             backgroundSize: "200px",
           }}
         />

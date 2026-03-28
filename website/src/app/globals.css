@@ -58,6 +58,23 @@
   --color-ds-error: #FF3B30;
   --color-ds-syncing: #007AFF;
 
+  /* Colors — borders */
+  --color-ds-border-subtle: rgba(240, 238, 233, 0.06);
+  --color-ds-border-faint: rgba(240, 238, 233, 0.04);
+  --color-ds-border-strong: rgba(240, 238, 233, 0.12);
+
+  /* Interactive states — hover tints, focus rings, button borders */
+  --color-ds-sage-tint: rgba(207, 225, 185, 0.08);
+  --color-ds-sage-ring: rgba(207, 225, 185, 0.3);
+  --color-ds-secondary-border: rgba(240, 238, 233, 0.2);
+
+  /* Segmented control active pill */
+  --color-ds-tab-active-bg: #F0EEE9;
+  --color-ds-tab-active-text: #161618;
+
+  /* Skeleton shimmer midpoint */
+  --color-ds-shimmer: rgba(240, 238, 233, 0.06);
+
   /* Colors — health categories */
   --color-ds-cat-activity: #30D158;
   --color-ds-cat-sleep: #5E5CE6;
@@ -95,6 +112,7 @@
 /* -- Brand Bible light-mode overrides -------------------------------- */
 /* Applied when BrandBibleThemeProvider sets data-theme="light"        */
 [data-theme="light"] {
+  /* Surface & text */
   --color-ds-canvas: #F0EEE9;
   --color-ds-surface: #E8E6E1;
   --color-ds-surface-raised: #DEDAD4;
@@ -103,9 +121,42 @@
   --color-ds-text-secondary: #6B6864;
   --color-ds-sage: #344E41;
   --color-ds-text-on-sage: #E8EDE0;
+
+  /* Borders */
+  --color-ds-border-subtle: rgba(22, 22, 24, 0.08);
+  --color-ds-border-faint: rgba(22, 22, 24, 0.05);
+  --color-ds-border-strong: rgba(22, 22, 24, 0.15);
+
+  /* Interactive states */
+  --color-ds-sage-tint: rgba(52, 78, 65, 0.10);
+  --color-ds-sage-ring: rgba(52, 78, 65, 0.3);
+  --color-ds-secondary-border: rgba(22, 22, 24, 0.2);
+
+  /* Segmented control active pill — Deep Forest on light track */
+  --color-ds-tab-active-bg: #344E41;
+  --color-ds-tab-active-text: #E8EDE0;
+
+  /* Skeleton shimmer */
+  --color-ds-shimmer: rgba(22, 22, 24, 0.06);
+
+  /* Swap sage pattern PNG to Forest Green for light mode */
+  --ds-pattern-sage: url('/patterns/original.png');
+
+  /* Shadcn overlay/popup tokens — fixes Sheet, Popover, HoverCard, Dialog, Command */
+  --popover: #DEDAD4;
+  --popover-foreground: #161618;
+  --border: rgba(22, 22, 24, 0.10);
+  --input: rgba(22, 22, 24, 0.10);
+  --muted: #DEDAD4;
+  --muted-foreground: #6B6864;
+  --accent: rgba(52, 78, 65, 0.08);
+  --accent-foreground: #161618;
 }
 
 :root {
+  /* Pattern URL variables — swap file in light mode via [data-theme="light"] override */
+  --ds-pattern-sage: url('/patterns/sage.png');
+
   --background: #FAFAF5;
   --foreground: #2D2D2D;
 

@@ -23,7 +23,7 @@ export function DSSkeleton({
         "bg-ds-surface-raised rounded-ds-sm",
         "relative overflow-hidden",
         "motion-safe:after:absolute motion-safe:after:inset-0",
-        "motion-safe:after:bg-gradient-to-r motion-safe:after:from-transparent motion-safe:after:via-[rgba(240,238,233,0.04)] motion-safe:after:to-transparent",
+        "motion-safe:after:bg-gradient-to-r motion-safe:after:from-transparent motion-safe:after:via-[var(--color-ds-shimmer)] motion-safe:after:to-transparent",
         "motion-safe:after:animate-[ds-shimmer_2s_ease-in-out_infinite]",
         className,
       )}

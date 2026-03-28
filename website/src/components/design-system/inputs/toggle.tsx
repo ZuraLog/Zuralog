@@ -56,7 +56,7 @@ export function Toggle({
           isOn ? "ds-pattern-drift" : "bg-ds-surface-raised",
           disabled && "opacity-40 cursor-not-allowed",
         )}
-        style={isOn ? { backgroundImage: "url('/patterns/sage.png')" } : undefined}
+        style={isOn ? { backgroundImage: "var(--ds-pattern-sage)" } : undefined}
       >
         {/* Thumb */}
         <span

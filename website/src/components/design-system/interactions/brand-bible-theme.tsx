@@ -4,9 +4,11 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 
 /**
  * BrandBibleThemeProvider — manages dark/light theme state for the brand bible page.
- * Preference saved to localStorage. Sets data-theme="light" on its wrapper div
- * to trigger CSS token overrides. Wrapper uses display:contents so it is invisible
- * to flexbox/grid layout.
+ * Preference saved to localStorage.
+ *
+ * Sets data-theme="light" on BOTH the inner wrapper div AND document.body so that
+ * Radix UI portals (Sheet, Popover, HoverCard, Select, Dialog) and Sonner toasts —
+ * which all portal to document.body — inherit the CSS variable overrides.
  */
 
 type BrandBibleTheme = "dark" | "light";
@@ -46,6 +48,18 @@ export function BrandBibleThemeProvider({ children }: { children: React.ReactNod
       setTheme("light");
     }
   }, []);
+
+  // Mirror data-theme onto document.body so portals (Radix, Sonner) inherit CSS vars
+  useEffect(() => {
+    if (theme === "light") {
+      document.body.setAttribute("data-theme", "light");
+    } else {
+      document.body.removeAttribute("data-theme");
+    }
+    return () => {
+      document.body.removeAttribute("data-theme");
+    };
+  }, [theme]);
 
   function toggleTheme() {
     setTheme((prev) => {

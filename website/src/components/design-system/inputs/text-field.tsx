@@ -31,9 +31,9 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(
             "bg-ds-surface rounded-ds-sm px-4 py-3",
             "text-ds-text-primary font-jakarta text-[1rem]",
             "placeholder:text-ds-text-secondary",
-            "focus:outline-none focus:ring-1 focus:ring-[rgba(207,225,185,0.3)]",
+            "focus:outline-none focus:ring-1 focus:ring-[var(--color-ds-sage-ring)]",
             "disabled:opacity-40",
-            error && "ring-1 ring-[rgba(255,59,48,0.5)]",
+            error && "ring-1 ring-ds-error/50",
             fullWidth && "w-full",
             className,
           )}
@@ -44,7 +44,7 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(
         {error && (
           <p
             id={`${inputId}-error`}
-            className="text-[rgba(255,59,48,1)] text-[0.6875rem] font-jakarta mt-1.5"
+            className="text-ds-error text-[0.6875rem] font-jakarta mt-1.5"
             role="alert"
           >
             {error}

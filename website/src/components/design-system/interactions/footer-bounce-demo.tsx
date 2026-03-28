@@ -4,6 +4,7 @@ import { useRef, useEffect } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { MorphSVGPlugin } from "gsap/MorphSVGPlugin";
+import { useBrandBibleThemeOptional } from "@/components/design-system/interactions/brand-bible-theme";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, MorphSVGPlugin);
@@ -30,6 +31,10 @@ export function FooterBouncDemo() {
   const containerRef = useRef<HTMLDivElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
   const triggerRef = useRef<ScrollTrigger | null>(null);
+  const themeCtx = useBrandBibleThemeOptional();
+  const patternSrc = themeCtx?.isLight
+    ? "/patterns/original.png"
+    : "/patterns/sage.png";
 
   useEffect(() => {
     const container = containerRef.current;
@@ -107,7 +112,7 @@ export function FooterBouncDemo() {
       >
         {/* Content above the wave — simulates page content */}
         <div className="h-20 flex items-center justify-center">
-          <span className="text-sm text-ds-secondary">
+          <span className="text-sm text-ds-text-secondary">
             ↑ Scroll speed affects bounce intensity
           </span>
         </div>
@@ -127,7 +132,7 @@ export function FooterBouncDemo() {
               height="120"
             >
               <image
-                href="/patterns/sage.png"
+                href={patternSrc}
                 width="600"
                 height="120"
                 preserveAspectRatio="xMidYMid slice"
@@ -152,7 +157,7 @@ export function FooterBouncDemo() {
       {/* Manual replay button */}
       <button
         onClick={replay}
-        className="self-center px-3 py-1.5 rounded-lg text-sm font-medium bg-ds-elevated text-ds-secondary hover:text-ds-primary hover:bg-ds-elevated/80 transition-all duration-200"
+        className="self-center px-3 py-1.5 rounded-lg text-sm font-medium bg-ds-surface-raised text-ds-text-secondary hover:text-ds-text-primary hover:bg-ds-surface-overlay transition-all duration-200"
       >
         Replay Bounce
       </button>

@@ -30,7 +30,7 @@ export function ScrollProgress() {
         ref={barRef}
         className="h-full ds-pattern-drift"
         style={{
-          backgroundImage: "url('/patterns/sage.png')",
+          backgroundImage: "var(--ds-pattern-sage)",
           width: "0%",
         }}
       />

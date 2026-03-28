@@ -36,7 +36,7 @@ export function RollingTextDemo() {
     // Apply pattern fill to each character
     splitLines.forEach((split) => {
       (split.chars as HTMLElement[]).forEach((charEl) => {
-        charEl.style.backgroundImage = "url('/patterns/sage.png')";
+        charEl.style.backgroundImage = "var(--ds-pattern-sage)";
         charEl.style.backgroundSize = "300px auto";
         charEl.style.backgroundRepeat = "repeat";
         charEl.style.backgroundClip = "text";

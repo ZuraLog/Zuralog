@@ -107,6 +107,8 @@ import {
   MorphCurveDemo,
   RollingTextDemo,
   ContainerTextDemo,
+  useBrandBibleThemeOptional,
+  useDSChartTheme,
 } from "@/components/design-system";
 import {
   AreaChart,
@@ -264,18 +266,18 @@ const radiusScale = [
   { name: "Pill", px: 100, token: "rounded-ds-pill" },
 ];
 
-const patternTable = [
-  { component: "DSButton (primary)", pattern: "sage", blend: "color-burn" },
-  { component: "DSButton (destructive)", pattern: "crimson", blend: "color-burn" },
-  { component: "Card (hero)", pattern: "original", blend: "screen" },
-  { component: "Card (feature)", pattern: "category color", blend: "screen" },
-  { component: "Toggle (on)", pattern: "sage", blend: "color-burn" },
-  { component: "DSCheckbox (checked)", pattern: "sage", blend: "color-burn" },
-  { component: "DSSlider (fill)", pattern: "sage", blend: "color-burn" },
-  { component: "Chip (active)", pattern: "original", blend: "screen" },
-  { component: "Avatar (fallback)", pattern: "original", blend: "screen" },
-  { component: "DSTabsList", pattern: "original", blend: "screen" },
-  { component: "FAB", pattern: "sage", blend: "color-burn" },
+const PATTERN_TABLE: Array<{ component: string; pattern: string; dark: string; light: string }> = [
+  { component: "DSButton (primary)", pattern: "sage.png", dark: "color-burn", light: "color-burn" },
+  { component: "DSButton (destructive)", pattern: "crimson.png", dark: "color-burn", light: "color-burn" },
+  { component: "Card (hero)", pattern: "original.png", dark: "screen", light: "color-burn" },
+  { component: "Card (feature)", pattern: "category color", dark: "screen", light: "color-burn" },
+  { component: "Toggle (on)", pattern: "sage.png → original.png", dark: "color-burn", light: "color-burn" },
+  { component: "DSCheckbox (checked)", pattern: "sage.png → original.png", dark: "color-burn", light: "color-burn" },
+  { component: "DSSlider (fill)", pattern: "sage.png → original.png", dark: "color-burn", light: "color-burn" },
+  { component: "Chip (active)", pattern: "sage.png → original.png", dark: "pattern fill", light: "solid #344E41" },
+  { component: "Avatar (fallback)", pattern: "original.png", dark: "screen", light: "color-burn" },
+  { component: "DSTabsList", pattern: "original.png", dark: "screen", light: "color-burn" },
+  { component: "FAB", pattern: "sage.png → original.png", dark: "color-burn", light: "color-burn" },
 ];
 
 /* ── Page ────────────────────────────────────────────────────────────── */
@@ -284,6 +286,11 @@ export default function BrandBiblePage() {
   /* ── Text animation refs ─────────────────────────────────────── */
   const heroScoreRef = useScrambleNumber<HTMLSpanElement>({ finalValue: "78", duration: 1.2 });
   const stepsRef = useScrambleNumber<HTMLSpanElement>({ finalValue: "8,432", duration: 1.0 });
+
+  /* ── Theme context ───────────────────────────────────────────── */
+  const themeCtx = useBrandBibleThemeOptional();
+  const isLight = themeCtx?.isLight ?? false;
+  const chartTheme = useDSChartTheme();
 
   /* ── Controlled state for new demos ─────────────────────────── */
   const [calendarDate, setCalendarDate] = useState<Date | undefined>(new Date());
@@ -300,7 +307,9 @@ export default function BrandBiblePage() {
         </Text>
         <Text variant="body-lg" color="secondary" className="mt-3 max-w-2xl">
           A living reference of every design token, component, and pattern.
-          Dark canvas, warm typography, topographic texture on every interactive surface.
+          {isLight
+            ? " Light canvas, warm typography, topographic texture on every interactive surface."
+            : " Dark canvas, warm typography, topographic texture on every interactive surface."}
         </Text>
       </header>
 
@@ -310,16 +319,24 @@ export default function BrandBiblePage() {
         <SectionSub>Four surface levels create depth without drop shadows. Every layer lifts content closer to the user.</SectionSub>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { name: "Canvas", token: "bg-ds-canvas", hex: "#161618", usage: "Page background" },
-            { name: "Surface", token: "bg-ds-surface", hex: "#1E1E20", usage: "Cards, inputs" },
-            { name: "Surface Raised", token: "bg-ds-surface-raised", hex: "#272729", usage: "Hover, toggles" },
-            { name: "Surface Overlay", token: "bg-ds-surface-overlay", hex: "#313133", usage: "Modals, dialogs" },
-          ].map((swatch) => (
+          {(isLight
+            ? [
+                { name: "Canvas", token: "bg-ds-canvas", hex: "#F0EEE9", usage: "Page background" },
+                { name: "Surface", token: "bg-ds-surface", hex: "#E8E6E1", usage: "Cards, inputs" },
+                { name: "Surface Raised", token: "bg-ds-surface-raised", hex: "#DEDAD4", usage: "Hover, toggles" },
+                { name: "Surface Overlay", token: "bg-ds-surface-overlay", hex: "#D4D0CA", usage: "Modals, dialogs" },
+              ]
+            : [
+                { name: "Canvas", token: "bg-ds-canvas", hex: "#161618", usage: "Page background" },
+                { name: "Surface", token: "bg-ds-surface", hex: "#1E1E20", usage: "Cards, inputs" },
+                { name: "Surface Raised", token: "bg-ds-surface-raised", hex: "#272729", usage: "Hover, toggles" },
+                { name: "Surface Overlay", token: "bg-ds-surface-overlay", hex: "#313133", usage: "Modals, dialogs" },
+              ]
+          ).map((swatch) => (
             <Card elevation="data" key={swatch.name}>
               <div
                 className={`h-20 rounded-ds-sm mb-3 ${swatch.token}`}
-                style={swatch.name === "Canvas" ? { border: "1px solid rgba(240,238,233,0.06)" } : undefined}
+                style={swatch.name === "Canvas" ? { border: "1px solid var(--color-ds-border-subtle)" } : undefined}
               />
               <Text variant="label-md" color="primary">{swatch.name}</Text>
               <Text variant="body-sm" color="secondary" className="mt-0.5">{swatch.usage}</Text>
@@ -399,7 +416,7 @@ export default function BrandBiblePage() {
             <div className="relative z-10">
               <Text variant="title-md" color="on-sage">Sage</Text>
               <Text variant="body-sm" color="on-sage" className="opacity-70">
-                #CFE1B9 — Primary actions, buttons, toggles, links
+                {isLight ? "#344E41 — Primary actions, buttons, toggles, links" : "#CFE1B9 — Primary actions, buttons, toggles, links"}
               </Text>
             </div>
           </Card>
@@ -420,12 +437,20 @@ export default function BrandBiblePage() {
         <SectionSub>Four text roles mapped to surface context. Always use the right pairing for contrast.</SectionSub>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { name: "Text Primary", color: "text-ds-text-primary", bg: "!bg-ds-surface", hex: "#F0EEE9" },
-            { name: "Text Secondary", color: "text-ds-text-secondary", bg: "!bg-ds-surface", hex: "#9B9894" },
-            { name: "On Sage", color: "text-ds-text-on-sage", bg: "!bg-ds-sage", hex: "#1A2E22" },
-            { name: "On Warm White", color: "text-ds-text-on-warm-white", bg: "!bg-ds-warm-white", hex: "#161618" },
-          ].map((item) => (
+          {(isLight
+            ? [
+                { name: "Text Primary", color: "text-ds-text-primary", bg: "!bg-ds-surface", hex: "#161618" },
+                { name: "Text Secondary", color: "text-ds-text-secondary", bg: "!bg-ds-surface", hex: "#6B6864" },
+                { name: "On Sage", color: "text-ds-text-on-sage", bg: "!bg-ds-sage", hex: "#E8EDE0" },
+                { name: "On Warm White", color: "text-ds-text-on-warm-white", bg: "!bg-ds-warm-white", hex: "#161618" },
+              ]
+            : [
+                { name: "Text Primary", color: "text-ds-text-primary", bg: "!bg-ds-surface", hex: "#F0EEE9" },
+                { name: "Text Secondary", color: "text-ds-text-secondary", bg: "!bg-ds-surface", hex: "#9B9894" },
+                { name: "On Sage", color: "text-ds-text-on-sage", bg: "!bg-ds-sage", hex: "#1A2E22" },
+                { name: "On Warm White", color: "text-ds-text-on-warm-white", bg: "!bg-ds-warm-white", hex: "#161618" },
+              ]
+          ).map((item) => (
             <Card key={item.name} elevation="data" className={item.bg}>
               <span className={`${item.color} font-jakarta text-[1rem] font-medium block`}>Aa</span>
               <Text variant="label-sm" color="secondary" className="mt-2">{item.name}</Text>
@@ -534,7 +559,7 @@ export default function BrandBiblePage() {
           {radiusScale.map((r) => (
             <div key={r.name} className="flex flex-col items-center gap-2">
               <div
-                className="w-16 h-16 bg-ds-surface-raised border border-[rgba(240,238,233,0.06)]"
+                className="w-16 h-16 bg-ds-surface-raised border border-[var(--color-ds-border-subtle)]"
                 style={{ borderRadius: `${r.px}px` }}
               />
               <Text variant="label-sm" color="primary">{r.name}</Text>
@@ -743,25 +768,25 @@ export default function BrandBiblePage() {
         <SectionSub>Toasts, dialogs, badges, tooltips, and loading states give the user clear signals.</SectionSub>
 
         <div className="grid gap-6">
-          {/* Toast mockups (inline — no toast component yet) */}
+          {/* Toast mockups */}
           <Card elevation="standard">
             <Label>Toast Mockups</Label>
-            <div className="flex flex-col gap-3 max-w-sm">
-              <div className="flex items-center gap-3 bg-ds-surface-raised rounded-ds-sm px-4 py-3">
+            <div className="flex flex-col gap-3 max-w-sm mt-2">
+              <div className="flex items-center gap-3 bg-ds-surface-raised border border-[var(--color-ds-border-subtle)] rounded-ds-sm px-4 py-3">
                 <div
                   className="w-2 h-2 rounded-full ds-pattern-drift shrink-0"
-                  style={{ backgroundImage: "url('/patterns/sage.png')" }}
+                  style={{ backgroundImage: "var(--ds-pattern-sage)" }}
                 />
                 <Text variant="body-sm" color="primary">Activity logged successfully.</Text>
               </div>
-              <div className="flex items-center gap-3 bg-ds-surface-raised rounded-ds-sm px-4 py-3">
+              <div className="flex items-center gap-3 bg-ds-surface-raised border border-[var(--color-ds-border-subtle)] rounded-ds-sm px-4 py-3">
                 <div
                   className="w-2 h-2 rounded-full ds-pattern-drift shrink-0"
                   style={{ backgroundImage: "url('/patterns/crimson.png')" }}
                 />
                 <Text variant="body-sm" color="primary">Failed to sync. Tap to retry.</Text>
               </div>
-              <div className="flex items-center gap-3 bg-ds-surface-raised rounded-ds-sm px-4 py-3">
+              <div className="flex items-center gap-3 bg-ds-surface-raised border border-[var(--color-ds-border-subtle)] rounded-ds-sm px-4 py-3">
                 <div
                   className="w-2 h-2 rounded-full ds-pattern-drift shrink-0"
                   style={{ backgroundImage: "url('/patterns/amber.png')" }}
@@ -852,7 +877,7 @@ export default function BrandBiblePage() {
               <div className="h-2 bg-ds-surface-raised rounded-full overflow-hidden">
                 <div
                   className="relative h-full w-[67%] bg-ds-sage rounded-full overflow-hidden ds-pattern-drift"
-                  style={{ backgroundImage: "url('/patterns/sage.png')" }}
+                  style={{ backgroundImage: "var(--ds-pattern-sage)" }}
                 />
               </div>
             </div>
@@ -878,7 +903,7 @@ export default function BrandBiblePage() {
                 <div key={item.title}>
                   <div className="flex items-center gap-4 py-3">
                     <div className="relative overflow-hidden w-9 h-9 rounded-ds-sm bg-ds-surface-raised flex items-center justify-center shrink-0">
-                      <PatternOverlay variant="original" opacity={0.12} blend="screen" />
+                      <PatternOverlay variant="original" opacity={0.12} blend={isLight ? "color-burn" : "screen"} />
                       <span className="relative z-10 text-ds-sage">{item.icon}</span>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -965,19 +990,19 @@ export default function BrandBiblePage() {
               <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
                 <defs>
                   <linearGradient id="stepsGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={CHART_COLORS.sage} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={CHART_COLORS.sage} stopOpacity={0} />
+                    <stop offset="5%" stopColor={chartTheme.sage} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={chartTheme.sage} stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={DS_CHART_THEME.gridColor} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridColor} />
                 <XAxis
                   dataKey="day"
-                  tick={{ fill: DS_CHART_THEME.textColor, fontSize: DS_CHART_THEME.fontSize }}
+                  tick={{ fill: chartTheme.textColor, fontSize: DS_CHART_THEME.fontSize }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fill: DS_CHART_THEME.textColor, fontSize: DS_CHART_THEME.fontSize }}
+                  tick={{ fill: chartTheme.textColor, fontSize: DS_CHART_THEME.fontSize }}
                   axisLine={false}
                   tickLine={false}
                 />
@@ -985,7 +1010,7 @@ export default function BrandBiblePage() {
                 <Area
                   type="monotone"
                   dataKey="steps"
-                  stroke={CHART_COLORS.sage}
+                  stroke={chartTheme.sage}
                   strokeWidth={2}
                   fill="url(#stepsGradient)"
                 />
@@ -1339,7 +1364,7 @@ export default function BrandBiblePage() {
                   "Sleep logged — 7h 24m",
                   "Water intake — 2.4L",
                 ].map((item) => (
-                  <div key={item} className="flex items-center gap-2 py-1 border-b border-[rgba(240,238,233,0.04)] last:border-0">
+                  <div key={item} className="flex items-center gap-2 py-1 border-b border-[var(--color-ds-border-faint)] last:border-0">
                     <Activity size={14} className="text-ds-sage shrink-0" />
                     <Text variant="body-sm" color="primary">{item}</Text>
                   </div>
@@ -1354,7 +1379,7 @@ export default function BrandBiblePage() {
             <div className="mt-2">
               <DSContextMenu>
                 <DSContextMenuTrigger>
-                  <div className="flex items-center justify-center h-24 rounded-ds-sm border border-dashed border-[rgba(240,238,233,0.12)] bg-ds-surface">
+                  <div className="flex items-center justify-center h-24 rounded-ds-sm border border-dashed border-[var(--color-ds-border-strong)] bg-ds-surface">
                     <Text variant="body-sm" color="secondary">Right-click here</Text>
                   </div>
                 </DSContextMenuTrigger>
@@ -1473,7 +1498,7 @@ export default function BrandBiblePage() {
           <Card elevation="feature">
             <div className="flex flex-col items-center text-center py-6">
               <div className="relative overflow-hidden w-12 h-12 rounded-full bg-ds-surface-raised flex items-center justify-center mb-4">
-                <PatternOverlay variant="original" opacity={0.12} blend="screen" />
+                <PatternOverlay variant="original" opacity={0.12} blend={isLight ? "color-burn" : "screen"} />
                 <Moon size={24} className="text-ds-sage relative z-10" />
               </div>
               <Text variant="title-md" color="primary">No sleep data yet</Text>
@@ -1506,7 +1531,7 @@ export default function BrandBiblePage() {
             <div className="mt-4">
             <div
               className="relative inline-flex items-center justify-center w-14 h-14 rounded-full overflow-hidden ds-pattern-drift"
-              style={{ backgroundImage: "url('/patterns/sage.png')" }}
+              style={{ backgroundImage: "var(--ds-pattern-sage)" }}
             >
               <Plus size={24} className="text-ds-text-on-sage relative z-[2]" />
             </div>
@@ -1528,7 +1553,7 @@ export default function BrandBiblePage() {
           </div>
 
           {/* Content placeholder */}
-          <div className="bg-ds-canvas h-24 flex items-center justify-center border-x border-[rgba(240,238,233,0.06)]">
+          <div className="bg-ds-canvas h-24 flex items-center justify-center border-x border-[var(--color-ds-border-subtle)]">
             <Text variant="body-sm" color="secondary">Screen content</Text>
           </div>
 
@@ -1544,7 +1569,9 @@ export default function BrandBiblePage() {
                 key={tab.label}
                 className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-ds-pill ${
                   tab.active
-                    ? "bg-[rgba(207,225,185,0.12)] text-ds-sage"
+                    ? isLight
+                      ? "bg-[rgba(52,78,65,0.12)] text-ds-sage"
+                      : "bg-[rgba(207,225,185,0.12)] text-ds-sage"
                     : "text-ds-text-secondary"
                 }`}
               >
@@ -1679,35 +1706,41 @@ export default function BrandBiblePage() {
       {/* ── 19. Pattern Reference Table ────────────────────────────── */}
       <RevealSection className="mt-16">
         <SectionTitle>Pattern Reference</SectionTitle>
-        <SectionSub>Every component that gets the topographic pattern treatment, with its variant and blend mode.</SectionSub>
+        <SectionSub>Every component that gets the topographic pattern treatment, with its blend mode in each theme.</SectionSub>
 
         <Card elevation="standard">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-[rgba(240,238,233,0.06)]">
+                <tr className="border-b border-[var(--color-ds-border-subtle)]">
                   <th className="text-left py-2 pr-4">
                     <Text variant="label-sm" color="sage" as="span">Component</Text>
                   </th>
                   <th className="text-left py-2 pr-4">
-                    <Text variant="label-sm" color="sage" as="span">Pattern</Text>
+                    <Text variant="label-sm" color="sage" as="span">Pattern File</Text>
+                  </th>
+                  <th className="text-left py-2 pr-4">
+                    <Text variant="label-sm" color="sage" as="span">Dark Blend</Text>
                   </th>
                   <th className="text-left py-2">
-                    <Text variant="label-sm" color="sage" as="span">Blend Mode</Text>
+                    <Text variant="label-sm" color="sage" as="span">Light Blend</Text>
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {patternTable.map((row) => (
-                  <tr key={row.component} className="border-b border-[rgba(240,238,233,0.03)]">
+                {PATTERN_TABLE.map((row) => (
+                  <tr key={row.component} className="border-b border-[var(--color-ds-border-faint)]">
                     <td className="py-2 pr-4">
                       <Text variant="body-sm" color="primary" as="span">{row.component}</Text>
                     </td>
                     <td className="py-2 pr-4">
                       <Text variant="body-sm" color="secondary" as="span">{row.pattern}</Text>
                     </td>
+                    <td className="py-2 pr-4">
+                      <Text variant="body-sm" color="secondary" as="span">{row.dark}</Text>
+                    </td>
                     <td className="py-2">
-                      <Text variant="body-sm" color="secondary" as="span">{row.blend}</Text>
+                      <Text variant="body-sm" color="secondary" as="span">{row.light}</Text>
                     </td>
                   </tr>
                 ))}

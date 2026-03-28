@@ -28,7 +28,7 @@ export function Chip({ active = false, children, onClick, className }: ChipProps
         className,
       )}
       {...(active
-        ? { style: { backgroundImage: "url('/patterns/sage.png')" } }
+        ? { style: { backgroundImage: "var(--ds-pattern-sage)" } }
         : undefined)}
     >
       <span className="relative z-10">{children}</span>

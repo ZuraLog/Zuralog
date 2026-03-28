@@ -47,11 +47,13 @@ export function DSToggleGroup({
               "min-h-[36px] min-w-[44px]",
               "transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]",
               "motion-reduce:transition-none",
-              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[rgba(207,225,185,0.3)]",
+              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-ds-sage-ring)]",
+              "bg-cover bg-center bg-no-repeat",
               isActive
-                ? "bg-ds-warm-white text-ds-text-on-warm-white shadow-sm"
+                ? "text-ds-text-on-sage shadow-sm"
                 : "text-ds-text-secondary bg-transparent hover:text-ds-text-primary",
             )}
+            style={isActive ? { backgroundImage: "var(--ds-pattern-sage)" } : undefined}
           >
             {item.label}
           </button>

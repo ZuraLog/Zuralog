@@ -54,7 +54,7 @@ export function ScrollDivider() {
       <div
         data-scroll-line
         className="h-px w-full max-w-[200px] ds-pattern-drift origin-center"
-        style={{ backgroundImage: "url('/patterns/sage.png')" }}
+        style={{ backgroundImage: "var(--ds-pattern-sage)" }}
       />
     </div>
   );

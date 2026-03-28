@@ -2,6 +2,7 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
+import { useBrandBibleThemeOptional } from "@/components/design-system/interactions/brand-bible-theme";
 
 type AlertVariant = "default" | "success" | "warning" | "error";
 
@@ -23,17 +24,17 @@ const variantStyles: Record<
   success: {
     bg: "bg-[rgba(52,199,89,0.06)]",
     border: "border-l-ds-success",
-    pattern: "/patterns/sage.png",
+    pattern: "var(--ds-pattern-sage)",
   },
   warning: {
     bg: "bg-[rgba(255,149,0,0.06)]",
     border: "border-l-ds-warning",
-    pattern: "/patterns/amber.png",
+    pattern: "url('/patterns/amber.png')",
   },
   error: {
     bg: "bg-[rgba(255,59,48,0.06)]",
     border: "border-l-ds-error",
-    pattern: "/patterns/crimson.png",
+    pattern: "url('/patterns/crimson.png')",
   },
 };
 
@@ -47,6 +48,8 @@ export function DSAlert({
   ...props
 }: DSAlertProps) {
   const styles = variantStyles[variant];
+  const themeCtx = useBrandBibleThemeOptional();
+  const patternOpacity = themeCtx?.isLight ? 0.1 : 0.04;
 
   return (
     <div
@@ -64,9 +67,10 @@ export function DSAlert({
       {styles.pattern && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 opacity-[0.04]"
+          className="pointer-events-none absolute inset-0"
           style={{
-            backgroundImage: `url('${styles.pattern}')`,
+            opacity: patternOpacity,
+            backgroundImage: styles.pattern,
             backgroundSize: "300px auto",
             backgroundRepeat: "repeat",
           }}

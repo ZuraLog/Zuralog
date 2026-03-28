@@ -83,7 +83,7 @@ export function DSPaginationLink({
       )}
       style={
         isActive
-          ? { backgroundImage: "url('/patterns/sage.png')", ...style }
+          ? { backgroundImage: "var(--ds-pattern-sage)", ...style }
           : style
       }
       {...props}

@@ -29,12 +29,12 @@ export function DSCommand({
         /* Override cmdk root rendered by shadcn */
         "[&_[data-slot=command]]:bg-ds-surface-overlay [&_[data-slot=command]]:rounded-ds-xl [&_[data-slot=command]]:overflow-hidden [&_[data-slot=command]]:p-0",
         /* Override input wrapper */
-        "[&_[data-slot=command-input-wrapper]]:bg-ds-surface [&_[data-slot=command-input-wrapper]]:border-b [&_[data-slot=command-input-wrapper]]:border-[rgba(240,238,233,0.06)] [&_[data-slot=command-input-wrapper]]:p-3",
+        "[&_[data-slot=command-input-wrapper]]:bg-ds-surface [&_[data-slot=command-input-wrapper]]:border-b [&_[data-slot=command-input-wrapper]]:border-[var(--color-ds-border-subtle)] [&_[data-slot=command-input-wrapper]]:p-3",
         /* Override InputGroup inside input wrapper — remove all borders and shadows */
         "[&_[data-slot=command-input-wrapper]_.group]:bg-transparent [&_[data-slot=command-input-wrapper]_.group]:border-none [&_[data-slot=command-input-wrapper]_.group]:shadow-none [&_[data-slot=command-input-wrapper]_.group]:ring-0",
         "[&_[data-slot=command-input-wrapper]_[data-slot=input-group]]:bg-transparent [&_[data-slot=command-input-wrapper]_[data-slot=input-group]]:border-none [&_[data-slot=command-input-wrapper]_[data-slot=input-group]]:shadow-none [&_[data-slot=command-input-wrapper]_[data-slot=input-group]]:ring-0",
         /* Override selected item */
-        "[&_[data-slot=command-item][data-selected=true]]:bg-[rgba(207,225,185,0.08)] [&_[data-slot=command-item][data-selected=true]]:text-ds-sage",
+        "[&_[data-slot=command-item][data-selected=true]]:bg-[var(--color-ds-sage-tint)] [&_[data-slot=command-item][data-selected=true]]:text-ds-sage",
         "[&_[data-slot=command-item][data-selected=true]_svg]:text-ds-sage",
         /* Override group headings */
         "[&_[cmdk-group-heading]]:text-ds-text-secondary [&_[cmdk-group-heading]]:text-[0.6875rem] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider",
@@ -151,7 +151,7 @@ export function DSCommandItem({
     <BaseItem
       className={cn(
         "px-3 py-2.5 rounded-ds-xs text-ds-text-primary text-[0.875rem] font-jakarta",
-        "data-selected:bg-[rgba(207,225,185,0.08)] data-selected:text-ds-sage",
+        "data-selected:bg-[var(--color-ds-sage-tint)] data-selected:text-ds-sage",
         "[&_svg]:text-ds-sage [&_svg]:mr-3",
         "cursor-pointer",
         className,
@@ -171,7 +171,7 @@ export function DSCommandSeparator({
 }: React.ComponentProps<typeof BaseSeparator>) {
   return (
     <BaseSeparator
-      className={cn("h-px bg-[rgba(240,238,233,0.06)] my-1", className)}
+      className={cn("h-px bg-[var(--color-ds-border-subtle)] my-1", className)}
       {...props}
     />
   );

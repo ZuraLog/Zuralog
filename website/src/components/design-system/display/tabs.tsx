@@ -33,7 +33,7 @@ export function DSTabsList({
         "bg-cover bg-center bg-no-repeat rounded-ds-sm p-1 inline-flex",
         className,
       )}
-      style={{ backgroundImage: "url('/patterns/sage.png')" }}
+      style={{ backgroundImage: "var(--ds-pattern-sage)" }}
       {...props}
     >
       <div className="relative z-10 inline-flex">{children}</div>
@@ -55,9 +55,9 @@ export function DSTabsTrigger({
         "px-3 py-1.5",
         "text-[0.8125rem] font-medium font-jakarta",
         "transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]",
-        "text-ds-text-secondary bg-transparent",
+        "text-ds-warm-white/80 bg-transparent",
         "cursor-pointer",
-        "data-[selected]:bg-ds-warm-white data-[selected]:text-ds-text-on-warm-white data-[selected]:rounded-[9px]",
+        "data-[selected]:bg-[var(--color-ds-tab-active-bg)] data-[selected]:text-[var(--color-ds-tab-active-text)] data-[selected]:rounded-[9px]",
         className,
       )}
       {...props}

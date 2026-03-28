@@ -52,7 +52,7 @@ export function DSContextMenuContent({
     <BaseContent
       className={cn(
         "bg-ds-surface-raised rounded-ds-sm p-1",
-        "border border-[rgba(240,238,233,0.06)]",
+        "border border-[var(--color-ds-border-subtle)]",
         "font-jakarta",
         className,
       )}
@@ -75,7 +75,7 @@ export function DSContextMenuItem({
         "text-ds-text-primary text-[0.875rem] font-jakarta",
         "px-3 py-2 rounded-ds-xs",
         "[&_svg]:text-current",
-        "focus:bg-[rgba(207,225,185,0.08)] focus:text-ds-sage",
+        "focus:bg-[var(--color-ds-sage-tint)] focus:text-ds-sage",
         "cursor-pointer",
         "min-h-[44px] flex items-center",
         className,
@@ -99,7 +99,7 @@ export function DSContextMenuCheckboxItem({
         "text-ds-text-primary text-[0.875rem] font-jakarta",
         "px-3 py-2 rounded-ds-xs",
         "[&_svg]:text-current",
-        "focus:bg-[rgba(207,225,185,0.08)] focus:text-ds-sage",
+        "focus:bg-[var(--color-ds-sage-tint)] focus:text-ds-sage",
         "min-h-[44px] flex items-center",
         "[&_span]:text-ds-sage",
         className,
@@ -132,7 +132,7 @@ export function DSContextMenuRadioItem({
       className={cn(
         "text-ds-text-primary text-[0.875rem] font-jakarta",
         "px-3 py-2 rounded-ds-xs",
-        "focus:bg-[rgba(207,225,185,0.08)] focus:text-ds-sage",
+        "focus:bg-[var(--color-ds-sage-tint)] focus:text-ds-sage",
         "min-h-[44px] flex items-center",
         "[&_span]:text-ds-sage",
         className,
@@ -171,7 +171,7 @@ export function DSContextMenuSeparator({
 }: React.ComponentProps<typeof BaseSeparator>) {
   return (
     <BaseSeparator
-      className={cn("h-px bg-[rgba(240,238,233,0.06)] my-1", className)}
+      className={cn("h-px bg-[var(--color-ds-border-subtle)] my-1", className)}
       {...props}
     />
   );
@@ -230,7 +230,7 @@ export function DSContextMenuSubTrigger({
         "text-ds-text-primary text-[0.875rem] font-jakarta",
         "px-3 py-2 rounded-ds-xs",
         "[&_svg]:text-current",
-        "focus:bg-[rgba(207,225,185,0.08)] focus:text-ds-sage",
+        "focus:bg-[var(--color-ds-sage-tint)] focus:text-ds-sage",
         "min-h-[44px] flex items-center",
         className,
       )}
@@ -251,7 +251,7 @@ export function DSContextMenuSubContent({
     <BaseSubContent
       className={cn(
         "bg-ds-surface-raised rounded-ds-sm p-1",
-        "border border-[rgba(240,238,233,0.06)]",
+        "border border-[var(--color-ds-border-subtle)]",
         "font-jakarta",
         className,
       )}

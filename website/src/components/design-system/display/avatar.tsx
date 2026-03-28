@@ -56,7 +56,7 @@ export function Avatar({
             <span
               className={cn(
                 "relative z-10 flex items-center justify-center size-full",
-                "text-ds-sage font-semibold font-jakarta",
+                "text-ds-warm-white font-semibold font-jakarta",
                 initialsTextSize[size],
               )}
               aria-label={alt || initials}

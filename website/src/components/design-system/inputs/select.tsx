@@ -35,7 +35,7 @@ export function DSSelectTrigger({
         "bg-ds-surface rounded-ds-sm border-none",
         "text-ds-text-primary font-jakarta",
         "px-4 py-3 h-auto",
-        "focus-visible:ring-1 focus-visible:ring-[rgba(207,225,185,0.3)] focus-visible:border-transparent",
+        "focus-visible:ring-1 focus-visible:ring-[var(--color-ds-sage-ring)] focus-visible:border-transparent",
         "min-h-[44px]",
         "[&_svg]:text-ds-text-secondary",
         className,
@@ -57,7 +57,7 @@ export function DSSelectContent({
     <BaseContent
       className={cn(
         "bg-ds-surface-raised rounded-ds-sm",
-        "border border-[rgba(240,238,233,0.06)]",
+        "border border-[var(--color-ds-border-subtle)]",
         "font-jakarta",
         className,
       )}
@@ -118,7 +118,7 @@ export function DSSelectSeparator({
 }: React.ComponentProps<typeof BaseSeparator>) {
   return (
     <BaseSeparator
-      className={cn("h-px bg-[rgba(240,238,233,0.06)] my-1", className)}
+      className={cn("h-px bg-[var(--color-ds-border-subtle)] my-1", className)}
       {...props}
     />
   );

@@ -10,7 +10,7 @@ export function Divider({ inset = false, className }: DividerProps) {
     <div
       role="separator"
       className={cn(
-        "h-px bg-[rgba(240,238,233,0.06)]",
+        "h-px bg-[var(--color-ds-border-subtle)]",
         inset && "mx-4",
         className,
       )}

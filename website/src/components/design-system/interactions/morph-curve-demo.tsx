@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
 import { MorphSVGPlugin } from "gsap/MorphSVGPlugin";
+import { useBrandBibleThemeOptional } from "@/components/design-system/interactions/brand-bible-theme";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(MorphSVGPlugin);
@@ -17,19 +18,32 @@ const PATH_END = "M 0 100 V 0 Q 50 0 100 0 V 100 z";
  *
  * Click the container to toggle a curved SVG shape that sweeps up from
  * the bottom with a bowed curve, then flattens to cover everything.
- * Text colour flips from white (dark bg) to dark (sage bg) as the
- * curve covers the surface.
+ * Text colour flips as the curve covers the surface — dark text on sage
+ * fill in dark mode, light text on deep-forest fill in light mode.
  */
 export function MorphCurveDemo() {
   const pathRef = useRef<SVGPathElement>(null);
   const tlRef = useRef<gsap.core.Timeline | null>(null);
   const labelRef = useRef<HTMLParagraphElement>(null);
   const [open, setOpen] = useState(false);
+  const themeCtx = useBrandBibleThemeOptional();
+  const isLight = themeCtx?.isLight ?? false;
+
+  // Theme-aware colours
+  const initialTextColor = isLight ? "#161618" : "#F0EEE9";
+  const revealedTextColor = isLight ? "#E8EDE0" : "#1A2E22";
+  const gradStart = isLight ? "#344E41" : "#CFE1B9";
+  const gradEnd = isLight ? "#2D4537" : "#8CA182";
 
   useEffect(() => {
     const path = pathRef.current;
     const label = labelRef.current;
     if (!path || !label) return;
+
+    // Reset open state and label colour whenever theme switches
+    setOpen(false);
+    gsap.set(path, { morphSVG: PATH_START });
+    gsap.set(label, { color: initialTextColor });
 
     const tl = gsap.timeline({ paused: true });
 
@@ -46,7 +60,7 @@ export function MorphCurveDemo() {
     // Flip label colour halfway through the sweep
     tl.to(
       label,
-      { color: "#1A2E22", duration: 0.2, ease: "power2.inOut" },
+      { color: revealedTextColor, duration: 0.2, ease: "power2.inOut" },
       0.3,
     );
 
@@ -55,7 +69,8 @@ export function MorphCurveDemo() {
     return () => {
       tl.kill();
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLight]);
 
   const toggle = () => {
     const tl = tlRef.current;
@@ -80,7 +95,7 @@ export function MorphCurveDemo() {
         <p
           ref={labelRef}
           className="text-sm font-medium"
-          style={{ color: "#F0EEE9" }}
+          style={{ color: initialTextColor }}
         >
           {open ? "Click to close" : "Click to reveal"}
         </p>
@@ -101,8 +116,8 @@ export function MorphCurveDemo() {
             y2="99"
             gradientUnits="userSpaceOnUse"
           >
-            <stop offset="0.2" stopColor="#CFE1B9" />
-            <stop offset="0.7" stopColor="#8CA182" />
+            <stop offset="0.2" stopColor={gradStart} />
+            <stop offset="0.7" stopColor={gradEnd} />
           </linearGradient>
         </defs>
         <path
