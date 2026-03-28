@@ -3,43 +3,47 @@ library;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/theme.dart';
-import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
+import 'package:zuralog/shared/widgets/charts/chart_render_context.dart';
 
-class AreaChartViz extends StatelessWidget {
-  const AreaChartViz({
+/// Renders an area chart (filled line chart) driven by [AreaChartConfig].
+///
+/// Delegates all mode-specific decisions (stroke width, curved lines, dot
+/// visibility, animation timing) to the supplied [ChartRenderContext].
+class AreaRenderer extends StatelessWidget {
+  const AreaRenderer({
     super.key,
     required this.config,
     required this.color,
-    required this.size,
+    required this.renderCtx,
   });
 
   final AreaChartConfig config;
   final Color color;
-  final TileSize size;
+  final ChartRenderContext renderCtx;
 
   @override
   Widget build(BuildContext context) {
     if (config.points.isEmpty) return const SizedBox.shrink();
 
-    final reduceMotion = MediaQuery.of(context).disableAnimations;
     final lastIndex = config.points.length - 1;
+    final progress = renderCtx.animationProgress;
 
     final spots = <FlSpot>[
       for (var i = 0; i < config.points.length; i++)
-        FlSpot(i.toDouble(), config.points[i].value),
+        FlSpot(i.toDouble(), config.points[i].value * progress),
     ];
 
     final lineBarData = LineChartBarData(
       spots: spots,
       color: color,
-      barWidth: 1.5,
-      isCurved: false,
+      barWidth: renderCtx.strokeWidth,
+      isCurved: renderCtx.isCurved,
+      preventCurveOverShooting: renderCtx.preventCurveOverShooting,
       isStrokeCapRound: true,
       dotData: FlDotData(
-        show: true,
-        checkToShowDot: (spot, barData) =>
-            spot.x.toInt() == lastIndex,
+        show: renderCtx.showDots,
+        checkToShowDot: (spot, barData) => spot.x.toInt() == lastIndex,
         getDotPainter: (spot, percent, barData, index) =>
             FlDotCirclePainter(radius: 3, color: color, strokeWidth: 0),
       ),
@@ -75,32 +79,39 @@ class AreaChartViz extends StatelessWidget {
           : const ExtraLinesData(),
     );
 
-    return Semantics(
-      label: 'Area chart with ${config.points.length} data points',
-      child: Stack(
-        children: [
-          LineChart(
-            chartData,
-            duration: reduceMotion
-                ? Duration.zero
-                : const Duration(milliseconds: 400),
-            curve: Curves.easeOutCubic,
-          ),
-          if (config.delta != null)
-            Positioned(
-              top: 4,
-              right: 4,
-              child: _DeltaBadge(
-                  delta: config.delta!, positiveIsUp: config.positiveIsUp),
+    return Stack(
+      children: [
+        LineChart(
+          chartData,
+          duration: renderCtx.flChartDuration,
+          curve: Curves.easeOut,
+        ),
+        if (config.delta != null)
+          Positioned(
+            top: 4,
+            right: 4,
+            child: DeltaBadge(
+              delta: config.delta!,
+              positiveIsUp: config.positiveIsUp,
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
 
-class _DeltaBadge extends StatelessWidget {
-  const _DeltaBadge({required this.delta, required this.positiveIsUp});
+/// A small badge showing a percentage change with an up/down arrow.
+///
+/// Displays green for "good" changes and dark accent for "bad" changes,
+/// where "good" depends on whether higher values are desirable
+/// ([positiveIsUp]).
+class DeltaBadge extends StatelessWidget {
+  const DeltaBadge({
+    super.key,
+    required this.delta,
+    required this.positiveIsUp,
+  });
+
   final double delta;
   final bool positiveIsUp;
 
@@ -110,7 +121,7 @@ class _DeltaBadge extends StatelessWidget {
     final isGood = positiveIsUp ? isPositive : !isPositive;
     final badgeColor =
         isGood ? AppColors.categoryActivity : AppColors.accentDark;
-    final arrow = isPositive ? '▲' : '▼';
+    final arrow = isPositive ? '\u25B2' : '\u25BC';
     final pct = '$arrow ${(delta.abs() * 100).toStringAsFixed(1)}%';
 
     return Container(
@@ -119,9 +130,14 @@ class _DeltaBadge extends StatelessWidget {
         color: badgeColor.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(pct,
-          style: TextStyle(
-              fontSize: 8, color: badgeColor, fontWeight: FontWeight.bold)),
+      child: Text(
+        pct,
+        style: TextStyle(
+          fontSize: 8,
+          color: badgeColor,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 }

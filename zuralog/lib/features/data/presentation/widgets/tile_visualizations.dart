@@ -4,18 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
-import 'package:zuralog/features/data/presentation/widgets/viz/area_chart_viz.dart';
-import 'package:zuralog/features/data/presentation/widgets/viz/bar_chart_viz.dart';
 import 'package:zuralog/features/data/presentation/widgets/viz/calendar_grid_viz.dart';
 import 'package:zuralog/features/data/presentation/widgets/viz/dot_row_viz.dart';
 import 'package:zuralog/features/data/presentation/widgets/viz/dual_value_viz.dart';
-import 'package:zuralog/features/data/presentation/widgets/viz/fill_gauge_viz.dart';
-import 'package:zuralog/features/data/presentation/widgets/viz/gauge_viz.dart';
 import 'package:zuralog/features/data/presentation/widgets/viz/heatmap_viz.dart';
-import 'package:zuralog/features/data/presentation/widgets/viz/line_chart_viz.dart';
-import 'package:zuralog/features/data/presentation/widgets/viz/ring_viz.dart';
-import 'package:zuralog/features/data/presentation/widgets/viz/segmented_bar_viz.dart';
 import 'package:zuralog/features/data/presentation/widgets/viz/stat_card_viz.dart';
+import 'package:zuralog/shared/widgets/charts/chart_mode.dart';
+import 'package:zuralog/shared/widgets/charts/z_chart.dart';
 
 // ── _VizEmptyPlaceholder ──────────────────────────────────────────────────────
 
@@ -43,20 +38,30 @@ Widget buildTileVisualization({
   required Color categoryColor,
   required TileSize size,
 }) {
+  // ── Chart types → ZChart unified system ───────────────────────────────
+  if (config is LineChartConfig ||
+      config is BarChartConfig ||
+      config is AreaChartConfig ||
+      config is RingConfig ||
+      config is GaugeConfig ||
+      config is FillGaugeConfig ||
+      config is SegmentedBarConfig) {
+    return ZChart(
+      config: config,
+      mode: size.toChartMode(),
+      color: categoryColor,
+    );
+  }
+
+  // ── Non-chart types → standalone widgets ─────────────────────────────
   if (!config.hasChartData) return const _VizEmptyPlaceholder();
 
   return switch (config) {
-    LineChartConfig()    => LineChartViz(config: config, color: categoryColor, size: size),
-    BarChartConfig()     => BarChartViz(config: config, color: categoryColor, size: size),
-    AreaChartConfig()    => AreaChartViz(config: config, color: categoryColor, size: size),
-    RingConfig()         => RingViz(config: config, color: categoryColor, size: size),
-    GaugeConfig()        => GaugeViz(config: config, color: categoryColor, size: size),
-    SegmentedBarConfig() => SegmentedBarViz(config: config, color: categoryColor, size: size),
-    FillGaugeConfig()    => FillGaugeViz(config: config, color: categoryColor, size: size),
     DotRowConfig()       => DotRowViz(config: config, color: categoryColor, size: size),
     CalendarGridConfig() => CalendarGridViz(config: config, color: categoryColor, size: size),
     HeatmapConfig()      => HeatmapViz(config: config, color: categoryColor, size: size),
     StatCardConfig()     => StatCardViz(config: config, color: categoryColor, size: size),
     DualValueConfig()    => DualValueViz(config: config, color: categoryColor, size: size),
+    _ => const _VizEmptyPlaceholder(),
   };
 }

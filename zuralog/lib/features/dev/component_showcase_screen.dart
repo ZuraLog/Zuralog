@@ -1312,7 +1312,7 @@ class _ComponentShowcaseScreenState
         // ── 8. CHART VISUALIZATIONS ────────────────────────────────────────
         _gap(AppDimens.spaceLg),
         Text(
-          '8. Chart Visualizations',
+          '8. ZChart System',
           style: AppTextStyles.displaySmall.copyWith(color: AppColors.warmWhite),
         ),
         _gap(),
