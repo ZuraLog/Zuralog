@@ -47,13 +47,14 @@ class ZSelect extends StatelessWidget {
   void _showOptions(BuildContext context) {
     showModalBottomSheet<String>(
       context: context,
-      backgroundColor: AppColors.surfaceOverlay,
+      backgroundColor: AppColorsOf(context).surfaceOverlay,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppDimens.shapeXl),
         ),
       ),
       builder: (context) {
+        final sheetColors = AppColorsOf(context);
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -65,7 +66,7 @@ class ZSelect extends StatelessWidget {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.textSecondary.withValues(alpha: 0.4),
+                    color: sheetColors.textSecondary.withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -90,15 +91,15 @@ class ZSelect extends StatelessWidget {
                           child: Text(
                             option,
                             style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.textPrimaryDark,
+                              color: sheetColors.textPrimary,
                             ),
                           ),
                         ),
                         if (isSelected)
-                          const Icon(
+                          Icon(
                             Icons.check,
                             size: 20,
-                            color: AppColors.primary,
+                            color: sheetColors.primary,
                           ),
                       ],
                     ),
@@ -115,6 +116,7 @@ class ZSelect extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final hasValue = value != null && value!.isNotEmpty;
 
     final trigger = Opacity(
@@ -127,7 +129,7 @@ class ZSelect extends StatelessWidget {
           vertical: AppDimens.spaceSm + 4,
         ),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.shapeSm),
         ),
         child: Row(
@@ -137,15 +139,15 @@ class ZSelect extends StatelessWidget {
                 hasValue ? value! : (placeholder ?? ''),
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: hasValue
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textSecondary,
+                      ? colors.textPrimary
+                      : colors.textSecondary,
                 ),
               ),
             ),
-            const Icon(
+            Icon(
               Icons.expand_more,
               size: 20,
-              color: AppColors.textSecondary,
+              color: colors.textSecondary,
             ),
           ],
         ),
@@ -162,7 +164,7 @@ class ZSelect extends StatelessWidget {
         Text(
           label!,
           style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textPrimaryDark,
+            color: colors.textPrimary,
           ),
         ),
         const SizedBox(height: AppDimens.spaceXs),

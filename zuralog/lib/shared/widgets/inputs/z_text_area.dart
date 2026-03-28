@@ -44,7 +44,8 @@ class ZTextArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sageFocusBorder = AppColors.primary.withValues(alpha: 0.3);
+    final colors = AppColorsOf(context);
+    final sageFocusBorder = colors.primary.withValues(alpha: 0.3);
 
     final field = Opacity(
       opacity: enabled ? 1.0 : 0.4,
@@ -53,17 +54,17 @@ class ZTextArea extends StatelessWidget {
         enabled: enabled,
         maxLines: maxLines,
         minLines: 4,
-        cursorColor: AppColors.primary,
+        cursorColor: colors.primary,
         style: AppTextStyles.bodyMedium.copyWith(
-          color: AppColors.textPrimaryDark,
+          color: colors.textPrimary,
         ),
         decoration: InputDecoration(
           hintText: placeholder,
           hintStyle: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
+            color: colors.textSecondary,
           ),
           filled: true,
-          fillColor: AppColors.surface,
+          fillColor: colors.surface,
           contentPadding: const EdgeInsets.all(AppDimens.spaceMd),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppDimens.shapeSm),
@@ -103,7 +104,7 @@ class ZTextArea extends StatelessWidget {
         Text(
           label!,
           style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textPrimaryDark,
+            color: colors.textPrimary,
           ),
         ),
         const SizedBox(height: AppDimens.spaceXs),

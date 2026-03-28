@@ -241,7 +241,7 @@ class _Slot extends StatelessWidget {
     } else if (isFocused) {
       borderSide = BorderSide(
         // Sage at 30% opacity per spec.
-        color: AppColors.primary.withValues(alpha: 0.3),
+        color: colors.primary.withValues(alpha: 0.3),
         width: _ZOtpInputState._borderWidth,
       );
     } else {
@@ -271,7 +271,7 @@ class _Slot extends StatelessWidget {
                 ),
               )
             : isFocused
-                ? _BlinkingCursor(color: AppColors.primary)
+                ? _BlinkingCursor(color: colors.primary)
                 : const SizedBox.shrink(),
       ),
     );

@@ -38,6 +38,7 @@ class ZSegmentedControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Opacity(
       opacity: enabled ? 1.0 : 0.4,
       child: LayoutBuilder(
@@ -52,7 +53,7 @@ class ZSegmentedControl extends StatelessWidget {
           child: Container(
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: colors.surface,
               borderRadius: BorderRadius.circular(AppDimens.shapePill),
             ),
             child: Stack(
@@ -96,7 +97,7 @@ class ZSegmentedControl extends StatelessWidget {
                                 style: AppTextStyles.labelMedium.copyWith(
                                   color: i == selectedIndex
                                       ? AppColors.textOnWarmWhite
-                                      : AppColors.textSecondary,
+                                      : colors.textSecondary,
                                 ),
                                 child: Text(segments[i]),
                               ),

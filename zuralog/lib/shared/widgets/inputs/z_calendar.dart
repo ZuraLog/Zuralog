@@ -302,10 +302,10 @@ class _ZCalendarState extends State<ZCalendar> {
     Border? border;
 
     if (selected) {
-      fillColor = AppColors.primary;
+      fillColor = colors.primary;
       textColor = AppColors.textOnSage;
     } else if (today && inMonth) {
-      border = Border.all(color: AppColors.primary, width: 2);
+      border = Border.all(color: colors.primary, width: 2);
       textColor = colors.textPrimary;
     } else if (!inMonth) {
       textColor = colors.textPrimary.withValues(alpha: 0.3);
