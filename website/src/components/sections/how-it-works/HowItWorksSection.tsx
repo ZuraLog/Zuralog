@@ -80,7 +80,7 @@ export function HowItWorksSection() {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "linear-gradient(to bottom, transparent 0%, #344E41 12%, #1A2E22 25%, #161618 40%, #161618 60%, #1A2E22 75%, #344E41 88%, transparent 100%)",
+            "linear-gradient(to bottom, transparent 0%, rgba(52,78,65,0.4) 8%, rgba(26,46,34,0.7) 15%, #161618 25%, #161618 75%, rgba(26,46,34,0.7) 85%, rgba(52,78,65,0.4) 92%, transparent 100%)",
         }}
       />
 
