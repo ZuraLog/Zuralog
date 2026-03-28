@@ -18,6 +18,13 @@ import 'package:zuralog/shared/widgets/charts/renderers/line_renderer.dart';
 import 'package:zuralog/shared/widgets/charts/renderers/ring_renderer.dart';
 import 'package:zuralog/shared/widgets/charts/renderers/segmented_bar_renderer.dart';
 
+/// Holds the data for a single bar tap event.
+class _BarTapInfo {
+  const _BarTapInfo({required this.value, this.label});
+  final double value;
+  final String? label;
+}
+
 /// Fixed hero chart height in fullscreen mode.
 const _kFullChartHeight = 200.0;
 
@@ -61,9 +68,7 @@ class _FullChartShellState extends State<FullChartShell>
   final _segmentNotifier = ValueNotifier<SegmentInfo?>(null);
 
   // Bar tap state
-  int? _tappedBarIndex;
-  String? _tappedBarLabel;
-  double? _tappedBarValue;
+  final _barTapNotifier = ValueNotifier<_BarTapInfo?>(null);
 
   @override
   void initState() {
@@ -83,6 +88,7 @@ class _FullChartShellState extends State<FullChartShell>
     _scrubController.dispose();
     _fadeCtrl.dispose();
     _segmentNotifier.dispose();
+    _barTapNotifier.dispose();
     super.dispose();
   }
 
@@ -95,19 +101,9 @@ class _FullChartShellState extends State<FullChartShell>
   }
 
   void _onBarTap(int barIndex, double value, String label) {
-    setState(() {
-      _tappedBarIndex = barIndex;
-      _tappedBarValue = value;
-      _tappedBarLabel = label;
-    });
+    _barTapNotifier.value = _BarTapInfo(value: value, label: label);
     Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        setState(() {
-          _tappedBarIndex = null;
-          _tappedBarValue = null;
-          _tappedBarLabel = null;
-        });
-      }
+      if (mounted) _barTapNotifier.value = null;
     });
   }
 
@@ -253,19 +249,24 @@ class _FullChartShellState extends State<FullChartShell>
                   },
                 ),
                 // Bar tap tooltip
-                if (_tappedBarIndex != null && _tappedBarValue != null)
-                  Positioned(
-                    top: 8,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: ZChartTooltip(
-                        value: _tappedBarValue!,
-                        unit: widget.unit,
-                        label: _tappedBarLabel,
+                ValueListenableBuilder<_BarTapInfo?>(
+                  valueListenable: _barTapNotifier,
+                  builder: (context, info, _) {
+                    if (info == null) return const SizedBox.shrink();
+                    return Positioned(
+                      top: 8,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: ZChartTooltip(
+                          value: info.value,
+                          unit: widget.unit,
+                          label: info.label,
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -464,6 +465,7 @@ class _SegmentedBarWithTap extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTapUp: (details) {
+        if (config.segments.isEmpty) return;
         final totalWidth = context.size?.width ?? 1.0;
         final tapX = details.localPosition.dx;
         final total = config.segments.fold(0.0, (a, s) => a + s.value);
