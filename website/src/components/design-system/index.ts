@@ -225,6 +225,8 @@ export { useScrambleNumber } from "@/hooks/use-scramble-number";
 // Interaction components & utilities
 export { SoundProvider, useSoundContext } from "./interactions/sound-provider";
 export { SoundToggle } from "./interactions/sound-toggle";
+export { BrandBibleThemeProvider, useBrandBibleTheme, useBrandBibleThemeOptional } from "./interactions/brand-bible-theme";
+export { ThemeToggle } from "./interactions/theme-toggle";
 export { AuroraBackground } from "./interactions/aurora-background";
 export { SpotlightFollow } from "./interactions/spotlight-follow";
 export { ScrollProgress } from "./interactions/scroll-progress";
