@@ -5,6 +5,7 @@ import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 import 'package:zuralog/shared/widgets/charts/animations/chart_entrance_controller.dart';
 import 'package:zuralog/shared/widgets/charts/chart_mode.dart';
 import 'package:zuralog/shared/widgets/charts/chart_render_context.dart';
+import 'package:zuralog/shared/widgets/charts/modes/full_chart_shell.dart';
 import 'package:zuralog/shared/widgets/charts/modes/tile_chart_shell.dart';
 import 'package:zuralog/shared/widgets/charts/z_chart_empty_state.dart';
 
@@ -24,12 +25,14 @@ class ZChart extends StatefulWidget {
     required this.mode,
     required this.color,
     this.onTap,
+    this.unit = '',
   });
 
   final TileVisualizationConfig config;
   final ChartMode mode;
   final Color color;
   final VoidCallback? onTap;
+  final String unit;
 
   @override
   State<ZChart> createState() => _ZChartState();
@@ -89,6 +92,12 @@ class _ZChartState extends State<ZChart>
           renderCtx: renderCtx,
         );
       case ChartMode.full:
+        chart = FullChartShell(
+          config: config,
+          color: widget.color,
+          renderCtx: renderCtx,
+          unit: widget.unit,
+        );
       case ChartMode.sparkline:
       case ChartMode.widget:
       case ChartMode.comparison:
