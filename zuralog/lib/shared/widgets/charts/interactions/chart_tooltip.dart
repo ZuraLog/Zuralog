@@ -35,53 +35,66 @@ class ZChartTooltip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceRaised,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (date != null)
-            Text(
-              DateFormat('EEE, MMM d').format(date!),
-              style: AppTextStyles.labelSmall.copyWith(
-                color: AppColors.warmWhite.withValues(alpha: 0.6),
+    return Semantics(
+      label: _buildSemanticLabel(),
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceRaised,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (date != null)
+              Text(
+                DateFormat('EEE, MMM d').format(date!),
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.warmWhite.withValues(alpha: 0.6),
+                ),
               ),
-            ),
-          if (date != null) const SizedBox(height: 2),
-          if (label != null)
-            Text(
-              label!,
-              style: AppTextStyles.labelMedium.copyWith(
-                color: AppColors.warmWhite,
+            if (date != null) const SizedBox(height: 2),
+            if (label != null)
+              Text(
+                label!,
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: AppColors.warmWhite,
+                ),
+              )
+            else
+              Text(
+                '${_formatValue(value)} $unit',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: AppColors.warmWhite,
+                ),
               ),
-            )
-          else
-            Text(
-              '${_formatValue(value)} $unit',
-              style: AppTextStyles.labelMedium.copyWith(
-                color: AppColors.warmWhite,
+            if (comparisonValue != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                '${_formatValue(comparisonValue!)} $unit  (prev)',
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.warmWhite.withValues(alpha: 0.5),
+                ),
               ),
-            ),
-          if (comparisonValue != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              '${_formatValue(comparisonValue!)} $unit  (prev)',
-              style: AppTextStyles.labelSmall.copyWith(
-                color: AppColors.warmWhite.withValues(alpha: 0.5),
-              ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
 
-  String _formatValue(double v) {
+  String _buildSemanticLabel() {
+    final datePart = date != null ? DateFormat('EEEE, MMMM d').format(date!) : '';
+    final valuePart = label ?? '${_formatValue(value)} $unit';
+    final parts = [if (datePart.isNotEmpty) datePart, valuePart];
+    if (comparisonValue != null) parts.add('Previous: ${_formatValue(comparisonValue!)} $unit');
+    return parts.join(': ');
+  }
+
+  static String _formatValue(double v) {
+    if (!v.isFinite) return '—';
     if (v >= 1000) {
       return NumberFormat('#,###').format(v.round());
     }
