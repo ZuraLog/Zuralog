@@ -120,9 +120,28 @@ class _MetricDetailScreenState extends ConsumerState<MetricDetailScreen> {
     // Resolve canonical display name from TileId — works in all async states.
     final displayName = formatMetricIdForDisplay(widget.metricId);
 
+    // Extract source label from loaded data — null during loading/error states.
+    final sourceSubtitle = detailAsync.maybeWhen(
+      data: (d) => _sourceLabel(d.series.sourceIntegration),
+      orElse: () => null,
+    );
+
     return ZuralogScaffold(
       appBar: AppBar(
-        title: Text(displayName, style: AppTextStyles.displaySmall),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(displayName, style: AppTextStyles.displaySmall),
+            if (sourceSubtitle != null)
+              Text(
+                sourceSubtitle,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.textTertiary,
+                ),
+              ),
+          ],
+        ),
       ),
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
@@ -302,9 +321,6 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
           ),
 
         const SizedBox(height: AppDimens.spaceMd),
-
-        // ── Source attribution ───────────────────────────────────────────────
-        _SourceAttribution(source: series.sourceIntegration),
 
         // ── AI Insight ───────────────────────────────────────────────────────
         if (widget.detail.aiInsight != null) ...[
@@ -576,36 +592,6 @@ class _ChartCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-// ── _SourceAttribution ────────────────────────────────────────────────────────
-
-class _SourceAttribution extends StatelessWidget {
-  const _SourceAttribution({required this.source});
-  final String? source;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(
-          Icons.sensors_rounded,
-          size: 14,
-          color: AppColors.textTertiary,
-        ),
-        const SizedBox(width: AppDimens.spaceXs),
-        Flexible(
-          child: Text(
-            _sourceLabel(source),
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textTertiary,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
     );
   }
 }
