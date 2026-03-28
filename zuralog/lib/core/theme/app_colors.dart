@@ -407,14 +407,24 @@ class AppColorsOf {
   Color get progressStreakWarm => _isDark ? AppColors.progressStreakWarm : AppColors.progressStreakWarmLight;
 
   // -- Trends ---------------------------------------------------------------
-  Color get trendsCanvas => AppColors.trendsCanvas;
-  Color get trendsSurface => AppColors.trendsSurface;
-  Color get trendsSurfaceRaised => AppColors.trendsSurfaceRaised;
-  Color get trendsTextPrimary => AppColors.trendsTextPrimary;
-  Color get trendsTextSecondary => AppColors.trendsTextSecondary;
-  Color get trendsTextMuted => AppColors.trendsTextMuted;
-  Color get trendsBorderDefault => AppColors.trendsBorderDefault;
-  Color get trendsBorderStrong => AppColors.trendsBorderStrong;
-  Color get trendsSage => AppColors.trendsSage;
+  Color get trendsCanvas =>
+      _isDark ? AppColors.canvas : AppColors.backgroundLight;
+  Color get trendsSurface =>
+      _isDark ? AppColors.surface : AppColors.surfaceLight;
+  Color get trendsSurfaceRaised =>
+      _isDark ? AppColors.surfaceRaised : AppColors.elevatedSurfaceLight;
+  Color get trendsTextPrimary =>
+      _isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+  Color get trendsTextSecondary =>
+      _isDark ? AppColors.primary : AppColors.primaryOnLight;
+  Color get trendsTextMuted => _isDark
+      ? AppColors.trendsTextMuted
+      : AppColors.primaryOnLight.withValues(alpha: 0.4);
+  Color get trendsBorderDefault =>
+      _isDark ? AppColors.dividerDefault : AppColors.borderLight;
+  Color get trendsBorderStrong =>
+      _isDark ? const Color(0x1FCFE1B9) : AppColors.borderLight;
+  Color get trendsSage =>
+      _isDark ? AppColors.primary : AppColors.primaryOnLight;
   Color get trendsDeepForest => AppColors.trendsDeepForest;
 }
