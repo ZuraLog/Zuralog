@@ -151,8 +151,8 @@ class _ZOtpInputState extends State<ZOtpInput> {
       label: 'One-time password input',
       child: Opacity(
         opacity: widget.enabled ? 1.0 : AppDimens.disabledOpacity,
-        child: AbsorbPointer(
-          absorbing: !widget.enabled,
+        child: IgnorePointer(
+          ignoring: !widget.enabled,
           child: Stack(
             children: [
               // ── Visual slots row ─────────────────────────────────────
