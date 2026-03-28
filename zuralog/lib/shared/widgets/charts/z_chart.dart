@@ -6,6 +6,7 @@ import 'package:zuralog/shared/widgets/charts/animations/chart_entrance_controll
 import 'package:zuralog/shared/widgets/charts/chart_mode.dart';
 import 'package:zuralog/shared/widgets/charts/chart_render_context.dart';
 import 'package:zuralog/shared/widgets/charts/modes/full_chart_shell.dart';
+import 'package:zuralog/shared/widgets/charts/modes/sparkline_shell.dart';
 import 'package:zuralog/shared/widgets/charts/modes/tile_chart_shell.dart';
 import 'package:zuralog/shared/widgets/charts/z_chart_empty_state.dart';
 
@@ -99,6 +100,11 @@ class _ZChartState extends State<ZChart>
           unit: widget.unit,
         );
       case ChartMode.sparkline:
+        chart = SparklineChartShell(
+          config: config,
+          color: widget.color,
+          renderCtx: renderCtx,
+        );
       case ChartMode.widget:
       case ChartMode.comparison:
       case ChartMode.mini:
