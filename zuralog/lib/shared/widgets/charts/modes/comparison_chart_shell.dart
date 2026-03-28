@@ -203,7 +203,7 @@ class _ComparisonChartShellState extends State<ComparisonChartShell> {
                   titlesData: const FlTitlesData(show: false),
                   lineTouchData: LineTouchData(
                     enabled: true,
-                    handleBuiltInTouches: true,
+                    handleBuiltInTouches: false,
                     touchCallback: (event, response) => _handleLineTouch(
                       event,
                       response,
@@ -214,7 +214,7 @@ class _ComparisonChartShellState extends State<ComparisonChartShell> {
                       return spotIndexes.map((_) {
                         return TouchedSpotIndicatorData(
                           FlLine(
-                            color: AppColors.primary.withValues(alpha: 0.4),
+                            color: AppColors.primary,
                             strokeWidth: 1,
                             dashArray: [4, 3],
                           ),

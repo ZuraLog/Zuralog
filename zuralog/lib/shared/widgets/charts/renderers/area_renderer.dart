@@ -145,13 +145,13 @@ class _AreaRendererState extends State<AreaRenderer> {
       lineTouchData: scrubEnabled
           ? LineTouchData(
               enabled: true,
-              handleBuiltInTouches: true,
+              handleBuiltInTouches: false,
               touchCallback: _handleTouch,
               getTouchedSpotIndicator: (barData, spotIndexes) {
                 return spotIndexes.map((index) {
                   return TouchedSpotIndicatorData(
                     FlLine(
-                      color: AppColors.primary.withValues(alpha: 0.4),
+                      color: AppColors.primary,
                       strokeWidth: 1,
                       dashArray: [4, 3],
                     ),

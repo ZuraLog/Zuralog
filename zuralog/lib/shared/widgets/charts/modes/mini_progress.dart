@@ -67,8 +67,8 @@ class _RingPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width / 2) - 2;
     const strokeWidth = 3.0;
+    final radius = (size.shortestSide / 2) - strokeWidth / 2;
 
     // Track arc (full 360°, 15% opacity).
     final trackPaint = Paint()
