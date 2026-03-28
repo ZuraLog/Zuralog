@@ -157,12 +157,12 @@ class ZuralogCard extends StatelessWidget {
 
     // Wrap in InkWell for tap support
     if (onTap != null) {
-      return ClipRRect(
-        borderRadius: borderRadius,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: borderRadius,
+          child: ClipRRect(
             borderRadius: borderRadius,
             child: body,
           ),
