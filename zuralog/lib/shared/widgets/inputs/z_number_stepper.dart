@@ -52,6 +52,7 @@ class ZNumberStepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final canDecrement = value > min;
     final canIncrement = value < max;
 
@@ -74,7 +75,7 @@ class ZNumberStepper extends StatelessWidget {
                 '$value',
                 key: ValueKey(value),
                 style: AppTextStyles.displaySmall.copyWith(
-                  color: AppColors.textPrimaryDark,
+                  color: colors.textPrimary,
                 ),
               ),
             ),
@@ -104,6 +105,7 @@ class _StepperButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -116,14 +118,14 @@ class _StepperButton extends StatelessWidget {
             child: Container(
               width: 32,
               height: 32,
-              decoration: const BoxDecoration(
-                color: AppColors.surfaceRaised,
+              decoration: BoxDecoration(
+                color: colors.surfaceRaised,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
                 size: 18,
-                color: AppColors.textPrimaryDark,
+                color: colors.textPrimary,
               ),
             ),
           ),

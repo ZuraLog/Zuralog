@@ -49,30 +49,31 @@ class ZBadge extends StatelessWidget {
   /// Override text color. When set, takes priority over the default white.
   final Color? textColor;
 
-  Color get _backgroundColor {
+  Color _resolvedBg(AppColorsOf colors) {
     if (color != null) return color!;
     switch (variant) {
       case ZBadgeVariant.error:
         return AppColors.error;
       case ZBadgeVariant.sage:
-        return AppColors.primary;
+        return colors.primary;
       case ZBadgeVariant.neutral:
-        return AppColors.surfaceRaised;
+        return colors.surfaceRaised;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final fgColor = textColor ?? Colors.white;
 
     return Container(
       constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: _backgroundColor,
+        color: _resolvedBg(colors),
         borderRadius: BorderRadius.circular(AppDimens.shapePill),
         border: Border.all(
-          color: AppColors.canvas,
+          color: colors.canvas,
           width: 2,
         ),
       ),

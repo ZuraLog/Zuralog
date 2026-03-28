@@ -55,6 +55,7 @@ class ZAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     Widget avatar;
 
     if (imageUrl != null) {
@@ -79,7 +80,7 @@ class ZAvatar extends StatelessWidget {
           child: Stack(
             children: [
               // Background
-              Container(color: AppColors.surfaceRaised),
+              Container(color: colors.surfaceRaised),
               // Pattern overlay
               Positioned.fill(
                 child: ZPatternOverlay(
@@ -93,7 +94,7 @@ class ZAvatar extends StatelessWidget {
                 child: Text(
                   (initials ?? '?').toUpperCase(),
                   style: AppTextStyles.labelLarge.copyWith(
-                    color: AppColors.primary,
+                    color: colors.primary,
                     fontSize: _diameter * 0.35,
                   ),
                 ),
