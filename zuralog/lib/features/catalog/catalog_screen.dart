@@ -63,7 +63,7 @@ class CatalogScreen extends ConsumerWidget {
           const SizedBox(height: AppDimens.spaceLg),
           const _IndicatorSection(),
           const SizedBox(height: AppDimens.spaceLg),
-          _ZButtonSection(),
+          const _ZButtonSection(),
           const SizedBox(height: AppDimens.spaceLg),
           const _ZChipSection(),
           const SizedBox(height: AppDimens.spaceLg),
