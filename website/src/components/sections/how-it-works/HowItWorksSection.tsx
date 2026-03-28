@@ -84,19 +84,26 @@ export function HowItWorksSection() {
         }}
       />
 
-      {/* Topographic pattern overlay on the dark zone */}
+      {/* Animated topographic pattern overlay — matches page background */}
       <div
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-0 overflow-hidden"
         style={{
-          backgroundImage: "url(/patterns/original.png)",
-          backgroundSize: "600px",
-          backgroundRepeat: "repeat",
-          opacity: 0.04,
+          opacity: 0.06,
           mixBlendMode: "screen",
-          maskImage: "linear-gradient(to bottom, transparent 0%, black 25%, black 75%, transparent 100%)",
-          WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 25%, black 75%, transparent 100%)",
+          maskImage: "linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%)",
         }}
-      />
+      >
+        <video
+          src="/patterns/Sage.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      </div>
 
       {/* Pinned viewport container */}
       <div ref={pinRef} className="relative flex h-screen w-full flex-col items-center justify-center overflow-hidden">
