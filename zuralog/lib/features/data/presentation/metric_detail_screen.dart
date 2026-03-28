@@ -33,6 +33,9 @@ import 'package:zuralog/shared/widgets/time_range_selector.dart';
 /// Maximum number of rows shown in the raw data table.
 const int _kRawTableMaxRows = 30;
 
+/// Number of rows shown before the "Show all" button.
+const int _kRawTablePreviewRows = 5;
+
 /// Maximum character length for the coach prefill string.
 const int _kCoachPrefillMaxLength = 500;
 
@@ -463,7 +466,7 @@ class _AiInsightCard extends StatelessWidget {
 
 // ── _RawTableToggle ───────────────────────────────────────────────────────────
 
-class _RawTableToggle extends StatelessWidget {
+class _RawTableToggle extends StatefulWidget {
   const _RawTableToggle({
     required this.isExpanded,
     required this.onToggle,
@@ -477,106 +480,22 @@ class _RawTableToggle extends StatelessWidget {
   final String displayUnit;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
+  State<_RawTableToggle> createState() => _RawTableToggleState();
+}
 
-    return GestureDetector(
-      onTap: onToggle,
-      child: Container(
-        padding: const EdgeInsets.all(AppDimens.spaceMd),
-        decoration: BoxDecoration(
-          color: colors.cardBackground,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                 Text(
-                   'Raw Data',
-                   style: AppTextStyles.titleMedium,
-                 ),
-                const Spacer(),
-                Icon(
-                  isExpanded
-                      ? Icons.keyboard_arrow_up_rounded
-                      : Icons.keyboard_arrow_down_rounded,
-                  color: AppColors.textTertiary,
-                ),
-              ],
-            ),
-            if (isExpanded) ...[
-              const SizedBox(height: AppDimens.spaceMd),
-              // Table header
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                     child: Text(
-                       'Date',
-                       style: AppTextStyles.bodySmall.copyWith(
-                         color: colors.textSecondary,
-                         fontWeight: FontWeight.w600,
-                       ),
-                     ),
-                   ),
-                   Expanded(
-                     flex: 2,
-                     child: Text(
-                       'Value',
-                       textAlign: TextAlign.right,
-                       style: AppTextStyles.bodySmall.copyWith(
-                         color: colors.textSecondary,
-                         fontWeight: FontWeight.w600,
-                       ),
-                     ),
-                   ),
-                ],
-              ),
-              const Divider(height: 16),
-              // Table rows (latest first, max _kRawTableMaxRows)
-              ...series.dataPoints.reversed
-                  .take(_kRawTableMaxRows)
-                  .map(
-                    (dp) => Padding(
-                      padding:
-                          const EdgeInsets.symmetric(vertical: 3),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            flex: 3,
-                            child: Text(
-                              _formatDate(dp.timestamp),
-                             style: AppTextStyles.bodySmall.copyWith(
-                                 color: colors.textSecondary,
-                               ),
-                             ),
-                           ),
-                           Expanded(
-                             flex: 2,
-                             child: Text(
-                               '${dp.value.toStringAsFixed(1)} $displayUnit',
-                               textAlign: TextAlign.right,
-                               style: AppTextStyles.bodySmall.copyWith(
-                                 color: Theme.of(context)
-                                     .colorScheme
-                                     .onSurface,
-                                 fontWeight: FontWeight.w600,
-                               ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-            ],
-          ],
-        ),
-      ),
-    );
+class _RawTableToggleState extends State<_RawTableToggle> {
+  bool _showAll = false;
+
+  @override
+  void didUpdateWidget(_RawTableToggle old) {
+    super.didUpdateWidget(old);
+    // Reset "show all" whenever the table is collapsed.
+    if (!widget.isExpanded && old.isExpanded) {
+      _showAll = false;
+    }
   }
 
-  static String _formatDate(String iso) {
+  String _formatDate(String iso) {
     if (iso.isEmpty) return 'Unknown date';
     try {
       final dt = DateTime.parse(iso).toLocal();
@@ -588,6 +507,127 @@ class _RawTableToggle extends StatelessWidget {
     } catch (_) {
       return iso;
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
+    return GestureDetector(
+      onTap: widget.onToggle,
+      child: Container(
+        padding: const EdgeInsets.all(AppDimens.spaceMd),
+        decoration: BoxDecoration(
+          color: colors.cardBackground,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Raw Data',
+                  style: AppTextStyles.titleMedium,
+                ),
+                const Spacer(),
+                Icon(
+                  widget.isExpanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  color: AppColors.textTertiary,
+                ),
+              ],
+            ),
+            if (widget.isExpanded) ...[
+              const SizedBox(height: AppDimens.spaceMd),
+              // Table header
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      'Date',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: colors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      'Value',
+                      textAlign: TextAlign.right,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: colors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 16),
+              // Table rows — preview first 5, "Show all" expands to 30.
+              Builder(
+                builder: (context) {
+                  final allRows = widget.series.dataPoints.reversed.toList();
+                  final visibleRows = _showAll
+                      ? allRows.take(_kRawTableMaxRows).toList()
+                      : allRows.take(_kRawTablePreviewRows).toList();
+                  final remaining = allRows.length - visibleRows.length;
+                  return Column(
+                    children: [
+                      ...visibleRows.map(
+                        (dp) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 3),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: Text(
+                                  _formatDate(dp.timestamp),
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: AppColorsOf(context).textSecondary,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  '${dp.value.toStringAsFixed(1)} ${widget.displayUnit}',
+                                  textAlign: TextAlign.right,
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (!_showAll && remaining > 0) ...[
+                        const SizedBox(height: AppDimens.spaceSm),
+                        GestureDetector(
+                          onTap: () => setState(() => _showAll = true),
+                          child: Text(
+                            'Show all ($remaining more)',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  );
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
 
