@@ -33,13 +33,16 @@ class ZMiniProgress extends StatelessWidget {
   Widget build(BuildContext context) {
     final percentage = goal > 0 ? (value / goal).clamp(0.0, 1.0) : 0.0;
     final label = '${(percentage * 100).round()}% of goal';
+    // Guard against zero/negative size — a zero-size canvas would cause
+    // _RingPainter to compute a negative radius, producing undefined behavior.
+    final safeSize = size.clamp(8.0, double.infinity);
 
     return Semantics(
       label: label,
       child: switch (variant) {
         MiniProgressVariant.ring => SizedBox(
-            width: size,
-            height: size,
+            width: safeSize,
+            height: safeSize,
             child: CustomPaint(
               painter: _RingPainter(percentage: percentage, color: color),
             ),

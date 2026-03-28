@@ -1,5 +1,7 @@
 library;
 
+import 'dart:math' as math;
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -128,8 +130,14 @@ class _ComparisonChartShellState extends State<ComparisonChartShell> {
       ...primaryPts.map((p) => p.value.isFinite ? p.value : 0.0),
       ...compPts.map((p) => p.value.isFinite ? p.value : 0.0),
     ];
-    final maxVal = allValues.fold(0.0, (a, b) => a > b ? a : b);
-    final minVal = allValues.fold(double.infinity, (a, b) => a < b ? a : b);
+    // Guard against empty list: fold on [] returns the identity value, so
+    // minVal would be +infinity and maxVal 0.0, producing a NaN Y range.
+    final maxVal = allValues.isEmpty
+        ? 1.0
+        : allValues.fold(0.0, (a, b) => a > b ? a : b);
+    final minVal = allValues.isEmpty
+        ? 0.0
+        : allValues.fold(double.infinity, (a, b) => a < b ? a : b);
     final padding = (maxVal - minVal) == 0 ? 1.0 : (maxVal - minVal) * 0.15;
 
     final primarySpots = [
@@ -411,7 +419,10 @@ class _ScrubTooltipOverlay extends StatelessWidget {
     const tooltipWidth = 100.0;
     final screenWidth = MediaQuery.sizeOf(context).width;
     final rawX = scrubState.pixelX - tooltipWidth / 2;
-    final clampedX = rawX.clamp(0.0, screenWidth - tooltipWidth);
+    // Guard: if screenWidth < tooltipWidth (e.g., very narrow host), the upper
+    // bound would be negative, causing a RangeError in Dart's clamp.
+    final clampMax = math.max(0.0, screenWidth - tooltipWidth);
+    final clampedX = rawX.clamp(0.0, clampMax);
 
     return Positioned(
       left: clampedX,
