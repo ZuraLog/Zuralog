@@ -376,7 +376,7 @@ class _StatCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final textColor =
-        color ?? Theme.of(context).colorScheme.onSurface;
+        color ?? colors.textPrimary;
     return Expanded(
       child: Column(
         children: [
@@ -449,7 +449,7 @@ class _AiInsightCard extends StatelessWidget {
                        child: Text(
                          insight,
                          style: AppTextStyles.bodySmall.copyWith(
-                           color: Theme.of(context).colorScheme.onSurface,
+                           color: AppColorsOf(context).textPrimary,
                          ),
                        ),
                     ),
@@ -597,7 +597,7 @@ class _RawTableToggleState extends State<_RawTableToggle> {
                                   '${dp.value.toStringAsFixed(1)} ${widget.displayUnit}',
                                   textAlign: TextAlign.right,
                                   style: AppTextStyles.bodySmall.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurface,
+                                    color: AppColorsOf(context).textPrimary,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
