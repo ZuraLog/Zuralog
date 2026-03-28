@@ -48,21 +48,31 @@ class CatalogScreen extends ConsumerWidget {
       ),
       body: ListView(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
-        children: const [
-          _ColorPaletteSection(),
-          SizedBox(height: AppDimens.spaceLg),
-          _TypographySection(),
-          SizedBox(height: AppDimens.spaceLg),
-          _ButtonSection(),
-          SizedBox(height: AppDimens.spaceLg),
-          _CardSection(),
-          SizedBox(height: AppDimens.spaceLg),
-          _InputSection(),
-          SizedBox(height: AppDimens.spaceLg),
-          _LayoutSection(),
-          SizedBox(height: AppDimens.spaceLg),
-          _IndicatorSection(),
-          SizedBox(height: AppDimens.spaceXxl),
+        children: [
+          const _ColorPaletteSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _TypographySection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _ButtonSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _CardSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _InputSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _LayoutSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _IndicatorSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          _ZButtonSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _ZChipSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _ZToggleSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _ZProgressBarSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _ZEmptyStateSection(),
+          const SizedBox(height: AppDimens.spaceXxl),
         ],
       ),
     );
@@ -102,8 +112,8 @@ class _ThemeToggle extends ConsumerWidget {
         ref.read(themeModeProvider.notifier).setTheme(selected.first);
       },
       style: SegmentedButton.styleFrom(
-        selectedBackgroundColor: AppColors.primary,
-        selectedForegroundColor: AppColors.primaryButtonText,
+        selectedBackgroundColor: Theme.of(context).colorScheme.primary,
+        selectedForegroundColor: Theme.of(context).colorScheme.onPrimary,
       ),
     );
   }
@@ -450,6 +460,161 @@ class _IndicatorSection extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── ZButton ───────────────────────────────────────────────────────────────
+
+class _ZButtonSection extends StatelessWidget {
+  const _ZButtonSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return _CatalogSection(
+      title: 'ZButton',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ZButton(label: 'Primary', onPressed: () {}),
+          const SizedBox(height: AppDimens.spaceSm),
+          ZButton(
+            label: 'Secondary',
+            onPressed: () {},
+            variant: ZButtonVariant.secondary,
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          ZButton(
+            label: 'Destructive',
+            onPressed: () {},
+            variant: ZButtonVariant.destructive,
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          const ZButton(
+            label: 'Loading',
+            onPressed: null,
+            isLoading: true,
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          const ZButton(
+            label: 'Disabled',
+            onPressed: null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── ZChip ─────────────────────────────────────────────────────────────────
+
+class _ZChipSection extends StatelessWidget {
+  const _ZChipSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return _CatalogSection(
+      title: 'ZChip',
+      child: ZuralogCard(
+        child: Wrap(
+          spacing: AppDimens.spaceSm,
+          runSpacing: AppDimens.spaceSm,
+          children: const [
+            ZChip(label: 'Active', isActive: true),
+            ZChip(label: 'Inactive'),
+            ZChip(
+              label: 'Active + Icon',
+              isActive: true,
+              icon: Icons.bolt_rounded,
+            ),
+            ZChip(
+              label: 'Inactive + Icon',
+              icon: Icons.bolt_rounded,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── ZToggle ───────────────────────────────────────────────────────────────
+
+class _ZToggleSection extends StatelessWidget {
+  const _ZToggleSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return _CatalogSection(
+      title: 'ZToggle',
+      child: ZuralogCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            ZToggle(value: true, label: 'Notifications'),
+            SizedBox(height: AppDimens.spaceMd),
+            ZToggle(value: false, label: 'Dark Mode'),
+            SizedBox(height: AppDimens.spaceMd),
+            ZToggle(
+              value: true,
+              enabled: false,
+              label: 'Disabled On',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── ZProgressBar ─────────────────────────────────────────────────────────
+
+class _ZProgressBarSection extends StatelessWidget {
+  const _ZProgressBarSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return _CatalogSection(
+      title: 'ZProgressBar',
+      child: ZuralogCard(
+        child: const Column(
+          children: [
+            ZProgressBar(value: 0.0, label: 'Empty', valueLabel: '0%'),
+            SizedBox(height: AppDimens.spaceMd),
+            ZProgressBar(
+              value: 0.4,
+              label: 'In Progress',
+              valueLabel: '40%',
+            ),
+            SizedBox(height: AppDimens.spaceMd),
+            ZProgressBar(
+              value: 1.0,
+              label: 'Complete',
+              valueLabel: '100%',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── ZEmptyState ───────────────────────────────────────────────────────────
+
+class _ZEmptyStateSection extends StatelessWidget {
+  const _ZEmptyStateSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _CatalogSection(
+      title: 'ZEmptyState',
+      child: ZEmptyState(
+        icon: Icons.bar_chart_outlined,
+        title: 'No data yet',
+        message: 'Connect a health app to get started.',
+        actionLabel: 'Connect App',
+        onAction: null,
       ),
     );
   }
