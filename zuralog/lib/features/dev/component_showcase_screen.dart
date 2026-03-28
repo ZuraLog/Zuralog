@@ -1463,7 +1463,188 @@ class _ComponentShowcaseScreenState
         ),
 
         _gap(AppDimens.spaceXxl),
+
+        // ── 9. CHART — NEW MODES ─────────────────────────────────────────
+        _gap(AppDimens.spaceLg),
+        Text(
+          '9. Chart — New Modes',
+          style: AppTextStyles.displaySmall.copyWith(color: AppColors.warmWhite),
+        ),
+        _gap(),
+        Text(
+          'Sparkline, mini progress, full-mode hero chart, and comparison overlay.',
+          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark),
+        ),
+        _buildChartNewModes(),
       ],
+    );
+  }
+
+  // ── 8b. CHART — NEW MODES ───────────────────────────────────────────────
+
+  Widget _buildChartNewModes() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Sparkline ─────────────────────────────────────────────────────
+        _label('Sparkline — inline trend shape (16px, no chrome)'),
+        Row(
+          children: [
+            _sparklineCell('Line', _kSparkLine, AppColors.categoryHeart),
+            const SizedBox(width: AppDimens.spaceXs),
+            _sparklineCell('Area', _kSparkArea, AppColors.categorySleep),
+            const SizedBox(width: AppDimens.spaceXs),
+            _sparklineCell('Bar', _kSparkBar, AppColors.categoryActivity),
+            const SizedBox(width: AppDimens.spaceXs),
+            _sparklineCell('Seg Bar', _kSparkSeg, AppColors.categoryWellness),
+          ],
+        ),
+
+        // ── Mini Progress ─────────────────────────────────────────────────
+        _label('Mini Progress — ring (24 / 28 / 32px) + linear'),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            ZMiniProgress(
+              value: 6240,
+              goal: 10000,
+              color: AppColors.categoryActivity,
+              variant: MiniProgressVariant.ring,
+              size: 24,
+            ),
+            const SizedBox(width: AppDimens.spaceMd),
+            ZMiniProgress(
+              value: 6240,
+              goal: 10000,
+              color: AppColors.categoryActivity,
+              variant: MiniProgressVariant.ring,
+              size: 28,
+            ),
+            const SizedBox(width: AppDimens.spaceMd),
+            ZMiniProgress(
+              value: 6240,
+              goal: 10000,
+              color: AppColors.categoryActivity,
+              variant: MiniProgressVariant.ring,
+              size: 32,
+            ),
+            const SizedBox(width: AppDimens.spaceLg),
+            Expanded(
+              child: ZMiniProgress(
+                value: 1.8,
+                goal: 2.5,
+                color: AppColors.categoryBody,
+                variant: MiniProgressVariant.linear,
+              ),
+            ),
+          ],
+        ),
+
+        // ── Full Mode — Line ──────────────────────────────────────────────
+        _label('Full Mode — line chart with scrub crosshair'),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColorsOf(context).surface,
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceSm),
+          child: ZChart(
+            config: _kFullLineChart,
+            mode: ChartMode.full,
+            color: AppColors.categoryHeart,
+            unit: 'bpm',
+          ),
+        ),
+
+        // ── Full Mode — Bar ───────────────────────────────────────────────
+        _label('Full Mode — bar chart with tap-to-tooltip'),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColorsOf(context).surface,
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceSm),
+          child: ZChart(
+            config: _kBarChartFull,
+            mode: ChartMode.full,
+            color: AppColors.categoryActivity,
+            unit: 'steps',
+          ),
+        ),
+
+        // ── Comparison Mode — Line ────────────────────────────────────────
+        _label('Comparison Mode — two periods overlaid'),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColorsOf(context).surface,
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceSm),
+          child: ZChart(
+            config: _kComparisonPrimary,
+            mode: ChartMode.comparison,
+            color: AppColors.categoryHeart,
+            unit: 'bpm',
+            comparisonConfig: _kComparisonSecondary,
+          ),
+        ),
+
+        // ── Mini — via ZChart ─────────────────────────────────────────────
+        _label('Mini Mode — ZChart.mini on RingConfig and FillGaugeConfig'),
+        Row(
+          children: [
+            ZChart(
+              config: _kRingFull,
+              mode: ChartMode.mini,
+              color: AppColors.categoryActivity,
+            ),
+            const SizedBox(width: AppDimens.spaceLg),
+            Expanded(
+              child: ZChart(
+                config: _kFillGaugeFull,
+                mode: ChartMode.mini,
+                color: AppColors.categoryBody,
+              ),
+            ),
+          ],
+        ),
+
+        _gap(AppDimens.spaceLg),
+      ],
+    );
+  }
+
+  Widget _sparklineCell(
+    String label,
+    TileVisualizationConfig config,
+    Color color,
+  ) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColorsOf(context).textSecondary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            height: 32,
+            decoration: BoxDecoration(
+              color: AppColorsOf(context).surface,
+              borderRadius: BorderRadius.circular(AppDimens.shapeXs),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            child: ZChart(
+              config: config,
+              mode: ChartMode.sparkline,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1679,3 +1860,118 @@ const _kGaugeEmpty = GaugeConfig(
 const _kFillGaugeEmpty = FillGaugeConfig(value: 0, maxValue: 2.5, unit: 'L');
 
 const _kSegBarEmpty = SegmentedBarConfig(totalLabel: '—', segments: []);
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Mock Chart Data — Extended Modes (sparkline, full, comparison)
+// ══════════════════════════════════════════════════════════════════════════════
+
+// 30-day heart rate data for full-mode and sparkline demos.
+final _kFullLineChart = LineChartConfig(
+  points: [
+    ChartPoint(date: DateTime(2026, 2, 27), value: 68),
+    ChartPoint(date: DateTime(2026, 2, 28), value: 71),
+    ChartPoint(date: DateTime(2026, 3, 1), value: 74),
+    ChartPoint(date: DateTime(2026, 3, 2), value: 70),
+    ChartPoint(date: DateTime(2026, 3, 3), value: 72),
+    ChartPoint(date: DateTime(2026, 3, 4), value: 69),
+    ChartPoint(date: DateTime(2026, 3, 5), value: 73),
+    ChartPoint(date: DateTime(2026, 3, 6), value: 76),
+    ChartPoint(date: DateTime(2026, 3, 7), value: 74),
+    ChartPoint(date: DateTime(2026, 3, 8), value: 71),
+    ChartPoint(date: DateTime(2026, 3, 9), value: 68),
+    ChartPoint(date: DateTime(2026, 3, 10), value: 72),
+    ChartPoint(date: DateTime(2026, 3, 11), value: 75),
+    ChartPoint(date: DateTime(2026, 3, 12), value: 73),
+    ChartPoint(date: DateTime(2026, 3, 13), value: 70),
+    ChartPoint(date: DateTime(2026, 3, 14), value: 67),
+    ChartPoint(date: DateTime(2026, 3, 15), value: 71),
+    ChartPoint(date: DateTime(2026, 3, 16), value: 74),
+    ChartPoint(date: DateTime(2026, 3, 17), value: 76),
+    ChartPoint(date: DateTime(2026, 3, 18), value: 72),
+    ChartPoint(date: DateTime(2026, 3, 19), value: 69),
+    ChartPoint(date: DateTime(2026, 3, 20), value: 73),
+    ChartPoint(date: DateTime(2026, 3, 21), value: 75),
+    ChartPoint(date: DateTime(2026, 3, 22), value: 71),
+    ChartPoint(date: DateTime(2026, 3, 23), value: 68),
+    ChartPoint(date: DateTime(2026, 3, 24), value: 74),
+    ChartPoint(date: DateTime(2026, 3, 25), value: 77),
+    ChartPoint(date: DateTime(2026, 3, 26), value: 73),
+    ChartPoint(date: DateTime(2026, 3, 27), value: 71),
+    ChartPoint(date: DateTime(2026, 3, 28), value: 76),
+  ],
+  referenceLine: 72,
+);
+
+// Comparison primary: this week's heart rate.
+final _kComparisonPrimary = LineChartConfig(
+  points: [
+    ChartPoint(date: DateTime(2026, 3, 22), value: 68),
+    ChartPoint(date: DateTime(2026, 3, 23), value: 72),
+    ChartPoint(date: DateTime(2026, 3, 24), value: 65),
+    ChartPoint(date: DateTime(2026, 3, 25), value: 78),
+    ChartPoint(date: DateTime(2026, 3, 26), value: 74),
+    ChartPoint(date: DateTime(2026, 3, 27), value: 71),
+    ChartPoint(date: DateTime(2026, 3, 28), value: 76),
+  ],
+);
+
+// Comparison secondary: previous week's heart rate.
+final _kComparisonSecondary = LineChartConfig(
+  points: [
+    ChartPoint(date: DateTime(2026, 3, 15), value: 74),
+    ChartPoint(date: DateTime(2026, 3, 16), value: 69),
+    ChartPoint(date: DateTime(2026, 3, 17), value: 73),
+    ChartPoint(date: DateTime(2026, 3, 18), value: 77),
+    ChartPoint(date: DateTime(2026, 3, 19), value: 70),
+    ChartPoint(date: DateTime(2026, 3, 20), value: 68),
+    ChartPoint(date: DateTime(2026, 3, 21), value: 72),
+  ],
+);
+
+// Sparkline configs — 7 data points, no labels, just shape.
+final _kSparkLine = LineChartConfig(
+  points: [
+    ChartPoint(date: DateTime(2026, 3, 22), value: 68),
+    ChartPoint(date: DateTime(2026, 3, 23), value: 72),
+    ChartPoint(date: DateTime(2026, 3, 24), value: 65),
+    ChartPoint(date: DateTime(2026, 3, 25), value: 78),
+    ChartPoint(date: DateTime(2026, 3, 26), value: 74),
+    ChartPoint(date: DateTime(2026, 3, 27), value: 71),
+    ChartPoint(date: DateTime(2026, 3, 28), value: 76),
+  ],
+);
+
+final _kSparkArea = AreaChartConfig(
+  points: [
+    ChartPoint(date: DateTime(2026, 3, 22), value: 7.2),
+    ChartPoint(date: DateTime(2026, 3, 23), value: 6.8),
+    ChartPoint(date: DateTime(2026, 3, 24), value: 8.1),
+    ChartPoint(date: DateTime(2026, 3, 25), value: 7.5),
+    ChartPoint(date: DateTime(2026, 3, 26), value: 6.9),
+    ChartPoint(date: DateTime(2026, 3, 27), value: 7.8),
+    ChartPoint(date: DateTime(2026, 3, 28), value: 7.4),
+  ],
+  fillOpacity: 0.15,
+);
+
+const _kSparkBar = BarChartConfig(
+  bars: [
+    BarPoint(label: 'M', value: 8432, isToday: false),
+    BarPoint(label: 'T', value: 6218, isToday: false),
+    BarPoint(label: 'W', value: 9105, isToday: false),
+    BarPoint(label: 'T', value: 7340, isToday: false),
+    BarPoint(label: 'F', value: 10230, isToday: false),
+    BarPoint(label: 'S', value: 5621, isToday: false),
+    BarPoint(label: 'S', value: 8910, isToday: true),
+  ],
+);
+
+const _kSparkSeg = SegmentedBarConfig(
+  totalLabel: '7h 22m',
+  segments: [
+    Segment(label: 'Deep', value: 95, color: Color(0xFF3634A3)),
+    Segment(label: 'Core', value: 210, color: Color(0xFF5E5CE6)),
+    Segment(label: 'REM', value: 82, color: Color(0xFF8E8CE8)),
+    Segment(label: 'Awake', value: 55, color: Color(0xFFBFBEF0)),
+  ],
+);
