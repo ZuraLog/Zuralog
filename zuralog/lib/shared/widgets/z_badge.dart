@@ -36,7 +36,10 @@ class ZBadge extends StatelessWidget {
     this.variant = ZBadgeVariant.neutral,
     this.color,
     this.textColor,
-  });
+  }) : assert(
+          color == null || variant == ZBadgeVariant.neutral,
+          'Custom color only applies to the neutral variant',
+        );
 
   final String label;
 
@@ -61,29 +64,40 @@ class ZBadge extends StatelessWidget {
     }
   }
 
+  String get _semanticLabel => label.isNotEmpty ? label : 'notification badge';
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final fgColor = textColor ?? Colors.white;
 
-    return Container(
-      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: _resolvedBg(colors),
-        borderRadius: BorderRadius.circular(AppDimens.shapePill),
-        border: Border.all(
-          color: colors.canvas,
-          width: 2,
+    return Semantics(
+      label: _semanticLabel,
+      container: true,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 80),
+        child: Container(
+          constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: _resolvedBg(colors),
+            borderRadius: BorderRadius.circular(AppDimens.shapePill),
+            border: Border.all(
+              color: colors.canvas,
+              width: 2,
+            ),
+          ),
+          child: Text(
+            label,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: fgColor,
+              fontWeight: FontWeight.w700,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.labelSmall.copyWith(
-          color: fgColor,
-          fontWeight: FontWeight.w700,
-        ),
-        textAlign: TextAlign.center,
       ),
     );
   }
