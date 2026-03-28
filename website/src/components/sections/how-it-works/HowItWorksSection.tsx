@@ -149,11 +149,11 @@ export function HowItWorksSection() {
           {/* Left phone (previous step) */}
           <div className="hidden sm:block">
             <PhoneFrame
-              className="w-[140px] md:w-[160px] lg:w-[180px]"
+              className="w-[180px] md:w-[200px] lg:w-[220px]"
               style={{
                 transform: "rotate(-6deg) translateY(-12px)",
                 opacity: leftId ? 0.4 : 0,
-                transition: "opacity 0.4s ease",
+                transition: "opacity 0.6s ease",
               }}
             >
               <AnimatePresence mode="wait">
@@ -163,7 +163,7 @@ export function HowItWorksSection() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3, ease: EXPO_OUT }}
+                    transition={{ duration: 0.5, ease: EXPO_OUT }}
                   >
                     {renderScreen(leftId)}
                   </motion.div>
@@ -173,15 +173,15 @@ export function HowItWorksSection() {
           </div>
 
           {/* Center phone (active step) */}
-          <PhoneFrame className="w-[200px] sm:w-[220px] md:w-[240px] lg:w-[260px] z-10">
+          <PhoneFrame className="w-[220px] sm:w-[240px] md:w-[260px] lg:w-[280px] z-10">
             <AnimatePresence mode="wait">
               {centerId && (
                 <motion.div
                   key={centerId}
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.35, ease: EXPO_OUT }}
+                  exit={{ opacity: 0, y: -16 }}
+                  transition={{ duration: 0.5, ease: EXPO_OUT }}
                 >
                   {renderScreen(centerId)}
                 </motion.div>
@@ -192,11 +192,11 @@ export function HowItWorksSection() {
           {/* Right phone (next step) */}
           <div className="hidden sm:block">
             <PhoneFrame
-              className="w-[140px] md:w-[160px] lg:w-[180px]"
+              className="w-[180px] md:w-[200px] lg:w-[220px]"
               style={{
                 transform: "rotate(6deg) translateY(-12px)",
                 opacity: rightId ? 0.4 : 0,
-                transition: "opacity 0.4s ease",
+                transition: "opacity 0.6s ease",
               }}
             >
               <AnimatePresence mode="wait">
@@ -206,7 +206,7 @@ export function HowItWorksSection() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3, ease: EXPO_OUT }}
+                    transition={{ duration: 0.5, ease: EXPO_OUT }}
                   >
                     {renderScreen(rightId)}
                   </motion.div>

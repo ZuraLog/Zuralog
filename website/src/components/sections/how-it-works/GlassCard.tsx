@@ -15,10 +15,10 @@ export function GlassCard({ step, stepIndex, isVisible }: GlassCardProps) {
       {isVisible && (
         <motion.div
           key={step.id}
-          initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
+          initial={{ opacity: 0, y: 24, filter: "blur(8px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          exit={{ opacity: 0, y: -20, filter: "blur(8px)" }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          exit={{ opacity: 0, y: -24, filter: "blur(8px)" }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="pointer-events-none absolute bottom-8 left-1/2 z-30 w-[320px] -translate-x-1/2 sm:bottom-12 sm:w-[380px]"
         >
           <div
