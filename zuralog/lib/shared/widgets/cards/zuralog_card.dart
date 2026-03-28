@@ -146,7 +146,7 @@ class ZuralogCard extends StatelessWidget {
       body = Container(
         padding: effectivePadding,
         decoration: BoxDecoration(
-          color: isDark ? AppColors.surface : theme.colorScheme.surface,
+          color: colors.cardBackground,
           borderRadius: borderRadius,
           // Light mode only: soft shadow
           boxShadow: isDark ? null : AppDimens.cardShadowLight,
@@ -160,9 +160,7 @@ class ZuralogCard extends StatelessWidget {
       return ClipRRect(
         borderRadius: borderRadius,
         child: Material(
-          color: _hasPattern
-              ? colors.cardBackground
-              : (isDark ? AppColors.surface : theme.colorScheme.surface),
+          color: colors.cardBackground,
           child: InkWell(
             onTap: onTap,
             child: _hasPattern
