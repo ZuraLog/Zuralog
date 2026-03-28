@@ -50,7 +50,7 @@ class ZRadioGroup<T> extends StatelessWidget {
     return IgnorePointer(
       ignoring: !enabled,
       child: Opacity(
-        opacity: enabled ? 1.0 : 0.4,
+        opacity: enabled ? 1.0 : AppDimens.disabledOpacity,
         child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,

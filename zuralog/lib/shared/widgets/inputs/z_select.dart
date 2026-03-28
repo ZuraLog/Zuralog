@@ -120,8 +120,10 @@ class ZSelect extends StatelessWidget {
     final colors = AppColorsOf(context);
     final hasValue = value != null && value!.isNotEmpty;
 
-    final trigger = Opacity(
-      opacity: enabled ? 1.0 : 0.4,
+    final trigger = IgnorePointer(
+      ignoring: !enabled,
+      child: Opacity(
+      opacity: enabled ? 1.0 : AppDimens.disabledOpacity,
       child: GestureDetector(
       onTap: _canOpen ? () => _showOptions(context) : null,
       child: Container(
@@ -154,6 +156,7 @@ class ZSelect extends StatelessWidget {
         ),
       ),
     ),
+      ),
     );
 
     if (label == null) return trigger;

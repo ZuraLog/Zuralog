@@ -47,8 +47,10 @@ class ZChip extends StatelessWidget {
       checked: isActive,
       label: label,
       button: true,
-      child: Opacity(
-        opacity: enabled ? 1.0 : 0.4,
+      child: IgnorePointer(
+        ignoring: !enabled,
+        child: Opacity(
+        opacity: enabled ? 1.0 : AppDimens.disabledOpacity,
         child: GestureDetector(
           onTap: enabled && onTap != null
               ? () {
@@ -94,6 +96,7 @@ class ZChip extends StatelessWidget {
             ],
           ),
           ),
+        ),
         ),
       ),
     );

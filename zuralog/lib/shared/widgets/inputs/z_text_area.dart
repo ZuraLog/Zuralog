@@ -47,8 +47,10 @@ class ZTextArea extends StatelessWidget {
     final colors = AppColorsOf(context);
     final sageFocusBorder = colors.primary.withValues(alpha: 0.3);
 
-    final field = Opacity(
-      opacity: enabled ? 1.0 : 0.4,
+    final field = IgnorePointer(
+      ignoring: !enabled,
+      child: Opacity(
+      opacity: enabled ? 1.0 : AppDimens.disabledOpacity,
       child: TextFormField(
         controller: controller,
         enabled: enabled,
@@ -92,6 +94,7 @@ class ZTextArea extends StatelessWidget {
           ),
           constraints: const BoxConstraints(minHeight: 120),
         ),
+      ),
       ),
     );
 

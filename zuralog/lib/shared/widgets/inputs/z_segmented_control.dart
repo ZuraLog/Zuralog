@@ -39,8 +39,10 @@ class ZSegmentedControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    return Opacity(
-      opacity: enabled ? 1.0 : 0.4,
+    return IgnorePointer(
+      ignoring: !enabled,
+      child: Opacity(
+      opacity: enabled ? 1.0 : AppDimens.disabledOpacity,
       child: LayoutBuilder(
       builder: (context, constraints) {
         final totalWidth = constraints.maxWidth;
@@ -77,7 +79,7 @@ class ZSegmentedControl extends StatelessWidget {
                   child: Container(
                     decoration: BoxDecoration(
                       color: AppColors.warmWhite,
-                      borderRadius: BorderRadius.circular(9),
+                      borderRadius: BorderRadius.circular(AppDimens.shapeXs),
                     ),
                   ),
                 ),
@@ -113,6 +115,7 @@ class ZSegmentedControl extends StatelessWidget {
         );
       },
     ),
+      ),
     );
   }
 }
