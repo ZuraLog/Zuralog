@@ -17,11 +17,13 @@ class BarRenderer extends StatelessWidget {
     required this.config,
     required this.color,
     required this.renderCtx,
+    this.onBarTap,
   });
 
   final BarChartConfig config;
   final Color color;
   final ChartRenderContext renderCtx;
+  final void Function(int barIndex, double value, String label)? onBarTap;
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +96,20 @@ class BarRenderer extends StatelessWidget {
         maxY: maxY,
         minY: 0,
         barGroups: groups,
-        barTouchData: const BarTouchData(enabled: false),
+        barTouchData: onBarTap != null
+            ? BarTouchData(
+                enabled: true,
+                handleBuiltInTouches: false,
+                touchCallback: (FlTouchEvent event, BarTouchResponse? response) {
+                  if (!event.isInterestedForInteractions) return;
+                  final spot = response?.spot;
+                  if (spot == null) return;
+                  final idx = spot.touchedBarGroupIndex;
+                  if (idx < 0 || idx >= bars.length) return;
+                  onBarTap!(idx, bars[idx].value, bars[idx].label);
+                },
+              )
+            : const BarTouchData(enabled: false),
         gridData: const FlGridData(show: false),
         borderData: FlBorderData(show: false),
         extraLinesData: ExtraLinesData(
