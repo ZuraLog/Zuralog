@@ -60,8 +60,8 @@ class ZIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final iconColor = isSage ? AppColors.primary : colors.textPrimary;
-    final bgColor = filled ? AppColors.surfaceRaised : Colors.transparent;
+    final iconColor = isSage ? colors.primary : colors.textPrimary;
+    final bgColor = filled ? colors.surfaceRaised : Colors.transparent;
     final shape = isCircle
         ? BoxShape.circle
         : BoxShape.rectangle;
