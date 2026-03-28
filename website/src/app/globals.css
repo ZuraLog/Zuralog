@@ -92,6 +92,17 @@
   --font-jakarta: var(--font-jakarta);
 }
 
+/* -- Brand Bible light-mode overrides -------------------------------- */
+/* Applied when BrandBibleThemeProvider sets data-theme="light"        */
+[data-theme="light"] {
+  --color-ds-canvas: #F0EEE9;
+  --color-ds-surface: #E8E6E1;
+  --color-ds-surface-raised: #DEDAD4;
+  --color-ds-surface-overlay: #D4D0CA;
+  --color-ds-text-primary: #161618;
+  --color-ds-text-secondary: #6B6864;
+}
+
 :root {
   --background: #FAFAF5;
   --foreground: #2D2D2D;
