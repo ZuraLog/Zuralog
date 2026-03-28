@@ -1,99 +1,237 @@
-/**
- * 500 Error page — ZuraLog.
- *
- * Next.js App Router renders this file for unhandled runtime errors.
- * Must be a Client Component because it receives the error and reset props.
- * Light, witty, health-themed — consistent with the 404 page.
- */
-
-'use client';
+"use client";
 
 import * as Sentry from "@sentry/nextjs";
-import { useEffect } from 'react';
-import Link from 'next/link';
+import { useEffect, useRef } from "react";
+import { motion } from "framer-motion";
+import { gsap } from "gsap";
+import Link from "next/link";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
+import { RotateCcw, ArrowLeft, Mail } from "lucide-react";
+
+const EXPO_OUT = [0.16, 1, 0.3, 1] as [number, number, number, number];
 
 interface ErrorPageProps {
-  /** The error that was thrown */
   error: Error & { digest?: string };
-  /** Call this to attempt recovering by re-rendering the segment */
   reset: () => void;
 }
 
-/**
- * Global error boundary page for unhandled server/client runtime errors.
- *
- * @param error - The caught error object
- * @param reset - Function to re-render and attempt recovery
- */
 export default function ErrorPage({ error, reset }: ErrorPageProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const numberRef = useRef<HTMLParagraphElement>(null);
+  const patternRef = useRef<HTMLDivElement>(null);
+
+  // Report to Sentry
   useEffect(() => {
     Sentry.captureException(error);
   }, [error]);
 
+  // Mouse parallax on the 500 number and pattern
+  useEffect(() => {
+    const container = containerRef.current;
+    const number = numberRef.current;
+    const pattern = patternRef.current;
+    if (!container || !number || !pattern) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+
+      gsap.to(number, {
+        x: x * 20,
+        y: y * 12,
+        duration: 0.8,
+        ease: "power2.out",
+      });
+
+      gsap.to(pattern, {
+        x: x * -10,
+        y: y * -8,
+        duration: 1.2,
+        ease: "power2.out",
+      });
+    };
+
+    const handleMouseLeave = () => {
+      gsap.to([number, pattern], {
+        x: 0,
+        y: 0,
+        duration: 1,
+        ease: "elastic.out(1, 0.4)",
+      });
+    };
+
+    container.addEventListener("mousemove", handleMouseMove);
+    container.addEventListener("mouseleave", handleMouseLeave);
+    return () => {
+      container.removeEventListener("mousemove", handleMouseMove);
+      container.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, []);
+
+  // Slow pattern drift animation
+  useEffect(() => {
+    const pattern = patternRef.current;
+    if (!pattern) return;
+
+    gsap.to(pattern, {
+      backgroundPosition: "600px 600px",
+      duration: 60,
+      ease: "none",
+      repeat: -1,
+    });
+  }, []);
+
   return (
-    <div
-      className="relative flex min-h-screen flex-col items-center justify-center px-6 py-32 text-center"
-      style={{ background: '#FAFAF5' }}
-    >
-      {/* Big 500 */}
-      <p
-        className="text-[120px] font-bold leading-none tracking-tighter"
-        style={{
-          background: 'linear-gradient(135deg, #CFE1B9 0%, #D4F291 50%, #E8F5A8 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-        }}
+    <>
+      <div
+        ref={containerRef}
+        className="relative flex min-h-screen flex-col overflow-hidden"
+        style={{ background: "#FAFAF5" }}
       >
-        500
-      </p>
+        {/* Topographic pattern texture */}
+        <div
+          ref={patternRef}
+          className="pointer-events-none absolute inset-[-100px]"
+          style={{
+            backgroundImage: 'url("/brand-pattern-hd.jpg")',
+            backgroundSize: "600px auto",
+            backgroundRepeat: "repeat",
+            opacity: 0.025,
+            mixBlendMode: "multiply",
+          }}
+        />
 
-      {/* Eyebrow */}
-      <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#E8F5A8]/60 bg-[#E8F5A8]/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#2D2D2D]/60">
-        <span className="h-1.5 w-1.5 rounded-full bg-[#D4F291] animate-pulse" />
-        Server error
-      </span>
+        <Navbar />
 
-      {/* Headline */}
-      <h1 className="mt-5 max-w-sm text-2xl font-bold tracking-tight text-[#1A1A1A] sm:text-3xl">
-        Our server pulled a muscle.
-      </h1>
+        <main className="relative z-10 flex flex-1 items-center justify-center px-6 pt-24 pb-16">
+          <div className="flex flex-col items-center text-center">
+            {/* 500 Number */}
+            <motion.p
+              ref={numberRef}
+              initial={{ opacity: 0, scale: 0.8, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.9, ease: EXPO_OUT }}
+              className="select-none text-[180px] font-bold leading-none tracking-[-0.06em] sm:text-[240px]"
+              style={{ color: "#344E41" }}
+            >
+              500
+            </motion.p>
 
-      {/* Subtext */}
-      <p className="mt-4 max-w-xs text-sm leading-relaxed text-black/45">
-        Something went wrong on our end. Give it a moment and try again.
-        If the problem keeps up, let us know.
-      </p>
+            {/* Pill badge */}
+            <motion.span
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: EXPO_OUT, delay: 0.15 }}
+              className="mt-2 inline-flex items-center gap-2 rounded-full px-4 py-1.5"
+              style={{
+                background: "rgba(52, 78, 65, 0.06)",
+                border: "1px solid rgba(52, 78, 65, 0.08)",
+              }}
+            >
+              <span
+                className="h-[5px] w-[5px] animate-pulse rounded-full"
+                style={{ background: "#344E41" }}
+              />
+              <span
+                className="text-[11px] font-medium uppercase tracking-[2px]"
+                style={{
+                  color: "#344E41",
+                  fontFamily: "var(--font-geist-mono, monospace)",
+                }}
+              >
+                Server error
+              </span>
+            </motion.span>
 
-      {/* Actions */}
-      <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
-        <button
-          type="button"
-          onClick={reset}
-          className="inline-flex items-center justify-center rounded-full bg-[#E8F5A8] px-6 py-2.5 text-sm font-semibold text-[#2D2D2D] transition-opacity hover:opacity-80"
-        >
-          Try again
-        </button>
-        <Link
-          href="/"
-          className="inline-flex items-center justify-center rounded-full border border-black/10 px-6 py-2.5 text-sm font-medium text-black/60 transition-colors hover:border-[#CFE1B9] hover:text-[#2D2D2D]"
-        >
-          Back to home
-        </Link>
-        <a
-          href="mailto:support@zuralog.com"
-          className="inline-flex items-center justify-center rounded-full border border-black/10 px-6 py-2.5 text-sm font-medium text-black/60 transition-colors hover:border-[#CFE1B9] hover:text-[#2D2D2D]"
-        >
-          Report this
-        </a>
+            {/* Headline */}
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: EXPO_OUT, delay: 0.25 }}
+              className="mt-6 text-[28px] font-semibold tracking-tight sm:text-[32px]"
+              style={{ color: "#1A2E22" }}
+            >
+              Something went wrong.
+            </motion.h1>
+
+            {/* Subtext */}
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: EXPO_OUT, delay: 0.35 }}
+              className="mt-3 max-w-sm text-[16px] leading-relaxed"
+              style={{ color: "rgba(52, 78, 65, 0.45)" }}
+            >
+              We hit an unexpected error on our end. Give it a moment and try
+              again. If the problem persists, let us know.
+            </motion.p>
+
+            {/* Buttons */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: EXPO_OUT, delay: 0.45 }}
+              className="mt-10 flex flex-col items-center gap-3 sm:flex-row"
+            >
+              <button
+                type="button"
+                onClick={reset}
+                className="btn-pattern-light group inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-semibold animate-sage-glow transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
+                style={{
+                  background: "#CFE1B9",
+                  color: "#141E18",
+                  boxShadow: "0 2px 12px rgba(207, 225, 185, 0.4)",
+                }}
+              >
+                <RotateCcw className="h-4 w-4 transition-transform duration-300 group-hover:-rotate-45" />
+                Try Again
+              </button>
+              <Link
+                href="/"
+                className="inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-semibold transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
+                style={{
+                  color: "#344E41",
+                  border: "1.5px solid rgba(52, 78, 65, 0.20)",
+                }}
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Home
+              </Link>
+              <a
+                href="mailto:support@zuralog.com"
+                className="inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-semibold transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
+                style={{
+                  color: "#344E41",
+                  border: "1.5px solid rgba(52, 78, 65, 0.20)",
+                }}
+              >
+                <Mail className="h-4 w-4" />
+                Report This
+              </a>
+            </motion.div>
+
+            {/* Error digest */}
+            {error.digest && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.7, delay: 0.6 }}
+                className="mt-8 text-[10px]"
+                style={{
+                  color: "rgba(52, 78, 65, 0.2)",
+                  fontFamily: "var(--font-geist-mono, monospace)",
+                }}
+              >
+                Error ID: {error.digest}
+              </motion.p>
+            )}
+          </div>
+        </main>
+
+        <Footer />
       </div>
-
-      {/* Error digest for debugging */}
-      {error.digest && (
-        <p className="mt-8 font-mono text-[10px] text-black/20">
-          Error ID: {error.digest}
-        </p>
-      )}
-    </div>
+    </>
   );
 }
