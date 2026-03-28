@@ -1761,46 +1761,50 @@ class _ChartShowcaseRow extends StatelessWidget {
   final List<(TileSize, TileVisualizationConfig)> configs;
 
   static const _sizeLabels = {
-    TileSize.square: 'Square',
-    TileSize.wide: 'Wide',
-    TileSize.tall: 'Tall',
+    TileSize.square: '1×1  Square',
+    TileSize.wide: '2×1  Wide',
+    TileSize.tall: '1×2  Tall',
   };
+
+  // Width/height for each tile size when rendered on its own row.
+  static (double, double) _dims(TileSize size) => switch (size) {
+        TileSize.square => (140, 140),
+        TileSize.wide   => (double.infinity, 110),
+        TileSize.tall   => (160, 220),
+      };
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (var i = 0; i < configs.length; i++) ...[
-          if (i > 0) const SizedBox(width: AppDimens.spaceSm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _sizeLabels[configs[i].$1] ?? '',
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: AppDimens.spaceXs),
-                Container(
-                  height: configs[i].$1 == TileSize.tall ? 180 : 100,
-                  decoration: BoxDecoration(
-                    color: colors.surface,
-                    borderRadius: BorderRadius.circular(AppDimens.shapeMd),
-                  ),
-                  padding: const EdgeInsets.all(AppDimens.spaceSm),
-                  child: buildTileVisualization(
-                    config: configs[i].$2,
-                    categoryColor: color,
-                    size: configs[i].$1,
-                  ),
-                ),
-              ],
+          if (i > 0) const SizedBox(height: AppDimens.spaceSm),
+          Text(
+            _sizeLabels[configs[i].$1] ?? '',
+            style: AppTextStyles.labelSmall.copyWith(
+              color: colors.textSecondary,
             ),
           ),
+          const SizedBox(height: AppDimens.spaceXs),
+          () {
+            final (w, h) = _dims(configs[i].$1);
+            return Container(
+              width: w,
+              height: h,
+              decoration: BoxDecoration(
+                color: colors.surface,
+                borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+              ),
+              padding: const EdgeInsets.all(AppDimens.spaceSm),
+              child: buildTileVisualization(
+                config: configs[i].$2,
+                categoryColor: color,
+                size: configs[i].$1,
+              ),
+            );
+          }(),
         ],
       ],
     );
