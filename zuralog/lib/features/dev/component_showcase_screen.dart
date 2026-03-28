@@ -1572,6 +1572,103 @@ class _ComponentShowcaseScreenState
           ),
         ),
 
+        // ── Full Mode — Area ──────────────────────────────────────────────
+        _label('Full Mode — area chart'),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColorsOf(context).surface,
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceSm),
+          child: ZChart(
+            config: _kAreaChartFull,
+            mode: ChartMode.full,
+            color: AppColors.categorySleep,
+            unit: 'h',
+          ),
+        ),
+
+        // ── Full Mode — Ring ──────────────────────────────────────────────
+        _label('Full Mode — ring / donut'),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColorsOf(context).surface,
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceSm),
+          child: ZChart(
+            config: _kRingFull,
+            mode: ChartMode.full,
+            color: AppColors.categoryActivity,
+            unit: 'steps',
+          ),
+        ),
+
+        // ── Full Mode — Gauge ─────────────────────────────────────────────
+        _label('Full Mode — gauge'),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColorsOf(context).surface,
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceSm),
+          child: ZChart(
+            config: _kGaugeFull,
+            mode: ChartMode.full,
+            color: AppColors.categoryHeart,
+            unit: 'bpm',
+          ),
+        ),
+
+        // ── Full Mode — Fill Gauge ────────────────────────────────────────
+        _label('Full Mode — fill gauge (tank)'),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColorsOf(context).surface,
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceSm),
+          child: ZChart(
+            config: _kFillGaugeFull,
+            mode: ChartMode.full,
+            color: AppColors.categoryBody,
+            unit: 'L',
+          ),
+        ),
+
+        // ── Full Mode — Segmented Bar ─────────────────────────────────────
+        _label('Full Mode — segmented bar (tap a segment)'),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColorsOf(context).surface,
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceSm),
+          child: ZChart(
+            config: _kSegBarFull,
+            mode: ChartMode.full,
+            color: AppColors.categorySleep,
+          ),
+        ),
+
+        // ── Full Mode — Empty state ───────────────────────────────────────
+        _label('Full Mode — empty state (no data)'),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColorsOf(context).surface,
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceSm),
+          child: SizedBox(
+            height: 200,
+            child: ZChart(
+              config: _kLineChartEmpty,
+              mode: ChartMode.full,
+              color: AppColors.categoryHeart,
+            ),
+          ),
+        ),
+
         // ── Comparison Mode — Line ────────────────────────────────────────
         _label('Comparison Mode — two periods overlaid'),
         Container(
