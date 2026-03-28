@@ -21,15 +21,12 @@ import 'package:zuralog/shared/widgets/widgets.dart';
 ///
 /// Allows QA to toggle between System, Light, and Dark modes to verify
 /// that all tokens and components correctly adapt to each theme.
-class CatalogScreen extends ConsumerWidget {
+class CatalogScreen extends StatelessWidget {
   /// Creates the [CatalogScreen].
   const CatalogScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode =
-        ref.watch(themeModeProvider).valueOrNull ?? ThemeMode.system;
-
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Design Catalog'),
@@ -42,11 +39,12 @@ class CatalogScreen extends ConsumerWidget {
               AppDimens.spaceMd,
               AppDimens.spaceSm,
             ),
-            child: _ThemeToggle(themeMode: themeMode),
+            child: const _ThemeToggle(),
           ),
         ),
       ),
       body: ListView(
+        key: const PageStorageKey('catalog'),
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         children: [
           const _ColorPaletteSection(),
@@ -82,13 +80,17 @@ class CatalogScreen extends ConsumerWidget {
 // ── Theme Toggle ─────────────────────────────────────────────────────────────
 
 /// Segmented button for switching theme mode from within the catalog.
+///
+/// Uses [ConsumerWidget] directly so [CatalogScreen] can stay a plain
+/// [StatelessWidget] — the Riverpod dependency is fully contained here.
 class _ThemeToggle extends ConsumerWidget {
-  final ThemeMode themeMode;
-
-  const _ThemeToggle({required this.themeMode});
+  const _ThemeToggle();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode =
+        ref.watch(themeModeProvider).valueOrNull ?? ThemeMode.system;
+
     return SegmentedButton<ThemeMode>(
       segments: const [
         ButtonSegment(
@@ -541,8 +543,17 @@ class _ZChipSection extends StatelessWidget {
 
 // ── ZToggle ───────────────────────────────────────────────────────────────
 
-class _ZToggleSection extends StatelessWidget {
+class _ZToggleSection extends StatefulWidget {
   const _ZToggleSection();
+
+  @override
+  State<_ZToggleSection> createState() => _ZToggleSectionState();
+}
+
+class _ZToggleSectionState extends State<_ZToggleSection> {
+  bool _notificationsOn = true;
+  bool _darkModeOn = false;
+  final bool _disabledOn = true;
 
   @override
   Widget build(BuildContext context) {
@@ -551,13 +562,21 @@ class _ZToggleSection extends StatelessWidget {
       child: ZuralogCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            ZToggle(value: true, label: 'Notifications'),
-            SizedBox(height: AppDimens.spaceMd),
-            ZToggle(value: false, label: 'Dark Mode'),
-            SizedBox(height: AppDimens.spaceMd),
+          children: [
             ZToggle(
-              value: true,
+              value: _notificationsOn,
+              label: 'Notifications',
+              onChanged: (v) => setState(() => _notificationsOn = v),
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            ZToggle(
+              value: _darkModeOn,
+              label: 'Dark Mode',
+              onChanged: (v) => setState(() => _darkModeOn = v),
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            ZToggle(
+              value: _disabledOn,
               enabled: false,
               label: 'Disabled On',
             ),
