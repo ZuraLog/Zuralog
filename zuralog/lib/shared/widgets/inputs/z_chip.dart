@@ -42,14 +42,18 @@ class ZChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    return Opacity(
-      opacity: enabled ? 1.0 : 0.4,
-      child: GestureDetector(
-        onTap: enabled ? onTap : null,
-        child: AnimatedContainer(
+    return Semantics(
+      checked: isActive,
+      label: label,
+      button: true,
+      child: Opacity(
+        opacity: enabled ? 1.0 : 0.4,
+        child: GestureDetector(
+          onTap: enabled ? onTap : null,
+          child: AnimatedContainer(
           duration: AppMotion.durationFast,
           curve: AppMotion.curveEntrance,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppDimens.shapePill),
             color: isActive ? null : colors.surface,
@@ -82,6 +86,7 @@ class ZChip extends StatelessWidget {
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),

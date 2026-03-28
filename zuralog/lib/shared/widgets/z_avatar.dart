@@ -37,6 +37,7 @@ class ZAvatar extends StatelessWidget {
     this.avatarSize = ZAvatarSize.md,
     this.size,
     this.onTap,
+    this.semanticLabel,
   });
 
   final String? imageUrl;
@@ -50,6 +51,9 @@ class ZAvatar extends StatelessWidget {
   final double? size;
 
   final VoidCallback? onTap;
+
+  /// Accessibility label for screen readers.
+  final String? semanticLabel;
 
   double get _diameter => size ?? avatarSize.diameter;
 
@@ -89,10 +93,12 @@ class ZAvatar extends StatelessWidget {
                   blendMode: BlendMode.screen,
                 ),
               ),
-              // Initials
+              // Initials (max 2 characters)
               Center(
                 child: Text(
-                  (initials ?? '?').toUpperCase(),
+                  (initials ?? '?').toUpperCase().characters.take(2).string,
+                  overflow: TextOverflow.clip,
+                  maxLines: 1,
                   style: AppTextStyles.labelLarge.copyWith(
                     color: colors.primary,
                     fontSize: _diameter * 0.35,
@@ -106,8 +112,21 @@ class ZAvatar extends StatelessWidget {
     }
 
     if (onTap != null) {
-      avatar = GestureDetector(onTap: onTap, child: avatar);
+      avatar = Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: avatar,
+        ),
+      );
     }
-    return avatar;
+
+    return Semantics(
+      label: semanticLabel ?? 'Avatar',
+      button: onTap != null,
+      excludeSemantics: true,
+      child: avatar,
+    );
   }
 }

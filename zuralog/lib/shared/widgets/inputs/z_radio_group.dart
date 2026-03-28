@@ -46,9 +46,11 @@ class ZRadioGroup<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: enabled ? 1.0 : 0.4,
-      child: Column(
+    return IgnorePointer(
+      ignoring: !enabled,
+      child: Opacity(
+        opacity: enabled ? 1.0 : 0.4,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -63,6 +65,7 @@ class ZRadioGroup<T> extends StatelessWidget {
             ),
           ],
         ],
+        ),
       ),
     );
   }
@@ -82,10 +85,16 @@ class _ZRadioItem<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    return GestureDetector(
+    return Semantics(
+      checked: isSelected,
+      inMutuallyExclusiveGroup: true,
+      label: option.label,
+      button: true,
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Row(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           // 44x44 hit area, 20x20 visual.
@@ -130,6 +139,7 @@ class _ZRadioItem<T> extends StatelessWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }
