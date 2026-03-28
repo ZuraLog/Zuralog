@@ -80,6 +80,7 @@ class _ZCheckboxState extends State<ZCheckbox>
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final checkbox = Semantics(
       checked: widget.value,
       label: widget.label ?? '',
@@ -111,7 +112,7 @@ class _ZCheckboxState extends State<ZCheckbox>
                             border: progress < 1.0
                                 ? Border.all(
                                     color: Color.lerp(
-                                      AppColors.textSecondary,
+                                      colors.textSecondary,
                                       Colors.transparent,
                                       progress,
                                     )!,
@@ -174,7 +175,7 @@ class _ZCheckboxState extends State<ZCheckbox>
           Text(
             widget.label!,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textPrimaryDark,
+              color: colors.textPrimary,
             ),
           ),
         ],

@@ -81,6 +81,7 @@ class _ZRadioItem<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -101,8 +102,8 @@ class _ZRadioItem<T> extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: isSelected
-                        ? AppColors.primary
-                        : AppColors.textSecondary,
+                        ? colors.primary
+                        : colors.textSecondary,
                     width: 2,
                   ),
                 ),
@@ -112,9 +113,9 @@ class _ZRadioItem<T> extends StatelessWidget {
                     curve: AppMotion.curveEntrance,
                     width: isSelected ? 10 : 0,
                     height: isSelected ? 10 : 0,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppColors.primary,
+                      color: colors.primary,
                     ),
                   ),
                 ),
@@ -125,7 +126,7 @@ class _ZRadioItem<T> extends StatelessWidget {
           Text(
             option.label,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textPrimaryDark,
+              color: colors.textPrimary,
             ),
           ),
         ],

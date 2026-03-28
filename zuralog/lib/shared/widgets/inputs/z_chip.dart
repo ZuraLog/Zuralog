@@ -41,6 +41,7 @@ class ZChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Opacity(
       opacity: enabled ? 1.0 : 0.4,
       child: GestureDetector(
@@ -51,7 +52,7 @@ class ZChip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppDimens.shapePill),
-            color: isActive ? null : AppColors.surface,
+            color: isActive ? null : colors.surface,
             image: isActive
                 ? DecorationImage(
                     image: AssetImage(ZPatternVariant.sage.assetPath),
@@ -68,7 +69,7 @@ class ZChip extends StatelessWidget {
                   size: 16,
                   color: isActive
                       ? AppColors.textOnSage
-                      : AppColors.textSecondary,
+                      : colors.textSecondary,
                 ),
                 const SizedBox(width: AppDimens.spaceXs),
               ],
@@ -77,7 +78,7 @@ class ZChip extends StatelessWidget {
                 style: AppTextStyles.labelMedium.copyWith(
                   color: isActive
                       ? AppColors.textOnSage
-                      : AppColors.textSecondary,
+                      : colors.textSecondary,
                 ),
               ),
             ],

@@ -95,6 +95,7 @@ class _ZToggleState extends State<ZToggle> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final toggle = Semantics(
       toggled: widget.value,
       label: widget.label ?? 'Toggle',
@@ -117,7 +118,7 @@ class _ZToggleState extends State<ZToggle> with SingleTickerProviderStateMixin {
                     Container(
                       decoration: BoxDecoration(
                         color: _controller.value < 1.0
-                            ? AppColors.surfaceRaised
+                            ? colors.surfaceRaised
                             : null,
                         borderRadius: BorderRadius.circular(_trackHeight / 2),
                         image: _controller.value > 0.0
@@ -136,7 +137,7 @@ class _ZToggleState extends State<ZToggle> with SingleTickerProviderStateMixin {
                         opacity: 1.0 - _controller.value,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: AppColors.surfaceRaised,
+                            color: colors.surfaceRaised,
                             borderRadius:
                                 BorderRadius.circular(_trackHeight / 2),
                           ),
@@ -176,7 +177,7 @@ class _ZToggleState extends State<ZToggle> with SingleTickerProviderStateMixin {
           Text(
             widget.label!,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textPrimaryDark,
+              color: colors.textPrimary,
             ),
           ),
           const SizedBox(width: AppDimens.spaceSm),
