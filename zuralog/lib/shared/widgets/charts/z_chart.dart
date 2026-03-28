@@ -24,16 +24,12 @@ class ZChart extends StatefulWidget {
     required this.mode,
     required this.color,
     this.onTap,
-    this.comparisonConfig,
-    this.goalValue,
   });
 
   final TileVisualizationConfig config;
   final ChartMode mode;
   final Color color;
   final VoidCallback? onTap;
-  final TileVisualizationConfig? comparisonConfig;
-  final double? goalValue;
 
   @override
   State<ZChart> createState() => _ZChartState();
@@ -97,7 +93,10 @@ class _ZChartState extends State<ZChart>
       case ChartMode.widget:
       case ChartMode.comparison:
       case ChartMode.mini:
-        debugPrint('ZChart: ${widget.mode.name} mode not yet implemented');
+        assert(() {
+          debugPrint('ZChart: ${widget.mode.name} mode not yet implemented');
+          return true;
+        }());
         chart = TileChartShell(
           config: config,
           color: widget.color,

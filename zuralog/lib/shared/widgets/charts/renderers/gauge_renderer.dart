@@ -73,10 +73,8 @@ class _GaugePainter extends CustomPainter {
     }
 
     // Draw needle arc to current value, scaled by animation progress.
-    final valueAngle = math.pi *
-        (config.value - config.minValue) /
-        range *
-        animationProgress;
+    final clampedValue = config.value.clamp(config.minValue, config.maxValue);
+    final valueAngle = math.pi * (clampedValue - config.minValue) / range * animationProgress;
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius - 6),
       math.pi,

@@ -79,6 +79,7 @@ class RingRenderer extends StatelessWidget {
             style: AppTextStyles.labelLarge.copyWith(
               fontSize: diameter * 0.2,
               fontWeight: FontWeight.bold,
+              color: color,
             ),
           ),
         ],

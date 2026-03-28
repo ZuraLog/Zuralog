@@ -2,6 +2,7 @@ library;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 import 'package:zuralog/shared/widgets/charts/chart_render_context.dart';
 
@@ -27,12 +28,18 @@ class LineRenderer extends StatelessWidget {
     if (config.points.isEmpty) return const SizedBox.shrink();
 
     final progress = renderCtx.animationProgress;
+    var points = config.points;
+    if (points.length > 100) {
+      final step = (points.length / 100).ceil();
+      points = [for (var i = 0; i < points.length; i += step) points[i], points.last];
+    }
+
     final spots = <FlSpot>[
-      for (var i = 0; i < config.points.length; i++)
-        FlSpot(i.toDouble(), config.points[i].value * progress),
+      for (var i = 0; i < points.length; i++)
+        FlSpot(i.toDouble(), (points[i].value.isFinite ? points[i].value : 0.0) * progress),
     ];
 
-    final lastIndex = config.points.length - 1;
+    final lastIndex = points.length - 1;
 
     final lineBarData = LineChartBarData(
       spots: spots,
@@ -60,7 +67,15 @@ class LineRenderer extends StatelessWidget {
     return LineChart(
       LineChartData(
         lineBarsData: [lineBarData],
-        gridData: const FlGridData(show: false),
+        gridData: FlGridData(
+          show: renderCtx.showGrid,
+          drawVerticalLine: false,
+          horizontalInterval: null,
+          getDrawingHorizontalLine: (value) => FlLine(
+            color: AppColors.warmWhite.withValues(alpha: 0.04),
+            strokeWidth: 0.5,
+          ),
+        ),
         borderData: FlBorderData(show: false),
         titlesData: const FlTitlesData(show: false),
         lineTouchData: const LineTouchData(enabled: false),

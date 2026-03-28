@@ -76,7 +76,7 @@ class BarRenderer extends StatelessWidget {
           x: i,
           barRods: [
             BarChartRodData(
-              toY: bars[i].value * renderCtx.animationProgress,
+              toY: (bars[i].value.isFinite ? bars[i].value : 0.0) * renderCtx.animationProgress,
               color: bars[i].isToday ? color : color.withValues(alpha: 0.3),
               width: barWidth,
               borderRadius: const BorderRadius.vertical(

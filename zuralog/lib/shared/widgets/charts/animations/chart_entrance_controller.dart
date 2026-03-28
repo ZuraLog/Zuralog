@@ -11,13 +11,14 @@ import 'package:flutter/scheduler.dart';
 mixin ChartEntranceController<T extends StatefulWidget>
     on State<T>, SingleTickerProviderStateMixin<T> {
   late final AnimationController _entranceCtrl;
+  late final Animation<double> _curvedEntrance;
   Object? _lastKey;
 
   /// Return an identity-compared key. When this changes, the entrance replays.
   Object get entranceKey;
 
   /// Current entrance progress (0.0 to 1.0).
-  double get animationProgress => _entranceCtrl.value;
+  double get animationProgress => _curvedEntrance.value;
 
   /// Whether the entrance animation has completed.
   bool get entranceComplete => _entranceCtrl.isCompleted;
@@ -28,6 +29,10 @@ mixin ChartEntranceController<T extends StatefulWidget>
     _entranceCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 350),
+    );
+    _curvedEntrance = CurvedAnimation(
+      parent: _entranceCtrl,
+      curve: Curves.easeOut,
     )..addListener(() => setState(() {}));
     SchedulerBinding.instance.addPostFrameCallback((_) => _maybePlay());
   }

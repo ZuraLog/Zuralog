@@ -26,12 +26,18 @@ class AreaRenderer extends StatelessWidget {
   Widget build(BuildContext context) {
     if (config.points.isEmpty) return const SizedBox.shrink();
 
-    final lastIndex = config.points.length - 1;
+    var points = config.points;
+    if (points.length > 100) {
+      final step = (points.length / 100).ceil();
+      points = [for (var i = 0; i < points.length; i += step) points[i], points.last];
+    }
+
+    final lastIndex = points.length - 1;
     final progress = renderCtx.animationProgress;
 
     final spots = <FlSpot>[
-      for (var i = 0; i < config.points.length; i++)
-        FlSpot(i.toDouble(), config.points[i].value * progress),
+      for (var i = 0; i < points.length; i++)
+        FlSpot(i.toDouble(), (points[i].value.isFinite ? points[i].value : 0.0) * progress),
     ];
 
     final lineBarData = LineChartBarData(
@@ -62,7 +68,15 @@ class AreaRenderer extends StatelessWidget {
 
     final chartData = LineChartData(
       lineBarsData: [lineBarData],
-      gridData: const FlGridData(show: false),
+      gridData: FlGridData(
+        show: renderCtx.showGrid,
+        drawVerticalLine: false,
+        horizontalInterval: null,
+        getDrawingHorizontalLine: (value) => FlLine(
+          color: AppColors.warmWhite.withValues(alpha: 0.04),
+          strokeWidth: 0.5,
+        ),
+      ),
       borderData: FlBorderData(show: false),
       titlesData: const FlTitlesData(show: false),
       lineTouchData: const LineTouchData(enabled: false),
@@ -120,7 +134,7 @@ class DeltaBadge extends StatelessWidget {
     final isPositive = delta >= 0;
     final isGood = positiveIsUp ? isPositive : !isPositive;
     final badgeColor =
-        isGood ? AppColors.categoryActivity : AppColors.accentDark;
+        isGood ? AppColors.categoryActivity : AppColors.categoryHeart;
     final arrow = isPositive ? '\u25B2' : '\u25BC';
     final pct = '$arrow ${(delta.abs() * 100).toStringAsFixed(1)}%';
 
@@ -132,8 +146,7 @@ class DeltaBadge extends StatelessWidget {
       ),
       child: Text(
         pct,
-        style: TextStyle(
-          fontSize: 8,
+        style: AppTextStyles.labelSmall.copyWith(
           color: badgeColor,
           fontWeight: FontWeight.bold,
         ),

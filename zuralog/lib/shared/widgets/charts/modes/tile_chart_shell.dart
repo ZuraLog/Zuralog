@@ -123,7 +123,9 @@ class TileChartShell extends StatelessWidget {
                         .copyWith(color: colors.textSecondary),
                   ),
                   Text(
-                    '${(c.maxValue - c.value).round()} remaining',
+                    c.value > c.maxValue
+                        ? 'Goal exceeded!'
+                        : '${(c.maxValue - c.value).clamp(0, c.maxValue).round()} ${c.unit} remaining',
                     style: AppTextStyles.labelSmall
                         .copyWith(color: colors.textSecondary),
                   ),
@@ -629,11 +631,12 @@ class _UnitIcons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconCount =
-        config.unitSize != null ? (config.value / config.unitSize!).floor() : 0;
-    final totalIcons = config.unitSize != null
-        ? (config.maxValue / config.unitSize!).ceil()
-        : 0;
+    if (config.unitIcon == null || config.unitSize == null || config.unitSize! <= 0) {
+      return const SizedBox.shrink();
+    }
+
+    final iconCount = (config.value / config.unitSize!).floor();
+    final totalIcons = (config.maxValue / config.unitSize!).ceil().clamp(0, 50);
 
     return Wrap(
       alignment: alignment,

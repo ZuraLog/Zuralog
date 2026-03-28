@@ -8,7 +8,6 @@ import 'chart_mode.dart';
 /// decisions are encoded here by the shell.
 class ChartRenderContext {
   const ChartRenderContext({
-    required this.mode,
     this.showAxes = false,
     this.showGrid = false,
     this.showDots = false,
@@ -24,7 +23,6 @@ class ChartRenderContext {
     this.animationProgress = 1.0,
   });
 
-  final ChartMode mode;
   final bool showAxes;
   final bool showGrid;
   final bool showDots;
@@ -52,24 +50,20 @@ class ChartRenderContext {
   }) {
     return switch (mode) {
       ChartMode.square => ChartRenderContext(
-          mode: mode,
           showDots: true,
           maxBars: 5,
           animationProgress: animationProgress,
         ),
       ChartMode.wide => ChartRenderContext(
-          mode: mode,
           showAxes: true,
           showDots: true,
           animationProgress: animationProgress,
         ),
       ChartMode.tall => ChartRenderContext(
-          mode: mode,
           showDots: true,
           animationProgress: animationProgress,
         ),
       ChartMode.full => ChartRenderContext(
-          mode: mode,
           showAxes: true,
           showGrid: true,
           showDots: true,
@@ -80,19 +74,16 @@ class ChartRenderContext {
           animationProgress: animationProgress,
         ),
       ChartMode.sparkline => ChartRenderContext(
-          mode: mode,
           strokeWidth: 1.0,
           animationProgress: animationProgress,
         ),
       ChartMode.widget => ChartRenderContext(
-          mode: mode,
           showDots: true,
           strokeWidth: 2.0,
           maxBars: 5,
           animationProgress: animationProgress,
         ),
       ChartMode.comparison => ChartRenderContext(
-          mode: mode,
           showAxes: true,
           showGrid: true,
           showDots: true,
@@ -103,7 +94,6 @@ class ChartRenderContext {
           animationProgress: animationProgress,
         ),
       ChartMode.mini => ChartRenderContext(
-          mode: mode,
           strokeWidth: 1.0,
           animationProgress: animationProgress,
         ),
@@ -111,7 +101,6 @@ class ChartRenderContext {
   }
 
   ChartRenderContext copyWith({
-    ChartMode? mode,
     bool? showAxes,
     bool? showGrid,
     bool? showDots,
@@ -127,7 +116,6 @@ class ChartRenderContext {
     double? animationProgress,
   }) {
     return ChartRenderContext(
-      mode: mode ?? this.mode,
       showAxes: showAxes ?? this.showAxes,
       showGrid: showGrid ?? this.showGrid,
       showDots: showDots ?? this.showDots,

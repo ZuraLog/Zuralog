@@ -76,6 +76,23 @@ class ZChartEmptyState extends StatelessWidget {
                     style: AppTextStyles.labelSmall
                         .copyWith(color: colors.textSecondary),
                   ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      borderRadius:
+                          BorderRadius.circular(AppDimens.shapeXl),
+                    ),
+                    child: Text(
+                      'Connect a source',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -98,6 +115,23 @@ class ZChartEmptyState extends StatelessWidget {
                     'Try a longer date range',
                     style: AppTextStyles.labelSmall
                         .copyWith(color: colors.textSecondary),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      borderRadius:
+                          BorderRadius.circular(AppDimens.shapeXl),
+                    ),
+                    child: Text(
+                      'Try a longer range',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -208,11 +242,11 @@ const _kGhostGauge = GaugeConfig(
 const _kGhostFillGauge =
     FillGaugeConfig(value: 1.5, maxValue: 3.0, unit: '');
 
-const _kGhostSegBar = SegmentedBarConfig(
+final _kGhostSegBar = SegmentedBarConfig(
   totalLabel: '',
   segments: [
-    Segment(label: '', value: 100, color: Color(0xFF3634A3)),
-    Segment(label: '', value: 200, color: Color(0xFF5E5CE6)),
-    Segment(label: '', value: 80, color: Color(0xFF8E8CE8)),
+    Segment(label: '', value: 100, color: AppColors.categorySleep),
+    Segment(label: '', value: 200, color: AppColors.categorySleep),
+    Segment(label: '', value: 80, color: AppColors.categorySleep),
   ],
 );
