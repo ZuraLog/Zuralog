@@ -1,6 +1,6 @@
 /// Zuralog Design System — Log Grid Cell Widget.
 ///
-/// A tappable cell for the log grid sheet. Displays an emoji icon in a
+/// A tappable cell for the log grid sheet. Displays a Material icon in a
 /// circular container plus a label below. Supports two overlay states:
 /// - [isLogged]: green checkmark at top-right of the circle
 /// - [isComingSoon]: "Soon" badge at bottom-right, reduced opacity
@@ -17,7 +17,7 @@ import 'package:zuralog/shared/widgets/z_badge.dart';
 /// Example:
 /// ```dart
 /// ZLogGridCell(
-///   icon: '💧',
+///   icon: Icons.water_drop_rounded,
 ///   label: 'Water',
 ///   isLogged: true,
 ///   onTap: () => _openWaterPanel(context),
@@ -33,8 +33,8 @@ class ZLogGridCell extends StatelessWidget {
     this.isComingSoon = false,
   });
 
-  /// Emoji displayed in the circular icon container.
-  final String icon;
+  /// Icon displayed in the circular icon container.
+  final IconData icon;
 
   /// Label shown below the circle.
   final String label;
@@ -95,7 +95,7 @@ class _IconCircle extends StatelessWidget {
     required this.colors,
   });
 
-  final String icon;
+  final IconData icon;
   final bool isLogged;
   final bool isComingSoon;
   final AppColorsOf colors;
@@ -114,9 +114,10 @@ class _IconCircle extends StatelessWidget {
             shape: BoxShape.circle,
           ),
           alignment: Alignment.center,
-          child: Text(
+          child: Icon(
             icon,
-            style: const TextStyle(fontSize: 26),
+            size: 26,
+            color: colors.primary,
           ),
         ),
 
