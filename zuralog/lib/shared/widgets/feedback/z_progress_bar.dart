@@ -43,7 +43,7 @@ class ZProgressBar extends StatelessWidget {
     final colors = AppColorsOf(context);
     final isLight = Theme.of(context).brightness == Brightness.light;
     final patternImage = effectivePatternVariant(ZPatternVariant.sage, isLight).assetPath;
-    final patternOpacity = effectivePatternOpacity(1.0, isLight);
+    final patternOpacity = effectivePatternOpacity(0.5, isLight);
     final hasLabels = label != null || valueLabel != null;
 
     return Column(

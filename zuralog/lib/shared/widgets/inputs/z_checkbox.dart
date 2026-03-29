@@ -96,7 +96,7 @@ class _ZCheckboxState extends State<ZCheckbox>
       builder: (context, _) {
         final progress = _controller.value;
         final patternImage = effectivePatternVariant(ZPatternVariant.sage, isLight).assetPath;
-        final patternOpacity = effectivePatternOpacity(1.0, isLight);
+        final patternOpacity = effectivePatternOpacity(0.6, isLight);
         return SizedBox(
           width: 20,
           height: 20,

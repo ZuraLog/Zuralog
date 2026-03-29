@@ -8,13 +8,14 @@ import 'package:flutter/services.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart'
-    show ZPatternVariant, effectivePatternVariant, effectivePatternOpacity;
+    show ZPatternVariant, effectivePatternVariant;
 
 /// A brand-styled selectable chip.
 ///
-/// When active, the chip has a Sage-tinted background with a subtle topographic
-/// pattern and Sage text. When inactive, it uses Surface fill with
-/// textSecondary text. Always pill-shaped.
+/// When active:
+///   - Light mode: solid Deep Forest (#344E41) background, no pattern.
+///   - Dark mode: sage→original pattern fill.
+/// When inactive, uses Surface fill with textSecondary text. Always pill-shaped.
 class ZChip extends StatelessWidget {
   const ZChip({
     super.key,
@@ -44,8 +45,26 @@ class ZChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final isLight = Theme.of(context).brightness == Brightness.light;
-    final patternImage = effectivePatternVariant(ZPatternVariant.sage, isLight).assetPath;
-    final patternOpacity = effectivePatternOpacity(1.0, isLight);
+
+    // Active chip: solid in light mode, pattern fill in dark mode.
+    final Color? activeBackgroundColor =
+        (isActive && isLight) ? AppColors.primaryOnLight : (isActive ? null : colors.surface);
+    final DecorationImage? activeImage = (isActive && !isLight)
+        ? DecorationImage(
+            image: AssetImage(
+              effectivePatternVariant(ZPatternVariant.sage, isLight).assetPath,
+            ),
+            fit: BoxFit.cover,
+            opacity: 0.6,
+          )
+        : null;
+
+    // Text/icon color: on light active use textOnSageLight, otherwise textOnSage
+    // for dark active, or textSecondary when inactive.
+    final Color contentColor = isActive
+        ? (isLight ? AppColors.textOnSageLight : AppColors.textOnSage)
+        : colors.textSecondary;
+
     return Semantics(
       checked: isActive,
       label: label,
@@ -67,14 +86,8 @@ class ZChip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppDimens.shapePill),
-            color: isActive ? null : colors.surface,
-            image: isActive
-                ? DecorationImage(
-                    image: AssetImage(patternImage),
-                    fit: BoxFit.cover,
-                    opacity: patternOpacity,
-                  )
-                : null,
+            color: activeBackgroundColor,
+            image: activeImage,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -83,18 +96,14 @@ class ZChip extends StatelessWidget {
                 Icon(
                   icon,
                   size: 16,
-                  color: isActive
-                      ? AppColors.textOnSage
-                      : colors.textSecondary,
+                  color: contentColor,
                 ),
                 const SizedBox(width: AppDimens.spaceXs),
               ],
               Text(
                 label,
                 style: AppTextStyles.labelMedium.copyWith(
-                  color: isActive
-                      ? AppColors.textOnSage
-                      : colors.textSecondary,
+                  color: contentColor,
                 ),
               ),
             ],

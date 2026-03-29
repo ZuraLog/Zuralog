@@ -202,7 +202,6 @@ class _FilledPatternButton extends StatelessWidget {
                 child: ZPatternOverlay(
                   variant: ZPatternVariant.sage,
                   opacity: 0.12,
-                  blendMode: BlendMode.colorBurn,
                 ),
               ),
               // Label.

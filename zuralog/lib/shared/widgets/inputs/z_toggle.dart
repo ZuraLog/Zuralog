@@ -99,7 +99,7 @@ class _ZToggleState extends State<ZToggle> with SingleTickerProviderStateMixin {
       animation: _controller,
       builder: (context, _) {
         final patternImage = effectivePatternVariant(ZPatternVariant.sage, isLight).assetPath;
-        final patternOpacity = effectivePatternOpacity(1.0, isLight);
+        final patternOpacity = effectivePatternOpacity(0.6, isLight);
         return SizedBox(
           width: _trackWidth,
           height: _trackHeight,
