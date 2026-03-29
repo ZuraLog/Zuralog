@@ -391,6 +391,7 @@ class _HealthScoreHero extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     return ZuralogCard(
       variant: ZCardVariant.hero,
       padding: const EdgeInsets.symmetric(
@@ -408,7 +409,7 @@ class _HealthScoreHero extends ConsumerWidget {
                     center: const Alignment(0.85, -0.85),
                     radius: 0.9,
                     colors: [
-                      AppColors.primary.withValues(alpha: 0.07),
+                      colors.primary.withValues(alpha: 0.07),
                       Colors.transparent,
                     ],
                   ),
