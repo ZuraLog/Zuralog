@@ -15,6 +15,7 @@ import 'package:zuralog/core/theme/app_colors.dart' show AppColorsOf;
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_motion.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 import 'package:zuralog/shared/widgets/profile_side_panel.dart';
 import 'package:zuralog/shared/widgets/sheets/z_log_grid_sheet.dart';
 
@@ -302,10 +303,19 @@ class _FrostedNavigationBarState extends State<_FrostedNavigationBar>
                                 horizontal: 4,
                                 vertical: 8,
                               ),
-                              decoration: BoxDecoration(
-                                color: activePillBg,
+                              child: ClipRRect(
                                 borderRadius: BorderRadius.circular(
                                   AppDimens.shapePill,
+                                ),
+                                child: ColoredBox(
+                                  color: activePillBg,
+                                  child: const SizedBox.expand(
+                                    child: ZPatternOverlay(
+                                      variant: ZPatternVariant.sage,
+                                      opacity: 0.35,
+                                      animate: true,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),

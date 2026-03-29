@@ -72,7 +72,6 @@ class _ZeroState extends StatelessWidget {
     final colors = AppColorsOf(context);
 
     return Column(
-      mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         // Ghost flame — greyscale, low opacity
@@ -133,7 +132,6 @@ class _ActiveState extends StatelessWidget {
             : 'Keep it up!';
 
     return Column(
-      mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         // Flame — frozen shows a shield overlay

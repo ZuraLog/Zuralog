@@ -399,6 +399,7 @@ class _HealthScoreHero extends ConsumerWidget {
         horizontal: AppDimens.spaceMd,
       ),
       child: Stack(
+        alignment: Alignment.center,
         children: [
           // Ambient sage-green radial glow — top-right corner.
           Positioned.fill(
