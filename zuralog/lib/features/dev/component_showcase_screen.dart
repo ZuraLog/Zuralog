@@ -4,6 +4,8 @@
 /// in all its variants and states. Accessible via /debug/components.
 library;
 
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/theme.dart';
@@ -41,6 +43,7 @@ class _ComponentShowcaseScreenState
   int _ratingValue = 3;
   DateTime? _selectedDate = DateTime.now();
   int _staggerKey = 0;
+  int _navBarActiveIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -124,6 +127,9 @@ class _ComponentShowcaseScreenState
 
             _sliverSection('Special Surfaces', colors),
             _sliverChild(_buildSpecialSurfaces()),
+
+            _sliverSection('Navigation & Layout', colors),
+            _sliverChild(_buildNavigationLayout()),
 
             // ── Footer ────────────────────────────────────────────────────
             SliverToBoxAdapter(
@@ -1714,6 +1720,254 @@ class _ComponentShowcaseScreenState
 
         _gap(AppDimens.spaceLg),
       ],
+    );
+  }
+
+  // ── 8. NAVIGATION & LAYOUT ──────────────────────────────────────────────
+
+  Widget _buildNavigationLayout() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Top App Bar ───────────────────────────────────────────────────
+        _label('Top App Bar — with subtitle', _colors!),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          child: SizedBox(
+            height: kToolbarHeight + 20,
+            child: Scaffold(
+              backgroundColor: _colors!.canvas,
+              appBar: const ZuralogAppBar(
+                title: 'Today',
+                subtitle: 'Mon, 29 Mar',
+              ),
+              body: const SizedBox.shrink(),
+            ),
+          ),
+        ),
+        _gap(AppDimens.spaceSm),
+        _label('Top App Bar — title only', _colors!),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          child: SizedBox(
+            height: kToolbarHeight,
+            child: Scaffold(
+              backgroundColor: _colors!.canvas,
+              appBar: const ZuralogAppBar(title: 'Progress'),
+              body: const SizedBox.shrink(),
+            ),
+          ),
+        ),
+        _gap(),
+
+        // ── Bottom Navigation Bar ─────────────────────────────────────────
+        _label('Bottom Nav Bar — frosted pill (interactive)', _colors!),
+        Container(
+          height: 100,
+          decoration: BoxDecoration(
+            color: _colors!.canvas,
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+            border: Border.all(color: _colors!.border),
+          ),
+          alignment: Alignment.center,
+          child: _buildNavBarReplica(),
+        ),
+        _gap(),
+
+        // ── Side Panel ────────────────────────────────────────────────────
+        _label('Side Panel — navigation drawer', _colors!),
+        Center(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+            child: SizedBox(
+              width: 280,
+              child: Material(
+                // SYNC: mirrors ProfileSidePanelWidget surface
+                color: Theme.of(context).colorScheme.surface,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppDimens.spaceMd,
+                        AppDimens.spaceLg,
+                        AppDimens.spaceMd,
+                        AppDimens.spaceMd,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CircleAvatar(
+                            radius: 32,
+                            backgroundColor:
+                                _colors!.primary.withValues(alpha: 0.85),
+                            child: Text(
+                              'Z',
+                              style: AppTextStyles.displaySmall.copyWith(
+                                color: _colors!.textOnSage,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: AppDimens.spaceSm),
+                          Text(
+                            'Zura User',
+                            style: AppTextStyles.titleMedium.copyWith(
+                              color:
+                                  Theme.of(context).colorScheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: AppDimens.spaceXs),
+                          Text(
+                            'user@zuralog.com',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Divider(
+                        height: 1, thickness: 1, color: _colors!.border),
+                    const SizedBox(height: AppDimens.spaceSm),
+                    for (final item in [
+                      (Icons.person_outline_rounded, 'Account'),
+                      (Icons.notifications_none_rounded, 'Notifications'),
+                      (Icons.palette_outlined, 'Appearance'),
+                      (Icons.psychology_outlined, 'Coach'),
+                    ])
+                      ListTile(
+                        leading: Icon(
+                          item.$1,
+                          color:
+                              Theme.of(context).colorScheme.onSurface,
+                          size: AppDimens.iconMd,
+                        ),
+                        title: Text(
+                          item.$2,
+                          style: AppTextStyles.bodyLarge.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.chevron_right_rounded,
+                          color: _colors!.textTertiary,
+                          size: AppDimens.iconSm,
+                        ),
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    const SizedBox(height: AppDimens.spaceSm),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        _gap(AppDimens.spaceLg),
+      ],
+    );
+  }
+
+  // SYNC: mirrors _FrostedNavigationBar in app_shell.dart
+  Widget _buildNavBarReplica() {
+    final colors = _colors!;
+    final activePillBg =
+        colors.primary.withValues(alpha: colors.isDark ? 0.12 : 1.0);
+    final activeItemColor =
+        colors.isDark ? colors.primary : colors.textOnSage;
+
+    const tabs = [
+      (Icons.wb_sunny_outlined, Icons.wb_sunny_rounded, 'Today'),
+      (Icons.grid_view_outlined, Icons.grid_view_rounded, 'Data'),
+      (Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Coach'),
+      (Icons.track_changes_outlined, Icons.track_changes_rounded, 'Progress'),
+      (Icons.trending_up_rounded, Icons.trending_up_rounded, 'Trends'),
+    ];
+
+    return Padding(
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppDimens.spaceSm),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppDimens.shapePill),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: AppDimens.navBarBlurSigma,
+            sigmaY: AppDimens.navBarBlurSigma,
+          ),
+          child: Container(
+            height: 64,
+            decoration: BoxDecoration(
+              color: colors.surface.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(AppDimens.shapePill),
+            ),
+            child: Row(
+              children: List.generate(tabs.length, (index) {
+                final isActive = index == _navBarActiveIndex;
+                final tab = tabs[index];
+                return Expanded(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () =>
+                        setState(() => _navBarActiveIndex = index),
+                    child: SizedBox(
+                      height: 64,
+                      child: Center(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeInOut,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? activePillBg
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(
+                              AppDimens.shapePill,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isActive ? tab.$2 : tab.$1,
+                                size: 22,
+                                color: isActive
+                                    ? activeItemColor
+                                    : colors.textSecondary,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                tab.$3,
+                                style:
+                                    AppTextStyles.labelMedium.copyWith(
+                                  color: isActive
+                                      ? activeItemColor
+                                      : colors.textSecondary,
+                                  fontSize: 11,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
