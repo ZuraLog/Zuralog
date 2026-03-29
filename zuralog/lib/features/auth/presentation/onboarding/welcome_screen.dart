@@ -387,9 +387,9 @@ class _HeroCarouselState extends State<_HeroCarousel>
               key: ValueKey(_displayedTaglineIndex),
               style: AppTextStyles.displaySmall.copyWith(
                 color: AppColorsOf(context).textPrimary,
-                shadows: const [
+                shadows: [
                   Shadow(
-                    color: Colors.black54,
+                    color: Colors.black.withValues(alpha: 0.54),
                     blurRadius: 8,
                   ),
                 ],
