@@ -127,6 +127,7 @@ class _AccordionSectionState extends State<_AccordionSection>
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -145,15 +146,15 @@ class _AccordionSectionState extends State<_AccordionSection>
                   child: Text(
                     widget.item.title,
                     style: AppTextStyles.titleMedium.copyWith(
-                      color: AppColorsOf(context).textPrimary,
+                      color: colors.textPrimary,
                     ),
                   ),
                 ),
                 RotationTransition(
                   turns: _chevronTurns,
-                  child: const Icon(
+                  child: Icon(
                     Icons.expand_more,
-                    color: AppColors.primary,
+                    color: colors.primary,
                     size: 24,
                   ),
                 ),

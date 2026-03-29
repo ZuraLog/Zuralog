@@ -44,14 +44,15 @@ class ZSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final slider = Opacity(
       opacity: enabled ? 1.0 : 0.4,
       child: SliderTheme(
         data: SliderThemeData(
-          activeTrackColor: AppColors.primary,
-          inactiveTrackColor: AppColors.surfaceRaised,
-          thumbColor: AppColors.primary,
-          overlayColor: AppColors.primary.withValues(alpha: 0.12),
+          activeTrackColor: colors.primary,
+          inactiveTrackColor: colors.surfaceRaised,
+          thumbColor: colors.primary,
+          overlayColor: colors.primary.withValues(alpha: 0.12),
           trackHeight: 6,
           thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 9),
           overlayShape: const RoundSliderOverlayShape(overlayRadius: 22),
@@ -75,7 +76,7 @@ class ZSlider extends StatelessWidget {
         Text(
           label!,
           style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textPrimaryDark,
+            color: colors.textPrimary,
           ),
         ),
         const SizedBox(height: AppDimens.spaceXs),

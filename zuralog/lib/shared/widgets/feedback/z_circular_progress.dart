@@ -38,7 +38,7 @@ class ZCircularProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final effectiveColor = color ?? AppColors.primary;
+    final effectiveColor = color ?? colors.primary;
 
     return SizedBox(
       width: size,

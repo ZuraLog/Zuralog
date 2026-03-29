@@ -65,7 +65,7 @@ class ZRatingBar extends StatelessWidget {
                   child: Icon(
                     Icons.star_rounded,
                     size: size,
-                    color: isFilled ? AppColors.primary : colors.surfaceRaised,
+                    color: isFilled ? colors.primary : colors.surfaceRaised,
                   ),
                 ),
               ),
