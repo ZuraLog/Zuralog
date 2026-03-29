@@ -13,6 +13,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/buttons/z_button.dart';
+import 'package:zuralog/shared/widgets/inputs/app_text_field.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 
 // ── ZStepsLogPanel ─────────────────────────────────────────────────────────────
@@ -152,17 +154,12 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
         mainAxisSize: MainAxisSize.min,
         children: [
           // ── Step count input ──────────────────────────────────────────────
-          TextField(
+          AppTextField(
             controller: _controller,
+            hintText: 'Enter step count',
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              hintText: 'Enter step count',
-              hintStyle:
-                  AppTextStyles.bodyMedium.copyWith(color: colors.textTertiary),
-            ),
             onChanged: _onChanged,
-            cursorColor: colors.primary,
           ),
 
           // ── Sync banner (only shown when today's data has arrived) ─────────
@@ -229,23 +226,11 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
           const SizedBox(height: AppDimens.spaceLg),
 
           // ── Save button ───────────────────────────────────────────────────
-          FilledButton(
+          ZButton(
+            label: (_syncedSteps != null && _steps == _syncedSteps)
+                ? 'Confirm Steps'
+                : 'Save Steps',
             onPressed: _canSave ? _handleSave : null,
-            style: FilledButton.styleFrom(
-              backgroundColor: colors.primary,
-              foregroundColor: colors.textOnSage,
-              shape: RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(AppDimens.radiusButton),
-              ),
-              minimumSize: const Size.fromHeight(AppDimens.touchTargetMin),
-            ),
-            child: Text(
-              (_syncedSteps != null && _steps == _syncedSteps)
-                  ? 'Confirm Steps'
-                  : 'Save Steps',
-              style: AppTextStyles.labelLarge,
-            ),
           ),
         ],
       ),
