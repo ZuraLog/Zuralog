@@ -158,6 +158,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Future<void> _handleRegister() async {
     // Mark email as touched so blur validation fires from now on.
     setState(() => _emailTouched = true);
+    _validateEmailInline(_emailCtrl.text);
 
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
