@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 
 /// Password strength bar for auth screens.
@@ -40,7 +41,7 @@ class ZPasswordStrengthBar extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 6),
+        const SizedBox(height: AppDimens.spaceSm),
         Row(
           children: [
             for (int i = 0; i < 4; i++) ...[
@@ -81,7 +82,7 @@ class ZPasswordStrengthBar extends StatelessWidget {
     );
   }
 
-  _StrengthLevel _strengthLevel(String pw) {
+  static _StrengthLevel _strengthLevel(String pw) {
     if (pw.length < 8) {
       return const _StrengthLevel(
         activeSegments: 1,
@@ -107,6 +108,7 @@ class ZPasswordStrengthBar extends StatelessWidget {
     if (hasLetter && hasDigit) {
       return const _StrengthLevel(
         activeSegments: 3,
+        // No AppColors constant exists for amber-orange; using raw hex per design spec.
         color: Color(0xFFFFB347),
         label: 'Good',
         hint: 'Add a symbol to strengthen it',
