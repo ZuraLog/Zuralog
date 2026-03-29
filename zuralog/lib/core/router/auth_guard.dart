@@ -64,7 +64,9 @@ String? authGuardRedirect({
       isPublicPath &&
       location != RouteNames.profileQuestionnairePath &&
       location != RouteNames.checkInboxPath &&
-      location != RouteNames.resetPasswordPath) {
+      location != RouteNames.resetPasswordPath &&
+      location != RouteNames.settingsTermsPath &&
+      location != RouteNames.settingsPrivacyPolicyPath) {
     return RouteNames.todayPath;
   }
 
