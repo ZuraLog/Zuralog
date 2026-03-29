@@ -110,7 +110,7 @@ class _SymptomLogScreenState extends ConsumerState<SymptomLogScreen> {
                   children: List.generate(_kSeverityLabels.length, (i) => ZChip(
                     label: _kSeverityLabels[i],
                     isActive: _severityIndex == i,
-                    onTap: () => setState(() => _severityIndex = i),
+                    onTap: () => setState(() => _severityIndex = _severityIndex == i ? null : i),
                   )),
                 ),
                 const SizedBox(height: AppDimens.spaceLg),

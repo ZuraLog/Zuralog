@@ -415,8 +415,8 @@ class _ModePicker extends StatelessWidget {
                 const SizedBox(width: AppDimens.spaceSm),
                 ZBadge(
                   label: 'Soon',
-                  color: AppColorsOf(context).primary.withValues(alpha: 0.2),
-                  textColor: AppColorsOf(context).primary,
+                  color: AppColorsOf(ctx).primary.withValues(alpha: 0.2),
+                  textColor: AppColorsOf(ctx).primary,
                 ),
               ]),
             ),

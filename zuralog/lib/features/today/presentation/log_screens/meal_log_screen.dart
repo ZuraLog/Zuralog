@@ -72,16 +72,16 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
     });
   }
 
-  bool get _canSave {
+  bool _canSaveWith(bool quickMode) {
     if (_isSaving || _mealType == null) return false;
-    final quickMode = ref.read(mealLogModeProvider).valueOrNull ?? false;
     if (quickMode && _calories == null) return false;
     if (!quickMode && _descriptionCtrl.text.trim().isEmpty) return false;
     return true;
   }
 
   Future<void> _save() async {
-    if (!_canSave) return;
+    final quickMode = ref.read(mealLogModeProvider).valueOrNull ?? false;
+    if (!_canSaveWith(quickMode)) return;
     setState(() => _isSaving = true);
     try {
       final repo = ref.read(todayRepositoryProvider);
@@ -247,7 +247,7 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
             padding: EdgeInsets.fromLTRB(AppDimens.spaceMd, AppDimens.spaceSm, AppDimens.spaceMd, AppDimens.spaceSm + bottomPad),
             child: ZButton(
               label: quickMode ? 'Save' : 'Save Meal',
-              onPressed: _canSave ? _save : null,
+              onPressed: _canSaveWith(quickMode) ? _save : null,
               isLoading: _isSaving,
             ),
           ),
