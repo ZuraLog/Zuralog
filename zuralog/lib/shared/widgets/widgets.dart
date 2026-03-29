@@ -82,4 +82,5 @@ export 'z_badge.dart';
 export 'pattern/z_pattern_overlay.dart';
 export 'pattern/z_pattern_text.dart';
 export 'z_divider.dart';
+export 'auth/z_auth_top_bar.dart';
 export 'zuralog_app_bar.dart';
