@@ -309,11 +309,21 @@ class _FrostedNavigationBarState extends State<_FrostedNavigationBar>
                                 ),
                                 child: ColoredBox(
                                   color: activePillBg,
-                                  child: const SizedBox.expand(
-                                    child: ZPatternOverlay(
-                                      variant: ZPatternVariant.sage,
-                                      opacity: 0.35,
-                                      animate: true,
+                                  // OverflowBox forces a wide non-square context
+                                  // so BoxFit.cover creates vertical overflow,
+                                  // giving the alignment drift room to move.
+                                  // ClipRRect above handles the visual clipping.
+                                  child: OverflowBox(
+                                    maxWidth: double.infinity,
+                                    maxHeight: double.infinity,
+                                    child: SizedBox(
+                                      width: 160,
+                                      height: 48,
+                                      child: ZPatternOverlay(
+                                        variant: ZPatternVariant.sage,
+                                        opacity: 0.35,
+                                        animate: true,
+                                      ),
                                     ),
                                   ),
                                 ),

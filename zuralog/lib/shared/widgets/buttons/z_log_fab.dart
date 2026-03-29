@@ -50,8 +50,14 @@ class ZLogFab extends StatelessWidget {
               children: [
                 // Sage fill (already the container background)
                 const SizedBox.expand(),
-                // Pattern overlay
-                const Positioned.fill(
+                // Pattern overlay — extended horizontally so BoxFit.cover
+                // creates vertical overflow, giving the alignment drift room
+                // to produce visible movement. ClipOval handles the clipping.
+                Positioned(
+                  left: -32,
+                  right: -32,
+                  top: 0,
+                  bottom: 0,
                   child: ZPatternOverlay(
                     variant: ZPatternVariant.sage,
                     opacity: 0.5,
