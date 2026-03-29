@@ -41,7 +41,7 @@ class WelcomeSlide {
 
 const List<WelcomeSlide> welcomeSlides = [
   WelcomeSlide(
-    imagePath: 'assets/welcome/placeholder_01.jpg',
+    imagePath: 'assets/welcome/welcome_01.jpg',
     tagline: 'Your health,\none clear picture.',
   ),
   WelcomeSlide(
