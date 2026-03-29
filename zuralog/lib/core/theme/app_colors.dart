@@ -310,7 +310,7 @@ abstract final class AppColors {
   static const Color progressSurfaceRaisedLight = Color(0xFFDFEBD6);
   static const Color progressTextPrimaryLight = Color(0xFF1A2E1E);
   static const Color progressTextSecondaryLight = Color(0xFF3D5E2E);
-  static const Color progressTextMutedLight = Color(0x993D5E2E);
+  static const Color progressTextMutedLight = Color(0xFF5C7A4D);
   static const Color progressBorderDefaultLight = Color(0x1F3D5E2E);
   static const Color progressBorderStrongLight = Color(0x333D5E2E);
   static const Color progressSageLight = Color(0xFF4A7C3F);

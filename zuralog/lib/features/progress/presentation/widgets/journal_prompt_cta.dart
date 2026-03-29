@@ -66,7 +66,7 @@ class JournalPromptCta extends StatelessWidget {
           padding: const EdgeInsets.all(AppDimens.spaceMd),
           child: Row(
             children: [
-              const Text('✍️', style: TextStyle(fontSize: 22)),
+              const Icon(Icons.edit_rounded, size: 22, color: Color(0xFF4A7C3F)),
               const SizedBox(width: AppDimens.spaceSm),
               Expanded(
                 child: Column(

@@ -478,9 +478,9 @@ class _MilestoneCelebrationCardState
                     children: [
                       Row(
                         children: const [
-                          Text('🔥', style: TextStyle(fontSize: 28)),
+                          Icon(Icons.local_fire_department_rounded, size: 28, color: Color(0xFFFF9500)),
                           SizedBox(width: AppDimens.spaceXs),
-                          Text('🏆', style: TextStyle(fontSize: 28)),
+                          Icon(Icons.emoji_events_rounded, size: 28, color: Color(0xFFFFD60A)),
                         ],
                       ),
                       const SizedBox(height: AppDimens.spaceSm),

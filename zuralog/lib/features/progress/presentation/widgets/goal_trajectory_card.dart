@@ -18,20 +18,20 @@ class GoalTrajectoryCard extends StatelessWidget {
   final Goal goal;
   final VoidCallback onTap;
 
-  static const Map<GoalType, (String, Color)> _typeInfo = {
-    GoalType.weightTarget: ('🎯', Color(0xFF64D2FF)),
-    GoalType.weeklyRunCount: ('🏃', Color(0xFF30D158)),
-    GoalType.dailyCalorieLimit: ('🥗', Color(0xFFFF9F0A)),
-    GoalType.sleepDuration: ('😴', Color(0xFF5E5CE6)),
-    GoalType.stepCount: ('👟', Color(0xFF30D158)),
-    GoalType.waterIntake: ('💧', Color(0xFF64D2FF)),
-    GoalType.custom: ('✨', AppColors.progressSage),
+  static const Map<GoalType, (IconData, Color)> _typeInfo = {
+    GoalType.weightTarget: (Icons.gps_fixed_rounded, Color(0xFF64D2FF)),
+    GoalType.weeklyRunCount: (Icons.directions_run_rounded, Color(0xFF30D158)),
+    GoalType.dailyCalorieLimit: (Icons.restaurant_rounded, Color(0xFFFF9F0A)),
+    GoalType.sleepDuration: (Icons.bedtime_rounded, Color(0xFF5E5CE6)),
+    GoalType.stepCount: (Icons.directions_walk_rounded, Color(0xFF30D158)),
+    GoalType.waterIntake: (Icons.water_drop_rounded, Color(0xFF64D2FF)),
+    GoalType.custom: (Icons.auto_awesome_rounded, AppColors.progressSage),
   };
 
   @override
   Widget build(BuildContext context) {
-    final typeData = _typeInfo[goal.type] ?? ('✨', AppColors.progressSage);
-    final emoji = typeData.$1;
+    final typeData = _typeInfo[goal.type] ?? (Icons.auto_awesome_rounded, AppColors.progressSage);
+    final iconData = typeData.$1;
     final color = typeData.$2;
     final pct = goal.progressFraction;
     final pctInt = (pct * 100).round();
@@ -65,7 +65,7 @@ class GoalTrajectoryCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(AppDimens.radiusSm),
                   ),
                   child: Center(
-                    child: Text(emoji, style: const TextStyle(fontSize: 16)),
+                    child: Icon(iconData, size: 16, color: color),
                   ),
                 ),
                 const SizedBox(width: AppDimens.spaceSm),

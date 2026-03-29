@@ -64,10 +64,9 @@ class StreakFlameHero extends StatelessWidget {
                   ),
                 ),
                 child: Center(
-                  child: Text(
-                    isFrozen ? '🧊' : '🔥',
-                    style: const TextStyle(fontSize: 40),
-                  ),
+                  child: isFrozen
+                      ? const Icon(Icons.ac_unit_rounded, size: 40, color: Color(0xFF64D2FF))
+                      : const Icon(Icons.local_fire_department_rounded, size: 40, color: Color(0xFFFF9500)),
                 ),
               ),
               const SizedBox(width: AppDimens.spaceMd),
@@ -97,11 +96,18 @@ class StreakFlameHero extends StatelessWidget {
                     ),
                     if (isRecord) ...[
                       const SizedBox(height: 2),
-                      Text(
-                        '🎉 Personal best!',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.progressTextMuted,
-                        ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.celebration_rounded, size: 14, color: Color(0xFFFF9500)),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Personal best!',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.progressTextMuted,
+                            ),
+                          ),
+                        ],
                       ),
                     ] else if (longestCount > 0) ...[
                       const SizedBox(height: 2),
@@ -159,7 +165,7 @@ class StreakFlameHero extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('🧊', style: TextStyle(fontSize: 13)),
+                      const Icon(Icons.ac_unit_rounded, size: 13, color: Color(0xFF64D2FF)),
                       const SizedBox(width: AppDimens.spaceXs),
                       Text(
                         '$freezeCount freeze token${freezeCount == 1 ? '' : 's'} available',
