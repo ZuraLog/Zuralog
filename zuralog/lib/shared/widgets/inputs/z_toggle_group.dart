@@ -135,7 +135,7 @@ class _ToggleButton<T> extends StatelessWidget {
             duration: duration,
             curve: curve,
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.warmWhite : Colors.transparent,
+              color: isSelected ? colors.warmWhite : Colors.transparent,
               borderRadius: BorderRadius.circular(9),
             ),
             alignment: Alignment.center,
@@ -145,7 +145,7 @@ class _ToggleButton<T> extends StatelessWidget {
               curve: curve,
               style: AppTextStyles.labelMedium.copyWith(
                 color: isSelected
-                    ? AppColors.textOnWarmWhite
+                    ? colors.textOnWarmWhite
                     : colors.textSecondary,
               ),
               child: Text(item.label, maxLines: 1, overflow: TextOverflow.ellipsis),

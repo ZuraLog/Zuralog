@@ -91,7 +91,7 @@ class _ZButtonState extends State<ZButton> {
       case ZButtonVariant.primary:
         return colors.primary;
       case ZButtonVariant.destructive:
-        return AppColors.error;
+        return colors.error;
       case ZButtonVariant.secondary:
       case ZButtonVariant.text:
         return Colors.transparent;
@@ -101,7 +101,7 @@ class _ZButtonState extends State<ZButton> {
   Color _foregroundColor(AppColorsOf colors) {
     switch (widget.variant) {
       case ZButtonVariant.primary:
-        return AppColors.textOnSage;
+        return colors.textOnSage;
       case ZButtonVariant.destructive:
         return Colors.white;
       case ZButtonVariant.secondary:
@@ -114,7 +114,7 @@ class _ZButtonState extends State<ZButton> {
   Color _spinnerColor(AppColorsOf colors) {
     switch (widget.variant) {
       case ZButtonVariant.primary:
-        return AppColors.textOnSage;
+        return colors.textOnSage;
       case ZButtonVariant.text:
         return colors.primary;
       case ZButtonVariant.destructive:

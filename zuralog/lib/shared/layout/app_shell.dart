@@ -10,7 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/state/log_sheet_provider.dart';
 import 'package:zuralog/core/state/side_panel_provider.dart';
-import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/app_colors.dart' show AppColorsOf;
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/profile_side_panel.dart';
@@ -99,7 +99,7 @@ class _AppShellState extends ConsumerState<AppShell> {
               onTap: () =>
                   ref.read(sidePanelOpenProvider.notifier).state = false,
               child: ColoredBox(
-                color: AppColors.black.withValues(alpha: 0.45),
+                color: Colors.black.withValues(alpha: 0.45),
                 child: const SizedBox.expand(),
               ),
             ),
@@ -167,11 +167,11 @@ class _NavTab {
 ///
 /// Brand bible spec:
 /// - Floating pill shape with 100px radius, 20px horizontal margin.
-/// - Surface (#1E1E1E) background with backdrop blur showing through.
-/// - Active tab: Sage tint pill (rgba(207,225,185,0.12)) behind icon+label,
-///   Sage text (#CFE1B9).
-/// - Inactive tabs: Text Secondary (#9B9894).
-/// - Icons 20-22px, labels Label Medium (13pt Medium 500).
+/// - Surface background at 0.92 opacity with backdrop blur showing through.
+/// - Dark mode active tab: Sage tint (rgba(207,225,185,0.12)) pill, Sage text (#CFE1B9).
+/// - Light mode active tab: Deep Forest (#344E41) solid pill, Warm Cream (#E8EDE0) text.
+/// - Inactive tabs: Text Secondary (#9B9894 dark / #6B6864 light).
+/// - Icons 22px, labels Label Medium scaled to 11pt for 5-tab fit.
 /// - Bottom padding: safe area + 18px.
 class _FrostedNavigationBar extends StatelessWidget {
   const _FrostedNavigationBar({
@@ -210,12 +210,13 @@ class _FrostedNavigationBar extends StatelessWidget {
     ),
   ];
 
-  /// Sage tint pill behind the active tab: rgba(207, 225, 185, 0.12).
-  static const Color _sageTint = Color(0x1FCFE1B9);
-
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
+    // Active pill bg: subtle tint in dark, solid Deep Forest in light.
+    // Active icon/label: Sage (#CFE1B9) in dark, Warm Cream (#E8EDE0) in light.
+    final activePillBg = colors.primary.withValues(alpha: colors.isDark ? 0.12 : 1.0);
+    final activeItemColor = colors.isDark ? colors.primary : colors.textOnSage;
     final bottomSafeArea = MediaQuery.of(context).padding.bottom;
 
     return Padding(
@@ -266,7 +267,7 @@ class _FrostedNavigationBar extends StatelessWidget {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: isActive ? _sageTint : Colors.transparent,
+                              color: isActive ? activePillBg : Colors.transparent,
                               borderRadius: BorderRadius.circular(
                                 AppDimens.shapePill,
                               ),
@@ -278,7 +279,7 @@ class _FrostedNavigationBar extends StatelessWidget {
                                   isActive ? tab.activeIcon : tab.icon,
                                   size: 22,
                                   color: isActive
-                                      ? colors.primary
+                                      ? activeItemColor
                                       : colors.textSecondary,
                                 ),
                                 const SizedBox(height: 2),
@@ -286,7 +287,7 @@ class _FrostedNavigationBar extends StatelessWidget {
                                   tab.label,
                                   style: AppTextStyles.labelMedium.copyWith(
                                     color: isActive
-                                        ? colors.primary
+                                        ? activeItemColor
                                         : colors.textSecondary,
                                     // Scaled down from 13pt to 11pt so all 5
                                     // labels (including "Progress") fit inside

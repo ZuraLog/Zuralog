@@ -47,7 +47,7 @@ abstract final class AppTheme {
             onSecondary: Colors.white,
             tertiary: AppColors.accentLight,
             onTertiary: Colors.white,
-            surface: AppColors.surfaceLight,
+            surface: AppColors.surfaceLightNew,
             onSurface: AppColors.textPrimaryLight,
             onSurfaceVariant: AppColors.textSecondaryLight,
             outline: AppColors.borderLight,
@@ -87,7 +87,7 @@ abstract final class AppTheme {
       brightness: brightness,
       colorScheme: colorScheme,
       scaffoldBackgroundColor:
-          isLight ? AppColors.backgroundLight : AppColors.backgroundDark,
+          isLight ? AppColors.canvasLight : AppColors.backgroundDark,
 
       fontFamily: AppTextStyles.bodyLarge.fontFamily,
       textTheme: _buildTextTheme(
@@ -96,7 +96,7 @@ abstract final class AppTheme {
       ),
       appBarTheme: AppBarTheme(
         backgroundColor:
-            isLight ? AppColors.backgroundLight : AppColors.backgroundDark,
+            isLight ? AppColors.canvasLight : AppColors.backgroundDark,
         foregroundColor:
             isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark,
         elevation: 0,
@@ -111,7 +111,7 @@ abstract final class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: isLight
-            ? AppColors.cardBackgroundLight
+            ? AppColors.surfaceLightNew
             : AppColors.cardBackgroundDark,
         elevation: 0,
         // No border, no shadow — cards defined by background contrast only.
@@ -210,7 +210,7 @@ abstract final class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: isLight
-            ? AppColors.inputBackgroundLight
+            ? AppColors.surfaceRaisedLight
             : AppColors.inputBackgroundDark,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusInput),
@@ -264,7 +264,7 @@ abstract final class AppTheme {
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor:
-            isLight ? AppColors.surfaceLight : AppColors.surfaceDark,
+            isLight ? AppColors.surfaceLightNew : AppColors.surfaceDark,
         selectedItemColor:
             isLight ? AppColors.primaryOnLight : AppColors.primary,
         unselectedItemColor:
@@ -276,7 +276,7 @@ abstract final class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor:
-            isLight ? AppColors.surfaceLight : AppColors.surfaceDark,
+            isLight ? AppColors.surfaceLightNew : AppColors.surfaceDark,
         indicatorColor: (isLight ? AppColors.primaryOnLight : AppColors.primary)
             .withValues(alpha: 0.2),
         iconTheme: WidgetStateProperty.resolveWith((states) {
@@ -340,7 +340,7 @@ abstract final class AppTheme {
       // Tooltip styling — used by OnboardingTooltip and system tooltips.
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
-          color: isLight ? AppColors.surfaceLight : AppColors.surfaceRaised,
+          color: isLight ? AppColors.surfaceLightNew : AppColors.surfaceRaised,
           borderRadius: BorderRadius.circular(AppDimens.shapeXs),
         ),
         textStyle: AppTextStyles.bodySmall.copyWith(

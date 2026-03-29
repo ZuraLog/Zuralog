@@ -1645,6 +1645,7 @@ class _Bubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Row(
@@ -1656,7 +1657,7 @@ class _Bubble extends StatelessWidget {
               width: 28,
               height: 28,
               decoration: BoxDecoration(
-                color: AppColors.shimmerBase.withValues(alpha: opacity),
+                color: colors.shimmerBase.withValues(alpha: opacity),
                 shape: BoxShape.circle,
               ),
             ),

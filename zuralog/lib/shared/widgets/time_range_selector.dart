@@ -85,9 +85,8 @@ class TimeRangeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor =
-        isDark ? const Color(0xFF2C2C2E) : AppColors.secondaryButtonLight;
+    final colors = AppColorsOf(context);
+    final bgColor = colors.secondaryButton;
 
     return Container(
       height: 36,
@@ -112,7 +111,7 @@ class TimeRangeSelector extends StatelessWidget {
                         builder: (ctx, child) => Theme(
                           data: Theme.of(ctx).copyWith(
                             colorScheme: Theme.of(ctx).colorScheme.copyWith(
-                              primary: AppColors.primary,
+                              primary: colors.primary,
                             ),
                           ),
                           child: child!,
@@ -152,8 +151,9 @@ class _Segment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final textColor = isSelected
-        ? AppColors.primaryButtonText
+        ? colors.textOnSage
         : Theme.of(context).colorScheme.onSurfaceVariant;
 
     final radius = BorderRadius.horizontal(
@@ -168,7 +168,7 @@ class _Segment extends StatelessWidget {
         curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.transparent,
+          color: isSelected ? colors.primary : Colors.transparent,
           borderRadius: radius,
         ),
         child: Text(

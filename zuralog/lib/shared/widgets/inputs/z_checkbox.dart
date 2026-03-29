@@ -8,7 +8,7 @@ import 'package:flutter/services.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart'
-    show ZPatternVariant;
+    show ZPatternVariant, effectivePatternVariant, effectivePatternOpacity;
 
 /// A brand-styled checkbox.
 ///
@@ -88,12 +88,15 @@ class _ZCheckboxState extends State<ZCheckbox>
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
+    final isLight = Theme.of(context).brightness == Brightness.light;
 
     // The 20×20 animated checkbox box — no GestureDetector inside.
     final checkboxVisual = AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
         final progress = _controller.value;
+        final patternImage = effectivePatternVariant(ZPatternVariant.sage, isLight).assetPath;
+        final patternOpacity = effectivePatternOpacity(0.6, isLight);
         return SizedBox(
           width: 20,
           height: 20,
@@ -115,22 +118,19 @@ class _ZCheckboxState extends State<ZCheckbox>
                             width: 2,
                           )
                         : null,
-                    image: progress > 0
-                        ? DecorationImage(
-                            image: AssetImage(ZPatternVariant.sage.assetPath),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
                   ),
                 ),
-                // Fade-in for the pattern during transition.
-                if (progress > 0 && progress < 1.0)
+                // Pattern layer fades in on top when checked.
+                if (progress > 0)
                   Opacity(
-                    opacity: 1.0 - progress,
+                    opacity: progress * patternOpacity,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.transparent,
                         borderRadius: BorderRadius.circular(4),
+                        image: DecorationImage(
+                          image: AssetImage(patternImage),
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
                   ),
@@ -139,10 +139,10 @@ class _ZCheckboxState extends State<ZCheckbox>
                   Center(
                     child: Opacity(
                       opacity: ((progress - 0.3) / 0.7).clamp(0, 1),
-                      child: const Icon(
+                      child: Icon(
                         Icons.check,
                         size: 16,
-                        color: AppColors.textOnSage,
+                        color: colors.textOnSage,
                       ),
                     ),
                   ),

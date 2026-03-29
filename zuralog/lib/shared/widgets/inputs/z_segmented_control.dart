@@ -83,7 +83,7 @@ class ZSegmentedControl extends StatelessWidget {
                   width: segmentWidth,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: AppColors.warmWhite,
+                      color: colors.warmWhite,
                       borderRadius: BorderRadius.circular(AppDimens.shapeXs),
                     ),
                   ),
@@ -103,7 +103,7 @@ class ZSegmentedControl extends StatelessWidget {
                                 duration: AppMotion.durationFast,
                                 style: AppTextStyles.labelMedium.copyWith(
                                   color: i == selectedIndex
-                                      ? AppColors.textOnWarmWhite
+                                      ? colors.textOnWarmWhite
                                       : colors.textSecondary,
                                 ),
                                 child: Text(segments[i]),

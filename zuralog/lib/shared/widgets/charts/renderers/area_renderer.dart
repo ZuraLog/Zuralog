@@ -136,7 +136,7 @@ class _AreaRendererState extends State<AreaRenderer> {
         drawVerticalLine: false,
         horizontalInterval: null,
         getDrawingHorizontalLine: (value) => FlLine(
-          color: AppColors.warmWhite.withValues(alpha: 0.04),
+          color: AppColorsOf(context).warmWhite.withValues(alpha: 0.04),
           strokeWidth: 0.5,
         ),
       ),

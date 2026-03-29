@@ -31,9 +31,7 @@ import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
-import 'package:zuralog/core/theme/app_colors.dart';
-import 'package:zuralog/core/theme/app_dimens.dart';
-import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/theme/theme.dart';
 
 // ── CategoryCard ──────────────────────────────────────────────────────────────
 
@@ -90,11 +88,10 @@ class CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
-    final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final textSecondary =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final colors = AppColorsOf(context);
+    final bg = colors.cardBackground;
+    final textPrimary = colors.textPrimary;
+    final textSecondary = colors.textSecondary;
 
     Widget card = IntrinsicHeight(
       child: Container(
@@ -206,8 +203,9 @@ class _DeltaIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     final isUp = deltaPercent > 0;
     final isFlat = deltaPercent == 0;
+    final colors = AppColorsOf(context);
     final color = isFlat
-        ? AppColors.textTertiary
+        ? colors.textTertiary
         : isUp
             ? AppColors.healthScoreGreen
             : AppColors.healthScoreRed;
@@ -278,7 +276,7 @@ class _EditModeControls extends StatelessWidget {
             child: Icon(
               isVisible ? Icons.visibility_rounded : Icons.visibility_off_rounded,
               size: AppDimens.iconSm,
-              color: isVisible ? categoryColor : AppColors.textTertiary,
+              color: isVisible ? categoryColor : AppColorsOf(context).textTertiary,
             ),
           ),
         ),
@@ -287,7 +285,7 @@ class _EditModeControls extends StatelessWidget {
         Icon(
           Icons.drag_handle_rounded,
           size: AppDimens.iconSm,
-          color: AppColors.textTertiary,
+          color: AppColorsOf(context).textTertiary,
         ),
       ],
     );

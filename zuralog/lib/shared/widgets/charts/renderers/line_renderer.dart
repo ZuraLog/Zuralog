@@ -134,7 +134,7 @@ class _LineRendererState extends State<LineRenderer> {
           drawVerticalLine: false,
           horizontalInterval: null,
           getDrawingHorizontalLine: (value) => FlLine(
-            color: AppColors.warmWhite.withValues(alpha: 0.04),
+            color: AppColorsOf(context).warmWhite.withValues(alpha: 0.04),
             strokeWidth: 0.5,
           ),
         ),

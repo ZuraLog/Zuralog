@@ -139,7 +139,7 @@ class _IconCircle extends StatelessWidget {
             right: -8,
             child: ZBadge(
               label: 'Soon',
-              color: AppColors.primary.withValues(alpha: 0.2),
+              color: colors.primary.withValues(alpha: 0.2),
               textColor: colors.primary,
             ),
           ),

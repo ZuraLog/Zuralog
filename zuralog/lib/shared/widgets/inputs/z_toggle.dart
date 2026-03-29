@@ -9,7 +9,7 @@ import 'package:flutter/services.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart'
-    show ZPatternVariant;
+    show ZPatternVariant, effectivePatternVariant, effectivePatternOpacity;
 
 /// A brand-styled toggle switch.
 ///
@@ -92,11 +92,14 @@ class _ZToggleState extends State<ZToggle> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
+    final isLight = Theme.of(context).brightness == Brightness.light;
 
     // Track visual, wrapped in a 48px tap target.
     final trackVisual = AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
+        final patternImage = effectivePatternVariant(ZPatternVariant.sage, isLight).assetPath;
+        final patternOpacity = effectivePatternOpacity(0.6, isLight);
         return SizedBox(
           width: _trackWidth,
           height: _trackHeight,
@@ -104,32 +107,24 @@ class _ZToggleState extends State<ZToggle> with SingleTickerProviderStateMixin {
             borderRadius: BorderRadius.circular(_trackHeight / 2),
             child: Stack(
               children: [
-                // Track background — sage pattern when ON, surfaceRaised when OFF.
+                // Base track — surfaceRaised color always present underneath.
                 Container(
                   decoration: BoxDecoration(
-                    color: _controller.value < 1.0
-                        ? colors.surfaceRaised
-                        : null,
+                    color: colors.surfaceRaised,
                     borderRadius: BorderRadius.circular(_trackHeight / 2),
-                    image: _controller.value > 0.0
-                        ? DecorationImage(
-                            image: AssetImage(
-                                ZPatternVariant.sage.assetPath),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
                   ),
                 ),
-                // Cross-fade: dim the pattern at the surfaceRaised opacity
-                // during the transition so it fades in smoothly.
-                if (_controller.value > 0.0 && _controller.value < 1.0)
+                // Pattern layer fades in on top when ON.
+                if (_controller.value > 0.0)
                   Opacity(
-                    opacity: 1.0 - _controller.value,
+                    opacity: _controller.value * patternOpacity,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: colors.surfaceRaised,
-                        borderRadius:
-                            BorderRadius.circular(_trackHeight / 2),
+                        borderRadius: BorderRadius.circular(_trackHeight / 2),
+                        image: DecorationImage(
+                          image: AssetImage(patternImage),
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
                   ),

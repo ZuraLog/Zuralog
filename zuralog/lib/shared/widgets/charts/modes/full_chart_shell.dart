@@ -528,6 +528,7 @@ class _StatCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -536,7 +537,7 @@ class _StatCell extends StatelessWidget {
           style: AppTextStyles.labelSmall.copyWith(
             color: color != null
                 ? color!.withValues(alpha: 0.7)
-                : AppColors.warmWhite.withValues(alpha: 0.4),
+                : colors.warmWhite.withValues(alpha: 0.4),
             letterSpacing: 0.5,
           ),
         ),
@@ -547,7 +548,7 @@ class _StatCell extends StatelessWidget {
               TextSpan(
                 text: value,
                 style: AppTextStyles.labelMedium.copyWith(
-                  color: color ?? AppColors.warmWhite,
+                  color: color ?? colors.warmWhite,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -555,7 +556,7 @@ class _StatCell extends StatelessWidget {
                 TextSpan(
                   text: ' $unit',
                   style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.warmWhite.withValues(alpha: 0.5),
+                    color: colors.warmWhite.withValues(alpha: 0.5),
                   ),
                 ),
             ],

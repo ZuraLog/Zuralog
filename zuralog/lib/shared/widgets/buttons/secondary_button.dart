@@ -10,9 +10,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'package:zuralog/core/theme/app_colors.dart';
-import 'package:zuralog/core/theme/app_dimens.dart';
-import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/theme/theme.dart';
 
 /// Full-width, pill-shaped secondary action button.
 ///
@@ -52,14 +50,12 @@ class SecondaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = AppColorsOf(context);
     return TextButton(
       onPressed: onPressed,
       style: TextButton.styleFrom(
-        foregroundColor:
-            isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-        backgroundColor:
-            isDark ? AppColors.secondaryButtonDark : AppColors.secondaryButtonLight,
+        foregroundColor: colors.textPrimary,
+        backgroundColor: colors.secondaryButton,
         minimumSize: const Size(double.infinity, AppDimens.touchTargetMin),
         tapTargetSize: MaterialTapTargetSize.padded,
         shape: RoundedRectangleBorder(

@@ -73,7 +73,8 @@ class _ZSearchBarState extends State<ZSearchBar> {
 
   @override
   Widget build(BuildContext context) {
-    final sageFocusBorder = AppColors.primary.withValues(alpha: 0.3);
+    final colors = AppColorsOf(context);
+    final sageFocusBorder = colors.primary.withValues(alpha: 0.3);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppDimens.shapeSm),
@@ -92,29 +93,29 @@ class _ZSearchBarState extends State<ZSearchBar> {
           // The text field (top layer, above the pattern).
           TextFormField(
             controller: _controller,
-            cursorColor: AppColors.primary,
+            cursorColor: colors.primary,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textPrimaryDark,
+              color: colors.textPrimary,
             ),
             onChanged: widget.onChanged,
             decoration: InputDecoration(
               hintText: widget.placeholder,
               hintStyle: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+                color: colors.textSecondary,
               ),
               filled: true,
-              fillColor: AppColors.surface,
-              prefixIcon: const Icon(
+              fillColor: colors.surface,
+              prefixIcon: Icon(
                 Icons.search,
-                color: AppColors.textSecondary,
+                color: colors.textSecondary,
                 size: 20,
               ),
               suffixIcon: _hasText
                   ? GestureDetector(
                       onTap: _handleClear,
-                      child: const Icon(
+                      child: Icon(
                         Icons.close,
-                        color: AppColors.textSecondary,
+                        color: colors.textSecondary,
                         size: 20,
                       ),
                     )

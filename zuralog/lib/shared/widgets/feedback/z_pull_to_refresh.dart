@@ -32,7 +32,7 @@ class ZPullToRefresh extends StatelessWidget {
 
     return RefreshIndicator(
       onRefresh: onRefresh,
-      color: AppColors.primary,
+      color: colors.primary,
       backgroundColor: colors.surface,
       child: child,
     );

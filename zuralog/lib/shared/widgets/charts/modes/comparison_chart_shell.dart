@@ -195,7 +195,7 @@ class _ComparisonChartShellState extends State<ComparisonChartShell> {
                     show: widget.renderCtx.showGrid,
                     drawVerticalLine: false,
                     getDrawingHorizontalLine: (_) => FlLine(
-                      color: AppColors.warmWhite.withValues(alpha: 0.04),
+                      color: AppColorsOf(context).warmWhite.withValues(alpha: 0.04),
                       strokeWidth: 0.5,
                     ),
                   ),
