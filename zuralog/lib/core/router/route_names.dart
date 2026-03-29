@@ -381,5 +381,7 @@ abstract final class RouteNames {
     forgotPasswordPath,
     checkInboxPath,
     resetPasswordPath,
+    settingsTermsPath,
+    settingsPrivacyPolicyPath,
   };
 }
