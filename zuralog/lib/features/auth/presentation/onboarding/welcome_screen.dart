@@ -1,8 +1,8 @@
 /// Zuralog Edge Agent — Welcome / Auth Home Screen (v5.0 lifestyle carousel redesign).
 ///
 /// The auth gate screen the user lands on after the slideshow (or on every
-/// subsequent launch). Top 58% is a photo carousel that crossfades between
-/// lifestyle images. Bottom 42% is the auth action section.
+/// subsequent launch). A photo carousel fills the top portion of the screen
+/// with a theme-aware gradient fade; the auth action section sits below it.
 ///
 /// **Backend wiring is unchanged:**
 /// - [_handleGoogleSignIn] → [SocialAuthService.signInWithGoogle] → [authStateProvider.socialLogin]
@@ -16,7 +16,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:simple_icons/simple_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -44,6 +43,26 @@ const List<WelcomeSlide> welcomeSlides = [
   WelcomeSlide(
     imagePath: 'assets/welcome/placeholder_01.jpg',
     tagline: 'Your health,\none clear picture.',
+  ),
+  WelcomeSlide(
+    imagePath: 'assets/welcome/welcome_02.jpg',
+    tagline: 'Rest, finally\nunderstood.',
+  ),
+  WelcomeSlide(
+    imagePath: 'assets/welcome/welcome_03.jpg',
+    tagline: 'Peace of mind,\nmeasured.',
+  ),
+  WelcomeSlide(
+    imagePath: 'assets/welcome/welcome_04.jpg',
+    tagline: 'Every rep,\nrecorded.',
+  ),
+  WelcomeSlide(
+    imagePath: 'assets/welcome/welcome_05.jpg',
+    tagline: 'What you eat,\ndecoded.',
+  ),
+  WelcomeSlide(
+    imagePath: 'assets/welcome/welcome_06.jpg',
+    tagline: 'Your day,\nyour way.',
   ),
 ];
 
@@ -131,48 +150,42 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.sizeOf(context).height;
     final safeBottom = MediaQuery.paddingOf(context).bottom;
+    final canvas = AppColorsOf(context).canvas;
 
     return ZuralogScaffold(
       useSafeArea: false,
       body: Stack(
         children: [
-          // ── Hero carousel (top 58%) ────────────────────────────────────
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: screenHeight * 0.58,
-            child: const _HeroCarousel(),
-          ),
+          // Two-layer layout: photo fills the top, auth buttons sit below.
+          Column(
+            children: [
+              // Layer 1 — photo carousel with bottom gradient fade.
+              //    Takes all space above the auth section.
+              const Expanded(child: _HeroCarousel()),
 
-          // ── Auth section (bottom 42%) ──────────────────────────────────
-          Positioned(
-            top: screenHeight * 0.58,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: ColoredBox(
-              color: AppColorsOf(context).canvas,
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  AppDimens.spaceLg,
-                  AppDimens.spaceLg,
-                  AppDimens.spaceLg,
-                  AppDimens.spaceLg + safeBottom,
-                ),
-                child: _AuthActions(
-                  isLoading: _isLoading,
-                  onApple: _handleAppleSignIn,
-                  onGoogle: _handleGoogleSignIn,
-                  onEmail: () => context.push(RouteNames.loginPath),
+              // Layer 2 — auth buttons on solid canvas background.
+              ColoredBox(
+                color: canvas,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppDimens.spaceLg,
+                    AppDimens.spaceMd,
+                    AppDimens.spaceLg,
+                    AppDimens.spaceMd + safeBottom,
+                  ),
+                  child: _AuthActions(
+                    isLoading: _isLoading,
+                    onApple: _handleAppleSignIn,
+                    onGoogle: _handleGoogleSignIn,
+                    onEmail: () => context.push(RouteNames.loginPath),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
 
-          // ── Loading overlay ────────────────────────────────────────────
+          // Loading overlay
           if (_isLoading)
             Positioned.fill(
               child: Semantics(
@@ -203,10 +216,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 /// Layers (bottom → top):
 /// 1. Current photo
 /// 2. Next photo fading in (only when >1 slide)
-/// 3. Brand topographic pattern overlay
-/// 4. Gradient scrim blending the photo into the canvas color below
-/// 5. Logo chip + ZuraLog wordmark (top-left)
-/// 6. Animated tagline (bottom-left)
+/// 3. Brand topographic pattern overlay (very subtle)
+/// 4. Top dark scrim (logo/wordmark legibility on any photo)
+/// 5. Bottom gradient scrim (photo → canvas)
+/// 6. ZuraLog mark + wordmark (top-left)
+/// 7. Animated tagline (centered)
 class _HeroCarousel extends StatefulWidget {
   const _HeroCarousel();
 
@@ -313,16 +327,36 @@ class _HeroCarouselState extends State<_HeroCarousel>
             ),
           ),
 
-        // Layer 3 — brand topographic pattern overlay
+        // Layer 3 — brand topographic pattern overlay (very subtle on photos)
         const Positioned.fill(
           child: ZPatternOverlay(
             variant: ZPatternVariant.original,
-            opacity: 0.09,
-            // blendMode removed — documented as unused in ZPatternOverlay
+            opacity: 0.04,
           ),
         ),
 
-        // Layer 4 — gradient scrim (photo → canvas)
+        // Layer 4 — top scrim: darkens the photo behind the logo/wordmark.
+        //    This is the standard industry pattern for text-on-photo legibility.
+        Positioned.fill(
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.center,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.55),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Layer 5 — bottom gradient: fades photo into canvas (theme-aware).
+        //    Transparent at mid-hero, fully canvas at the bottom edge —
+        //    light mode fades to warm cream, dark mode fades to near-black.
         Positioned.fill(
           child: IgnorePointer(
             child: DecoratedBox(
@@ -330,11 +364,9 @@ class _HeroCarouselState extends State<_HeroCarousel>
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  stops: const [0.0, 0.35, 0.65, 1.0],
+                  stops: const [0.45, 1.0],
                   colors: [
                     Colors.transparent,
-                    Colors.transparent,
-                    AppColorsOf(context).canvas.withValues(alpha: 0.5),
                     AppColorsOf(context).canvas,
                   ],
                 ),
@@ -343,65 +375,52 @@ class _HeroCarouselState extends State<_HeroCarousel>
           ),
         ),
 
-        // Layer 5 — logo chip + ZuraLog wordmark (top-left, below safe area)
+        // Layer 6 — logo chip + ZuraLog wordmark (top-left, below safe area).
+        //    Frosted glass chip (semi-transparent white) with the Sage PNG mark
+        //    inside. Reads clearly on any photo in any mode — no theme dependency.
         Positioned(
           top: MediaQuery.paddingOf(context).top + AppDimens.spaceMd,
           left: AppDimens.spaceLg,
           child: Row(
             children: [
-              ClipRRect(
-                borderRadius:
-                    BorderRadius.circular(AppDimens.shapeXs),
-                child: SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: Stack(
-                    children: [
-                      Container(color: AppColorsOf(context).primary),
-                      Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: SvgPicture.asset(
-                          AppAssets.logoSvg,
-                          fit: BoxFit.contain,
-                          colorFilter: const ColorFilter.mode(
-                            AppColors.primaryButtonText,
-                            BlendMode.srcIn,
-                          ),
-                        ),
-                      ),
-                    ],
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(AppDimens.shapeXs),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.35),
+                    width: 1,
                   ),
                 ),
+                padding: const EdgeInsets.all(6),
+                child: Image.asset(AppAssets.logoSagePng),
               ),
               const SizedBox(width: AppDimens.spaceSm),
               Text(
                 'ZuraLog',
                 style: AppTextStyles.labelLarge.copyWith(
-                  color: AppColorsOf(context).textPrimary,
-                  shadows: [
-                    Shadow(
-                      color: Colors.black.withValues(alpha: 0.40),
-                      blurRadius: 6,
-                    ),
-                  ],
+                  color: Colors.white,
                 ),
               ),
             ],
           ),
         ),
 
-        // Layer 6 — animated tagline (bottom-left)
+        // Layer 7 — animated tagline, centered in the photo zone.
         Positioned(
           left: AppDimens.spaceLg,
           right: AppDimens.spaceLg,
-          bottom: AppDimens.spaceLg,
+          bottom: 120,
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 1200),
             child: Text(
               welcomeSlides[_displayedTaglineIndex].tagline,
               key: ValueKey(_displayedTaglineIndex),
+              textAlign: TextAlign.center,
               style: AppTextStyles.displaySmall.copyWith(
-                color: AppColorsOf(context).textPrimary,
+                color: Colors.white,
                 shadows: [
                   Shadow(
                     color: Colors.black.withValues(alpha: 0.54),
@@ -460,12 +479,12 @@ class _AuthActions extends StatelessWidget {
           onPressed: isLoading ? null : onGoogle,
         ),
 
-        const SizedBox(height: AppDimens.spaceMd),
+        const SizedBox(height: AppDimens.spaceSm),
 
         // "or" divider
         const _OrDivider(),
 
-        const SizedBox(height: AppDimens.spaceMd),
+        const SizedBox(height: AppDimens.spaceSm),
 
         // Email — text variant
         ZButton(
@@ -475,7 +494,7 @@ class _AuthActions extends StatelessWidget {
           onPressed: isLoading ? null : onEmail,
         ),
 
-        const SizedBox(height: AppDimens.spaceMd),
+        const SizedBox(height: AppDimens.spaceSm),
 
         // Legal footer
         const _LegalFooter(),

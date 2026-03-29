@@ -35,7 +35,7 @@ abstract final class AppAssets {
   ///
   /// Use when the icon needs its own background context (e.g., standalone
   /// icon in a document, share sheet, or external context).
-  static const String logoWithBgSvg = 'assets/images/Zuralog.svg';
+  static const String logoWithBgSvg = 'assets/images/ZuraLog.svg';
 
   // ── PNG Logos ─────────────────────────────────────────────────────────────
   /// Main logo PNG with dark green (#344E41) background.
