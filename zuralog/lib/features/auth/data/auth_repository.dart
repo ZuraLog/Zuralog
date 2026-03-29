@@ -159,6 +159,23 @@ class AuthRepository {
     }
   }
 
+  /// Re-sends the email verification link to the given address.
+  ///
+  /// Calls `POST /api/v1/auth/resend-verification` with the user's email.
+  /// The backend triggers Supabase GoTrue to re-send the confirmation email.
+  ///
+  /// Args:
+  ///   [email]: The email address to re-send the verification link to.
+  ///
+  /// Throws:
+  ///   [DioException] if the network call fails or returns a non-2xx status.
+  Future<void> resendVerification(String email) async {
+    await _apiClient.post(
+      '/api/v1/auth/resend-verification',
+      data: {'email': email},
+    );
+  }
+
   /// Sends a password reset email to the given address.
   ///
   /// Calls `POST /api/v1/auth/reset-password` with the user's email.
