@@ -8,7 +8,7 @@ import 'package:flutter/services.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart'
-    show ZPatternVariant;
+    show ZPatternVariant, effectivePatternVariant, effectivePatternOpacity;
 
 /// A brand-styled selectable chip.
 ///
@@ -43,6 +43,9 @@ class ZChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    final patternImage = effectivePatternVariant(ZPatternVariant.sage, isLight).assetPath;
+    final patternOpacity = effectivePatternOpacity(1.0, isLight);
     return Semantics(
       checked: isActive,
       label: label,
@@ -67,8 +70,9 @@ class ZChip extends StatelessWidget {
             color: isActive ? null : colors.surface,
             image: isActive
                 ? DecorationImage(
-                    image: AssetImage(ZPatternVariant.sage.assetPath),
+                    image: AssetImage(patternImage),
                     fit: BoxFit.cover,
+                    opacity: patternOpacity,
                   )
                 : null,
           ),

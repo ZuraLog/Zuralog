@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart'
-    show ZPatternVariant;
+    show ZPatternVariant, effectivePatternVariant, effectivePatternOpacity;
 
 /// A horizontal progress bar with a Sage-colored fill and brand pattern.
 ///
@@ -41,6 +41,9 @@ class ZProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    final patternImage = effectivePatternVariant(ZPatternVariant.sage, isLight).assetPath;
+    final patternOpacity = effectivePatternOpacity(1.0, isLight);
     final hasLabels = label != null || valueLabel != null;
 
     return Column(
@@ -110,8 +113,9 @@ class ZProgressBar extends StatelessWidget {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(3),
                             image: DecorationImage(
-                              image: AssetImage(ZPatternVariant.sage.assetPath),
+                              image: AssetImage(patternImage),
                               fit: BoxFit.cover,
+                              opacity: patternOpacity,
                             ),
                           ),
                         ),
