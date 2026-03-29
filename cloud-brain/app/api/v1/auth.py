@@ -317,7 +317,7 @@ async def reset_password(
     """Request a password reset email. Always returns 200."""
     await auth_service.request_password_reset(
         email=body.email,
-        redirect_to="zuralog://reset-password",
+        redirect_to="https://zuralog.com/auth/reset-password",
     )
     return MessageResponse(message="If an account exists, a reset link has been sent.")
 

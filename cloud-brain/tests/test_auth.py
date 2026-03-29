@@ -190,7 +190,7 @@ def test_reset_password_success(client):
     assert "reset link" in data["message"].lower()
     mock_auth.request_password_reset.assert_called_once_with(
         email="test@example.com",
-        redirect_to="zuralog://reset-password",
+        redirect_to="https://zuralog.com/auth/reset-password",
     )
 
 
