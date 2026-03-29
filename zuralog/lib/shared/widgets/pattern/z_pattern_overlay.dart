@@ -133,8 +133,8 @@ class _ZPatternOverlayState extends State<ZPatternOverlay>
     with SingleTickerProviderStateMixin {
   AnimationController? _controller;
 
-  static const _startOffset = Offset(-10.0, -10.0);
-  static const _endOffset = Offset(10.0, 10.0);
+  static const _start = Alignment(-0.5, -0.5);
+  static const _end = Alignment(0.5, 0.5);
 
   @override
   void initState() {
@@ -194,9 +194,9 @@ class _ZPatternOverlayState extends State<ZPatternOverlay>
     super.dispose();
   }
 
-  Offset get _currentOffset {
-    if (_controller == null) return Offset.zero;
-    return Offset.lerp(_startOffset, _endOffset, _controller!.value)!;
+  Alignment get _currentAlignment {
+    if (_controller == null) return Alignment.center;
+    return Alignment.lerp(_start, _end, _controller!.value)!;
   }
 
   @override
@@ -205,32 +205,31 @@ class _ZPatternOverlayState extends State<ZPatternOverlay>
     final resolvedOpacity = effectivePatternOpacity(widget.opacity, isLight);
     final resolvedVariant = effectivePatternVariant(widget.variant, isLight);
 
-    final content = _controller != null
+    final alignment = _controller != null
         ? AnimatedBuilder(
             animation: _controller!,
-            builder: (context, child) => Transform.translate(
-              offset: _currentOffset,
-              child: _buildContainer(resolvedVariant),
-            ),
+            builder: (context, child) =>
+                _buildContainer(_currentAlignment, resolvedVariant),
           )
-        : _buildContainer(resolvedVariant);
+        : _buildContainer(Alignment.center, resolvedVariant);
 
     return ExcludeSemantics(
       child: IgnorePointer(
         child: Opacity(
           opacity: resolvedOpacity,
-          child: content,
+          child: alignment,
         ),
       ),
     );
   }
 
-  Widget _buildContainer(ZPatternVariant variant) {
+  Widget _buildContainer(Alignment alignment, ZPatternVariant variant) {
     return Container(
       decoration: BoxDecoration(
         image: DecorationImage(
           image: AssetImage(variant.assetPath),
           fit: BoxFit.cover,
+          alignment: alignment,
         ),
       ),
     );
