@@ -151,7 +151,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // Health Score hero — left half.
-                      Flexible(
+                      Expanded(
                         child: OnboardingTooltip(
                           screenKey: 'today_feed',
                           tooltipKey: 'health_score',
@@ -162,7 +162,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                       ),
                       const SizedBox(width: AppDimens.spaceSm),
                       // Streak Hero Card — right half.
-                      Flexible(
+                      Expanded(
                         child: feedAsync.when(
                           loading: () => const StreakHeroCard(streakDays: 0),
                           error: (e, _) => const StreakHeroCard(streakDays: 0),
