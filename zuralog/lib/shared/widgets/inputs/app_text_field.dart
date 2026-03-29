@@ -8,7 +8,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/theme.dart';
 
 /// Styled text input field for the Zuralog design system.
 ///
@@ -99,6 +99,7 @@ class AppTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return TextFormField(
       controller: controller,
       validator: validator,
@@ -110,8 +111,8 @@ class AppTextField extends StatelessWidget {
       onFieldSubmitted: onSubmitted != null ? (_) => onSubmitted!() : null,
       autofocus: autofocus,
       textInputAction: textInputAction,
-      // Sage Green cursor — the brand's primary identity color.
-      cursorColor: AppColors.primary,
+      // Brand primary cursor color — Sage in dark mode, Deep Forest in light.
+      cursorColor: colors.primary,
       decoration: InputDecoration(
         hintText: hintText,
         labelText: labelText,

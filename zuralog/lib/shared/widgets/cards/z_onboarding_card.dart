@@ -55,13 +55,14 @@ class ZOnboardingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final borderRadius = BorderRadius.circular(AppDimens.shapeLg);
 
     return ClipRRect(
       borderRadius: borderRadius,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: colors.surface,
           borderRadius: borderRadius,
         ),
         child: Stack(
@@ -88,14 +89,14 @@ class ZOnboardingCard extends StatelessWidget {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.15),
+                        color: colors.primary.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,
                       child: Icon(
                         icon,
                         size: 24,
-                        color: AppColors.primary,
+                        color: colors.primary,
                       ),
                     ),
                     const SizedBox(height: AppDimens.spaceMd),
@@ -105,7 +106,7 @@ class ZOnboardingCard extends StatelessWidget {
                   Text(
                     title,
                     style: AppTextStyles.displaySmall.copyWith(
-                      color: AppColors.primary,
+                      color: colors.primary,
                     ),
                   ),
                   const SizedBox(height: AppDimens.spaceSm),
@@ -114,7 +115,7 @@ class ZOnboardingCard extends StatelessWidget {
                   Text(
                     body,
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textSecondaryDark,
+                      color: colors.textSecondary,
                     ),
                   ),
                   const SizedBox(height: AppDimens.spaceMdPlus),

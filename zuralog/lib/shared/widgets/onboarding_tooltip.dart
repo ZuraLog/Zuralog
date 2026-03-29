@@ -8,9 +8,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:zuralog/core/theme/app_colors.dart';
-import 'package:zuralog/core/theme/app_dimens.dart';
-import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/theme/theme.dart';
 import 'onboarding_tooltip_provider.dart';
 
 const double _kMaxWidth = 240.0;
@@ -143,13 +141,9 @@ class _OnboardingTooltipState extends ConsumerState<OnboardingTooltip> {
 
     _overlayEntry = OverlayEntry(
       builder: (overlayContext) {
-        final isDark = Theme.of(overlayContext).brightness == Brightness.dark;
-        final bubbleBg = isDark
-            ? AppColors.surfaceDark
-            : AppColors.surfaceLight;
-        final textColor = isDark
-            ? AppColors.textPrimaryDark
-            : AppColors.textPrimaryLight;
+        final colors = AppColorsOf(overlayContext);
+        final bubbleBg = colors.surface;
+        final textColor = colors.textPrimary;
         // The OverlayEntry's render box fills the entire overlay, so a
         // transparent Material inside it would absorb taps across the whole
         // screen — including AppBar buttons rendered below the overlay layer.
@@ -253,6 +247,7 @@ class _BubbleContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       padding: _kPadding,
       decoration: BoxDecoration(
@@ -274,7 +269,7 @@ class _BubbleContent extends StatelessWidget {
             child: Text(
               'Got it',
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.primary,
+                color: colors.primary,
                 fontWeight: FontWeight.w600,
               ),
             ),

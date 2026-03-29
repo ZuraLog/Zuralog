@@ -34,6 +34,7 @@ import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/theme/theme.dart';
 
 // ── CategoryCard ──────────────────────────────────────────────────────────────
 
@@ -90,11 +91,10 @@ class CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
-    final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final textSecondary =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final colors = AppColorsOf(context);
+    final bg = colors.cardBackground;
+    final textPrimary = colors.textPrimary;
+    final textSecondary = colors.textSecondary;
 
     Widget card = IntrinsicHeight(
       child: Container(

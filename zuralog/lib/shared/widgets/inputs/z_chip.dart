@@ -48,7 +48,7 @@ class ZChip extends StatelessWidget {
 
     // Active chip: solid in light mode, pattern fill in dark mode.
     final Color? activeBackgroundColor =
-        (isActive && isLight) ? AppColors.primaryOnLight : (isActive ? null : colors.surface);
+        (isActive && isLight) ? colors.primary : (isActive ? null : colors.surface);
     final DecorationImage? activeImage = (isActive && !isLight)
         ? DecorationImage(
             image: AssetImage(
@@ -59,10 +59,9 @@ class ZChip extends StatelessWidget {
           )
         : null;
 
-    // Text/icon color: on light active use textOnSageLight, otherwise textOnSage
-    // for dark active, or textSecondary when inactive.
+    // Text/icon color: textOnSage resolves per-mode (light/dark automatically).
     final Color contentColor = isActive
-        ? (isLight ? AppColors.textOnSageLight : colors.textOnSage)
+        ? colors.textOnSage
         : colors.textSecondary;
 
     return Semantics(

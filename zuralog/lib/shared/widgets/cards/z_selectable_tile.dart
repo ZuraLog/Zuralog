@@ -6,8 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'package:zuralog/core/theme/app_colors.dart';
-import 'package:zuralog/core/theme/app_dimens.dart';
+import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/shared/widgets/buttons/spring_button.dart';
 
 /// A frame-only selectable tile that handles selection decoration.
@@ -71,7 +70,8 @@ class ZSelectableTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolvedColor = selectedColor ?? AppColors.primary;
+    final colors = AppColorsOf(context);
+    final resolvedColor = selectedColor ?? colors.primary;
     final resolvedRadius = BorderRadius.circular(
       borderRadius ?? AppDimens.shapeMd,
     );
@@ -85,7 +85,7 @@ class ZSelectableTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: isSelected
             ? resolvedColor.withValues(alpha: 0.08)
-            : AppColors.surface,
+            : colors.surface,
         border: Border.all(
           color: isSelected ? resolvedColor : Colors.transparent,
           width: 1.5,
