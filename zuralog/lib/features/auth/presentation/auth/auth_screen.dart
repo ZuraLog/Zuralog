@@ -322,145 +322,153 @@ class _LoginForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppDimens.spaceLg),
-      child: Form(
-        key: formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: AppDimens.spaceLg),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(AppDimens.spaceLg),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Form(
+              key: formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(height: AppDimens.spaceLg),
 
-            Text(
-              'Welcome back.',
-              style: AppTextStyles.displayLarge.copyWith(
-                color: AppColorsOf(context).textPrimary,
-              ),
-            ),
-
-            const SizedBox(height: AppDimens.spaceSm),
-
-            Text(
-              'Sign in to continue.',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColorsOf(context).textSecondary,
-              ),
-            ),
-
-            const SizedBox(height: AppDimens.spaceXl),
-
-            AppTextField(
-              hintText: 'Email address',
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              controller: emailCtrl,
-              validator: validateEmail,
-            ),
-
-            const SizedBox(height: AppDimens.spaceMd),
-
-            AppTextField(
-              hintText: 'Password',
-              obscureText: obscurePassword,
-              textInputAction: TextInputAction.done,
-              controller: passwordCtrl,
-              validator: validatePassword,
-              onSubmitted: onSubmit,
-              suffixIcon: ZIconButton(
-                icon: obscurePassword
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
-                onPressed: onToggleObscure,
-                filled: false,
-                iconSize: 20,
-                semanticLabel: 'Toggle password visibility',
-              ),
-            ),
-
-            const SizedBox(height: AppDimens.spaceSm),
-
-            // "Forgot password?" — right-aligned Sage text link
-            Align(
-              alignment: Alignment.centerRight,
-              child: Semantics(
-                button: true,
-                label: 'Forgot password',
-                child: GestureDetector(
-                  onTap: isLoading ? null : onForgotPassword,
-                  behavior: HitTestBehavior.opaque,
-                  child: SizedBox(
-                    height: AppDimens.touchTargetMin,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppDimens.spaceSm,
-                      ),
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          'Forgot password?',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
+                  Text(
+                    'Welcome back.',
+                    style: AppTextStyles.displayLarge.copyWith(
+                      color: AppColorsOf(context).textPrimary,
                     ),
                   ),
-                ),
-              ),
-            ),
 
-            const SizedBox(height: AppDimens.spaceXl),
+                  const SizedBox(height: AppDimens.spaceSm),
 
-            // Primary CTA — Sage fill + pattern
-            ZButton(
-              label: 'Log In',
-              onPressed: isLoading ? null : onSubmit,
-              isLoading: isLoading,
-            ),
-
-            const SizedBox(height: AppDimens.spaceMd),
-
-            // Footer — switch to register
-            Center(
-              child: SizedBox(
-                height: AppDimens.touchTargetMin,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      "Don't have an account? ",
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColorsOf(context).textSecondary,
-                      ),
+                  Text(
+                    'Sign in to continue.',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColorsOf(context).textSecondary,
                     ),
-                    Semantics(
+                  ),
+
+                  const SizedBox(height: AppDimens.spaceXl),
+
+                  AppTextField(
+                    hintText: 'Email address',
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    controller: emailCtrl,
+                    validator: validateEmail,
+                  ),
+
+                  const SizedBox(height: AppDimens.spaceMd),
+
+                  AppTextField(
+                    hintText: 'Password',
+                    obscureText: obscurePassword,
+                    textInputAction: TextInputAction.done,
+                    controller: passwordCtrl,
+                    validator: validatePassword,
+                    onSubmitted: onSubmit,
+                    suffixIcon: ZIconButton(
+                      icon: obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      onPressed: onToggleObscure,
+                      filled: false,
+                      iconSize: 20,
+                      semanticLabel: 'Toggle password visibility',
+                    ),
+                  ),
+
+                  const SizedBox(height: AppDimens.spaceSm),
+
+                  // "Forgot password?" — right-aligned Sage text link
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Semantics(
                       button: true,
-                      label: 'Sign up for a new account',
+                      label: 'Forgot password',
                       child: GestureDetector(
-                        onTap: onSwitchToRegister,
+                        onTap: isLoading ? null : onForgotPassword,
                         behavior: HitTestBehavior.opaque,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppDimens.spaceSm,
-                          ),
-                          child: Text(
-                            'Sign up',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
+                        child: SizedBox(
+                          height: AppDimens.touchTargetMin,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppDimens.spaceSm,
+                            ),
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                'Forgot password?',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+
+                  const SizedBox(height: AppDimens.spaceXl),
+
+                  // Primary CTA — Sage fill + pattern
+                  ZButton(
+                    label: 'Log In',
+                    onPressed: isLoading ? null : onSubmit,
+                    isLoading: isLoading,
+                  ),
+
+                  const SizedBox(height: AppDimens.spaceMd),
+
+                  // Footer — switch to register
+                  Center(
+                    child: SizedBox(
+                      height: AppDimens.touchTargetMin,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            "Don't have an account? ",
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColorsOf(context).textSecondary,
+                            ),
+                          ),
+                          Semantics(
+                            button: true,
+                            label: 'Sign up for a new account',
+                            child: GestureDetector(
+                              onTap: onSwitchToRegister,
+                              behavior: HitTestBehavior.opaque,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppDimens.spaceSm,
+                                ),
+                                child: Text(
+                                  'Sign up',
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -494,112 +502,120 @@ class _RegisterForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppDimens.spaceLg),
-      child: Form(
-        key: formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: AppDimens.spaceLg),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(AppDimens.spaceLg),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Form(
+              key: formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(height: AppDimens.spaceLg),
 
-            Text(
-              'Create account.',
-              style: AppTextStyles.displayLarge.copyWith(
-                color: AppColorsOf(context).textPrimary,
-              ),
-            ),
-
-            const SizedBox(height: AppDimens.spaceSm),
-
-            Text(
-              'Start your health journey.',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColorsOf(context).textSecondary,
-              ),
-            ),
-
-            const SizedBox(height: AppDimens.spaceXl),
-
-            AppTextField(
-              hintText: 'Email address',
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              controller: emailCtrl,
-              validator: validateEmail,
-            ),
-
-            const SizedBox(height: AppDimens.spaceMd),
-
-            AppTextField(
-              hintText: 'Password',
-              obscureText: obscurePassword,
-              textInputAction: TextInputAction.done,
-              controller: passwordCtrl,
-              validator: validatePassword,
-              onSubmitted: onSubmit,
-              suffixIcon: ZIconButton(
-                icon: obscurePassword
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
-                onPressed: onToggleObscure,
-                filled: false,
-                iconSize: 20,
-                semanticLabel: 'Toggle password visibility',
-              ),
-            ),
-
-            const SizedBox(height: AppDimens.spaceXl),
-
-            // Primary CTA — Sage fill + pattern
-            ZButton(
-              label: 'Create Account',
-              onPressed: isLoading ? null : onSubmit,
-              isLoading: isLoading,
-            ),
-
-            const SizedBox(height: AppDimens.spaceMd),
-
-            // Footer — switch to login
-            Center(
-              child: SizedBox(
-                height: AppDimens.touchTargetMin,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Already have an account? ',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColorsOf(context).textSecondary,
-                      ),
+                  Text(
+                    'Create account.',
+                    style: AppTextStyles.displayLarge.copyWith(
+                      color: AppColorsOf(context).textPrimary,
                     ),
-                    Semantics(
-                      button: true,
-                      label: 'Log in to existing account',
-                      child: GestureDetector(
-                        onTap: onSwitchToLogin,
-                        behavior: HitTestBehavior.opaque,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppDimens.spaceSm,
-                          ),
-                          child: Text(
-                            'Log in',
+                  ),
+
+                  const SizedBox(height: AppDimens.spaceSm),
+
+                  Text(
+                    'Start your health journey.',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColorsOf(context).textSecondary,
+                    ),
+                  ),
+
+                  const SizedBox(height: AppDimens.spaceXl),
+
+                  AppTextField(
+                    hintText: 'Email address',
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    controller: emailCtrl,
+                    validator: validateEmail,
+                  ),
+
+                  const SizedBox(height: AppDimens.spaceMd),
+
+                  AppTextField(
+                    hintText: 'Password',
+                    obscureText: obscurePassword,
+                    textInputAction: TextInputAction.done,
+                    controller: passwordCtrl,
+                    validator: validatePassword,
+                    onSubmitted: onSubmit,
+                    suffixIcon: ZIconButton(
+                      icon: obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      onPressed: onToggleObscure,
+                      filled: false,
+                      iconSize: 20,
+                      semanticLabel: 'Toggle password visibility',
+                    ),
+                  ),
+
+                  const SizedBox(height: AppDimens.spaceXl),
+
+                  // Primary CTA — Sage fill + pattern
+                  ZButton(
+                    label: 'Create Account',
+                    onPressed: isLoading ? null : onSubmit,
+                    isLoading: isLoading,
+                  ),
+
+                  const SizedBox(height: AppDimens.spaceMd),
+
+                  // Footer — switch to login
+                  Center(
+                    child: SizedBox(
+                      height: AppDimens.touchTargetMin,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Already have an account? ',
                             style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
+                              color: AppColorsOf(context).textSecondary,
                             ),
                           ),
-                        ),
+                          Semantics(
+                            button: true,
+                            label: 'Log in to existing account',
+                            child: GestureDetector(
+                              onTap: onSwitchToLogin,
+                              behavior: HitTestBehavior.opaque,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppDimens.spaceSm,
+                                ),
+                                child: Text(
+                                  'Log in',
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
