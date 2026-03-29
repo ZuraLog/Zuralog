@@ -86,9 +86,7 @@ class TimeRangeSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor =
-        isDark ? const Color(0xFF2C2C2E) : AppColors.secondaryButtonLight;
+    final bgColor = colors.secondaryButton;
 
     return Container(
       height: 36,
