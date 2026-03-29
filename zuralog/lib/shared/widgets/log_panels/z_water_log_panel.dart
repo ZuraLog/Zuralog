@@ -201,9 +201,13 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
               hintText: isImperial ? 'Enter amount (oz)' : 'Enter amount (ml)',
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-              suffixIcon: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                child: Text(isImperial ? 'oz' : 'ml', style: AppTextStyles.bodyMedium.copyWith(color: colors.textSecondary)),
+              suffixIcon: Align(
+                widthFactor: 1.0,
+                heightFactor: 1.0,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: AppDimens.spaceMd),
+                  child: Text(isImperial ? 'oz' : 'ml', style: AppTextStyles.labelMedium.copyWith(color: colors.textSecondary)),
+                ),
               ),
               onChanged: _onCustomChanged,
             ),

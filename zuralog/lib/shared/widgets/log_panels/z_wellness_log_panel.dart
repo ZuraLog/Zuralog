@@ -163,7 +163,6 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
           AppTextField(
             controller: _notesController,
             hintText: "How's your day going?",
-            onChanged: (_) {},
           ),
 
           const SizedBox(height: AppDimens.spaceMd),
