@@ -215,18 +215,26 @@ class _HeroCarousel extends StatefulWidget {
 }
 
 class _HeroCarouselState extends State<_HeroCarousel>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
-  int _nextIndex = 1 % welcomeSlides.length;
+  int _nextIndex = welcomeSlides.length > 1 ? 1 : 0;
   int _displayedTaglineIndex = 0;
+  bool _reduceMotion = false;
 
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
   Timer? _timer;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduceMotion = MediaQuery.of(context).disableAnimations;
+  }
+
+  @override
   void initState() {
     super.initState();
+    assert(welcomeSlides.isNotEmpty, 'welcomeSlides must contain at least one slide');
 
     _fadeCtrl = AnimationController(
       vsync: this,
@@ -238,6 +246,7 @@ class _HeroCarouselState extends State<_HeroCarousel>
     );
 
     _fadeCtrl.addListener(() {
+      if (!mounted) return;
       if (_fadeCtrl.value >= 0.5 &&
           _displayedTaglineIndex != _nextIndex) {
         setState(() => _displayedTaglineIndex = _nextIndex);
@@ -245,6 +254,7 @@ class _HeroCarouselState extends State<_HeroCarousel>
     });
 
     _fadeCtrl.addStatusListener((status) {
+      if (!mounted) return;
       if (status == AnimationStatus.completed) {
         setState(() {
           _currentIndex = _nextIndex;
@@ -258,8 +268,7 @@ class _HeroCarouselState extends State<_HeroCarousel>
     if (welcomeSlides.length > 1) {
       _timer = Timer.periodic(const Duration(seconds: 5), (_) {
         if (!mounted) return;
-        final reduceMotion = MediaQuery.of(context).disableAnimations;
-        if (reduceMotion) {
+        if (_reduceMotion) {
           setState(() {
             _currentIndex = _nextIndex;
             _nextIndex = (_currentIndex + 1) % welcomeSlides.length;
@@ -309,7 +318,7 @@ class _HeroCarouselState extends State<_HeroCarousel>
           child: ZPatternOverlay(
             variant: ZPatternVariant.original,
             opacity: 0.09,
-            blendMode: BlendMode.screen,
+            // blendMode removed — documented as unused in ZPatternOverlay
           ),
         ),
 
@@ -348,7 +357,7 @@ class _HeroCarouselState extends State<_HeroCarousel>
                   height: 32,
                   child: Stack(
                     children: [
-                      Container(color: AppColors.primary),
+                      Container(color: AppColorsOf(context).primary),
                       Padding(
                         padding: const EdgeInsets.all(6),
                         child: SvgPicture.asset(
@@ -369,6 +378,12 @@ class _HeroCarouselState extends State<_HeroCarousel>
                 'ZuraLog',
                 style: AppTextStyles.labelLarge.copyWith(
                   color: AppColorsOf(context).textPrimary,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withValues(alpha: 0.40),
+                      blurRadius: 6,
+                    ),
+                  ],
                 ),
               ),
             ],
