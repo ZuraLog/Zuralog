@@ -95,7 +95,7 @@ class MetricTile extends StatelessWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+        borderRadius: BorderRadius.circular(AppDimens.shapeMd),
       ),
       padding: const EdgeInsets.symmetric(
         vertical: AppDimens.spaceSm,
