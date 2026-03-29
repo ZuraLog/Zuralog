@@ -179,30 +179,53 @@ class _ZPatternOverlayState extends State<ZPatternOverlay>
     return Alignment.lerp(_start, _end, _controller!.value)!;
   }
 
+  /// Resolves which pattern variant to actually render.
+  ///
+  /// In light mode, "sage" maps to "original" to match the CSS rule:
+  ///   `[data-theme="light"] { --ds-pattern-sage: url('/patterns/original.png'); }`
+  static ZPatternVariant _effectiveVariant(
+      ZPatternVariant requested, bool isLight) {
+    if (isLight && requested == ZPatternVariant.sage) {
+      return ZPatternVariant.original;
+    }
+    return requested;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
+
+    // In light mode we multiply opacity by 1.6 (capped at 1.0) to compensate
+    // for the absence of CSS mix-blend-mode:color-burn, which the website uses
+    // to intensify pattern contrast on light beige surfaces.
+    final effectiveOpacity =
+        isLight ? (widget.opacity * 1.6).clamp(0.0, 1.0) : widget.opacity;
+
+    final effectiveVariant = _effectiveVariant(widget.variant, isLight);
+
     final alignment = _controller != null
         ? AnimatedBuilder(
             animation: _controller!,
-            builder: (context, child) => _buildContainer(_currentAlignment),
+            builder: (context, child) =>
+                _buildContainer(_currentAlignment, effectiveVariant),
           )
-        : _buildContainer(Alignment.center);
+        : _buildContainer(Alignment.center, effectiveVariant);
 
     return ExcludeSemantics(
       child: IgnorePointer(
         child: Opacity(
-          opacity: widget.opacity,
+          opacity: effectiveOpacity,
           child: alignment,
         ),
       ),
     );
   }
 
-  Widget _buildContainer(Alignment alignment) {
+  Widget _buildContainer(Alignment alignment, ZPatternVariant variant) {
     return Container(
       decoration: BoxDecoration(
         image: DecorationImage(
-          image: AssetImage(widget.variant.assetPath),
+          image: AssetImage(variant.assetPath),
           fit: BoxFit.cover,
           alignment: alignment,
         ),
