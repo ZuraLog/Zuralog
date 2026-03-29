@@ -10,8 +10,8 @@ import 'package:zuralog/core/theme/theme.dart';
 
 /// A brand-styled slider.
 ///
-/// The active portion of the track is Sage (#CFE1B9), the inactive portion
-/// is surfaceRaised (#272729), and the thumb is an 18px Sage circle.
+/// The active portion uses the brand primary color (adapts to light/dark theme),
+/// the inactive portion is surfaceRaised, and the thumb is an 18px circle.
 /// Track height is 6px.
 class ZSlider extends StatelessWidget {
   const ZSlider({

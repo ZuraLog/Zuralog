@@ -71,7 +71,7 @@ class ZAlertDialog extends StatelessWidget {
     final confirmColor =
         isDestructive ? AppColors.error : AppColors.primary;
     final confirmTextColor =
-        isDestructive ? Colors.white : AppColors.textOnSage;
+        isDestructive ? Colors.white : colors.textOnSage;
 
     return Dialog(
       backgroundColor: colors.surfaceOverlay,

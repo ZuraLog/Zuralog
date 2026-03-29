@@ -139,10 +139,10 @@ class _ZCheckboxState extends State<ZCheckbox>
                   Center(
                     child: Opacity(
                       opacity: ((progress - 0.3) / 0.7).clamp(0, 1),
-                      child: const Icon(
+                      child: Icon(
                         Icons.check,
                         size: 16,
-                        color: AppColors.textOnSage,
+                        color: colors.textOnSage,
                       ),
                     ),
                   ),

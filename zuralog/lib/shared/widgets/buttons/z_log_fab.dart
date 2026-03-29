@@ -22,6 +22,7 @@ class ZLogFab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Semantics(
       button: true,
       label: 'Log new entry',
@@ -56,10 +57,10 @@ class ZLogFab extends StatelessWidget {
                   ),
                 ),
                 // Icon
-                const Icon(
+                Icon(
                   Icons.add_rounded,
                   size: AppDimens.iconMd,
-                  color: AppColors.textOnSage,
+                  color: colors.textOnSage,
                 ),
               ],
             ),

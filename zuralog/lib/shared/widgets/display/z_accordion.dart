@@ -35,7 +35,7 @@ class ZAccordionItem {
 
 /// A grouped list of collapsible sections inside a Surface card.
 ///
-/// Uses [AppDimens.shapeLg] (20px) rounded corners, Surface (#1E1E20)
+/// Uses [AppDimens.shapeLg] (20px) rounded corners, Surface background (adapts to light/dark theme)
 /// background, and brand dividers between items.
 ///
 /// ```dart

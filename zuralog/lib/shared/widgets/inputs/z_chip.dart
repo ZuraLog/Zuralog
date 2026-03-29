@@ -62,7 +62,7 @@ class ZChip extends StatelessWidget {
     // Text/icon color: on light active use textOnSageLight, otherwise textOnSage
     // for dark active, or textSecondary when inactive.
     final Color contentColor = isActive
-        ? (isLight ? AppColors.textOnSageLight : AppColors.textOnSage)
+        ? (isLight ? AppColors.textOnSageLight : colors.textOnSage)
         : colors.textSecondary;
 
     return Semantics(
