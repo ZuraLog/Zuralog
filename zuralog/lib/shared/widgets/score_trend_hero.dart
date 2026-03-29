@@ -35,13 +35,12 @@ class ScoreTrendHero extends ConsumerWidget {
     final scoreAsync = ref.watch(healthScoreProvider);
     final historyAsync = ref.watch(scoreHistoryProvider);
     final selectedRange = ref.watch(scoreHistoryRangeProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
+    final colors = AppColorsOf(context);
 
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: bg,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(20),
       ),
       padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -87,9 +86,7 @@ class ScoreTrendHero extends ConsumerWidget {
                     Text(
                       'Your trend over time',
                       style: AppTextStyles.caption.copyWith(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
+                        color: colors.textSecondary,
                       ),
                     ),
                   ],
@@ -127,9 +124,7 @@ class ScoreTrendHero extends ConsumerWidget {
                       border: Border.all(
                         color: isSelected
                             ? AppColors.primary
-                            : (isDark
-                                ? AppColors.borderDark
-                                : AppColors.borderLight),
+                            : colors.border,
                         width: 1,
                       ),
                     ),
@@ -138,9 +133,7 @@ class ScoreTrendHero extends ConsumerWidget {
                       style: AppTextStyles.caption.copyWith(
                         color: isSelected
                             ? AppColors.primary
-                            : (isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight),
+                            : colors.textSecondary,
                         fontWeight: isSelected
                             ? FontWeight.w700
                             : FontWeight.w400,
@@ -167,16 +160,14 @@ class ScoreTrendHero extends ConsumerWidget {
                 child: Text(
                   'No history yet',
                   style: AppTextStyles.caption.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
+                    color: colors.textSecondary,
                   ),
                 ),
               ),
               data: (history) {
                 final values = history.trendValues;
                 if (values.length < 2) {
-                  return _ScoreChartEmptyState(isDark: isDark);
+                  return const _ScoreChartEmptyState();
                 }
                 return _ScoreSparkline(values: values);
               },
@@ -284,9 +275,7 @@ class _StatChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textSecondary =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final colors = AppColorsOf(context);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -301,7 +290,7 @@ class _StatChip extends StatelessWidget {
         Text(
           label,
           style: AppTextStyles.caption.copyWith(
-            color: textSecondary,
+            color: colors.textSecondary,
             fontSize: 10,
           ),
         ),
@@ -406,13 +395,10 @@ class _CompactScoreZeroState extends StatelessWidget {
 /// Replaces the bare "Not enough data for this range" text with a compact,
 /// welcoming prompt that tells the user what to expect.
 class _ScoreChartEmptyState extends StatelessWidget {
-  const _ScoreChartEmptyState({required this.isDark});
-  final bool isDark;
+  const _ScoreChartEmptyState();
 
   @override
   Widget build(BuildContext context) {
-    final textTertiary =
-        isDark ? AppColors.textTertiary : AppColors.textTertiary;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -424,7 +410,7 @@ class _ScoreChartEmptyState extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           'Your trend chart will appear here as data builds up.',
-          style: AppTextStyles.caption.copyWith(color: textTertiary),
+          style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
           textAlign: TextAlign.center,
         ),
       ],
@@ -440,7 +426,7 @@ class _ScoreCommentaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = AppColorsOf(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: IntrinsicHeight(
@@ -451,9 +437,7 @@ class _ScoreCommentaryCard extends StatelessWidget {
             Expanded(
               child: Container(
                 padding: const EdgeInsets.all(AppDimens.spaceMd),
-                color: isDark
-                    ? AppColors.cardBackgroundDark
-                    : AppColors.cardBackgroundLight,
+                color: colors.cardBackground,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
