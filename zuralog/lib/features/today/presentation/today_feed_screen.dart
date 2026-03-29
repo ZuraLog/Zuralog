@@ -399,7 +399,6 @@ class _HealthScoreHero extends ConsumerWidget {
         horizontal: AppDimens.spaceMd,
       ),
       child: Stack(
-        alignment: Alignment.center,
         children: [
           // Ambient sage-green radial glow — top-right corner.
           Positioned.fill(
@@ -418,53 +417,59 @@ class _HealthScoreHero extends ConsumerWidget {
               ),
             ),
           ),
-          // Card content.
-          scoreAsync.when(
-              // Provider never errors — this branch is a safety net only.
-              error: (err, stack) => const HealthScoreZeroState(),
-              loading: () => const ZLoadingSkeleton(
-                width: double.infinity,
-                height: 120,
-                borderRadius: AppDimens.shapeLg,
-              ),
-              data: (data) {
-                // Three states based on data maturity:
-                // 1. No data at all → sad-face zero state.
-                if (data.dataDays == 0) {
-                  return const HealthScoreZeroState();
-                }
-                // 2. Building up (Days 1–6) → partial sage-green ring
-                //    showing progress towards the 7-day threshold.
-                if (data.dataDays < kMinDataDaysForMaturity) {
-                  return HealthScoreBuildingState(
-                    dataDays: data.dataDays,
-                    targetDays: kMinDataDaysForMaturity,
+          // Card content — Positioned.fill + Center guarantees vertical
+          // centering regardless of how tall the sibling card is.
+          Positioned.fill(
+            child: Center(
+              child: scoreAsync.when(
+                // Provider never errors — this branch is a safety net only.
+                error: (err, stack) => const HealthScoreZeroState(),
+                loading: () => const ZLoadingSkeleton(
+                  width: double.infinity,
+                  height: 120,
+                  borderRadius: AppDimens.shapeLg,
+                ),
+                data: (data) {
+                  // Three states based on data maturity:
+                  // 1. No data at all → sad-face zero state.
+                  if (data.dataDays == 0) {
+                    return const HealthScoreZeroState();
+                  }
+                  // 2. Building up (Days 1–6) → partial sage-green ring
+                  //    showing progress towards the 7-day threshold.
+                  if (data.dataDays < kMinDataDaysForMaturity) {
+                    return HealthScoreBuildingState(
+                      dataDays: data.dataDays,
+                      targetDays: kMinDataDaysForMaturity,
+                    );
+                  }
+                  // 3. Full (Day 7+) → real score ring with sparkline.
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      HealthScoreWidget.hero(
+                        score: data.score,
+                        trend: data.trend.isNotEmpty ? data.trend : null,
+                        commentary: data.commentary,
+                        onTap: () {
+                          ref.read(hapticServiceProvider).light();
+                          ref.read(analyticsServiceProvider).capture(
+                            event: AnalyticsEvents.healthScoreTapped,
+                          );
+                          context.go(RouteNames.dataPath);
+                        },
+                      ),
+                      // AI delta chip — week-over-week score change.
+                      if (data.weekChange != null &&
+                          data.weekChange != 0 &&
+                          data.dataDays > kMinDataDaysForMaturity)
+                        _HealthScoreDeltaChip(weekChange: data.weekChange!),
+                    ],
                   );
-                }
-                // 3. Full (Day 7+) → real score ring with sparkline.
-                return Column(
-                  children: [
-                    HealthScoreWidget.hero(
-                      score: data.score,
-                      trend: data.trend.isNotEmpty ? data.trend : null,
-                      commentary: data.commentary,
-                      onTap: () {
-                        ref.read(hapticServiceProvider).light();
-                        ref.read(analyticsServiceProvider).capture(
-                          event: AnalyticsEvents.healthScoreTapped,
-                        );
-                        context.go(RouteNames.dataPath);
-                      },
-                    ),
-                    // AI delta chip — week-over-week score change.
-                    if (data.weekChange != null &&
-                        data.weekChange != 0 &&
-                        data.dataDays > kMinDataDaysForMaturity)
-                      _HealthScoreDeltaChip(weekChange: data.weekChange!),
-                  ],
-                );
-              },
+                },
+              ),
             ),
+          ),
         ],
       ),
     );
