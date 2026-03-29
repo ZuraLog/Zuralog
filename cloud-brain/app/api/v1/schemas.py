@@ -71,6 +71,21 @@ class SocialAuthRequest(BaseModel):
     nonce: Optional[str] = None
 
 
+class PasswordResetRequest(BaseModel):
+    """Request body for requesting a password reset email."""
+    email: EmailStr
+
+
+class ResendVerificationRequest(BaseModel):
+    """Request body for resending the email verification link."""
+    email: EmailStr
+
+
+class SetPasswordRequest(BaseModel):
+    """Request body for setting a new password via recovery token."""
+    new_password: str = Field(min_length=8)
+
+
 class AuthResponse(BaseModel):
     """Successful authentication response.
 

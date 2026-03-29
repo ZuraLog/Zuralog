@@ -362,6 +362,38 @@ class AuthService:
             "expires_in": data.get("expires_in", 3600),
         }
 
+    async def request_password_reset(self, email: str, redirect_to: str) -> None:
+        """Request a password reset link via Supabase GoTrue."""
+        response = await self._request(
+            "POST",
+            "/recover",
+            headers=self._headers(),
+            json={"email": email, "redirect_to": redirect_to},
+        )
+        if response.status_code not in (200, 204):
+            logger.warning(
+                "Supabase /recover returned %s for email=%s: %s",
+                response.status_code,
+                email[:3] + "***",
+                self._extract_error(response),
+            )
+
+    async def resend_confirmation(self, email: str) -> None:
+        """Resend the email confirmation link via Supabase GoTrue."""
+        response = await self._request(
+            "POST",
+            "/resend",
+            headers=self._headers(),
+            json={"type": "signup", "email": email},
+        )
+        if response.status_code not in (200, 204):
+            logger.warning(
+                "Supabase /resend returned %s for email=%s: %s",
+                response.status_code,
+                email[:3] + "***",
+                self._extract_error(response),
+            )
+
     async def get_user(self, access_token: str) -> dict:
         """Retrieves and validates the user profile using their access token.
 
