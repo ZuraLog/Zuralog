@@ -237,7 +237,7 @@ class _ComponentShowcaseScreenState
         Row(
           children: [
             _colorSwatch('Sage', _colors!.primary),
-            _colorSwatch('Warm White', AppColors.warmWhite),
+            _colorSwatch('Warm White', _colors!.warmWhite),
           ],
         ),
 
