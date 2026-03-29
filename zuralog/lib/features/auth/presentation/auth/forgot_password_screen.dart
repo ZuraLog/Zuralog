@@ -1,30 +1,34 @@
 /// Zuralog Edge Agent — Forgot Password Screen.
 ///
-/// UI-only screen. Collects the user's email and shows a fake 800 ms
-/// loading delay before navigating to [CheckInboxScreen] with context=reset.
-/// No backend call is made from this screen.
+/// Collects the user's email and calls the password-reset API endpoint.
+/// On success, navigates to [CheckInboxScreen] with context=reset.
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/auth/domain/auth_state.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 /// Forgot password screen.
 ///
-/// Prompts the user for their account email and, on submit, navigates to
-/// [CheckInboxScreen] with `context=reset` to indicate a password-reset flow.
-class ForgotPasswordScreen extends StatefulWidget {
+/// Prompts the user for their account email and, on submit, calls the
+/// password-reset API. On success, navigates to [CheckInboxScreen] with
+/// `context=reset` to indicate a password-reset flow.
+class ForgotPasswordScreen extends ConsumerStatefulWidget {
   /// Creates a [ForgotPasswordScreen].
   const ForgotPasswordScreen({super.key});
 
   @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() =>
+      _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   // ── Form ───────────────────────────────────────────────────────────────────
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
@@ -50,14 +54,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await Future.delayed(const Duration(milliseconds: 800));
+      final result = await ref.read(authRepositoryProvider).resetPassword(email);
 
       if (!mounted) return;
 
-      context.go(
-        '${RouteNames.checkInboxPath}'
-        '?email=${Uri.encodeComponent(email)}&context=reset',
-      );
+      switch (result) {
+        case AuthSuccess():
+          context.go(
+            '${RouteNames.checkInboxPath}'
+            '?email=${Uri.encodeComponent(email)}&context=reset',
+          );
+        case AuthFailure(:final message):
+          ZToast.error(context, message);
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
