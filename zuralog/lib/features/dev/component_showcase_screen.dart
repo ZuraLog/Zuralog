@@ -22,6 +22,9 @@ class ComponentShowcaseScreen extends ConsumerStatefulWidget {
 
 class _ComponentShowcaseScreenState
     extends ConsumerState<ComponentShowcaseScreen> {
+  // ── Theme colors (set at top of build, used by builder helpers) ─────────
+  AppColorsOf? _colors;
+
   // ── State for interactive demos ──────────────────────────────────────────
   bool _toggleValue = true;
   bool _toggleOff = false;
@@ -41,8 +44,10 @@ class _ComponentShowcaseScreenState
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    _colors = colors;
     return Scaffold(
-      backgroundColor: AppColors.canvas,
+      backgroundColor: colors.canvas,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
@@ -58,7 +63,7 @@ class _ComponentShowcaseScreenState
                       children: [
                         IconButton(
                           icon: const Icon(Icons.arrow_back),
-                          color: AppColors.warmWhite,
+                          color: colors.textPrimary,
                           onPressed: () => Navigator.of(context).pop(),
                         ),
                         Builder(builder: (context) {
@@ -85,13 +90,13 @@ class _ComponentShowcaseScreenState
                     Text(
                       'Component Showcase',
                       style: AppTextStyles.displayLarge
-                          .copyWith(color: AppColors.warmWhite),
+                          .copyWith(color: colors.textPrimary),
                     ),
                     const SizedBox(height: AppDimens.spaceXs),
                     Text(
                       'Every design system lego in one place',
                       style: AppTextStyles.bodyLarge
-                          .copyWith(color: AppColors.textSecondaryDark),
+                          .copyWith(color: colors.textSecondary),
                     ),
                   ],
                 ),
@@ -99,25 +104,25 @@ class _ComponentShowcaseScreenState
             ),
 
             // ── Sections ──────────────────────────────────────────────────
-            _sliverSection('Foundations'),
+            _sliverSection('Foundations', colors),
             _sliverChild(_buildFoundations()),
 
-            _sliverSection('Buttons'),
+            _sliverSection('Buttons', colors),
             _sliverChild(_buildButtons()),
 
-            _sliverSection('Cards'),
+            _sliverSection('Cards', colors),
             _sliverChild(_buildCards()),
 
-            _sliverSection('Inputs & Selection'),
+            _sliverSection('Inputs & Selection', colors),
             _sliverChild(_buildInputs()),
 
-            _sliverSection('Feedback'),
+            _sliverSection('Feedback', colors),
             _sliverChild(_buildFeedback()),
 
-            _sliverSection('Display'),
+            _sliverSection('Display', colors),
             _sliverChild(_buildDisplay()),
 
-            _sliverSection('Special Surfaces'),
+            _sliverSection('Special Surfaces', colors),
             _sliverChild(_buildSpecialSurfaces()),
 
             // ── Footer ────────────────────────────────────────────────────
@@ -128,7 +133,7 @@ class _ComponentShowcaseScreenState
                   child: Text(
                     'Zuralog Design System · 2026',
                     style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.textSecondaryDark),
+                        .copyWith(color: colors.textSecondary),
                   ),
                 ),
               ),
@@ -141,7 +146,7 @@ class _ComponentShowcaseScreenState
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
-  Widget _sliverSection(String title) {
+  Widget _sliverSection(String title, AppColorsOf colors) {
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -153,7 +158,7 @@ class _ComponentShowcaseScreenState
         child: Text(
           title,
           style:
-              AppTextStyles.displaySmall.copyWith(color: AppColors.primary),
+              AppTextStyles.displaySmall.copyWith(color: colors.primary),
         ),
       ),
     );
@@ -169,7 +174,7 @@ class _ComponentShowcaseScreenState
     );
   }
 
-  Widget _label(String text) {
+  Widget _label(String text, AppColorsOf colors) {
     return Padding(
       padding: const EdgeInsets.only(
         top: AppDimens.spaceMd,
@@ -178,7 +183,7 @@ class _ComponentShowcaseScreenState
       child: Text(
         text,
         style: AppTextStyles.labelMedium
-            .copyWith(color: AppColors.textSecondaryDark),
+            .copyWith(color: colors.textSecondary),
       ),
     );
   }
@@ -191,7 +196,7 @@ class _ComponentShowcaseScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _label('Canvas & Elevation'),
+        _label('Canvas & Elevation', _colors!),
         for (final entry in [
           ('Canvas', AppColors.canvas),
           ('Surface', AppColors.surface),
@@ -228,7 +233,7 @@ class _ComponentShowcaseScreenState
             ),
           ),
 
-        _label('Accent Colors'),
+        _label('Accent Colors', _colors!),
         Row(
           children: [
             _colorSwatch('Sage', AppColors.primary),
@@ -236,7 +241,7 @@ class _ComponentShowcaseScreenState
           ],
         ),
 
-        _label('Health Categories'),
+        _label('Health Categories', _colors!),
         Wrap(
           spacing: AppDimens.spaceSm,
           runSpacing: AppDimens.spaceSm,
@@ -254,7 +259,7 @@ class _ComponentShowcaseScreenState
           ],
         ),
 
-        _label('Status Colors'),
+        _label('Status Colors', _colors!),
         Wrap(
           spacing: AppDimens.spaceMd,
           runSpacing: AppDimens.spaceSm,
@@ -266,7 +271,7 @@ class _ComponentShowcaseScreenState
           ],
         ),
 
-        _label('Typography'),
+        _label('Typography', _colors!),
         Text('Display Large (34pt Bold)',
             style: AppTextStyles.displayLarge
                 .copyWith(color: AppColors.warmWhite)),
@@ -301,7 +306,7 @@ class _ComponentShowcaseScreenState
             style: AppTextStyles.labelSmall
                 .copyWith(color: AppColors.warmWhite)),
 
-        _label('Pattern Typography'),
+        _label('Pattern Typography', _colors!),
         // Bold (animated drift) — display-lg
         ZPatternText(
           text: 'Zuralog Health',
@@ -324,7 +329,7 @@ class _ComponentShowcaseScreenState
           variant: ZPatternVariant.sage,
         ),
 
-        _label('Pattern Color Variants'),
+        _label('Pattern Color Variants', _colors!),
         // Sage
         ZPatternText(
           text: 'Sage Pattern',
@@ -353,7 +358,7 @@ class _ComponentShowcaseScreenState
           variant: ZPatternVariant.original,
         ),
 
-        _label('Solid Text (comparison)'),
+        _label('Solid Text (comparison)', _colors!),
         Text('Solid Sage',
             style: AppTextStyles.displayMedium
                 .copyWith(color: AppColors.primary)),
@@ -363,7 +368,7 @@ class _ComponentShowcaseScreenState
             style: AppTextStyles.bodyLarge
                 .copyWith(color: AppColorsOf(context).textPrimary)),
 
-        _label('Spacing'),
+        _label('Spacing', _colors!),
         _spacingBar('XXS (2px)', AppDimens.spaceXxs),
         _spacingBar('XS (4px)', AppDimens.spaceXs),
         _spacingBar('SM (8px)', AppDimens.spaceSm),
@@ -373,7 +378,7 @@ class _ComponentShowcaseScreenState
         _spacingBar('XL (32px)', AppDimens.spaceXl),
         _spacingBar('XXL (48px)', AppDimens.spaceXxl),
 
-        _label('Shape (Border Radius)'),
+        _label('Shape (Border Radius)', _colors!),
         Wrap(
           spacing: AppDimens.spaceSm,
           runSpacing: AppDimens.spaceSm,
@@ -511,7 +516,7 @@ class _ComponentShowcaseScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _label('Primary — all sizes'),
+        _label('Primary — all sizes', _colors!),
         ZButton(label: 'Large Primary', onPressed: () {}),
         _gap(),
         ZButton(
@@ -524,26 +529,26 @@ class _ComponentShowcaseScreenState
             size: ZButtonSize.small,
             onPressed: () {}),
 
-        _label('Destructive'),
+        _label('Destructive', _colors!),
         ZButton(
             label: 'Delete Account',
             variant: ZButtonVariant.destructive,
             onPressed: () {}),
 
-        _label('Secondary'),
+        _label('Secondary', _colors!),
         ZButton(
             label: 'View Details',
             variant: ZButtonVariant.secondary,
             onPressed: () {}),
 
-        _label('Text'),
+        _label('Text', _colors!),
         ZButton(
             label: 'See all →',
             variant: ZButtonVariant.text,
             onPressed: () {},
             isFullWidth: false),
 
-        _label('With icons'),
+        _label('With icons', _colors!),
         ZButton(label: 'Log Activity', icon: Icons.add, onPressed: () {}),
         _gap(),
         ZButton(
@@ -552,12 +557,12 @@ class _ComponentShowcaseScreenState
             icon: Icons.settings,
             onPressed: () {}),
 
-        _label('States'),
+        _label('States', _colors!),
         ZButton(label: 'Disabled', onPressed: null),
         _gap(),
         const ZButton(label: 'Loading...', isLoading: true),
 
-        _label('Icon Button'),
+        _label('Icon Button', _colors!),
         Row(
           children: [
             ZIconButton(icon: Icons.favorite, onPressed: () {}, semanticLabel: 'Like'),
@@ -570,7 +575,7 @@ class _ComponentShowcaseScreenState
           ],
         ),
 
-        _label('FAB'),
+        _label('FAB', _colors!),
         Align(
           alignment: Alignment.centerRight,
           child: ZLogFab(onPressed: () {}),
@@ -585,7 +590,7 @@ class _ComponentShowcaseScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _label('Hero Card (pattern 10%)'),
+        _label('Hero Card (pattern 10%)', _colors!),
         ZuralogCard(
           variant: ZCardVariant.hero,
           child: Column(
@@ -601,7 +606,7 @@ class _ComponentShowcaseScreenState
           ),
         ),
 
-        _label('Feature Card (pattern 7%)'),
+        _label('Feature Card (pattern 7%)', _colors!),
         ZuralogCard(
           variant: ZCardVariant.feature,
           child: Column(
@@ -620,7 +625,7 @@ class _ComponentShowcaseScreenState
           ),
         ),
 
-        _label('Category Feature Cards'),
+        _label('Category Feature Cards', _colors!),
         ZuralogCard(
           variant: ZCardVariant.feature,
           category: AppColors.categorySleep,
@@ -637,7 +642,7 @@ class _ComponentShowcaseScreenState
                   .copyWith(color: AppColors.warmWhite)),
         ),
 
-        _label('Data Card (no pattern)'),
+        _label('Data Card (no pattern)', _colors!),
         ZuralogCard(
           variant: ZCardVariant.data,
           child: Row(
@@ -653,7 +658,7 @@ class _ComponentShowcaseScreenState
           ),
         ),
 
-        _label('Topographic Card'),
+        _label('Topographic Card', _colors!),
         ZTopographicCard(
           child: Text('Legacy topographic card',
               style: AppTextStyles.bodyMedium
@@ -669,7 +674,7 @@ class _ComponentShowcaseScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _label('Toggle'),
+        _label('Toggle', _colors!),
         ZToggle(
           value: _toggleValue,
           onChanged: (v) => setState(() => _toggleValue = v),
@@ -684,7 +689,7 @@ class _ComponentShowcaseScreenState
         _gap(),
         const ZToggle(value: true, label: 'Disabled (on)', enabled: false),
 
-        _label('Checkbox'),
+        _label('Checkbox', _colors!),
         ZCheckbox(
           value: _checkboxValue,
           onChanged: (v) => setState(() => _checkboxValue = v),
@@ -699,14 +704,14 @@ class _ComponentShowcaseScreenState
         _gap(),
         const ZCheckbox(value: true, label: 'Disabled', enabled: false),
 
-        _label('Slider'),
+        _label('Slider', _colors!),
         ZSlider(
           value: _sliderValue,
           onChanged: (v) => setState(() => _sliderValue = v),
           label: 'Volume: ${(_sliderValue * 100).round()}%',
         ),
 
-        _label('Radio Group'),
+        _label('Radio Group', _colors!),
         ZRadioGroup<String>(
           value: _radioValue,
           onChanged: (v) => setState(() => _radioValue = v),
@@ -717,14 +722,14 @@ class _ComponentShowcaseScreenState
           ],
         ),
 
-        _label('Segmented Control'),
+        _label('Segmented Control', _colors!),
         ZSegmentedControl(
           selectedIndex: _segmentIndex,
           onChanged: (i) => setState(() => _segmentIndex = i),
           segments: const ['Day', 'Week', 'Month', 'Year'],
         ),
 
-        _label('Chips'),
+        _label('Chips', _colors!),
         Wrap(
           spacing: AppDimens.spaceSm,
           children: [
@@ -744,7 +749,7 @@ class _ComponentShowcaseScreenState
           ],
         ),
 
-        _label('Select / Dropdown'),
+        _label('Select / Dropdown', _colors!),
         ZSelect(
           value: _selectValue,
           onChanged: (v) => setState(() => _selectValue = v),
@@ -753,19 +758,19 @@ class _ComponentShowcaseScreenState
           label: 'Report Frequency',
         ),
 
-        _label('Text Area'),
+        _label('Text Area', _colors!),
         const ZTextArea(
           placeholder: 'How are you feeling today?',
           label: 'Health Note',
         ),
 
-        _label('Search Bar'),
+        _label('Search Bar', _colors!),
         ZSearchBar(
           onChanged: (v) {},
           placeholder: 'Search metrics...',
         ),
 
-        _label('Number Stepper'),
+        _label('Number Stepper', _colors!),
         ZNumberStepper(
           value: _stepperValue,
           onChanged: (v) => setState(() => _stepperValue = v),
@@ -773,13 +778,13 @@ class _ComponentShowcaseScreenState
           max: 20,
         ),
 
-        _label('Text Field (existing)'),
+        _label('Text Field (existing)', _colors!),
         const AppTextField(
           labelText: 'Email',
           hintText: 'you@example.com',
         ),
 
-        _label('Toggle Group'),
+        _label('Toggle Group', _colors!),
         ZToggleGroup<String>(
           items: const [
             ZToggleGroupItem(value: 'mon', label: 'Mon'),
@@ -791,25 +796,25 @@ class _ComponentShowcaseScreenState
           onChanged: (v) => setState(() => _toggleGroupValues = v),
         ),
 
-        _label('OTP / PIN Input'),
+        _label('OTP / PIN Input', _colors!),
         ZOtpInput(
           onCompleted: (code) {},
           onChanged: (code) {},
         ),
 
-        _label('Password Field'),
+        _label('Password Field', _colors!),
         const ZPasswordField(
           label: 'Password',
           hint: 'Enter your password',
         ),
 
-        _label('Rating Bar'),
+        _label('Rating Bar', _colors!),
         ZRatingBar(
           rating: _ratingValue,
           onChanged: (v) => setState(() => _ratingValue = v),
         ),
 
-        _label('Calendar'),
+        _label('Calendar', _colors!),
         ZCalendar(
           selectedDate: _selectedDate,
           onDateSelected: (d) => setState(() => _selectedDate = d),
@@ -824,7 +829,7 @@ class _ComponentShowcaseScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _label('Toast (tap to trigger)'),
+        _label('Toast (tap to trigger)', _colors!),
         Row(
           children: [
             Expanded(
@@ -858,7 +863,7 @@ class _ComponentShowcaseScreenState
           ],
         ),
 
-        _label('Alert Dialog (tap to trigger)'),
+        _label('Alert Dialog (tap to trigger)', _colors!),
         ZButton(
           label: 'Show Dialog',
           variant: ZButtonVariant.secondary,
@@ -871,7 +876,7 @@ class _ComponentShowcaseScreenState
           ),
         ),
 
-        _label('Bottom Sheet (tap to trigger)'),
+        _label('Bottom Sheet (tap to trigger)', _colors!),
         ZButton(
           label: 'Show Bottom Sheet',
           variant: ZButtonVariant.secondary,
@@ -899,7 +904,7 @@ class _ComponentShowcaseScreenState
           ),
         ),
 
-        _label('Badge'),
+        _label('Badge', _colors!),
         Row(
           children: [
             const ZBadge(label: '3', variant: ZBadgeVariant.error),
@@ -910,7 +915,7 @@ class _ComponentShowcaseScreenState
           ],
         ),
 
-        _label('Tooltip (long press the text)'),
+        _label('Tooltip (long press the text)', _colors!),
         ZTooltip(
           message: 'Your health score is calculated from 10 categories',
           child: Container(
@@ -928,7 +933,7 @@ class _ComponentShowcaseScreenState
           ),
         ),
 
-        _label('Progress Bar'),
+        _label('Progress Bar', _colors!),
         ZProgressBar(
           value: _progressValue,
           label: 'Syncing Fitbit...',
@@ -939,7 +944,7 @@ class _ComponentShowcaseScreenState
         _gap(),
         const ZProgressBar(value: 1.0, label: 'Complete!', valueLabel: '100%'),
 
-        _label('Alert Banners'),
+        _label('Alert Banners', _colors!),
         const ZAlertBanner(
           variant: ZAlertVariant.info,
           message: 'Syncing your data with Fitbit...',
@@ -963,10 +968,10 @@ class _ComponentShowcaseScreenState
           onDismiss: () {},
         ),
 
-        _label('Skeleton Loader'),
+        _label('Skeleton Loader', _colors!),
         const ZLoadingSkeleton(width: double.infinity, height: 80),
 
-        _label('Circular Progress'),
+        _label('Circular Progress', _colors!),
         Row(
           children: [
             const ZCircularProgress(),
@@ -977,7 +982,7 @@ class _ComponentShowcaseScreenState
           ],
         ),
 
-        _label('Pull-to-Refresh (wraps scrollable content)'),
+        _label('Pull-to-Refresh (wraps scrollable content)', _colors!),
         Text('ZPullToRefresh wraps a scrollable child with a Sage spinner',
             style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark)),
       ],
@@ -990,7 +995,7 @@ class _ComponentShowcaseScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _label('Avatar — all sizes'),
+        _label('Avatar — all sizes', _colors!),
         Row(
           children: [
             const ZAvatar(initials: 'AJ', avatarSize: ZAvatarSize.lg),
@@ -1001,12 +1006,12 @@ class _ComponentShowcaseScreenState
           ],
         ),
 
-        _label('Divider'),
+        _label('Divider', _colors!),
         const ZDivider(),
         _gap(),
         const ZDivider(inset: 16),
 
-        _label('Accordion'),
+        _label('Accordion', _colors!),
         ZAccordion(
           items: [
             ZAccordionItem(
@@ -1037,7 +1042,7 @@ class _ComponentShowcaseScreenState
           ],
         ),
 
-        _label('Collapsible'),
+        _label('Collapsible', _colors!),
         ZCollapsible(
           header: Text('Weekly Step Breakdown',
               style: AppTextStyles.titleMedium
@@ -1057,7 +1062,7 @@ class _ComponentShowcaseScreenState
           ),
         ),
 
-        _label('Context Menu (long press)'),
+        _label('Context Menu (long press)', _colors!),
         ZContextMenu(
           items: [
             ZContextMenuItem(
@@ -1079,7 +1084,7 @@ class _ComponentShowcaseScreenState
           ),
         ),
 
-        _label('List Item'),
+        _label('List Item', _colors!),
         ZuralogCard(
           variant: ZCardVariant.plain,
           child: Column(
@@ -1107,7 +1112,7 @@ class _ComponentShowcaseScreenState
           ),
         ),
 
-        _label('Carousel'),
+        _label('Carousel', _colors!),
         // Note: Carousel extends beyond section padding
         ZCarousel(
           height: 140,
@@ -1123,7 +1128,7 @@ class _ComponentShowcaseScreenState
           ],
         ),
 
-        _label('Chart Container'),
+        _label('Chart Container', _colors!),
         ZChartContainer(
           title: 'Weekly Steps',
           subtitle: 'Last 7 days',
@@ -1133,7 +1138,7 @@ class _ComponentShowcaseScreenState
           ),
         ),
 
-        _label('Data Table'),
+        _label('Data Table', _colors!),
         ZDataTable(
           columns: const [
             ZDataColumn(label: 'Metric'),
@@ -1159,7 +1164,7 @@ class _ComponentShowcaseScreenState
           ],
         ),
 
-        _label('Empty State'),
+        _label('Empty State', _colors!),
         ZEmptyState(
           icon: Icons.bedtime_outlined,
           title: 'No sleep data yet',
@@ -1169,7 +1174,7 @@ class _ComponentShowcaseScreenState
           onAction: () {},
         ),
 
-        _label('Error State'),
+        _label('Error State', _colors!),
         const ZErrorState(
           message: 'We couldn\'t load your data. Please try again.',
         ),
@@ -1188,7 +1193,7 @@ class _ComponentShowcaseScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _label('Onboarding Card'),
+        _label('Onboarding Card', _colors!),
         ZOnboardingCard(
           title: 'Welcome to Zuralog',
           body:
@@ -1198,7 +1203,7 @@ class _ComponentShowcaseScreenState
           onCtaTap: () {},
         ),
 
-        _label('Hero Banner'),
+        _label('Hero Banner', _colors!),
         ZHeroBanner(
           height: 180,
           child: Column(
@@ -1214,7 +1219,7 @@ class _ComponentShowcaseScreenState
           ),
         ),
 
-        _label('Staggered Animation (tap to replay)'),
+        _label('Staggered Animation (tap to replay)', _colors!),
         ZStaggeredList(
           key: ValueKey(_staggerKey),
           children: [
@@ -1237,7 +1242,7 @@ class _ComponentShowcaseScreenState
           onPressed: () => setState(() => _staggerKey++),
         ),
 
-        _label('Pattern Overlay Demo'),
+        _label('Pattern Overlay Demo', _colors!),
         _gap(AppDimens.spaceSm),
         for (final opacity in [0.04, 0.07, 0.10, 0.15])
           Padding(
@@ -1268,7 +1273,7 @@ class _ComponentShowcaseScreenState
             ),
           ),
 
-        _label('Pattern Variants'),
+        _label('Pattern Variants', _colors!),
         _gap(AppDimens.spaceSm),
         Wrap(
           spacing: AppDimens.spaceSm,
@@ -1324,7 +1329,7 @@ class _ComponentShowcaseScreenState
         ),
 
         // ── Line Chart ──────────────────────────────────────────────────
-        _label('Line Chart — Full'),
+        _label('Line Chart — Full', _colors!),
         _ChartShowcaseRow(
           color: AppColors.categoryHeart,
           configs: [
@@ -1333,7 +1338,7 @@ class _ComponentShowcaseScreenState
             (TileSize.tall, _kLineChartFull),
           ],
         ),
-        _label('Line Chart — Empty'),
+        _label('Line Chart — Empty', _colors!),
         _ChartShowcaseRow(
           color: AppColors.categoryHeart,
           configs: [
@@ -1344,7 +1349,7 @@ class _ComponentShowcaseScreenState
         ),
 
         // ── Bar Chart ───────────────────────────────────────────────────
-        _label('Bar Chart — Full'),
+        _label('Bar Chart — Full', _colors!),
         _ChartShowcaseRow(
           color: AppColors.categoryActivity,
           configs: [
@@ -1353,7 +1358,7 @@ class _ComponentShowcaseScreenState
             (TileSize.tall, _kBarChartFull),
           ],
         ),
-        _label('Bar Chart — Empty'),
+        _label('Bar Chart — Empty', _colors!),
         _ChartShowcaseRow(
           color: AppColors.categoryActivity,
           configs: [
@@ -1364,7 +1369,7 @@ class _ComponentShowcaseScreenState
         ),
 
         // ── Area Chart ──────────────────────────────────────────────────
-        _label('Area Chart — Full'),
+        _label('Area Chart — Full', _colors!),
         _ChartShowcaseRow(
           color: AppColors.categorySleep,
           configs: [
@@ -1373,7 +1378,7 @@ class _ComponentShowcaseScreenState
             (TileSize.tall, _kAreaChartFull),
           ],
         ),
-        _label('Area Chart — Empty'),
+        _label('Area Chart — Empty', _colors!),
         _ChartShowcaseRow(
           color: AppColors.categorySleep,
           configs: [
@@ -1384,7 +1389,7 @@ class _ComponentShowcaseScreenState
         ),
 
         // ── Ring / Donut ────────────────────────────────────────────────
-        _label('Ring Chart — Full'),
+        _label('Ring Chart — Full', _colors!),
         _ChartShowcaseRow(
           color: AppColors.categoryActivity,
           configs: [
@@ -1393,7 +1398,7 @@ class _ComponentShowcaseScreenState
             (TileSize.tall, _kRingFullWithBars),
           ],
         ),
-        _label('Ring Chart — Empty (0%)'),
+        _label('Ring Chart — Empty (0%)', _colors!),
         _ChartShowcaseRow(
           color: AppColors.categoryActivity,
           configs: [
@@ -1404,7 +1409,7 @@ class _ComponentShowcaseScreenState
         ),
 
         // ── Gauge ───────────────────────────────────────────────────────
-        _label('Gauge — Full'),
+        _label('Gauge — Full', _colors!),
         _ChartShowcaseRow(
           color: AppColors.categoryHeart,
           configs: [
@@ -1413,7 +1418,7 @@ class _ComponentShowcaseScreenState
             (TileSize.tall, _kGaugeFull),
           ],
         ),
-        _label('Gauge — Empty (min value)'),
+        _label('Gauge — Empty (min value)', _colors!),
         _ChartShowcaseRow(
           color: AppColors.categoryHeart,
           configs: [
@@ -1424,7 +1429,7 @@ class _ComponentShowcaseScreenState
         ),
 
         // ── Fill Gauge ──────────────────────────────────────────────────
-        _label('Fill Gauge — Full'),
+        _label('Fill Gauge — Full', _colors!),
         _ChartShowcaseRow(
           color: AppColors.categoryBody,
           configs: [
@@ -1433,7 +1438,7 @@ class _ComponentShowcaseScreenState
             (TileSize.tall, _kFillGaugeFullTall),
           ],
         ),
-        _label('Fill Gauge — Empty (0)'),
+        _label('Fill Gauge — Empty (0)', _colors!),
         _ChartShowcaseRow(
           color: AppColors.categoryBody,
           configs: [
@@ -1444,7 +1449,7 @@ class _ComponentShowcaseScreenState
         ),
 
         // ── Segmented Bar ───────────────────────────────────────────────
-        _label('Segmented Bar — Full'),
+        _label('Segmented Bar — Full', _colors!),
         _ChartShowcaseRow(
           color: AppColors.categorySleep,
           configs: [
@@ -1453,7 +1458,7 @@ class _ComponentShowcaseScreenState
             (TileSize.tall, _kSegBarFull),
           ],
         ),
-        _label('Segmented Bar — Empty'),
+        _label('Segmented Bar — Empty', _colors!),
         _ChartShowcaseRow(
           color: AppColors.categorySleep,
           configs: [
@@ -1488,7 +1493,7 @@ class _ComponentShowcaseScreenState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // ── Sparkline ─────────────────────────────────────────────────────
-        _label('Sparkline — inline trend shape (16px, no chrome)'),
+        _label('Sparkline — inline trend shape (16px, no chrome)', _colors!),
         Row(
           children: [
             _sparklineCell('Line', _kSparkLine, AppColors.categoryHeart),
@@ -1502,7 +1507,7 @@ class _ComponentShowcaseScreenState
         ),
 
         // ── Mini Progress ─────────────────────────────────────────────────
-        _label('Mini Progress — ring (24 / 28 / 32px) + linear'),
+        _label('Mini Progress — ring (24 / 28 / 32px) + linear', _colors!),
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -1542,7 +1547,7 @@ class _ComponentShowcaseScreenState
         ),
 
         // ── Full Mode — Line ──────────────────────────────────────────────
-        _label('Full Mode — line chart with scrub crosshair'),
+        _label('Full Mode — line chart with scrub crosshair', _colors!),
         Container(
           decoration: BoxDecoration(
             color: AppColorsOf(context).surface,
@@ -1558,7 +1563,7 @@ class _ComponentShowcaseScreenState
         ),
 
         // ── Full Mode — Bar ───────────────────────────────────────────────
-        _label('Full Mode — bar chart with tap-to-tooltip'),
+        _label('Full Mode — bar chart with tap-to-tooltip', _colors!),
         Container(
           decoration: BoxDecoration(
             color: AppColorsOf(context).surface,
@@ -1574,7 +1579,7 @@ class _ComponentShowcaseScreenState
         ),
 
         // ── Full Mode — Area ──────────────────────────────────────────────
-        _label('Full Mode — area chart'),
+        _label('Full Mode — area chart', _colors!),
         Container(
           decoration: BoxDecoration(
             color: AppColorsOf(context).surface,
@@ -1590,7 +1595,7 @@ class _ComponentShowcaseScreenState
         ),
 
         // ── Full Mode — Ring ──────────────────────────────────────────────
-        _label('Full Mode — ring / donut'),
+        _label('Full Mode — ring / donut', _colors!),
         Container(
           decoration: BoxDecoration(
             color: AppColorsOf(context).surface,
@@ -1606,7 +1611,7 @@ class _ComponentShowcaseScreenState
         ),
 
         // ── Full Mode — Gauge ─────────────────────────────────────────────
-        _label('Full Mode — gauge'),
+        _label('Full Mode — gauge', _colors!),
         Container(
           decoration: BoxDecoration(
             color: AppColorsOf(context).surface,
@@ -1622,7 +1627,7 @@ class _ComponentShowcaseScreenState
         ),
 
         // ── Full Mode — Fill Gauge ────────────────────────────────────────
-        _label('Full Mode — fill gauge (tank)'),
+        _label('Full Mode — fill gauge (tank)', _colors!),
         Container(
           decoration: BoxDecoration(
             color: AppColorsOf(context).surface,
@@ -1638,7 +1643,7 @@ class _ComponentShowcaseScreenState
         ),
 
         // ── Full Mode — Segmented Bar ─────────────────────────────────────
-        _label('Full Mode — segmented bar (tap a segment)'),
+        _label('Full Mode — segmented bar (tap a segment)', _colors!),
         Container(
           decoration: BoxDecoration(
             color: AppColorsOf(context).surface,
@@ -1653,7 +1658,7 @@ class _ComponentShowcaseScreenState
         ),
 
         // ── Full Mode — Empty state ───────────────────────────────────────
-        _label('Full Mode — empty state (no data)'),
+        _label('Full Mode — empty state (no data)', _colors!),
         Container(
           decoration: BoxDecoration(
             color: AppColorsOf(context).surface,
@@ -1671,7 +1676,7 @@ class _ComponentShowcaseScreenState
         ),
 
         // ── Comparison Mode — Line ────────────────────────────────────────
-        _label('Comparison Mode — two periods overlaid'),
+        _label('Comparison Mode — two periods overlaid', _colors!),
         Container(
           decoration: BoxDecoration(
             color: AppColorsOf(context).surface,
@@ -1688,7 +1693,7 @@ class _ComponentShowcaseScreenState
         ),
 
         // ── Mini — via ZChart ─────────────────────────────────────────────
-        _label('Mini Mode — ZChart.mini on RingConfig and FillGaugeConfig'),
+        _label('Mini Mode — ZChart.mini on RingConfig and FillGaugeConfig', _colors!),
         Row(
           children: [
             ZChart(
