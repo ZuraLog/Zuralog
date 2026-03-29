@@ -38,10 +38,7 @@ class ZAuthTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimens.spaceSm,
-        vertical: AppDimens.spaceSm,
-      ),
+      padding: const EdgeInsets.all(AppDimens.spaceSm),
       child: Row(
         children: [
           // Left: back button or balancing spacer
@@ -58,7 +55,7 @@ class ZAuthTopBar extends StatelessWidget {
           // Centre: logo
           Expanded(
             child: Center(
-              child: _LogoImage(),
+              child: const _LogoImage(),
             ),
           ),
 
@@ -76,6 +73,8 @@ class ZAuthTopBar extends StatelessWidget {
 /// - Light mode: SVG asset recoloured with [AppColorsOf.primary] (Deep Forest)
 ///   so it meets WCAG contrast on light canvases.
 class _LogoImage extends StatelessWidget {
+  const _LogoImage();
+
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
