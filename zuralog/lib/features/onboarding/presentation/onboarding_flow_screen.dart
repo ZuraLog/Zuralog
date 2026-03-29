@@ -504,7 +504,7 @@ class _StepDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const inactiveColor = AppColors.surfaceRaised;
+    final colors = AppColorsOf(context);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -518,7 +518,7 @@ class _StepDots extends StatelessWidget {
           height: 6,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppDimens.shapePill),
-            color: isActive ? AppColors.primary : inactiveColor,
+            color: isActive ? colors.primary : colors.surfaceRaised,
           ),
         );
       }),
