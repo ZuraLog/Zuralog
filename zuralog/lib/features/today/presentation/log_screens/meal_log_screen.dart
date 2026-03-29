@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
@@ -123,6 +124,7 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final quickMode = ref.watch(mealLogModeProvider).valueOrNull ?? false;
     final bottomPad = MediaQuery.of(context).padding.bottom;
     return ZuralogScaffold(
@@ -146,56 +148,59 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
                 Wrap(
                   spacing: AppDimens.spaceSm,
                   runSpacing: AppDimens.spaceSm,
-                  children: _kMealTypes.map((t) => ChoiceChip(
-                    label: Text(t),
-                    selected: _mealType == t,
-                    onSelected: (_) => setState(() => _mealType = t),
+                  children: _kMealTypes.map((t) => ZChip(
+                    label: t,
+                    isActive: _mealType == t,
+                    onTap: () => setState(() => _mealType = t),
                   )).toList(),
                 ),
                 const SizedBox(height: AppDimens.spaceLg),
                 if (quickMode) ...[
                   const ZSectionLabel(label: 'Calories'),
                   const SizedBox(height: AppDimens.spaceSm),
-                  TextField(
+                  AppTextField(
                     controller: _caloriesCtrl,
+                    hintText: 'Enter calories',
                     keyboardType: TextInputType.number,
-                    maxLength: 4,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
-                      hintText: 'Enter calories',
-                      suffixText: 'kcal',
-                      counterText: '',
+                    suffixIcon: Align(
+                      widthFactor: 1.0,
+                      heightFactor: 1.0,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: AppDimens.spaceMd),
+                        child: Text('kcal', style: AppTextStyles.labelMedium.copyWith(color: colors.textSecondary)),
+                      ),
                     ),
                     onChanged: _onCaloriesTyped,
                   ),
                   const SizedBox(height: AppDimens.spaceSm),
                   Wrap(
                     spacing: AppDimens.spaceSm,
-                    children: _kCaloriePresets.map((c) => ChoiceChip(
-                      label: Text('~$c'),
-                      selected: _calories == c,
-                      onSelected: (_) => _onPresetChipTapped(c),
+                    children: _kCaloriePresets.map((c) => ZChip(
+                      label: '~$c',
+                      isActive: _calories == c,
+                      onTap: () => _onPresetChipTapped(c),
                     )).toList(),
                   ),
                 ] else ...[
                   const ZSectionLabel(label: 'What did you eat?'),
                   const SizedBox(height: AppDimens.spaceSm),
-                  TextField(
+                  ZTextArea(
                     controller: _descriptionCtrl,
+                    placeholder: 'Describe what you ate...',
                     maxLength: 1000,
                     maxLines: 4,
-                    decoration: const InputDecoration(hintText: 'Describe what you ate...'),
-                    onChanged: (_) => setState(() {}),
+                    minLines: 3,
                   ),
                   const SizedBox(height: AppDimens.spaceLg),
                   const ZSectionLabel(label: 'Rough calories', isOptional: true),
                   const SizedBox(height: AppDimens.spaceSm),
                   Wrap(
                     spacing: AppDimens.spaceSm,
-                    children: _kCaloriePresets.map((c) => ChoiceChip(
-                      label: Text('~$c'),
-                      selected: _calories == c,
-                      onSelected: (_) => setState(() => _calories = _calories == c ? null : c),
+                    children: _kCaloriePresets.map((c) => ZChip(
+                      label: '~$c',
+                      isActive: _calories == c,
+                      onTap: () => setState(() => _calories = _calories == c ? null : c),
                     )).toList(),
                   ),
                   const SizedBox(height: AppDimens.spaceLg),
@@ -204,10 +209,10 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
                   Wrap(
                     spacing: AppDimens.spaceSm,
                     runSpacing: AppDimens.spaceSm,
-                    children: _kFeelChips.map((f) => FilterChip(
-                      label: Text(f),
-                      selected: _feelChips.contains(f),
-                      onSelected: (_) => setState(() {
+                    children: _kFeelChips.map((f) => ZChip(
+                      label: f,
+                      isActive: _feelChips.contains(f),
+                      onTap: () => setState(() {
                         if (_feelChips.contains(f)) { _feelChips.remove(f); } else { _feelChips.add(f); }
                       }),
                     )).toList(),
@@ -218,10 +223,10 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
                   Wrap(
                     spacing: AppDimens.spaceSm,
                     runSpacing: AppDimens.spaceSm,
-                    children: _kTagChips.map((t) => FilterChip(
-                      label: Text(t),
-                      selected: _tags.contains(t),
-                      onSelected: (_) => setState(() {
+                    children: _kTagChips.map((t) => ZChip(
+                      label: t,
+                      isActive: _tags.contains(t),
+                      onTap: () => setState(() {
                         if (_tags.contains(t)) { _tags.remove(t); } else { _tags.add(t); }
                       }),
                     )).toList(),
@@ -229,19 +234,21 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
                   const SizedBox(height: AppDimens.spaceLg),
                   ZSectionLabel(label: 'Notes', isOptional: true),
                   const SizedBox(height: AppDimens.spaceSm),
-                  TextField(controller: _notesCtrl, maxLength: 500, decoration: const InputDecoration(hintText: 'Anything else to note?')),
+                  ZTextArea(
+                    controller: _notesCtrl,
+                    placeholder: 'Anything else to note?',
+                    maxLength: 500,
+                  ),
                 ],
               ],
             ),
           ),
           Container(
             padding: EdgeInsets.fromLTRB(AppDimens.spaceMd, AppDimens.spaceSm, AppDimens.spaceMd, AppDimens.spaceSm + bottomPad),
-            child: FilledButton(
+            child: ZButton(
+              label: quickMode ? 'Save' : 'Save Meal',
               onPressed: _canSave ? _save : null,
-              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-              child: _isSaving
-                  ? const CircularProgressIndicator.adaptive()
-                  : Text(quickMode ? 'Save' : 'Save Meal'),
+              isLoading: _isSaving,
             ),
           ),
         ],
