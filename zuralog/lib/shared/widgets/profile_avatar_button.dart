@@ -44,8 +44,8 @@ class ProfileAvatarButton extends ConsumerWidget {
     final email = ref.watch(userEmailProvider);
     final profile = ref.watch(userProfileProvider);
 
-    final displayName = profile?.aiName ?? (email.isNotEmpty ? email : '—');
-    final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
+    final displayName = profile?.aiName ?? (email.isNotEmpty ? email : '');
+    final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : '';
 
     return GestureDetector(
       onTap: () {
@@ -58,13 +58,19 @@ class ProfileAvatarButton extends ConsumerWidget {
       child: CircleAvatar(
         radius: AppDimens.avatarMd / 2,
         backgroundColor: colors.primary.withValues(alpha: 0.85),
-        child: Text(
-          initial,
-          style: AppTextStyles.body.copyWith(
-            color: colors.textOnSage,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        child: initial.isNotEmpty
+            ? Text(
+                initial,
+                style: AppTextStyles.body.copyWith(
+                  color: colors.textOnSage,
+                  fontWeight: FontWeight.w700,
+                ),
+              )
+            : Icon(
+                Icons.person_rounded,
+                size: 18,
+                color: colors.textOnSage,
+              ),
       ),
     );
   }
