@@ -198,10 +198,10 @@ class _ComponentShowcaseScreenState
       children: [
         _label('Canvas & Elevation', _colors!),
         for (final entry in [
-          ('Canvas', AppColors.canvas),
-          ('Surface', AppColors.surface),
-          ('Surface Raised', AppColors.surfaceRaised),
-          ('Surface Overlay', AppColors.surfaceOverlay),
+          ('Canvas', _colors!.canvas),
+          ('Surface', _colors!.surface),
+          ('Surface Raised', _colors!.surfaceRaised),
+          ('Surface Overlay', _colors!.surfaceOverlay),
         ])
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
@@ -212,7 +212,7 @@ class _ComponentShowcaseScreenState
                 color: entry.$2,
                 borderRadius: BorderRadius.circular(AppDimens.shapeXs),
                 border: Border.all(
-                  color: AppColors.warmWhite.withValues(alpha: 0.08),
+                  color: _colors!.border,
                 ),
               ),
               alignment: Alignment.centerLeft,
@@ -222,11 +222,11 @@ class _ComponentShowcaseScreenState
                 children: [
                   Text(entry.$1,
                       style: AppTextStyles.labelMedium
-                          .copyWith(color: AppColors.warmWhite)),
+                          .copyWith(color: _colors!.textPrimary)),
                   Text(
                       '#${entry.$2.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
                       style: AppTextStyles.labelSmall.copyWith(
-                          color: AppColors.textSecondaryDark,
+                          color: _colors!.textSecondary,
                           fontFamily: 'monospace')),
                 ],
               ),
@@ -236,7 +236,7 @@ class _ComponentShowcaseScreenState
         _label('Accent Colors', _colors!),
         Row(
           children: [
-            _colorSwatch('Sage', AppColors.primary),
+            _colorSwatch('Sage', _colors!.primary),
             _colorSwatch('Warm White', AppColors.warmWhite),
           ],
         ),
@@ -274,37 +274,37 @@ class _ComponentShowcaseScreenState
         _label('Typography', _colors!),
         Text('Display Large (34pt Bold)',
             style: AppTextStyles.displayLarge
-                .copyWith(color: AppColors.warmWhite)),
+                .copyWith(color: _colors!.textPrimary)),
         Text('Display Medium (28pt SemiBold)',
             style: AppTextStyles.displayMedium
-                .copyWith(color: AppColors.warmWhite)),
+                .copyWith(color: _colors!.textPrimary)),
         Text('Display Small (24pt SemiBold)',
             style: AppTextStyles.displaySmall
-                .copyWith(color: AppColors.warmWhite)),
+                .copyWith(color: _colors!.textPrimary)),
         Text('Title Large (20pt Medium)',
             style: AppTextStyles.titleLarge
-                .copyWith(color: AppColors.warmWhite)),
+                .copyWith(color: _colors!.textPrimary)),
         Text('Title Medium (17pt Medium)',
             style: AppTextStyles.titleMedium
-                .copyWith(color: AppColors.warmWhite)),
+                .copyWith(color: _colors!.textPrimary)),
         Text('Body Large (16pt Regular)',
             style: AppTextStyles.bodyLarge
-                .copyWith(color: AppColors.warmWhite)),
+                .copyWith(color: _colors!.textPrimary)),
         Text('Body Medium (14pt Regular)',
             style: AppTextStyles.bodyMedium
-                .copyWith(color: AppColors.warmWhite)),
+                .copyWith(color: _colors!.textPrimary)),
         Text('Body Small (12pt Regular)',
             style: AppTextStyles.bodySmall
-                .copyWith(color: AppColors.warmWhite)),
+                .copyWith(color: _colors!.textPrimary)),
         Text('Label Large (15pt SemiBold)',
             style: AppTextStyles.labelLarge
-                .copyWith(color: AppColors.warmWhite)),
+                .copyWith(color: _colors!.textPrimary)),
         Text('Label Medium (13pt Medium)',
             style: AppTextStyles.labelMedium
-                .copyWith(color: AppColors.warmWhite)),
+                .copyWith(color: _colors!.textPrimary)),
         Text('Label Small (11pt Medium)',
             style: AppTextStyles.labelSmall
-                .copyWith(color: AppColors.warmWhite)),
+                .copyWith(color: _colors!.textPrimary)),
 
         _label('Pattern Typography', _colors!),
         // Bold (animated drift) — display-lg
@@ -361,7 +361,7 @@ class _ComponentShowcaseScreenState
         _label('Solid Text (comparison)', _colors!),
         Text('Solid Sage',
             style: AppTextStyles.displayMedium
-                .copyWith(color: AppColors.primary)),
+                .copyWith(color: _colors!.primary)),
         _gap(),
         Text(
             'Body text stays solid — patterns are only for display-size headings where the letterforms are large enough.',
@@ -410,7 +410,7 @@ class _ComponentShowcaseScreenState
                 color: color,
                 borderRadius: BorderRadius.circular(AppDimens.shapeXs),
                 border: Border.all(
-                  color: AppColors.warmWhite.withValues(alpha: 0.1),
+                  color: _colors!.border,
                   width: 0.5,
                 ),
               ),
@@ -418,10 +418,10 @@ class _ComponentShowcaseScreenState
             const SizedBox(height: 4),
             Text(name,
                 style: AppTextStyles.labelSmall
-                    .copyWith(color: AppColors.textSecondaryDark)),
+                    .copyWith(color: _colors!.textSecondary)),
             Text(hex,
                 style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.textSecondaryDark,
+                    color: _colors!.textSecondary,
                     fontSize: 9,
                     fontFamily: 'monospace')),
           ],
@@ -441,7 +441,7 @@ class _ComponentShowcaseScreenState
         const SizedBox(height: 2),
         Text(name,
             style: AppTextStyles.labelSmall
-                .copyWith(color: AppColors.textSecondaryDark, fontSize: 9)),
+                .copyWith(color: _colors!.textSecondary, fontSize: 9)),
       ],
     );
   }
@@ -462,7 +462,7 @@ class _ComponentShowcaseScreenState
         const SizedBox(height: 4),
         Text(name,
             style: AppTextStyles.labelSmall
-                .copyWith(color: AppColors.textSecondaryDark)),
+                .copyWith(color: _colors!.textSecondary)),
       ],
     );
   }
@@ -476,13 +476,13 @@ class _ComponentShowcaseScreenState
             width: 90,
             child: Text(label,
                 style: AppTextStyles.labelSmall
-                    .copyWith(color: AppColors.textSecondaryDark)),
+                    .copyWith(color: _colors!.textSecondary)),
           ),
           Container(
             width: width * 3, // visual scale
             height: 12,
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.4),
+              color: _colors!.primary.withValues(alpha: 0.4),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -498,14 +498,14 @@ class _ComponentShowcaseScreenState
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: AppColors.surfaceRaised,
+            color: _colors!.surfaceRaised,
             borderRadius: BorderRadius.circular(radius.clamp(0, 24)),
           ),
         ),
         const SizedBox(height: 2),
         Text(label,
             style: AppTextStyles.labelSmall
-                .copyWith(color: AppColors.textSecondaryDark)),
+                .copyWith(color: _colors!.textSecondary)),
       ],
     );
   }
@@ -598,10 +598,10 @@ class _ComponentShowcaseScreenState
             children: [
               Text('Health Score',
                   style: AppTextStyles.titleMedium
-                      .copyWith(color: AppColors.textSecondaryDark)),
+                      .copyWith(color: _colors!.textSecondary)),
               Text('87',
                   style: AppTextStyles.displayLarge
-                      .copyWith(color: AppColors.primary)),
+                      .copyWith(color: _colors!.primary)),
             ],
           ),
         ),
@@ -614,12 +614,12 @@ class _ComponentShowcaseScreenState
             children: [
               Text('AI Insight',
                   style: AppTextStyles.labelMedium
-                      .copyWith(color: AppColors.primary)),
+                      .copyWith(color: _colors!.primary)),
               const SizedBox(height: AppDimens.spaceXs),
               Text(
                 'Your sleep quality improved 12% this week. Keep up the consistent bedtime routine!',
                 style: AppTextStyles.bodyMedium
-                    .copyWith(color: AppColors.warmWhite),
+                    .copyWith(color: _colors!.textPrimary),
               ),
             ],
           ),
@@ -631,7 +631,7 @@ class _ComponentShowcaseScreenState
           category: AppColors.categorySleep,
           child: Text('Sleep Insight',
               style: AppTextStyles.titleMedium
-                  .copyWith(color: AppColors.warmWhite)),
+                  .copyWith(color: _colors!.textPrimary)),
         ),
         _gap(),
         ZuralogCard(
@@ -639,7 +639,7 @@ class _ComponentShowcaseScreenState
           category: AppColors.categoryHeart,
           child: Text('Heart Rate Insight',
               style: AppTextStyles.titleMedium
-                  .copyWith(color: AppColors.warmWhite)),
+                  .copyWith(color: _colors!.textPrimary)),
         ),
 
         _label('Data Card (no pattern)', _colors!),
@@ -650,10 +650,10 @@ class _ComponentShowcaseScreenState
             children: [
               Text('Steps Today',
                   style: AppTextStyles.bodyMedium
-                      .copyWith(color: AppColors.textSecondaryDark)),
+                      .copyWith(color: _colors!.textSecondary)),
               Text('8,432',
                   style: AppTextStyles.titleLarge
-                      .copyWith(color: AppColors.warmWhite)),
+                      .copyWith(color: _colors!.textPrimary)),
             ],
           ),
         ),
@@ -662,7 +662,7 @@ class _ComponentShowcaseScreenState
         ZTopographicCard(
           child: Text('Legacy topographic card',
               style: AppTextStyles.bodyMedium
-                  .copyWith(color: AppColors.warmWhite)),
+                  .copyWith(color: _colors!.textPrimary)),
         ),
       ],
     );
@@ -890,7 +890,7 @@ class _ComponentShowcaseScreenState
                 children: [
                   Text('Choose an activity to log',
                       style: AppTextStyles.bodyMedium
-                          .copyWith(color: AppColors.textSecondaryDark)),
+                          .copyWith(color: _colors!.textSecondary)),
                   const SizedBox(height: AppDimens.spaceMd),
                   ZButton(label: 'Sleep', onPressed: () => Navigator.pop(context)),
                   const SizedBox(height: AppDimens.spaceSm),
@@ -924,12 +924,12 @@ class _ComponentShowcaseScreenState
               vertical: AppDimens.spaceSm,
             ),
             decoration: BoxDecoration(
-              color: AppColors.surfaceRaised,
+              color: _colors!.surfaceRaised,
               borderRadius: BorderRadius.circular(AppDimens.shapeXs),
             ),
             child: Text('Long press me',
                 style: AppTextStyles.bodyMedium
-                    .copyWith(color: AppColors.warmWhite)),
+                    .copyWith(color: _colors!.textPrimary)),
           ),
         ),
 
@@ -984,7 +984,7 @@ class _ComponentShowcaseScreenState
 
         _label('Pull-to-Refresh (wraps scrollable content)', _colors!),
         Text('ZPullToRefresh wraps a scrollable child with a Sage spinner',
-            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark)),
+            style: AppTextStyles.bodySmall.copyWith(color: _colors!.textSecondary)),
       ],
     );
   }
@@ -1021,13 +1021,13 @@ class _ComponentShowcaseScreenState
                 children: [
                   Text('Deep Sleep: 2h 15m',
                       style: AppTextStyles.bodyMedium
-                          .copyWith(color: AppColors.warmWhite)),
+                          .copyWith(color: _colors!.textPrimary)),
                   Text('REM: 1h 45m',
                       style: AppTextStyles.bodyMedium
-                          .copyWith(color: AppColors.warmWhite)),
+                          .copyWith(color: _colors!.textPrimary)),
                   Text('Light: 3h 30m',
                       style: AppTextStyles.bodyMedium
-                          .copyWith(color: AppColors.warmWhite)),
+                          .copyWith(color: _colors!.textPrimary)),
                 ],
               ),
             ),
@@ -1036,7 +1036,7 @@ class _ComponentShowcaseScreenState
               content: Text(
                 'Your HRV has been steadily improving over the past 2 weeks.',
                 style: AppTextStyles.bodyMedium
-                    .copyWith(color: AppColors.warmWhite),
+                    .copyWith(color: _colors!.textPrimary),
               ),
             ),
           ],
@@ -1046,7 +1046,7 @@ class _ComponentShowcaseScreenState
         ZCollapsible(
           header: Text('Weekly Step Breakdown',
               style: AppTextStyles.titleMedium
-                  .copyWith(color: AppColors.warmWhite)),
+                  .copyWith(color: _colors!.textPrimary)),
           content: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1056,7 +1056,7 @@ class _ComponentShowcaseScreenState
                       const EdgeInsets.symmetric(vertical: AppDimens.spaceXs),
                   child: Text('$day: ${7000 + day.hashCode % 5000} steps',
                       style: AppTextStyles.bodyMedium
-                          .copyWith(color: AppColors.textSecondaryDark)),
+                          .copyWith(color: _colors!.textSecondary)),
                 ),
             ],
           ),
@@ -1080,7 +1080,7 @@ class _ComponentShowcaseScreenState
             variant: ZCardVariant.data,
             child: Text('Long press this card for options',
                 style: AppTextStyles.bodyMedium
-                    .copyWith(color: AppColors.warmWhite)),
+                    .copyWith(color: _colors!.textPrimary)),
           ),
         ),
 
@@ -1122,7 +1122,7 @@ class _ComponentShowcaseScreenState
                 variant: ZCardVariant.data,
                 child: Center(
                   child: Text(item,
-                      style: AppTextStyles.titleMedium.copyWith(color: AppColors.warmWhite)),
+                      style: AppTextStyles.titleMedium.copyWith(color: _colors!.textPrimary)),
                 ),
               ),
           ],
@@ -1134,7 +1134,7 @@ class _ComponentShowcaseScreenState
           subtitle: 'Last 7 days',
           child: Center(
             child: Text('Chart goes here',
-                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondaryDark)),
+                style: AppTextStyles.bodyMedium.copyWith(color: _colors!.textSecondary)),
           ),
         ),
 
@@ -1147,19 +1147,19 @@ class _ComponentShowcaseScreenState
           ],
           rows: [
             ZDataRow(cells: [
-              Text('Steps', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warmWhite)),
-              Text('8,432', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warmWhite)),
+              Text('Steps', style: AppTextStyles.bodyMedium.copyWith(color: _colors!.textPrimary)),
+              Text('8,432', style: AppTextStyles.bodyMedium.copyWith(color: _colors!.textPrimary)),
               Text('+12%', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.success)),
             ]),
             ZDataRow(cells: [
-              Text('Sleep', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warmWhite)),
-              Text('7h 23m', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warmWhite)),
+              Text('Sleep', style: AppTextStyles.bodyMedium.copyWith(color: _colors!.textPrimary)),
+              Text('7h 23m', style: AppTextStyles.bodyMedium.copyWith(color: _colors!.textPrimary)),
               Text('-5%', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.statusError)),
             ]),
             ZDataRow(cells: [
-              Text('Heart Rate', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warmWhite)),
-              Text('72 bpm', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warmWhite)),
-              Text('—', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondaryDark)),
+              Text('Heart Rate', style: AppTextStyles.bodyMedium.copyWith(color: _colors!.textPrimary)),
+              Text('72 bpm', style: AppTextStyles.bodyMedium.copyWith(color: _colors!.textPrimary)),
+              Text('—', style: AppTextStyles.bodyMedium.copyWith(color: _colors!.textSecondary)),
             ]),
           ],
         ),
@@ -1211,10 +1211,10 @@ class _ComponentShowcaseScreenState
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('Your Health Journey',
-                  style: AppTextStyles.displaySmall.copyWith(color: AppColors.warmWhite)),
+                  style: AppTextStyles.displaySmall.copyWith(color: _colors!.textPrimary)),
               const SizedBox(height: AppDimens.spaceXs),
               Text('Track, understand, improve',
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondaryDark)),
+                  style: AppTextStyles.bodyMedium.copyWith(color: _colors!.textSecondary)),
             ],
           ),
         ),
@@ -1229,7 +1229,7 @@ class _ComponentShowcaseScreenState
                 child: ZuralogCard(
                   variant: ZCardVariant.data,
                   child: Text(label,
-                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warmWhite)),
+                      style: AppTextStyles.bodyMedium.copyWith(color: _colors!.textPrimary)),
                 ),
               ),
           ],
@@ -1253,7 +1253,7 @@ class _ComponentShowcaseScreenState
                 height: 64,
                 child: Stack(
                   children: [
-                    Container(color: AppColors.surface),
+                    Container(color: _colors!.surface),
                     Positioned.fill(
                       child: ZPatternOverlay(
                         opacity: opacity,
@@ -1264,7 +1264,7 @@ class _ComponentShowcaseScreenState
                       child: Text(
                         'Screen blend · ${(opacity * 100).round()}% opacity',
                         style: AppTextStyles.labelMedium
-                            .copyWith(color: AppColors.warmWhite),
+                            .copyWith(color: _colors!.textPrimary),
                       ),
                     ),
                   ],
@@ -1319,13 +1319,13 @@ class _ComponentShowcaseScreenState
         _gap(AppDimens.spaceLg),
         Text(
           '8. ZChart System',
-          style: AppTextStyles.displaySmall.copyWith(color: AppColors.warmWhite),
+          style: AppTextStyles.displaySmall.copyWith(color: _colors!.textPrimary),
         ),
         _gap(),
         Text(
           'All 7 chart types shown in all 3 tile sizes. '
           'Each has a "Full" variant with data and an "Empty" variant with no data.',
-          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark),
+          style: AppTextStyles.bodySmall.copyWith(color: _colors!.textSecondary),
         ),
 
         // ── Line Chart ──────────────────────────────────────────────────
@@ -1474,12 +1474,12 @@ class _ComponentShowcaseScreenState
         _gap(AppDimens.spaceLg),
         Text(
           '9. Chart — New Modes',
-          style: AppTextStyles.displaySmall.copyWith(color: AppColors.warmWhite),
+          style: AppTextStyles.displaySmall.copyWith(color: _colors!.textPrimary),
         ),
         _gap(),
         Text(
           'Sparkline, mini progress, full-mode hero chart, and comparison overlay.',
-          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark),
+          style: AppTextStyles.bodySmall.copyWith(color: _colors!.textSecondary),
         ),
         _buildChartNewModes(),
       ],
