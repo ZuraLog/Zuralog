@@ -69,7 +69,7 @@ class ZAlertDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final confirmColor =
-        isDestructive ? AppColors.error : colors.primary;
+        isDestructive ? colors.error : colors.primary;
     final confirmTextColor =
         isDestructive ? Colors.white : colors.textOnSage;
 

@@ -162,7 +162,7 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
                   AppTextStyles.bodyMedium.copyWith(color: colors.textTertiary),
             ),
             onChanged: _onChanged,
-            cursorColor: AppColors.primary,
+            cursorColor: colors.primary,
           ),
 
           // ── Sync banner (only shown when today's data has arrived) ─────────
@@ -171,7 +171,7 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
             Container(
               padding: const EdgeInsets.all(AppDimens.spaceMd),
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
+                color: colors.primary.withValues(alpha: 0.08),
                 borderRadius:
                     BorderRadius.circular(AppDimens.radiusSm),
               ),
@@ -179,7 +179,7 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
                 '✓ Synced from ${_syncedSource ?? ''} — '
                 '$_syncedSteps steps today. You can override below.',
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.primary,
+                  color: colors.primary,
                 ),
               ),
             ),
@@ -209,7 +209,7 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
                         val ? StepsLogMode.add : StepsLogMode.override_,
                       );
                     },
-                    activeThumbColor: AppColors.primary,
+                    activeThumbColor: colors.primary,
                   ),
                 ],
               ),
@@ -232,8 +232,8 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
           FilledButton(
             onPressed: _canSave ? _handleSave : null,
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.primaryButtonText,
+              backgroundColor: colors.primary,
+              foregroundColor: colors.textOnSage,
               shape: RoundedRectangleBorder(
                 borderRadius:
                     BorderRadius.circular(AppDimens.radiusButton),

@@ -290,8 +290,8 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
           FilledButton(
             onPressed: _handleSave,
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.primaryButtonText,
+              backgroundColor: colors.primary,
+              foregroundColor: colors.textOnSage,
               shape: RoundedRectangleBorder(
                 borderRadius:
                     BorderRadius.circular(AppDimens.radiusButton),
@@ -334,16 +334,16 @@ class _UnitChip extends StatelessWidget {
           vertical: AppDimens.spaceSm,
         ),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : colors.surface,
+          color: isSelected ? colors.primary : colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusChip),
           border: Border.all(
-            color: isSelected ? AppColors.primary : colors.border,
+            color: isSelected ? colors.primary : colors.border,
           ),
         ),
         child: Text(
           label,
           style: AppTextStyles.labelMedium.copyWith(
-            color: isSelected ? AppColors.primaryButtonText : colors.textPrimary,
+            color: isSelected ? colors.textOnSage : colors.textPrimary,
           ),
         ),
       ),

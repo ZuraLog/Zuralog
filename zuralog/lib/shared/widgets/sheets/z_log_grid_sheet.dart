@@ -177,7 +177,7 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
         (widget.parentMessenger ?? ScaffoldMessenger.of(context)).showSnackBar(
           SnackBar(
             content: const Text('Workout tracking is coming soon — stay tuned!'),
-            backgroundColor: AppColors.primary,
+            backgroundColor: AppColorsOf(context).primary,
             duration: const Duration(seconds: 3),
           ),
         );

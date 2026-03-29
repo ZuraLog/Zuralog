@@ -31,10 +31,10 @@ class ZLogFab extends StatelessWidget {
         child: Container(
           width: 56,
           height: 56,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.primary,
-            boxShadow: [
+            color: colors.primary,
+            boxShadow: const [
               BoxShadow(
                 color: Color(0x4D000000), // rgba(0,0,0,0.3)
                 blurRadius: 12,

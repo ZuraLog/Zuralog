@@ -118,12 +118,12 @@ class ScoreTrendHero extends ConsumerWidget {
                     ),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? AppColors.primary.withValues(alpha: 0.15)
+                          ? colors.primary.withValues(alpha: 0.15)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: isSelected
-                            ? AppColors.primary
+                            ? colors.primary
                             : colors.border,
                         width: 1,
                       ),
@@ -132,7 +132,7 @@ class ScoreTrendHero extends ConsumerWidget {
                       range.label,
                       style: AppTextStyles.caption.copyWith(
                         color: isSelected
-                            ? AppColors.primary
+                            ? colors.primary
                             : colors.textSecondary,
                         fontWeight: isSelected
                             ? FontWeight.w700
@@ -150,10 +150,10 @@ class ScoreTrendHero extends ConsumerWidget {
           SizedBox(
             height: 72,
             child: historyAsync.when(
-              loading: () => const Center(
+              loading: () => Center(
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: AppColors.primary,
+                  color: colors.primary,
                 ),
               ),
               error: (e, st) => Center(
@@ -222,6 +222,7 @@ class _TrendBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final appColors = AppColorsOf(context);
     final Color color;
     final IconData icon;
     final String label;
@@ -236,7 +237,7 @@ class _TrendBadge extends StatelessWidget {
         icon = Icons.trending_down_rounded;
         label = 'Declining';
       default:
-        color = AppColors.textTertiary;
+        color = appColors.textTertiary;
         icon = Icons.trending_flat_rounded;
         label = 'Stable';
     }
@@ -307,6 +308,7 @@ class _ScoreSparkline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final nonZero = values.where((v) => v > 0).toList();
     final minY = nonZero.isNotEmpty ? nonZero.reduce(math.min) - 5 : 0.0;
     final maxY = nonZero.isNotEmpty ? nonZero.reduce(math.max) + 5 : 100.0;
@@ -334,21 +336,21 @@ class _ScoreSparkline extends StatelessWidget {
           LineChartBarData(
             spots: spots,
             isCurved: true,
-            color: AppColors.primary,
+            color: colors.primary,
             barWidth: 2,
             dotData: FlDotData(
               show: true,
               getDotPainter: (spot, percent, bar, index) =>
                   FlDotCirclePainter(
                 radius: 2.5,
-                color: AppColors.primary,
+                color: colors.primary,
                 strokeWidth: 0,
                 strokeColor: Colors.transparent,
               ),
             ),
             belowBarData: BarAreaData(
               show: true,
-              color: AppColors.primary.withValues(alpha: 0.08),
+              color: colors.primary.withValues(alpha: 0.08),
             ),
           ),
         ],
@@ -368,13 +370,14 @@ class _CompactScoreZeroState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       width: 48,
       height: 48,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.25),
+          color: colors.primary.withValues(alpha: 0.25),
           width: 5,
         ),
       ),
@@ -382,7 +385,7 @@ class _CompactScoreZeroState extends StatelessWidget {
         child: Icon(
           Icons.favorite_border_rounded,
           size: 20,
-          color: AppColors.primary.withValues(alpha: 0.5),
+          color: colors.primary.withValues(alpha: 0.5),
         ),
       ),
     );
@@ -399,18 +402,19 @@ class _ScoreChartEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(
           Icons.show_chart_rounded,
           size: 16,
-          color: AppColors.primary.withValues(alpha: 0.4),
+          color: colors.primary.withValues(alpha: 0.4),
         ),
         const SizedBox(width: 6),
         Text(
           'Your trend chart will appear here as data builds up.',
-          style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
+          style: AppTextStyles.caption.copyWith(color: colors.textTertiary),
           textAlign: TextAlign.center,
         ),
       ],
@@ -433,7 +437,7 @@ class _ScoreCommentaryCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(width: 3, color: AppColors.primary),
+            Container(width: 3, color: colors.primary),
             Expanded(
               child: Container(
                 padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -441,10 +445,10 @@ class _ScoreCommentaryCard extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.auto_awesome_rounded,
                       size: 16,
-                      color: AppColors.primary,
+                      color: colors.primary,
                     ),
                     const SizedBox(width: AppDimens.spaceSm),
                     Expanded(

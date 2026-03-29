@@ -250,7 +250,7 @@ class _AnimatedRingState extends State<_AnimatedRing>
                       height: widget.diameter * 0.2,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: AppColors.textTertiary,
+                        color: colors.textTertiary,
                       ),
                     ),
             ),

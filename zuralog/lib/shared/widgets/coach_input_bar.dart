@@ -304,7 +304,7 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
                       decoration: InputDecoration(
                         hintText: 'Message your coach…',
                         hintStyle: AppTextStyles.bodyLarge
-                            .copyWith(color: AppColors.textTertiary),
+                            .copyWith(color: colors.textTertiary),
                         border: InputBorder.none,
                         counterText: '',
                         contentPadding: const EdgeInsets.symmetric(
@@ -394,7 +394,7 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
                     style: AppTextStyles.bodySmall.copyWith(
                       color: remaining <= 0
                           ? AppColors.statusError
-                          : AppColors.textTertiary,
+                          : AppColorsOf(context).textTertiary,
                     ),
                   ),
                 ),
@@ -441,8 +441,8 @@ class _InputIcon extends StatelessWidget {
       bgColor = filledColor!;
       defaultIconColor = Colors.white;
     } else if (filled) {
-      bgColor = AppColors.primary;
-      defaultIconColor = AppColors.primaryButtonText;
+      bgColor = colors.primary;
+      defaultIconColor = colors.textOnSage;
     } else {
       bgColor = colors.inputBackground;
       defaultIconColor = colors.textSecondary;

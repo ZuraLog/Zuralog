@@ -203,8 +203,9 @@ class _DeltaIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     final isUp = deltaPercent > 0;
     final isFlat = deltaPercent == 0;
+    final colors = AppColorsOf(context);
     final color = isFlat
-        ? AppColors.textTertiary
+        ? colors.textTertiary
         : isUp
             ? AppColors.healthScoreGreen
             : AppColors.healthScoreRed;
@@ -275,7 +276,7 @@ class _EditModeControls extends StatelessWidget {
             child: Icon(
               isVisible ? Icons.visibility_rounded : Icons.visibility_off_rounded,
               size: AppDimens.iconSm,
-              color: isVisible ? categoryColor : AppColors.textTertiary,
+              color: isVisible ? categoryColor : AppColorsOf(context).textTertiary,
             ),
           ),
         ),
@@ -284,7 +285,7 @@ class _EditModeControls extends StatelessWidget {
         Icon(
           Icons.drag_handle_rounded,
           size: AppDimens.iconSm,
-          color: AppColors.textTertiary,
+          color: AppColorsOf(context).textTertiary,
         ),
       ],
     );

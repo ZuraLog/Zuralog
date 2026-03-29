@@ -60,7 +60,7 @@ class ProfileSidePanelWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = AppColorsOf(context);
     final email = ref.watch(userEmailProvider);
     final profile = ref.watch(userProfileProvider);
 
@@ -88,11 +88,11 @@ class ProfileSidePanelWidget extends ConsumerWidget {
                   // Avatar circle
                   CircleAvatar(
                     radius: _kPanelAvatarSize / 2,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.85),
+                    backgroundColor: colors.primary.withValues(alpha: 0.85),
                     child: Text(
                       initial,
                       style: AppTextStyles.displaySmall.copyWith(
-                        color: AppColors.primaryButtonText,
+                        color: colors.textOnSage,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -128,7 +128,7 @@ class ProfileSidePanelWidget extends ConsumerWidget {
             Divider(
               height: 1,
               thickness: 1,
-              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+              color: colors.border,
             ),
 
             const SizedBox(height: AppDimens.spaceSm),
@@ -214,7 +214,7 @@ class ProfileSidePanelWidget extends ConsumerWidget {
                     _NavItem(
                       icon: Icons.grid_view_rounded,
                       label: 'Component Showcase',
-                      color: AppColors.primary,
+                      color: colors.primary,
                       onTap: () {
                         ref.read(hapticServiceProvider).light();
                         onClose();
@@ -229,14 +229,14 @@ class ProfileSidePanelWidget extends ConsumerWidget {
             Divider(
               height: 1,
               thickness: 1,
-              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+              color: colors.border,
             ),
 
             // ── Sign Out ─────────────────────────────────────────────────
             _NavItem(
               icon: Icons.logout_rounded,
               label: 'Sign Out',
-              color: isDark ? AppColors.accentDark : AppColors.accentLight,
+              color: colors.accent,
               onTap: () async {
                 ref.read(hapticServiceProvider).light();
                 onClose();
@@ -286,6 +286,7 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final colors = AppColorsOf(context);
     final effectiveColor = color ?? cs.onSurface;
 
     return ListTile(
@@ -297,7 +298,7 @@ class _NavItem extends StatelessWidget {
       trailing: color == null
           ? Icon(
               Icons.chevron_right_rounded,
-              color: AppColors.textTertiary,
+              color: colors.textTertiary,
               size: AppDimens.iconSm,
             )
           : null,
