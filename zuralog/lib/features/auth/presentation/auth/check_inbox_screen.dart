@@ -68,6 +68,7 @@ class _CheckInboxScreenState extends ConsumerState<CheckInboxScreen> {
   // ── Countdown ─────────────────────────────────────────────────────────────
 
   void _startCountdown() {
+    _timer?.cancel(); // Cancel any existing timer before starting a new one
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_countdown <= 1) {
         timer.cancel();
