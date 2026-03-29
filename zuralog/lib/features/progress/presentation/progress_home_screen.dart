@@ -285,6 +285,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.only(
         bottom: AppDimens.spaceSm,
@@ -294,7 +295,7 @@ class _SectionHeader extends StatelessWidget {
           Text(
             title,
             style: AppTextStyles.titleMedium.copyWith(
-              color: AppColors.progressTextPrimary,
+              color: colors.progressTextPrimary,
             ),
           ),
           const Spacer(),
@@ -304,7 +305,7 @@ class _SectionHeader extends StatelessWidget {
               child: Text(
                 trailingLabel!,
                 style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.progressTextSecondary,
+                  color: colors.progressTextSecondary,
                 ),
               ),
             ),
@@ -442,6 +443,8 @@ class _MilestoneCelebrationCardState
   Widget build(BuildContext context) {
     if (_dismissed) return const SizedBox.shrink();
 
+    final colors = AppColorsOf(context);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppDimens.spaceMd),
       child: ScaleTransition(
@@ -450,8 +453,8 @@ class _MilestoneCelebrationCardState
           width: double.infinity,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-            color: AppColors.progressSurface,
-            border: Border.all(color: AppColors.progressBorderDefault),
+            color: colors.progressSurface,
+            border: Border.all(color: colors.progressBorderDefault),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(AppDimens.radiusCard),
@@ -464,8 +467,8 @@ class _MilestoneCelebrationCardState
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          AppColors.progressStreakWarm.withValues(alpha: 0.08),
-                          AppColors.progressStreakWarm.withValues(alpha: 0.02),
+                          colors.progressStreakWarm.withValues(alpha: 0.08),
+                          colors.progressStreakWarm.withValues(alpha: 0.02),
                         ],
                       ),
                     ),
@@ -487,7 +490,7 @@ class _MilestoneCelebrationCardState
                       Text(
                         '${widget.days}-Day Streak!',
                         style: AppTextStyles.displaySmall.copyWith(
-                          color: AppColors.progressStreakWarm,
+                          color: colors.progressStreakWarm,
                         ),
                       ),
                       const SizedBox(height: AppDimens.spaceXs),
@@ -495,7 +498,7 @@ class _MilestoneCelebrationCardState
                         'Amazing consistency! You\'ve logged every day '
                         'for ${widget.days} days.',
                         style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.progressTextMuted,
+                          color: colors.progressTextMuted,
                         ),
                       ),
                     ],
@@ -509,7 +512,7 @@ class _MilestoneCelebrationCardState
                     child: Icon(
                       Icons.close_rounded,
                       size: 20,
-                      color: AppColors.progressTextMuted,
+                      color: colors.progressTextMuted,
                     ),
                   ),
                 ),

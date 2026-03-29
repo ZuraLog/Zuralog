@@ -17,12 +17,13 @@ class GoalsEmptyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return PressableCard(
       onTap: onTap,
       borderRadius: AppDimens.radiusCard,
       child: CustomPaint(
         painter: _DashedBorderPainter(
-          color: AppColors.progressBorderStrong,
+          color: colors.progressBorderStrong,
           radius: AppDimens.radiusCard.toDouble(),
         ),
         child: Padding(
@@ -36,17 +37,17 @@ class GoalsEmptyCard extends StatelessWidget {
                 width: AppDimens.iconContainerSm,
                 height: AppDimens.iconContainerSm,
                 decoration: BoxDecoration(
-                  color: AppColors.progressSage.withValues(alpha: 0.08),
+                  color: colors.progressSage.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(AppDimens.radiusSm),
                   border: Border.all(
-                    color: AppColors.progressSage.withValues(alpha: 0.2),
+                    color: colors.progressSage.withValues(alpha: 0.2),
                   ),
                 ),
                 child: Center(
                   child: Icon(
                     Icons.flag_rounded,
                     size: AppDimens.iconSm,
-                    color: AppColors.progressSage,
+                    color: colors.progressSage,
                   ),
                 ),
               ),
@@ -58,14 +59,14 @@ class GoalsEmptyCard extends StatelessWidget {
                     Text(
                       'Set your first goal',
                       style: AppTextStyles.titleMedium.copyWith(
-                        color: AppColors.progressTextPrimary,
+                        color: colors.progressTextPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       'Track your progress toward what matters most.',
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.progressTextMuted,
+                        color: colors.progressTextMuted,
                       ),
                     ),
                   ],
@@ -78,16 +79,16 @@ class GoalsEmptyCard extends StatelessWidget {
                   vertical: AppDimens.spaceXs + 2,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.progressSage.withValues(alpha: 0.1),
+                  color: colors.progressSage.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppDimens.radiusButton),
                   border: Border.all(
-                    color: AppColors.progressSage.withValues(alpha: 0.25),
+                    color: colors.progressSage.withValues(alpha: 0.25),
                   ),
                 ),
                 child: Text(
                   'Add Goal',
                   style: AppTextStyles.labelMedium.copyWith(
-                    color: AppColors.progressSage,
+                    color: colors.progressSage,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
