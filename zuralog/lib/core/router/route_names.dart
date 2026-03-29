@@ -82,6 +82,18 @@ abstract final class RouteNames {
   /// Path for the profile questionnaire screen.
   static const String profileQuestionnairePath = '/auth/profile-questionnaire';
 
+  /// Name for the forgot-password screen.
+  static const String forgotPassword = 'forgotPassword';
+
+  /// Path for the forgot-password screen.
+  static const String forgotPasswordPath = '/auth/forgot-password';
+
+  /// Name for the post-registration "check your inbox" confirmation screen.
+  static const String checkInbox = 'checkInbox';
+
+  /// Path for the check-inbox screen.
+  static const String checkInboxPath = '/auth/check-inbox';
+
   // ── Tab 0: Today ─────────────────────────────────────────────────────────
 
   /// Name for the Today Feed tab root.
@@ -360,5 +372,7 @@ abstract final class RouteNames {
     loginPath,
     registerPath,
     profileQuestionnairePath,
+    forgotPasswordPath,
+    checkInboxPath,
   };
 }

@@ -488,7 +488,7 @@ class _AuthActions extends StatelessWidget {
 
         // Email — text variant
         ZButton(
-          label: 'Log in with Email',
+          label: 'Continue with Email',
           variant: ZButtonVariant.text,
           size: ZButtonSize.medium,
           onPressed: isLoading ? null : onEmail,
