@@ -183,7 +183,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   child: Center(
                     child: CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.primary,
+                        AppColorsOf(context).primary,
                       ),
                     ),
                   ),
@@ -571,9 +571,9 @@ class _LegalFooterState extends State<_LegalFooter> {
           TextSpan(
             text: 'Terms of Service',
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.primary,
+              color: AppColorsOf(context).primary,
               decoration: TextDecoration.underline,
-              decorationColor: AppColors.primary,
+              decorationColor: AppColorsOf(context).primary,
             ),
             recognizer: _tosRecognizer,
           ),
@@ -581,9 +581,9 @@ class _LegalFooterState extends State<_LegalFooter> {
           TextSpan(
             text: 'Privacy Policy',
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.primary,
+              color: AppColorsOf(context).primary,
               decoration: TextDecoration.underline,
-              decorationColor: AppColors.primary,
+              decorationColor: AppColorsOf(context).primary,
             ),
             recognizer: _privacyRecognizer,
           ),
