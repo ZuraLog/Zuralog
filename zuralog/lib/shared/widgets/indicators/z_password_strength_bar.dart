@@ -1,25 +1,28 @@
 /// Zuralog Design System — Password Strength Bar Widget.
 ///
-/// Displays a colour-coded bar and label below a password input field,
+/// Displays a 4-segment animated bar and label below a password input field,
 /// giving the user immediate feedback on how strong their password is.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/app_text_styles.dart';
 
-/// Password strength bar for the change-password sheet.
+/// Password strength bar for auth screens.
 ///
-/// Takes [password] and renders a coloured strength bar with a label.
+/// Takes [password] and renders a 4-segment animated strength bar with a
+/// label and hint text below it.
 ///
 /// Strength levels:
-/// - Empty string → no bar shown ([SizedBox.shrink])
-/// - Length 1–7 → Weak (red, 1/3 width) — will be rejected by the server
-/// - Length 8+ with mixed letters & digits → Strong (green, full width)
-/// - Length 8+ but only letters OR only digits → Fair (orange, 2/3 width)
+/// - Empty string → nothing shown ([SizedBox.shrink])
+/// - Weak: < 8 chars → 1 segment lit, red
+/// - Fair: 8+ chars but letters-only OR digits-only → 2 segments lit, orange
+/// - Good: 8+ chars with letters + digits → 3 segments lit, yellow-orange
+/// - Strong: 8+ chars with letters + digits + symbol → 4 segments lit, green
 ///
 /// Example:
 /// ```dart
-/// ZPasswordStrengthBar(password: _newPasswordController.text)
+/// ZPasswordStrengthBar(password: _passwordController.text)
 /// ```
 class ZPasswordStrengthBar extends StatelessWidget {
   const ZPasswordStrengthBar({super.key, required this.password});
@@ -30,63 +33,105 @@ class ZPasswordStrengthBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (password.isEmpty) return const SizedBox.shrink();
-    final strength = _strength(password);
+
+    final colors = AppColorsOf(context);
+    final level = _strengthLevel(password);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(2),
-          child: SizedBox(
-            height: 4,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return Row(
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      width: constraints.maxWidth * strength.fraction,
-                      color: strength.color,
-                    ),
-                    Expanded(
-                      child: Container(
-                        color: Colors.white.withValues(alpha: 0.1),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
+        Row(
+          children: [
+            for (int i = 0; i < 4; i++) ...[
+              if (i > 0) const SizedBox(width: 4),
+              Expanded(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: i < level.activeSegments
+                        ? level.color
+                        : colors.surfaceRaised,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: 4),
-        Text(
-          strength.label,
-          style: TextStyle(
-            fontSize: 11,
-            color: strength.color,
-            fontWeight: FontWeight.w500,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              level.label,
+              style: AppTextStyles.labelSmall.copyWith(color: level.color),
+            ),
+            if (level.hint.isNotEmpty)
+              Text(
+                level.hint,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+          ],
         ),
       ],
     );
   }
 
-  _Strength _strength(String pw) {
-    if (pw.length < 8) return _Strength(AppColors.statusError, 1 / 3, 'Weak');
+  _StrengthLevel _strengthLevel(String pw) {
+    if (pw.length < 8) {
+      return const _StrengthLevel(
+        activeSegments: 1,
+        color: AppColors.statusError,
+        label: 'Weak',
+        hint: 'Use 8+ characters',
+      );
+    }
+
     final hasLetter = pw.contains(RegExp(r'[A-Za-z]'));
     final hasDigit = pw.contains(RegExp(r'\d'));
-    if (pw.length >= 8 && hasLetter && hasDigit) {
-      return _Strength(AppColors.statusConnected, 1.0, 'Strong');
+    final hasSymbol = pw.contains(RegExp(r'[^A-Za-z\d]'));
+
+    if (hasLetter && hasDigit && hasSymbol) {
+      return const _StrengthLevel(
+        activeSegments: 4,
+        color: AppColors.statusConnected,
+        label: 'Strong',
+        hint: '',
+      );
     }
-    return _Strength(AppColors.statusConnecting, 2 / 3, 'Fair');
+
+    if (hasLetter && hasDigit) {
+      return const _StrengthLevel(
+        activeSegments: 3,
+        color: Color(0xFFFFB347),
+        label: 'Good',
+        hint: 'Add a symbol to strengthen it',
+      );
+    }
+
+    return const _StrengthLevel(
+      activeSegments: 2,
+      color: AppColors.statusConnecting,
+      label: 'Fair',
+      hint: 'Add numbers to strengthen',
+    );
   }
 }
 
-class _Strength {
-  const _Strength(this.color, this.fraction, this.label);
+class _StrengthLevel {
+  const _StrengthLevel({
+    required this.activeSegments,
+    required this.color,
+    required this.label,
+    required this.hint,
+  });
 
+  final int activeSegments;
   final Color color;
-  final double fraction;
   final String label;
+  final String hint;
 }
