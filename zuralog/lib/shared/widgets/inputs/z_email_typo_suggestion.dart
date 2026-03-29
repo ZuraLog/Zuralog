@@ -44,7 +44,11 @@ const Map<String, String> _domainCorrections = {
 
 /// Returns a corrected email address if [email] contains a recognised domain
 /// typo, or `null` if the email looks fine (or doesn't contain an @ yet).
+///
+/// Leading and trailing whitespace is trimmed before checking, so a stray
+/// space or auto-capitalised character does not prevent detection.
 String? detectEmailTypo(String email) {
+  email = email.trim();
   final atIndex = email.indexOf('@');
   if (atIndex < 0) return null;
 
@@ -112,8 +116,8 @@ class _Chip extends StatelessWidget {
       onTap: onAccept,
       behavior: HitTestBehavior.opaque,
       child: ConstrainedBox(
-        // Enforce minimum 44pt touch target height.
-        constraints: const BoxConstraints(minHeight: 44),
+        // Enforce minimum touch target height per project standard.
+        constraints: const BoxConstraints(minHeight: AppDimens.touchTargetMin),
         child: Container(
           decoration: BoxDecoration(
             color: colors.surfaceRaised,
@@ -131,7 +135,7 @@ class _Chip extends StatelessWidget {
                 size: 16,
                 color: textSecondary,
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: AppDimens.spaceSm),
               Flexible(
                 child: RichText(
                   text: TextSpan(
