@@ -91,7 +91,7 @@ class _ZButtonState extends State<ZButton> {
       case ZButtonVariant.primary:
         return colors.primary;
       case ZButtonVariant.destructive:
-        return AppColors.error;
+        return colors.error;
       case ZButtonVariant.secondary:
       case ZButtonVariant.text:
         return Colors.transparent;

@@ -32,7 +32,7 @@ class ZCircularProgress extends StatelessWidget {
   /// Progress value between 0.0 and 1.0, or null for indeterminate.
   final double? value;
 
-  /// Arc color. Defaults to Sage Green ([AppColors.primary]).
+  /// Arc color. Defaults to the theme's primary (Sage Green in dark mode, Forest Green in light mode).
   final Color? color;
 
   @override
