@@ -243,7 +243,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 offset: suggestion.length,
                               );
                             }
-                            setState(() {});
+                            _validateEmailInline(_emailCtrl.text);
                           },
                         ),
                         const SizedBox(height: AppDimens.spaceMd),
@@ -340,8 +340,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 color: colors.textSecondary,
                               ),
                             ),
-                            GestureDetector(
-                              onTap: () =>
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                minimumSize: Size.zero,
+                                tapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              onPressed: () =>
                                   context.go(RouteNames.registerPath),
                               child: Text(
                                 'Sign up',
