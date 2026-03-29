@@ -49,14 +49,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     setState(() => _isLoading = true);
 
-    await Future.delayed(const Duration(milliseconds: 800));
+    try {
+      await Future.delayed(const Duration(milliseconds: 800));
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    context.go(
-      '${RouteNames.checkInboxPath}'
-      '?email=${Uri.encodeComponent(email)}&context=reset',
-    );
+      context.go(
+        '${RouteNames.checkInboxPath}'
+        '?email=${Uri.encodeComponent(email)}&context=reset',
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -96,18 +100,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // ── Icon tile ─────────────────────────────────────────
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: colors.surfaceRaised,
-                          borderRadius:
-                              BorderRadius.circular(AppDimens.shapeMd),
-                        ),
-                        child: Icon(
-                          Icons.lock_reset_rounded,
-                          size: 28,
-                          color: colors.textSecondary,
+                      Center(
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: colors.surfaceRaised,
+                            borderRadius:
+                                BorderRadius.circular(AppDimens.shapeMd),
+                          ),
+                          child: Icon(
+                            Icons.lock_reset_rounded,
+                            size: 28,
+                            color: colors.textSecondary,
+                          ),
                         ),
                       ),
                       const SizedBox(height: AppDimens.spaceLg),
