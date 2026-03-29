@@ -23,7 +23,7 @@ class TermsOfServiceScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ZuralogScaffold(
-      appBar: ZuralogAppBar(title: 'Terms of Service'),
+      appBar: const ZuralogAppBar(title: 'Terms of Service', showProfileAvatar: false),
       body: ListView(
         padding: const EdgeInsets.symmetric(
           horizontal: AppDimens.spaceMd,
@@ -167,7 +167,7 @@ class TermsOfServiceScreen extends StatelessWidget {
             body:
                 'Questions about these Terms? Contact us at:\n\n'
                 'Zuralog, Inc.\n'
-                'legal@zuralog.com\n'
+                'support@zuralog.com\n'
                 'https://zuralog.com/terms',
           ),
           SizedBox(height: AppDimens.spaceXxl),

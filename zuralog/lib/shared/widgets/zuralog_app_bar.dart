@@ -50,6 +50,7 @@ class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.leading,
     this.actions,
     this.tooltipConfig,
+    this.showProfileAvatar = true,
   });
 
   /// The title text displayed in the app bar.
@@ -66,6 +67,9 @@ class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   /// When provided, wraps the title in an [OnboardingTooltip].
   final ZuralogAppBarTooltipConfig? tooltipConfig;
+
+  /// Whether to show the profile avatar button in the top-right corner.
+  final bool showProfileAvatar;
 
   /// Extra height added when a subtitle is present, based on bodySmall line
   /// height (12pt × 1.4) plus 4px spacing.
@@ -107,10 +111,11 @@ class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
 
     final fullActions = [
       ...?actions,
-      const Padding(
-        padding: EdgeInsets.only(right: AppDimens.spaceMd),
-        child: ProfileAvatarButton(),
-      ),
+      if (showProfileAvatar)
+        const Padding(
+          padding: EdgeInsets.only(right: AppDimens.spaceMd),
+          child: ProfileAvatarButton(),
+        ),
     ];
 
     return AppBar(
