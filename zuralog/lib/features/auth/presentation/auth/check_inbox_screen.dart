@@ -133,19 +133,13 @@ class _CheckInboxScreenState extends ConsumerState<CheckInboxScreen> {
 
           // Scrollable content.
           Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                    child: IntrinsicHeight(
-                      child: Padding(
+            child: SingleChildScrollView(
+              child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.spaceLg,
                   vertical: AppDimens.spaceLg,
                 ),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // ── Mail icon tile ──────────────────────────────────────
@@ -317,10 +311,6 @@ class _CheckInboxScreenState extends ConsumerState<CheckInboxScreen> {
                 ),
               ),
             ),
-          ),
-          );
-        },
-      ),
           ),
         ],
       ),

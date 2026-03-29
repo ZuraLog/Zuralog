@@ -186,13 +186,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
           // Scrollable form content.
           Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                    child: IntrinsicHeight(
-                      child: AutofillGroup(
+            child: SingleChildScrollView(
+              child: AutofillGroup(
                 child: Form(
                   key: _formKey,
                   child: Padding(
@@ -201,7 +196,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       vertical: AppDimens.spaceLg,
                     ),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         // ── Headline ──────────────────────────────────────
@@ -371,10 +365,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
               ),
             ),
-          ),
-          );
-        },
-      ),
           ),
         ],
       ),

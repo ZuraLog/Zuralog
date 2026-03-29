@@ -88,13 +88,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
           // Scrollable form content.
           Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                    child: IntrinsicHeight(
-                      child: Padding(
+            child: SingleChildScrollView(
+              child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.spaceLg,
                   vertical: AppDimens.spaceLg,
@@ -102,7 +97,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 child: Form(
                   key: _formKey,
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // ── Icon tile ─────────────────────────────────────────
@@ -204,10 +198,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
               ),
             ),
-          ),
-          );
-        },
-      ),
           ),
         ],
       ),
