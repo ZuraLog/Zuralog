@@ -8,14 +8,17 @@
 /// 2. If [AuthState.unauthenticated] and the destination is a protected route
 ///    → redirect to [RouteNames.welcomePath].
 /// 3. If [AuthState.authenticated] and the destination is a public auth route,
-///    **except** [RouteNames.profileQuestionnairePath] or
-///    [RouteNames.checkInboxPath] → redirect to [RouteNames.todayPath]
+///    **except** [RouteNames.profileQuestionnairePath],
+///    [RouteNames.checkInboxPath], or [RouteNames.resetPasswordPath]
+///    → redirect to [RouteNames.todayPath]
 ///    (prevent back-navigation to login).
 ///    The questionnaire is excluded because authenticated new users must be
 ///    allowed to stay on it until [UserProfile.onboardingComplete] is `true`.
 ///    The check-inbox screen is excluded because Supabase creates a session
 ///    immediately on sign-up; without the exception the guard bounces the user
 ///    away before they see the email-verification prompt.
+///    The reset-password screen is excluded so a user who is already logged in
+///    on another device can still complete the password-reset deep link flow.
 /// 4. Otherwise → return `null` (allow navigation).
 library;
 
@@ -60,7 +63,8 @@ String? authGuardRedirect({
   if (authState == AuthState.authenticated &&
       isPublicPath &&
       location != RouteNames.profileQuestionnairePath &&
-      location != RouteNames.checkInboxPath) {
+      location != RouteNames.checkInboxPath &&
+      location != RouteNames.resetPasswordPath) {
     return RouteNames.todayPath;
   }
 
