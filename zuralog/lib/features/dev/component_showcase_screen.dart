@@ -1280,7 +1280,7 @@ class _ComponentShowcaseScreenState
           runSpacing: AppDimens.spaceSm,
           children: [
             for (final v in [
-              (ZPatternVariant.sage, 'Sage', AppColors.primary),
+              (ZPatternVariant.sage, 'Sage', _colors!.primary),
               (ZPatternVariant.crimson, 'Crimson', AppColors.error),
               (ZPatternVariant.periwinkle, 'Periwinkle', AppColors.categorySleep),
               (ZPatternVariant.rose, 'Rose', AppColors.categoryHeart),
@@ -1305,7 +1305,7 @@ class _ComponentShowcaseScreenState
                         child: Text(
                           v.$2,
                           style: AppTextStyles.labelSmall
-                              .copyWith(color: AppColors.textOnSage),
+                              .copyWith(color: _colors!.textOnSage),
                         ),
                       ),
                     ],
