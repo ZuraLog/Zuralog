@@ -38,6 +38,7 @@ export 'feedback/z_tooltip.dart';
 export 'inputs/app_text_field.dart';
 export 'inputs/z_otp_input.dart';
 export 'inputs/z_password_field.dart';
+export 'inputs/z_password_requirements.dart';
 export 'inputs/z_rating_bar.dart';
 export 'inputs/z_checkbox.dart';
 export 'inputs/z_chip.dart';
