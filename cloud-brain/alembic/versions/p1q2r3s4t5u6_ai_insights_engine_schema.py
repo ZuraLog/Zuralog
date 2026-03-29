@@ -65,7 +65,7 @@ def upgrade() -> None:
     # ------------------------------------------------------------------
     op.execute("""
         UPDATE insights
-        SET generation_date = COALESCE(date, DATE(created_at AT TIME ZONE 'UTC'))
+        SET generation_date = DATE(created_at AT TIME ZONE 'UTC')
         WHERE generation_date IS NULL
     """)
 
