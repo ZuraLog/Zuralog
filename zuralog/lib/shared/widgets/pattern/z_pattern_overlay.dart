@@ -31,6 +31,23 @@ enum ZPatternVariant {
   String get assetPath => 'assets/brand/pattern/$filename';
 }
 
+/// Returns the effective [ZPatternVariant] for the current theme.
+///
+/// In light mode, [ZPatternVariant.sage] is swapped for [ZPatternVariant.original]
+/// to match the CSS rule: `--ds-pattern-sage: url('/patterns/original.png')`.
+ZPatternVariant effectivePatternVariant(ZPatternVariant requested, bool isLight) {
+  if (isLight && requested == ZPatternVariant.sage) return ZPatternVariant.original;
+  return requested;
+}
+
+/// Returns the effective opacity for the current theme.
+///
+/// In light mode, opacity is multiplied by 1.6 (capped at 1.0) to compensate
+/// for the lack of CSS `mix-blend-mode: color-burn` on light surfaces.
+double effectivePatternOpacity(double opacity, bool isLight) {
+  return isLight ? (opacity * 1.6).clamp(0.0, 1.0) : opacity;
+}
+
 /// Returns the correct pattern variant for a health category color.
 ZPatternVariant patternForCategory(Color category) {
   if (category == AppColors.categoryActivity) return ZPatternVariant.green;
@@ -85,7 +102,7 @@ class ZPatternOverlay extends StatefulWidget {
   /// Which pre-colored pattern PNG to use.
   final ZPatternVariant variant;
 
-  /// Pattern opacity (0.0 – 1.0). Recommended values:
+  /// Pattern opacity (0.0 – 1.0). Recommended values in dark mode:
   /// - Hero cards: 0.18
   /// - Feature cards: 0.15
   /// - Buttons (primary/destructive): 0.60
@@ -93,6 +110,9 @@ class ZPatternOverlay extends StatefulWidget {
   /// - Empty states: 0.06
   /// - Search bar: 0.05
   /// - Tab track: 0.04
+  ///
+  /// In light mode, this value is automatically multiplied by 1.6 (capped at 1.0)
+  /// to compensate for the absence of CSS `mix-blend-mode: color-burn`.
   final double opacity;
 
   /// Kept for API compatibility but no longer used for rendering.
@@ -179,42 +199,24 @@ class _ZPatternOverlayState extends State<ZPatternOverlay>
     return Alignment.lerp(_start, _end, _controller!.value)!;
   }
 
-  /// Resolves which pattern variant to actually render.
-  ///
-  /// In light mode, "sage" maps to "original" to match the CSS rule:
-  ///   `[data-theme="light"] { --ds-pattern-sage: url('/patterns/original.png'); }`
-  static ZPatternVariant _effectiveVariant(
-      ZPatternVariant requested, bool isLight) {
-    if (isLight && requested == ZPatternVariant.sage) {
-      return ZPatternVariant.original;
-    }
-    return requested;
-  }
-
   @override
   Widget build(BuildContext context) {
     final isLight = Theme.of(context).brightness == Brightness.light;
-
-    // In light mode we multiply opacity by 1.6 (capped at 1.0) to compensate
-    // for the absence of CSS mix-blend-mode:color-burn, which the website uses
-    // to intensify pattern contrast on light beige surfaces.
-    final effectiveOpacity =
-        isLight ? (widget.opacity * 1.6).clamp(0.0, 1.0) : widget.opacity;
-
-    final effectiveVariant = _effectiveVariant(widget.variant, isLight);
+    final resolvedOpacity = effectivePatternOpacity(widget.opacity, isLight);
+    final resolvedVariant = effectivePatternVariant(widget.variant, isLight);
 
     final alignment = _controller != null
         ? AnimatedBuilder(
             animation: _controller!,
             builder: (context, child) =>
-                _buildContainer(_currentAlignment, effectiveVariant),
+                _buildContainer(_currentAlignment, resolvedVariant),
           )
-        : _buildContainer(Alignment.center, effectiveVariant);
+        : _buildContainer(Alignment.center, resolvedVariant);
 
     return ExcludeSemantics(
       child: IgnorePointer(
         child: Opacity(
-          opacity: effectiveOpacity,
+          opacity: resolvedOpacity,
           child: alignment,
         ),
       ),
