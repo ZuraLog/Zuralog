@@ -17,9 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/state/side_panel_provider.dart';
-import 'package:zuralog/core/theme/app_colors.dart';
-import 'package:zuralog/core/theme/app_dimens.dart';
-import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 
 // ── ProfileAvatarButton ───────────────────────────────────────────────────────
@@ -42,6 +40,7 @@ class ProfileAvatarButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     final email = ref.watch(userEmailProvider);
     final profile = ref.watch(userProfileProvider);
 
@@ -58,11 +57,11 @@ class ProfileAvatarButton extends ConsumerWidget {
       behavior: HitTestBehavior.opaque,
       child: CircleAvatar(
         radius: AppDimens.avatarMd / 2,
-        backgroundColor: AppColors.primary.withValues(alpha: 0.85),
+        backgroundColor: colors.primary.withValues(alpha: 0.85),
         child: Text(
           initial,
           style: AppTextStyles.body.copyWith(
-            color: AppColors.primaryButtonText,
+            color: colors.textOnSage,
             fontWeight: FontWeight.w700,
           ),
         ),

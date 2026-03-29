@@ -64,6 +64,9 @@ class _ZOtpInputState extends State<ZOtpInput> {
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
 
+  /// Guards against firing [onCompleted] more than once per full entry.
+  bool _hasCompleted = false;
+
   /// Slot dimensions from the brand bible spec.
   static const double _slotWidth = 48;
   static const double _slotHeight = 56;
@@ -92,6 +95,10 @@ class _ZOtpInputState extends State<ZOtpInput> {
     if (widget.enabled && !oldWidget.enabled) {
       _focusNode.requestFocus();
     }
+    // If disabled, release focus immediately.
+    if (!widget.enabled && oldWidget.enabled) {
+      _focusNode.unfocus();
+    }
   }
 
   @override
@@ -109,7 +116,12 @@ class _ZOtpInputState extends State<ZOtpInput> {
     final text = _controller.text;
     widget.onChanged?.call(text);
 
-    if (text.length == widget.length) {
+    if (text.length < widget.length) {
+      // Reset the guard whenever the user deletes a character.
+      _hasCompleted = false;
+    } else if (!_hasCompleted) {
+      // Fire onCompleted exactly once per complete entry.
+      _hasCompleted = true;
       widget.onCompleted?.call(text);
     }
 
@@ -138,9 +150,9 @@ class _ZOtpInputState extends State<ZOtpInput> {
     return Semantics(
       label: 'One-time password input',
       child: Opacity(
-        opacity: widget.enabled ? 1.0 : 0.4,
-        child: AbsorbPointer(
-          absorbing: !widget.enabled,
+        opacity: widget.enabled ? 1.0 : AppDimens.disabledOpacity,
+        child: IgnorePointer(
+          ignoring: !widget.enabled,
           child: Stack(
             children: [
               // ── Visual slots row ─────────────────────────────────────
@@ -171,33 +183,38 @@ class _ZOtpInputState extends State<ZOtpInput> {
               ),
 
               // ── Hidden TextField that drives keyboard input ──────────
+              // IgnorePointer blocks OS paste popups from intercepting
+              // touches through the invisible overlay.
               Positioned.fill(
-                child: ExcludeSemantics(
-                  child: Opacity(
-                    opacity: 0,
-                    child: TextField(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    keyboardType: TextInputType.number,
-                    textInputAction: TextInputAction.done,
-                    maxLength: widget.length,
-                    enableSuggestions: false,
-                    autocorrect: false,
-                    showCursor: false,
-                    decoration: const InputDecoration(
-                      counterText: '',
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp('[0-9]')),
-                      LengthLimitingTextInputFormatter(widget.length),
-                    ],
-                    style: const TextStyle(
-                      color: Colors.transparent,
-                      height: 0.01,
-                      fontSize: 1,
-                    ),
+                child: IgnorePointer(
+                  child: ExcludeSemantics(
+                    child: Opacity(
+                      opacity: 0,
+                      child: TextField(
+                        controller: _controller,
+                        focusNode: _focusNode,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.done,
+                        maxLength: widget.length,
+                        enableSuggestions: false,
+                        autocorrect: false,
+                        showCursor: false,
+                        onSubmitted: (_) => _focusNode.unfocus(),
+                        decoration: const InputDecoration(
+                          counterText: '',
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp('[0-9]')),
+                          LengthLimitingTextInputFormatter(widget.length),
+                        ],
+                        style: const TextStyle(
+                          color: Colors.transparent,
+                          height: 0.01,
+                          fontSize: 1,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -241,7 +258,7 @@ class _Slot extends StatelessWidget {
     } else if (isFocused) {
       borderSide = BorderSide(
         // Sage at 30% opacity per spec.
-        color: AppColors.primary.withValues(alpha: 0.3),
+        color: colors.primary.withValues(alpha: 0.3),
         width: _ZOtpInputState._borderWidth,
       );
     } else {
@@ -271,7 +288,7 @@ class _Slot extends StatelessWidget {
                 ),
               )
             : isFocused
-                ? _BlinkingCursor(color: AppColors.primary)
+                ? _BlinkingCursor(color: colors.primary)
                 : const SizedBox.shrink(),
       ),
     );

@@ -13,7 +13,7 @@ import 'package:zuralog/core/theme/theme.dart';
 /// The trigger looks like a text field (Surface background, shapeSm radius)
 /// with a chevron on the right. Tapping it opens a modal bottom sheet at
 /// surfaceOverlay level showing the list of options.
-class ZSelect extends StatelessWidget {
+class ZSelect extends StatefulWidget {
   const ZSelect({
     super.key,
     this.value,
@@ -42,83 +42,102 @@ class ZSelect extends StatelessWidget {
   /// Whether the select is interactive.
   final bool enabled;
 
-  bool get _canOpen => enabled && onChanged != null && options.isNotEmpty;
+  @override
+  State<ZSelect> createState() => _ZSelectState();
+}
+
+class _ZSelectState extends State<ZSelect> {
+  bool _sheetOpen = false;
+
+  bool get _canOpen =>
+      widget.enabled && widget.onChanged != null && widget.options.isNotEmpty;
 
   void _showOptions(BuildContext context) {
+    if (_sheetOpen) return;
+    setState(() => _sheetOpen = true);
+
     showModalBottomSheet<String>(
       context: context,
-      backgroundColor: AppColors.surfaceOverlay,
+      backgroundColor: AppColorsOf(context).surfaceOverlay,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppDimens.shapeXl),
         ),
       ),
       builder: (context) {
+        final sheetColors = AppColorsOf(context);
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Drag handle.
-              Padding(
-                padding: const EdgeInsets.only(top: AppDimens.spaceSm),
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.textSecondary.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(2),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Drag handle.
+                Padding(
+                  padding: const EdgeInsets.only(top: AppDimens.spaceSm),
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: sheetColors.textSecondary.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: AppDimens.spaceSm),
-              // Option list.
-              ...options.map((option) {
-                final isSelected = option == value;
-                return InkWell(
-                  onTap: () {
-                    Navigator.pop(context);
-                    onChanged?.call(option);
-                  },
-                  child: Container(
-                    height: 48,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppDimens.spaceMd,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            option,
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.textPrimaryDark,
+                const SizedBox(height: AppDimens.spaceSm),
+                // Option list.
+                ...widget.options.map((option) {
+                  final isSelected = option == widget.value;
+                  return InkWell(
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onChanged?.call(option);
+                    },
+                    child: Container(
+                      height: 48,
+                      color: sheetColors.surface,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.spaceMd,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              option,
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: sheetColors.textPrimary,
+                              ),
                             ),
                           ),
-                        ),
-                        if (isSelected)
-                          const Icon(
-                            Icons.check,
-                            size: 20,
-                            color: AppColors.primary,
-                          ),
-                      ],
+                          if (isSelected)
+                            Icon(
+                              Icons.check,
+                              size: 20,
+                              color: sheetColors.primary,
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              }),
-              const SizedBox(height: AppDimens.spaceMd),
-            ],
+                  );
+                }),
+                const SizedBox(height: AppDimens.spaceMd),
+              ],
+            ),
           ),
         );
       },
-    );
+    ).then((_) => setState(() => _sheetOpen = false));
   }
 
   @override
   Widget build(BuildContext context) {
-    final hasValue = value != null && value!.isNotEmpty;
+    final colors = AppColorsOf(context);
+    final hasValue = widget.value != null && widget.value!.isNotEmpty;
 
-    final trigger = Opacity(
-      opacity: enabled ? 1.0 : 0.4,
+    final trigger = IgnorePointer(
+      ignoring: !widget.enabled,
+      child: Opacity(
+      opacity: widget.enabled ? 1.0 : AppDimens.disabledOpacity,
       child: GestureDetector(
       onTap: _canOpen ? () => _showOptions(context) : null,
       child: Container(
@@ -127,42 +146,43 @@ class ZSelect extends StatelessWidget {
           vertical: AppDimens.spaceSm + 4,
         ),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.shapeSm),
         ),
         child: Row(
           children: [
             Expanded(
               child: Text(
-                hasValue ? value! : (placeholder ?? ''),
+                hasValue ? widget.value! : (widget.placeholder ?? ''),
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: hasValue
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textSecondary,
+                      ? colors.textPrimary
+                      : colors.textSecondary,
                 ),
               ),
             ),
-            const Icon(
+            Icon(
               Icons.expand_more,
               size: 20,
-              color: AppColors.textSecondary,
+              color: colors.textSecondary,
             ),
           ],
         ),
       ),
     ),
+      ),
     );
 
-    if (label == null) return trigger;
+    if (widget.label == null) return trigger;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          label!,
+          widget.label!,
           style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textPrimaryDark,
+            color: colors.textPrimary,
           ),
         ),
         const SizedBox(height: AppDimens.spaceXs),

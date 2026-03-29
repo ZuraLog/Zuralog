@@ -208,7 +208,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
                 suffixText: isImperial ? 'oz' : 'ml',
               ),
               onChanged: _onCustomChanged,
-              cursorColor: AppColors.primary,
+              cursorColor: colors.primary,
             ),
           ],
 
@@ -251,8 +251,8 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
           FilledButton(
             onPressed: _canSave ? _handleSave : null,
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.primaryButtonText,
+              backgroundColor: colors.primary,
+              foregroundColor: colors.textOnSage,
               shape: RoundedRectangleBorder(
                 borderRadius:
                     BorderRadius.circular(AppDimens.radiusButton),

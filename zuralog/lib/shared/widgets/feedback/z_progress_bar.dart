@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart'
-    show ZPatternVariant;
+    show ZPatternVariant, effectivePatternVariant, effectivePatternOpacity;
 
 /// A horizontal progress bar with a Sage-colored fill and brand pattern.
 ///
@@ -41,6 +41,9 @@ class ZProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    final patternImage = effectivePatternVariant(ZPatternVariant.sage, isLight).assetPath;
+    final patternOpacity = effectivePatternOpacity(0.5, isLight);
     final hasLabels = label != null || valueLabel != null;
 
     return Column(
@@ -64,7 +67,7 @@ class ZProgressBar extends StatelessWidget {
                 Text(
                   valueLabel!,
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.primary,
+                    color: colors.primary,
                   ),
                 )
               else
@@ -79,43 +82,48 @@ class ZProgressBar extends StatelessWidget {
           borderRadius: BorderRadius.circular(3),
           child: SizedBox(
             height: 6,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final totalWidth = constraints.maxWidth;
-                final fillWidth = totalWidth * value;
-
-                return Stack(
-                  children: [
-                    // Inactive track (full width).
-                    Container(
-                      width: totalWidth,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceRaised,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
+            child: Stack(
+              children: [
+                // Inactive track (full width).
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: colors.surfaceRaised,
+                      borderRadius: BorderRadius.circular(3),
                     ),
+                  ),
+                ),
 
-                    // Active track — sage pattern as the fill.
-                    AnimatedContainer(
-                      duration: animate
-                          ? AppMotion.durationMedium
-                          : Duration.zero,
-                      curve: AppMotion.curveEntrance,
-                      width: fillWidth,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(3),
-                        image: DecorationImage(
-                          image:
-                              AssetImage(ZPatternVariant.sage.assetPath),
-                          fit: BoxFit.cover,
+                // Active track — TweenAnimationBuilder ensures the animation
+                // actually fires on a StatelessWidget (AnimatedContainer
+                // requires prior state to interpolate from).
+                Positioned.fill(
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0, end: value.clamp(0.0, 1.0)),
+                    duration: animate
+                        ? AppMotion.durationMedium
+                        : Duration.zero,
+                    curve: AppMotion.curveEntrance,
+                    builder: (context, animatedValue, _) {
+                      if (animatedValue == 0) return const SizedBox.shrink();
+                      return FractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: animatedValue,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(3),
+                            image: DecorationImage(
+                              image: AssetImage(patternImage),
+                              fit: BoxFit.cover,
+                              opacity: patternOpacity,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
-                );
-              },
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         ),

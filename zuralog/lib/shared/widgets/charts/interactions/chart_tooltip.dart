@@ -35,13 +35,14 @@ class ZChartTooltip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Semantics(
       label: _buildSemanticLabel(),
       excludeSemantics: true,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
-          color: AppColors.surfaceRaised,
+          color: colors.surfaceRaised,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -52,7 +53,7 @@ class ZChartTooltip extends StatelessWidget {
               Text(
                 DateFormat('EEE, MMM d').format(date!),
                 style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.warmWhite.withValues(alpha: 0.6),
+                  color: colors.textPrimary.withValues(alpha: 0.6),
                 ),
               ),
             if (date != null) const SizedBox(height: 2),
@@ -60,14 +61,14 @@ class ZChartTooltip extends StatelessWidget {
               Text(
                 label!,
                 style: AppTextStyles.labelMedium.copyWith(
-                  color: AppColors.warmWhite,
+                  color: colors.textPrimary,
                 ),
               )
             else
               Text(
                 '${_formatValue(value)} $unit',
                 style: AppTextStyles.labelMedium.copyWith(
-                  color: AppColors.warmWhite,
+                  color: colors.textPrimary,
                 ),
               ),
             if (comparisonValue != null) ...[
@@ -75,7 +76,7 @@ class ZChartTooltip extends StatelessWidget {
               Text(
                 '${_formatValue(comparisonValue!)} $unit  (prev)',
                 style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.warmWhite.withValues(alpha: 0.5),
+                  color: colors.textPrimary.withValues(alpha: 0.5),
                 ),
               ),
             ],

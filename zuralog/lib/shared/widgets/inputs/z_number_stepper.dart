@@ -4,7 +4,10 @@
 /// to avoid conflict with Flutter's built-in Stepper widget.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 
@@ -41,17 +44,24 @@ class ZNumberStepper extends StatelessWidget {
   void _decrement() {
     if (onChanged == null) return;
     final next = (value - step).clamp(min, max);
-    if (next != value) onChanged!(next);
+    if (next != value) {
+      HapticFeedback.lightImpact();
+      onChanged!(next);
+    }
   }
 
   void _increment() {
     if (onChanged == null) return;
     final next = (value + step).clamp(min, max);
-    if (next != value) onChanged!(next);
+    if (next != value) {
+      HapticFeedback.lightImpact();
+      onChanged!(next);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final canDecrement = value > min;
     final canIncrement = value < max;
 
@@ -59,10 +69,14 @@ class ZNumberStepper extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         // Minus button.
-        _StepperButton(
-          icon: Icons.remove,
-          onTap: canDecrement ? _decrement : null,
-          enabled: canDecrement && onChanged != null,
+        Semantics(
+          label: 'Decrease value',
+          button: true,
+          child: _StepperButton(
+            icon: Icons.remove,
+            onTap: canDecrement ? _decrement : null,
+            enabled: canDecrement && onChanged != null,
+          ),
         ),
         // Value display.
         SizedBox(
@@ -70,28 +84,36 @@ class ZNumberStepper extends StatelessWidget {
           child: Center(
             child: AnimatedSwitcher(
               duration: AppMotion.durationFast,
-              child: Text(
-                '$value',
-                key: ValueKey(value),
-                style: AppTextStyles.displaySmall.copyWith(
-                  color: AppColors.textPrimaryDark,
+              child: Semantics(
+                value: '$value',
+                liveRegion: true,
+                child: Text(
+                  '$value',
+                  key: ValueKey(value),
+                  style: AppTextStyles.displaySmall.copyWith(
+                    color: colors.textPrimary,
+                  ),
                 ),
               ),
             ),
           ),
         ),
         // Plus button.
-        _StepperButton(
-          icon: Icons.add,
-          onTap: canIncrement ? _increment : null,
-          enabled: canIncrement && onChanged != null,
+        Semantics(
+          label: 'Increase value',
+          button: true,
+          child: _StepperButton(
+            icon: Icons.add,
+            onTap: canIncrement ? _increment : null,
+            enabled: canIncrement && onChanged != null,
+          ),
         ),
       ],
     );
   }
 }
 
-class _StepperButton extends StatelessWidget {
+class _StepperButton extends StatefulWidget {
   const _StepperButton({
     required this.icon,
     this.onTap,
@@ -103,27 +125,55 @@ class _StepperButton extends StatelessWidget {
   final bool enabled;
 
   @override
+  State<_StepperButton> createState() => _StepperButtonState();
+}
+
+class _StepperButtonState extends State<_StepperButton> {
+  Timer? _timer;
+
+  void _startLongPress() {
+    _timer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      widget.onTap?.call();
+    });
+  }
+
+  void _stopLongPress() {
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
+      onLongPressStart: widget.onTap != null ? (_) => _startLongPress() : null,
+      onLongPressEnd: (_) => _stopLongPress(),
+      onLongPressCancel: _stopLongPress,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
         width: 44,
         height: 44,
         child: Center(
           child: Opacity(
-            opacity: enabled ? 1.0 : 0.4,
+            opacity: widget.enabled ? 1.0 : AppDimens.disabledOpacity,
             child: Container(
               width: 32,
               height: 32,
-              decoration: const BoxDecoration(
-                color: AppColors.surfaceRaised,
+              decoration: BoxDecoration(
+                color: colors.surfaceRaised,
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                icon,
+                widget.icon,
                 size: 18,
-                color: AppColors.textPrimaryDark,
+                color: colors.textPrimary,
               ),
             ),
           ),

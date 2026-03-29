@@ -1,9 +1,8 @@
-/// Zuralog Edge Agent — Welcome / Auth Home Screen (v4.0 brand bible redesign).
+/// Zuralog Edge Agent — Welcome / Auth Home Screen (v5.0 lifestyle carousel redesign).
 ///
 /// The auth gate screen the user lands on after the slideshow (or on every
-/// subsequent launch). Full-screen canvas with a subtle Sage Green radial
-/// bloom at top-center, brand logo card with topographic pattern, and three
-/// auth buttons using the design system [ZButton] component.
+/// subsequent launch). A photo carousel fills the top portion of the screen
+/// with a theme-aware gradient fade; the auth action section sits below it.
 ///
 /// **Backend wiring is unchanged:**
 /// - [_handleGoogleSignIn] → [SocialAuthService.signInWithGoogle] → [authStateProvider.socialLogin]
@@ -11,11 +10,14 @@
 /// - [_showError] → [ZToast.error] overlay notification
 library;
 
+import 'dart:async';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:simple_icons/simple_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:zuralog/core/di/providers.dart';
@@ -26,6 +28,46 @@ import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
+// ── Slide data model ───────────────────────────────────────────────────────────
+
+/// A single slide in the WelcomeScreen photo carousel.
+/// To add a new photo: drop the file in assets/welcome/ and add one entry here.
+class WelcomeSlide {
+  const WelcomeSlide({required this.imagePath, required this.tagline});
+
+  final String imagePath;
+  final String tagline;
+}
+
+const List<WelcomeSlide> welcomeSlides = [
+  WelcomeSlide(
+    imagePath: 'assets/welcome/placeholder_01.jpg',
+    tagline: 'Your health,\none clear picture.',
+  ),
+  WelcomeSlide(
+    imagePath: 'assets/welcome/welcome_02.jpg',
+    tagline: 'Rest, finally\nunderstood.',
+  ),
+  WelcomeSlide(
+    imagePath: 'assets/welcome/welcome_03.jpg',
+    tagline: 'Peace of mind,\nmeasured.',
+  ),
+  WelcomeSlide(
+    imagePath: 'assets/welcome/welcome_04.jpg',
+    tagline: 'Every rep,\nrecorded.',
+  ),
+  WelcomeSlide(
+    imagePath: 'assets/welcome/welcome_05.jpg',
+    tagline: 'What you eat,\ndecoded.',
+  ),
+  WelcomeSlide(
+    imagePath: 'assets/welcome/welcome_06.jpg',
+    tagline: 'Your day,\nyour way.',
+  ),
+];
+
+// ── Screen ─────────────────────────────────────────────────────────────────────
+
 /// The auth home screen — entry point for unauthenticated users.
 ///
 /// A [ConsumerStatefulWidget] to hold the [_isLoading] flag for the social-auth
@@ -34,8 +76,6 @@ class WelcomeScreen extends ConsumerStatefulWidget {
   /// Creates a [WelcomeScreen].
   const WelcomeScreen({super.key});
 
-  static const String _logoAsset = AppAssets.logoSvg;
-
   @override
   ConsumerState<WelcomeScreen> createState() => _WelcomeScreenState();
 }
@@ -43,7 +83,7 @@ class WelcomeScreen extends ConsumerStatefulWidget {
 class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   bool _isLoading = false;
 
-  // ── Google Sign In ─────────────────────────────────────────────────────────
+  // ── Google Sign In ──────────────────────────────────────────────────────────
 
   /// Initiates the Google Sign In native flow.
   ///
@@ -82,7 +122,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     }
   }
 
-  // ── Apple Sign In ──────────────────────────────────────────────────────────
+  // ── Apple Sign In ───────────────────────────────────────────────────────────
 
   /// Initiates the Apple Sign In native flow.
   ///
@@ -101,7 +141,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     );
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
+  // ── Helpers ─────────────────────────────────────────────────────────────────
 
   void _showError(String message) {
     if (!mounted) return;
@@ -111,49 +151,52 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   @override
   Widget build(BuildContext context) {
     final safeBottom = MediaQuery.paddingOf(context).bottom;
+    final canvas = AppColorsOf(context).canvas;
 
     return ZuralogScaffold(
       useSafeArea: false,
       body: Stack(
         children: [
-          // ── Radial bloom background — Sage Green at top-center ────────
-          const Positioned.fill(child: _RadialBloom()),
+          // Two-layer layout: photo fills the top, auth buttons sit below.
+          Column(
+            children: [
+              // Layer 1 — photo carousel with bottom gradient fade.
+              //    Takes all space above the auth section.
+              const Expanded(child: _HeroCarousel()),
 
-          // ── Main content ──────────────────────────────────────────────
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceLg),
-              child: Column(
-                children: [
-                  // ── Brand area ─────────────────────────────────────────
-                  const Expanded(child: _BrandArea()),
-
-                  // ── Auth action buttons ────────────────────────────────
-                  _AuthActions(
+              // Layer 2 — auth buttons on solid canvas background.
+              ColoredBox(
+                color: canvas,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppDimens.spaceLg,
+                    AppDimens.spaceMd,
+                    AppDimens.spaceLg,
+                    AppDimens.spaceMd + safeBottom,
+                  ),
+                  child: _AuthActions(
                     isLoading: _isLoading,
                     onApple: _handleAppleSignIn,
                     onGoogle: _handleGoogleSignIn,
                     onEmail: () => context.push(RouteNames.loginPath),
                   ),
-
-                  SizedBox(height: AppDimens.spaceLg + safeBottom),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
 
-          // ── Loading overlay ────────────────────────────────────────────
+          // Loading overlay
           if (_isLoading)
             Positioned.fill(
               child: Semantics(
                 liveRegion: true,
                 label: 'Signing in',
                 child: ColoredBox(
-                  color: Colors.black54,
+                  color: Colors.black.withValues(alpha: 0.54),
                   child: Center(
                     child: CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.primary,
+                        AppColorsOf(context).primary,
                       ),
                     ),
                   ),
@@ -168,112 +211,227 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
 // ── Private Widgets ────────────────────────────────────────────────────────────
 
-/// Full-screen subtle sage green radial gradient bloom at top-center.
-/// Creates depth and anchors the content to the dark background.
-class _RadialBloom extends StatelessWidget {
-  const _RadialBloom();
+/// Full-bleed photo carousel that crossfades between [welcomeSlides].
+///
+/// Layers (bottom → top):
+/// 1. Current photo
+/// 2. Next photo fading in (only when >1 slide)
+/// 3. Brand topographic pattern overlay (very subtle)
+/// 4. Top dark scrim (logo/wordmark legibility on any photo)
+/// 5. Bottom gradient scrim (photo → canvas)
+/// 6. ZuraLog mark + wordmark (top-left)
+/// 7. Animated tagline (centered)
+class _HeroCarousel extends StatefulWidget {
+  const _HeroCarousel();
 
   @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: RadialGradient(
-          center: const Alignment(0, -1.2),
-          radius: 0.8,
-          colors: [
-            AppColors.primary.withValues(alpha: 0.07),
-            Colors.transparent,
-          ],
-        ),
-      ),
-    );
-  }
+  State<_HeroCarousel> createState() => _HeroCarouselState();
 }
 
-/// Brand area: logo card + app name + tagline.
-class _BrandArea extends StatelessWidget {
-  const _BrandArea();
+class _HeroCarouselState extends State<_HeroCarousel>
+    with SingleTickerProviderStateMixin {
+  int _currentIndex = 0;
+  int _nextIndex = welcomeSlides.length > 1 ? 1 : 0;
+  int _displayedTaglineIndex = 0;
+  bool _reduceMotion = false;
+
+  late AnimationController _fadeCtrl;
+  late Animation<double> _fadeAnim;
+  Timer? _timer;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduceMotion = MediaQuery.of(context).disableAnimations;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    assert(welcomeSlides.isNotEmpty, 'welcomeSlides must contain at least one slide');
+
+    _fadeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _fadeAnim = CurvedAnimation(
+      parent: _fadeCtrl,
+      curve: Curves.easeInOut,
+    );
+
+    _fadeCtrl.addListener(() {
+      if (!mounted) return;
+      if (_fadeCtrl.value >= 0.5 &&
+          _displayedTaglineIndex != _nextIndex) {
+        setState(() => _displayedTaglineIndex = _nextIndex);
+      }
+    });
+
+    _fadeCtrl.addStatusListener((status) {
+      if (!mounted) return;
+      if (status == AnimationStatus.completed) {
+        setState(() {
+          _currentIndex = _nextIndex;
+          _nextIndex = (_currentIndex + 1) % welcomeSlides.length;
+          _displayedTaglineIndex = _currentIndex;
+        });
+        _fadeCtrl.reset();
+      }
+    });
+
+    if (welcomeSlides.length > 1) {
+      _timer = Timer.periodic(const Duration(seconds: 5), (_) {
+        if (!mounted) return;
+        if (_reduceMotion) {
+          setState(() {
+            _currentIndex = _nextIndex;
+            _nextIndex = (_currentIndex + 1) % welcomeSlides.length;
+            _displayedTaglineIndex = _currentIndex;
+          });
+        } else {
+          _fadeCtrl.forward();
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _fadeCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Stack(
+      fit: StackFit.expand,
       children: [
-        // Logo card — 96×96px, shapeLg, primary fill with pattern
-        const _LogoCard(),
-
-        const SizedBox(height: AppDimens.spaceLg),
-
-        // App name
-        Text(
-          'Zuralog',
-          style: AppTextStyles.displayLarge.copyWith(
-            color: colors.textPrimary,
+        // Layer 1 — current photo
+        Positioned.fill(
+          child: Image.asset(
+            welcomeSlides[_currentIndex].imagePath,
+            fit: BoxFit.cover,
           ),
         ),
 
-        const SizedBox(height: AppDimens.spaceSm),
-
-        // Tagline — two short editorial lines
-        Text(
-          'Better health,\ntogether.',
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: colors.textSecondary,
+        // Layer 2 — next photo fading in (only when >1 slide)
+        if (welcomeSlides.length > 1)
+          Positioned.fill(
+            child: FadeTransition(
+              opacity: _fadeAnim,
+              child: Image.asset(
+                welcomeSlides[_nextIndex].imagePath,
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
-          textAlign: TextAlign.center,
+
+        // Layer 3 — brand topographic pattern overlay (very subtle on photos)
+        const Positioned.fill(
+          child: ZPatternOverlay(
+            variant: ZPatternVariant.original,
+            opacity: 0.04,
+          ),
         ),
-      ],
-    );
-  }
-}
 
-/// 96×96px logo card with Sage Green fill and brand topographic pattern.
-class _LogoCard extends StatelessWidget {
-  const _LogoCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final borderRadius = BorderRadius.circular(AppDimens.shapeLg);
-
-    return ClipRRect(
-      borderRadius: borderRadius,
-      child: SizedBox(
-        width: 96,
-        height: 96,
-        child: Stack(
-          children: [
-            // Sage fill background
-            Container(
+        // Layer 4 — top scrim: darkens the photo behind the logo/wordmark.
+        //    This is the standard industry pattern for text-on-photo legibility.
+        Positioned.fill(
+          child: IgnorePointer(
+            child: DecoratedBox(
               decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: borderRadius,
-              ),
-            ),
-            // Brand pattern — Sage surface gets colorBurn at 15%
-            const Positioned.fill(
-              child: ZPatternOverlay(
-                variant: ZPatternVariant.sage,
-                opacity: 0.15,
-                blendMode: BlendMode.colorBurn,
-              ),
-            ),
-            // Logo icon
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: SvgPicture.asset(
-                WelcomeScreen._logoAsset,
-                fit: BoxFit.contain,
-                colorFilter: const ColorFilter.mode(
-                  AppColors.primaryButtonText,
-                  BlendMode.srcIn,
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.center,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.55),
+                    Colors.transparent,
+                  ],
                 ),
               ),
             ),
-          ],
+          ),
         ),
-      ),
+
+        // Layer 5 — bottom gradient: fades photo into canvas (theme-aware).
+        //    Transparent at mid-hero, fully canvas at the bottom edge —
+        //    light mode fades to warm cream, dark mode fades to near-black.
+        Positioned.fill(
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0.45, 1.0],
+                  colors: [
+                    Colors.transparent,
+                    AppColorsOf(context).canvas,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Layer 6 — logo chip + ZuraLog wordmark (top-left, below safe area).
+        //    Frosted glass chip (semi-transparent white) with the Sage PNG mark
+        //    inside. Reads clearly on any photo in any mode — no theme dependency.
+        Positioned(
+          top: MediaQuery.paddingOf(context).top + AppDimens.spaceMd,
+          left: AppDimens.spaceLg,
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(AppDimens.shapeXs),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.35),
+                    width: 1,
+                  ),
+                ),
+                padding: const EdgeInsets.all(6),
+                child: Image.asset(AppAssets.logoSagePng),
+              ),
+              const SizedBox(width: AppDimens.spaceSm),
+              Text(
+                'ZuraLog',
+                style: AppTextStyles.labelLarge.copyWith(
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Layer 7 — animated tagline, centered in the photo zone.
+        Positioned(
+          left: AppDimens.spaceLg,
+          right: AppDimens.spaceLg,
+          bottom: 120,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 1200),
+            child: Text(
+              welcomeSlides[_displayedTaglineIndex].tagline,
+              key: ValueKey(_displayedTaglineIndex),
+              textAlign: TextAlign.center,
+              style: AppTextStyles.displaySmall.copyWith(
+                color: Colors.white,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withValues(alpha: 0.54),
+                    blurRadius: 8,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -297,48 +455,46 @@ class _AuthActions extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Apple button — secondary (outlined) with Apple icon
+        // Apple — secondary (outlined) with FontAwesome apple icon
         ZButton(
           label: 'Continue with Apple',
           variant: ZButtonVariant.secondary,
-          icon: Icons.apple,
-          onPressed: isLoading ? null : onApple,
           size: ZButtonSize.large,
+          icon: FontAwesomeIcons.apple,
+          onPressed: isLoading ? null : onApple,
         ),
 
         const SizedBox(height: AppDimens.spaceSm),
 
-        // Google button — secondary (outlined) with colored "G"
+        // Google — secondary (outlined) with colored SimpleIcons google mark
         ZButton(
           label: 'Continue with Google',
           variant: ZButtonVariant.secondary,
-          leadingWidget: Text(
-            'G',
-            style: AppTextStyles.labelLarge.copyWith(
-              color: AppColors.googleBlue,
-              fontWeight: FontWeight.w700,
-            ),
+          size: ZButtonSize.large,
+          leadingWidget: const Icon(
+            SimpleIcons.google,
+            size: 18,
+            color: Color(0xFFEA4335), // Google brand red — semantic, never changes
           ),
           onPressed: isLoading ? null : onGoogle,
-          size: ZButtonSize.large,
         ),
 
-        const SizedBox(height: AppDimens.spaceMd),
+        const SizedBox(height: AppDimens.spaceSm),
 
         // "or" divider
         const _OrDivider(),
 
-        const SizedBox(height: AppDimens.spaceMd),
+        const SizedBox(height: AppDimens.spaceSm),
 
-        // Email button — text variant (Sage text, no background)
+        // Email — text variant
         ZButton(
-          label: 'Log in with Email',
+          label: 'Continue with Email',
           variant: ZButtonVariant.text,
-          onPressed: isLoading ? null : onEmail,
           size: ZButtonSize.medium,
+          onPressed: isLoading ? null : onEmail,
         ),
 
-        const SizedBox(height: AppDimens.spaceMd),
+        const SizedBox(height: AppDimens.spaceSm),
 
         // Legal footer
         const _LegalFooter(),
@@ -392,7 +548,7 @@ class _LegalFooterState extends State<_LegalFooter> {
       ..onTap = () async {
         try {
           await launchUrl(
-            Uri.parse('https://zuralog.com/terms'),
+            Uri.parse('https://www.zuralog.com/terms'),
             mode: LaunchMode.externalApplication,
           );
         } catch (_) {
@@ -403,7 +559,7 @@ class _LegalFooterState extends State<_LegalFooter> {
       ..onTap = () async {
         try {
           await launchUrl(
-            Uri.parse('https://zuralog.com/privacy'),
+            Uri.parse('https://www.zuralog.com/privacy'),
             mode: LaunchMode.externalApplication,
           );
         } catch (_) {
@@ -434,9 +590,9 @@ class _LegalFooterState extends State<_LegalFooter> {
           TextSpan(
             text: 'Terms of Service',
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.primary,
+              color: AppColorsOf(context).primary,
               decoration: TextDecoration.underline,
-              decorationColor: AppColors.primary,
+              decorationColor: AppColorsOf(context).primary,
             ),
             recognizer: _tosRecognizer,
           ),
@@ -444,9 +600,9 @@ class _LegalFooterState extends State<_LegalFooter> {
           TextSpan(
             text: 'Privacy Policy',
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.primary,
+              color: AppColorsOf(context).primary,
               decoration: TextDecoration.underline,
-              decorationColor: AppColors.primary,
+              decorationColor: AppColorsOf(context).primary,
             ),
             recognizer: _privacyRecognizer,
           ),

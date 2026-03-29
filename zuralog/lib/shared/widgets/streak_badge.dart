@@ -49,6 +49,7 @@ class StreakBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final double iconSize = _standalone ? 28 : 16;
     final TextStyle countStyle = _standalone
         ? AppTextStyles.h2.copyWith(
@@ -75,7 +76,7 @@ class StreakBadge extends StatelessWidget {
           Icon(
             Icons.shield_rounded,
             size: iconSize * 0.85,
-            color: AppColors.primary,
+            color: colors.primary,
           ),
         ],
       ],

@@ -69,9 +69,9 @@ class ZAlertDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final confirmColor =
-        isDestructive ? AppColors.error : AppColors.primary;
+        isDestructive ? colors.error : colors.primary;
     final confirmTextColor =
-        isDestructive ? Colors.white : AppColors.textOnSage;
+        isDestructive ? Colors.white : colors.textOnSage;
 
     return Dialog(
       backgroundColor: colors.surfaceOverlay,
@@ -113,6 +113,7 @@ class ZAlertDialog extends StatelessWidget {
                 Expanded(
                   child: _OutlinedButton(
                     label: cancelLabel,
+                    textColor: colors.textPrimary,
                     onPressed: () => Navigator.of(context).pop(false),
                   ),
                 ),
@@ -140,14 +141,17 @@ class ZAlertDialog extends StatelessWidget {
 class _OutlinedButton extends StatelessWidget {
   const _OutlinedButton({
     required this.label,
+    required this.textColor,
     required this.onPressed,
   });
 
   final String label;
+  final Color textColor;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return GestureDetector(
       onTap: onPressed,
       child: Container(
@@ -156,13 +160,13 @@ class _OutlinedButton extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppDimens.shapePill),
           border: Border.all(
-            color: const Color(0x33F0EEE9), // rgba(240,238,233,0.2)
+            color: colors.border.withValues(alpha: 0.4),
           ),
         ),
         child: Text(
           label,
           style: AppTextStyles.labelLarge.copyWith(
-            color: AppColors.warmWhite,
+            color: textColor,
           ),
         ),
       ),
@@ -202,7 +206,6 @@ class _FilledPatternButton extends StatelessWidget {
                 child: ZPatternOverlay(
                   variant: ZPatternVariant.sage,
                   opacity: 0.12,
-                  blendMode: BlendMode.colorBurn,
                 ),
               ),
               // Label.

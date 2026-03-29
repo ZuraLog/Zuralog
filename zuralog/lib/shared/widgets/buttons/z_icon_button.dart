@@ -5,6 +5,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 
@@ -15,28 +16,31 @@ import 'package:zuralog/core/theme/theme.dart';
 ///
 /// Example:
 /// ```dart
-/// ZIconButton(icon: Icons.close, onPressed: _dismiss)
-/// ZIconButton(icon: Icons.settings, onPressed: _open, isCircle: false)
-/// ZIconButton(icon: Icons.favorite, onPressed: _like, isSage: true)
+/// ZIconButton(icon: Icons.close, onPressed: _dismiss, semanticLabel: 'Close')
+/// ZIconButton(icon: Icons.settings, onPressed: _open, isCircle: false, semanticLabel: 'Settings')
+/// ZIconButton(icon: Icons.favorite, onPressed: _like, isSage: true, semanticLabel: 'Like')
 /// ```
-class ZIconButton extends StatelessWidget {
+class ZIconButton extends StatefulWidget {
   const ZIconButton({
     super.key,
     required this.icon,
     required this.onPressed,
+    required this.semanticLabel,
     this.isCircle = true,
     this.filled = true,
     this.isSage = false,
     this.size = 40,
     this.iconSize = 20,
-    this.semanticLabel,
   });
 
   /// The icon to display.
   final IconData icon;
 
-  /// Tap callback.
+  /// Tap callback. Pass null to disable the button.
   final VoidCallback? onPressed;
+
+  /// Accessible label for screen readers. Required.
+  final String semanticLabel;
 
   /// Whether the button is a circle (true) or a rounded square (false).
   final bool isCircle;
@@ -54,39 +58,59 @@ class ZIconButton extends StatelessWidget {
   /// Size of the icon. Defaults to 20px.
   final double iconSize;
 
-  /// Accessible label for screen readers.
-  final String? semanticLabel;
+  @override
+  State<ZIconButton> createState() => _ZIconButtonState();
+}
+
+class _ZIconButtonState extends State<ZIconButton> {
+  bool _isPressed = false;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final iconColor = isSage ? AppColors.primary : colors.textPrimary;
-    final bgColor = filled ? AppColors.surfaceRaised : Colors.transparent;
-    final shape = isCircle
-        ? BoxShape.circle
-        : BoxShape.rectangle;
-    final borderRadius = isCircle ? null : BorderRadius.circular(10);
+    final iconColor = widget.isSage ? colors.primary : colors.textPrimary;
+    final bgColor = widget.filled ? colors.surfaceRaised : Colors.transparent;
+    final shape = widget.isCircle ? BoxShape.circle : BoxShape.rectangle;
+    final borderRadius = widget.isCircle ? null : BorderRadius.circular(10);
+
+    final isDisabled = widget.onPressed == null;
 
     return Semantics(
+      label: widget.semanticLabel,
       button: true,
-      label: semanticLabel,
-      child: GestureDetector(
-        onTap: onPressed,
-        behavior: HitTestBehavior.opaque,
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Center(
-            child: Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                color: bgColor,
-                shape: shape,
-                borderRadius: borderRadius,
-              ),
+      enabled: !isDisabled,
+      child: AnimatedScale(
+        scale: _isPressed ? 0.92 : 1.0,
+        duration: AppMotion.durationFast,
+        child: Opacity(
+          opacity: isDisabled ? AppDimens.disabledOpacity : 1.0,
+          child: GestureDetector(
+            onTapDown: isDisabled ? null : (_) => setState(() => _isPressed = true),
+            onTapUp: isDisabled
+                ? null
+                : (_) {
+                    setState(() => _isPressed = false);
+                    HapticFeedback.lightImpact();
+                    widget.onPressed?.call();
+                  },
+            onTapCancel: isDisabled ? null : () => setState(() => _isPressed = false),
+            behavior: HitTestBehavior.opaque,
+            child: SizedBox(
+              width: 44,
+              height: 44,
               child: Center(
-                child: Icon(icon, size: iconSize, color: iconColor),
+                child: Container(
+                  width: widget.size,
+                  height: widget.size,
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    shape: shape,
+                    borderRadius: borderRadius,
+                  ),
+                  child: Center(
+                    child: Icon(widget.icon, size: widget.iconSize, color: iconColor),
+                  ),
+                ),
               ),
             ),
           ),

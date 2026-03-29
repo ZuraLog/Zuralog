@@ -4,6 +4,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 
@@ -46,9 +47,11 @@ class ZRadioGroup<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: enabled ? 1.0 : 0.4,
-      child: Column(
+    return IgnorePointer(
+      ignoring: !enabled,
+      child: Opacity(
+        opacity: enabled ? 1.0 : AppDimens.disabledOpacity,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -58,11 +61,15 @@ class ZRadioGroup<T> extends StatelessWidget {
               option: options[i],
               isSelected: options[i].value == value,
               onTap: enabled && onChanged != null
-                  ? () => onChanged!(options[i].value)
+                  ? () {
+                      HapticFeedback.selectionClick();
+                      onChanged!(options[i].value);
+                    }
                   : null,
             ),
           ],
         ],
+        ),
       ),
     );
   }
@@ -81,10 +88,17 @@ class _ZRadioItem<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final colors = AppColorsOf(context);
+    return Semantics(
+      checked: isSelected,
+      inMutuallyExclusiveGroup: true,
+      label: option.label,
+      button: true,
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Row(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           // 44x44 hit area, 20x20 visual.
@@ -101,8 +115,8 @@ class _ZRadioItem<T> extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: isSelected
-                        ? AppColors.primary
-                        : AppColors.textSecondary,
+                        ? colors.primary
+                        : colors.textSecondary,
                     width: 2,
                   ),
                 ),
@@ -112,9 +126,9 @@ class _ZRadioItem<T> extends StatelessWidget {
                     curve: AppMotion.curveEntrance,
                     width: isSelected ? 10 : 0,
                     height: isSelected ? 10 : 0,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppColors.primary,
+                      color: colors.primary,
                     ),
                   ),
                 ),
@@ -125,10 +139,11 @@ class _ZRadioItem<T> extends StatelessWidget {
           Text(
             option.label,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textPrimaryDark,
+              color: colors.textPrimary,
             ),
           ),
         ],
+        ),
       ),
     );
   }

@@ -112,6 +112,7 @@ class ZuralogCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final colors = AppColorsOf(context);
     final borderRadius = BorderRadius.circular(_radius);
     final effectivePadding = padding ?? _defaultPadding;
 
@@ -122,7 +123,7 @@ class ZuralogCard extends StatelessWidget {
         borderRadius: borderRadius,
         child: Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: colors.cardBackground,
             borderRadius: borderRadius,
           ),
           child: Stack(
@@ -145,7 +146,7 @@ class ZuralogCard extends StatelessWidget {
       body = Container(
         padding: effectivePadding,
         decoration: BoxDecoration(
-          color: isDark ? AppColors.surface : theme.colorScheme.surface,
+          color: colors.cardBackground,
           borderRadius: borderRadius,
           // Light mode only: soft shadow
           boxShadow: isDark ? null : AppDimens.cardShadowLight,
@@ -156,20 +157,14 @@ class ZuralogCard extends StatelessWidget {
 
     // Wrap in InkWell for tap support
     if (onTap != null) {
-      return ClipRRect(
-        borderRadius: borderRadius,
-        child: Material(
-          color: _hasPattern
-              ? AppColors.surface
-              : (isDark ? AppColors.surface : theme.colorScheme.surface),
-          child: InkWell(
-            onTap: onTap,
-            child: _hasPattern
-                ? body
-                : Padding(
-                    padding: effectivePadding,
-                    child: child,
-                  ),
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: borderRadius,
+          child: ClipRRect(
+            borderRadius: borderRadius,
+            child: body,
           ),
         ),
       );

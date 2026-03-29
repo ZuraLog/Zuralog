@@ -43,7 +43,7 @@ class ZDivider extends StatelessWidget {
         left: effectiveIndent,
         right: effectiveEndIndent,
       ),
-      color: AppColors.dividerDefault,
+      color: AppColorsOf(context).divider,
     );
   }
 }

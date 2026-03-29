@@ -8,7 +8,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/theme.dart';
 
 /// Styled text input field for the Zuralog design system.
 ///
@@ -78,6 +78,24 @@ class AppTextField extends StatelessWidget {
   /// The action button to show on the keyboard (e.g., done, next, search).
   final TextInputAction? textInputAction;
 
+  /// Hints for the platform's autofill service (e.g., iOS Keychain, Android autofill).
+  ///
+  /// Pass values from [AutofillHints] — e.g., `[AutofillHints.email]` or
+  /// `[AutofillHints.password]`. When `null`, autofill is not enabled.
+  final List<String>? autofillHints;
+
+  /// An optional [FocusNode] to control when this field gains or loses focus.
+  ///
+  /// Pass a node to programmatically shift focus between fields (e.g., moving
+  /// from the email field to the password field on keyboard action).
+  final FocusNode? focusNode;
+
+  /// Called when the user presses the keyboard action button (e.g., "Next" or "Done").
+  ///
+  /// Use this to move focus to the next field or trigger form submission
+  /// without consuming the submitted text value.
+  final VoidCallback? onEditingComplete;
+
   /// Creates an [AppTextField].
   const AppTextField({
     super.key,
@@ -95,10 +113,14 @@ class AppTextField extends StatelessWidget {
     this.onSubmitted,
     this.autofocus = false,
     this.textInputAction,
+    this.autofillHints,
+    this.focusNode,
+    this.onEditingComplete,
   });
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return TextFormField(
       controller: controller,
       validator: validator,
@@ -110,8 +132,11 @@ class AppTextField extends StatelessWidget {
       onFieldSubmitted: onSubmitted != null ? (_) => onSubmitted!() : null,
       autofocus: autofocus,
       textInputAction: textInputAction,
-      // Sage Green cursor — the brand's primary identity color.
-      cursorColor: AppColors.primary,
+      autofillHints: autofillHints,
+      focusNode: focusNode,
+      onEditingComplete: onEditingComplete,
+      // Brand primary cursor color — Sage in dark mode, Deep Forest in light.
+      cursorColor: colors.primary,
       decoration: InputDecoration(
         hintText: hintText,
         labelText: labelText,

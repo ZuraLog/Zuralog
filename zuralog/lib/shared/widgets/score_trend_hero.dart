@@ -35,13 +35,12 @@ class ScoreTrendHero extends ConsumerWidget {
     final scoreAsync = ref.watch(healthScoreProvider);
     final historyAsync = ref.watch(scoreHistoryProvider);
     final selectedRange = ref.watch(scoreHistoryRangeProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
+    final colors = AppColorsOf(context);
 
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: bg,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(20),
       ),
       padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -87,9 +86,7 @@ class ScoreTrendHero extends ConsumerWidget {
                     Text(
                       'Your trend over time',
                       style: AppTextStyles.caption.copyWith(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
+                        color: colors.textSecondary,
                       ),
                     ),
                   ],
@@ -121,15 +118,13 @@ class ScoreTrendHero extends ConsumerWidget {
                     ),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? AppColors.primary.withValues(alpha: 0.15)
+                          ? colors.primary.withValues(alpha: 0.15)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: isSelected
-                            ? AppColors.primary
-                            : (isDark
-                                ? AppColors.borderDark
-                                : AppColors.borderLight),
+                            ? colors.primary
+                            : colors.border,
                         width: 1,
                       ),
                     ),
@@ -137,10 +132,8 @@ class ScoreTrendHero extends ConsumerWidget {
                       range.label,
                       style: AppTextStyles.caption.copyWith(
                         color: isSelected
-                            ? AppColors.primary
-                            : (isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight),
+                            ? colors.primary
+                            : colors.textSecondary,
                         fontWeight: isSelected
                             ? FontWeight.w700
                             : FontWeight.w400,
@@ -157,26 +150,24 @@ class ScoreTrendHero extends ConsumerWidget {
           SizedBox(
             height: 72,
             child: historyAsync.when(
-              loading: () => const Center(
+              loading: () => Center(
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: AppColors.primary,
+                  color: colors.primary,
                 ),
               ),
               error: (e, st) => Center(
                 child: Text(
                   'No history yet',
                   style: AppTextStyles.caption.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
+                    color: colors.textSecondary,
                   ),
                 ),
               ),
               data: (history) {
                 final values = history.trendValues;
                 if (values.length < 2) {
-                  return _ScoreChartEmptyState(isDark: isDark);
+                  return const _ScoreChartEmptyState();
                 }
                 return _ScoreSparkline(values: values);
               },
@@ -231,6 +222,7 @@ class _TrendBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final appColors = AppColorsOf(context);
     final Color color;
     final IconData icon;
     final String label;
@@ -245,7 +237,7 @@ class _TrendBadge extends StatelessWidget {
         icon = Icons.trending_down_rounded;
         label = 'Declining';
       default:
-        color = AppColors.textTertiary;
+        color = appColors.textTertiary;
         icon = Icons.trending_flat_rounded;
         label = 'Stable';
     }
@@ -284,9 +276,7 @@ class _StatChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textSecondary =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final colors = AppColorsOf(context);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -301,7 +291,7 @@ class _StatChip extends StatelessWidget {
         Text(
           label,
           style: AppTextStyles.caption.copyWith(
-            color: textSecondary,
+            color: colors.textSecondary,
             fontSize: 10,
           ),
         ),
@@ -318,6 +308,7 @@ class _ScoreSparkline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final nonZero = values.where((v) => v > 0).toList();
     final minY = nonZero.isNotEmpty ? nonZero.reduce(math.min) - 5 : 0.0;
     final maxY = nonZero.isNotEmpty ? nonZero.reduce(math.max) + 5 : 100.0;
@@ -345,21 +336,21 @@ class _ScoreSparkline extends StatelessWidget {
           LineChartBarData(
             spots: spots,
             isCurved: true,
-            color: AppColors.primary,
+            color: colors.primary,
             barWidth: 2,
             dotData: FlDotData(
               show: true,
               getDotPainter: (spot, percent, bar, index) =>
                   FlDotCirclePainter(
                 radius: 2.5,
-                color: AppColors.primary,
+                color: colors.primary,
                 strokeWidth: 0,
                 strokeColor: Colors.transparent,
               ),
             ),
             belowBarData: BarAreaData(
               show: true,
-              color: AppColors.primary.withValues(alpha: 0.08),
+              color: colors.primary.withValues(alpha: 0.08),
             ),
           ),
         ],
@@ -379,13 +370,14 @@ class _CompactScoreZeroState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       width: 48,
       height: 48,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.25),
+          color: colors.primary.withValues(alpha: 0.25),
           width: 5,
         ),
       ),
@@ -393,7 +385,7 @@ class _CompactScoreZeroState extends StatelessWidget {
         child: Icon(
           Icons.favorite_border_rounded,
           size: 20,
-          color: AppColors.primary.withValues(alpha: 0.5),
+          color: colors.primary.withValues(alpha: 0.5),
         ),
       ),
     );
@@ -406,25 +398,23 @@ class _CompactScoreZeroState extends StatelessWidget {
 /// Replaces the bare "Not enough data for this range" text with a compact,
 /// welcoming prompt that tells the user what to expect.
 class _ScoreChartEmptyState extends StatelessWidget {
-  const _ScoreChartEmptyState({required this.isDark});
-  final bool isDark;
+  const _ScoreChartEmptyState();
 
   @override
   Widget build(BuildContext context) {
-    final textTertiary =
-        isDark ? AppColors.textTertiary : AppColors.textTertiary;
+    final colors = AppColorsOf(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(
           Icons.show_chart_rounded,
           size: 16,
-          color: AppColors.primary.withValues(alpha: 0.4),
+          color: colors.primary.withValues(alpha: 0.4),
         ),
         const SizedBox(width: 6),
         Text(
           'Your trend chart will appear here as data builds up.',
-          style: AppTextStyles.caption.copyWith(color: textTertiary),
+          style: AppTextStyles.caption.copyWith(color: colors.textTertiary),
           textAlign: TextAlign.center,
         ),
       ],
@@ -440,27 +430,25 @@ class _ScoreCommentaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = AppColorsOf(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(width: 3, color: AppColors.primary),
+            Container(width: 3, color: colors.primary),
             Expanded(
               child: Container(
                 padding: const EdgeInsets.all(AppDimens.spaceMd),
-                color: isDark
-                    ? AppColors.cardBackgroundDark
-                    : AppColors.cardBackgroundLight,
+                color: colors.cardBackground,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.auto_awesome_rounded,
                       size: 16,
-                      color: AppColors.primary,
+                      color: colors.primary,
                     ),
                     const SizedBox(width: AppDimens.spaceSm),
                     Expanded(

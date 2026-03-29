@@ -14,7 +14,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart'
+    show ZPatternVariant, effectivePatternVariant;
 
 /// Renders text filled with the topographic pattern texture.
 ///
@@ -75,19 +76,17 @@ class _ZPatternTextState extends State<ZPatternText>
 
   ui.Image? _image;
   AnimationController? _controller;
+  String? _lastLoadedPath;
 
   @override
   void initState() {
     super.initState();
-    _loadImage();
+    // _loadImage is called from didChangeDependencies once context is available.
   }
 
   @override
   void didUpdateWidget(ZPatternText old) {
     super.didUpdateWidget(old);
-    if (old.variant != widget.variant) {
-      _loadImage();
-    }
     if (old.animate != widget.animate) {
       if (widget.animate) {
         _maybeStartAnimation();
@@ -95,11 +94,23 @@ class _ZPatternTextState extends State<ZPatternText>
         _disposeAnimation();
       }
     }
+    // Variant changes are caught via didChangeDependencies which also runs
+    // after didUpdateWidget — nothing extra needed here.
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+
+    // Resolve the correct variant for the current brightness.
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    final resolvedVariant = effectivePatternVariant(widget.variant, isLight);
+
+    // Reload only when the resolved asset path actually changed.
+    if (resolvedVariant.assetPath != _lastLoadedPath) {
+      _loadImage(resolvedVariant);
+    }
+
     if (widget.animate) {
       final reduceMotion = MediaQuery.of(context).disableAnimations;
       if (reduceMotion && _controller != null) {
@@ -112,8 +123,9 @@ class _ZPatternTextState extends State<ZPatternText>
 
   // ── Image loading ─────────────────────────────────────────────────────
 
-  Future<void> _loadImage() async {
-    final path = widget.variant.assetPath;
+  Future<void> _loadImage(ZPatternVariant variant) async {
+    final path = variant.assetPath;
+    _lastLoadedPath = path;
 
     // Already cached.
     if (_imageCache.containsKey(path)) {

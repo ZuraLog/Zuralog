@@ -44,6 +44,7 @@ class ZTopographicCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final effectivePadding =
         padding ?? const EdgeInsets.all(AppDimens.spaceMdPlus);
     final borderRadius = BorderRadius.circular(AppDimens.shapeLg);
@@ -52,7 +53,7 @@ class ZTopographicCard extends StatelessWidget {
       borderRadius: borderRadius,
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: colors.surface,
           borderRadius: borderRadius,
         ),
         child: Stack(

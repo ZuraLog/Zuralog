@@ -103,7 +103,7 @@ class ZContextMenu extends StatelessWidget {
                     items[i].icon,
                     size: 20,
                     color: items[i].isDestructive
-                        ? AppColors.error
+                        ? AppColorsOf(context).error
                         : AppColorsOf(context).textPrimary,
                   ),
                   const SizedBox(width: AppDimens.spaceSm),
@@ -112,7 +112,7 @@ class ZContextMenu extends StatelessWidget {
                   items[i].label,
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: items[i].isDestructive
-                        ? AppColors.error
+                        ? AppColorsOf(context).error
                         : AppColorsOf(context).textPrimary,
                   ),
                 ),

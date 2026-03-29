@@ -85,7 +85,7 @@ class ZSettingsTile extends StatelessWidget {
       trailingWidget = Icon(
         Icons.chevron_right_rounded,
         size: AppDimens.iconMd,
-        color: AppColors.textTertiary,
+        color: colors.textTertiary,
       );
     } else {
       trailingWidget = const SizedBox.shrink();

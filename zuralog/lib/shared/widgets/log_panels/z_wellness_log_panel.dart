@@ -169,7 +169,7 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
               counterStyle: AppTextStyles.labelSmall
                   .copyWith(color: colors.textTertiary),
             ),
-            cursorColor: AppColors.primary,
+            cursorColor: colors.primary,
           ),
 
           const SizedBox(height: AppDimens.spaceMd),
@@ -178,8 +178,8 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
           FilledButton(
             onPressed: _canSave ? _handleSave : null,
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.primaryButtonText,
+              backgroundColor: colors.primary,
+              foregroundColor: colors.textOnSage,
               shape: RoundedRectangleBorder(
                 borderRadius:
                     BorderRadius.circular(AppDimens.radiusButton),

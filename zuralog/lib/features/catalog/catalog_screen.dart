@@ -21,15 +21,12 @@ import 'package:zuralog/shared/widgets/widgets.dart';
 ///
 /// Allows QA to toggle between System, Light, and Dark modes to verify
 /// that all tokens and components correctly adapt to each theme.
-class CatalogScreen extends ConsumerWidget {
+class CatalogScreen extends StatelessWidget {
   /// Creates the [CatalogScreen].
   const CatalogScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode =
-        ref.watch(themeModeProvider).valueOrNull ?? ThemeMode.system;
-
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Design Catalog'),
@@ -42,27 +39,38 @@ class CatalogScreen extends ConsumerWidget {
               AppDimens.spaceMd,
               AppDimens.spaceSm,
             ),
-            child: _ThemeToggle(themeMode: themeMode),
+            child: const _ThemeToggle(),
           ),
         ),
       ),
       body: ListView(
+        key: const PageStorageKey('catalog'),
         padding: const EdgeInsets.all(AppDimens.spaceMd),
-        children: const [
-          _ColorPaletteSection(),
-          SizedBox(height: AppDimens.spaceLg),
-          _TypographySection(),
-          SizedBox(height: AppDimens.spaceLg),
-          _ButtonSection(),
-          SizedBox(height: AppDimens.spaceLg),
-          _CardSection(),
-          SizedBox(height: AppDimens.spaceLg),
-          _InputSection(),
-          SizedBox(height: AppDimens.spaceLg),
-          _LayoutSection(),
-          SizedBox(height: AppDimens.spaceLg),
-          _IndicatorSection(),
-          SizedBox(height: AppDimens.spaceXxl),
+        children: [
+          const _ColorPaletteSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _TypographySection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _ButtonSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _CardSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _InputSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _LayoutSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _IndicatorSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _ZButtonSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _ZChipSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _ZToggleSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _ZProgressBarSection(),
+          const SizedBox(height: AppDimens.spaceLg),
+          const _ZEmptyStateSection(),
+          const SizedBox(height: AppDimens.spaceXxl),
         ],
       ),
     );
@@ -72,13 +80,17 @@ class CatalogScreen extends ConsumerWidget {
 // ── Theme Toggle ─────────────────────────────────────────────────────────────
 
 /// Segmented button for switching theme mode from within the catalog.
+///
+/// Uses [ConsumerWidget] directly so [CatalogScreen] can stay a plain
+/// [StatelessWidget] — the Riverpod dependency is fully contained here.
 class _ThemeToggle extends ConsumerWidget {
-  final ThemeMode themeMode;
-
-  const _ThemeToggle({required this.themeMode});
+  const _ThemeToggle();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode =
+        ref.watch(themeModeProvider).valueOrNull ?? ThemeMode.system;
+
     return SegmentedButton<ThemeMode>(
       segments: const [
         ButtonSegment(
@@ -102,8 +114,8 @@ class _ThemeToggle extends ConsumerWidget {
         ref.read(themeModeProvider.notifier).setTheme(selected.first);
       },
       style: SegmentedButton.styleFrom(
-        selectedBackgroundColor: AppColors.primary,
-        selectedForegroundColor: AppColors.primaryButtonText,
+        selectedBackgroundColor: Theme.of(context).colorScheme.primary,
+        selectedForegroundColor: Theme.of(context).colorScheme.onPrimary,
       ),
     );
   }
@@ -450,6 +462,178 @@ class _IndicatorSection extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── ZButton ───────────────────────────────────────────────────────────────
+
+class _ZButtonSection extends StatelessWidget {
+  const _ZButtonSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return _CatalogSection(
+      title: 'ZButton',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ZButton(label: 'Primary', onPressed: () {}),
+          const SizedBox(height: AppDimens.spaceSm),
+          ZButton(
+            label: 'Secondary',
+            onPressed: () {},
+            variant: ZButtonVariant.secondary,
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          ZButton(
+            label: 'Destructive',
+            onPressed: () {},
+            variant: ZButtonVariant.destructive,
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          const ZButton(
+            label: 'Loading',
+            onPressed: null,
+            isLoading: true,
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          const ZButton(
+            label: 'Disabled',
+            onPressed: null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── ZChip ─────────────────────────────────────────────────────────────────
+
+class _ZChipSection extends StatelessWidget {
+  const _ZChipSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return _CatalogSection(
+      title: 'ZChip',
+      child: ZuralogCard(
+        child: Wrap(
+          spacing: AppDimens.spaceSm,
+          runSpacing: AppDimens.spaceSm,
+          children: const [
+            ZChip(label: 'Active', isActive: true),
+            ZChip(label: 'Inactive'),
+            ZChip(
+              label: 'Active + Icon',
+              isActive: true,
+              icon: Icons.bolt_rounded,
+            ),
+            ZChip(
+              label: 'Inactive + Icon',
+              icon: Icons.bolt_rounded,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── ZToggle ───────────────────────────────────────────────────────────────
+
+class _ZToggleSection extends StatefulWidget {
+  const _ZToggleSection();
+
+  @override
+  State<_ZToggleSection> createState() => _ZToggleSectionState();
+}
+
+class _ZToggleSectionState extends State<_ZToggleSection> {
+  bool _notificationsOn = true;
+  bool _darkModeOn = false;
+  final bool _disabledOn = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return _CatalogSection(
+      title: 'ZToggle',
+      child: ZuralogCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ZToggle(
+              value: _notificationsOn,
+              label: 'Notifications',
+              onChanged: (v) => setState(() => _notificationsOn = v),
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            ZToggle(
+              value: _darkModeOn,
+              label: 'Dark Mode',
+              onChanged: (v) => setState(() => _darkModeOn = v),
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            ZToggle(
+              value: _disabledOn,
+              enabled: false,
+              label: 'Disabled On',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── ZProgressBar ─────────────────────────────────────────────────────────
+
+class _ZProgressBarSection extends StatelessWidget {
+  const _ZProgressBarSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return _CatalogSection(
+      title: 'ZProgressBar',
+      child: ZuralogCard(
+        child: const Column(
+          children: [
+            ZProgressBar(value: 0.0, label: 'Empty', valueLabel: '0%'),
+            SizedBox(height: AppDimens.spaceMd),
+            ZProgressBar(
+              value: 0.4,
+              label: 'In Progress',
+              valueLabel: '40%',
+            ),
+            SizedBox(height: AppDimens.spaceMd),
+            ZProgressBar(
+              value: 1.0,
+              label: 'Complete',
+              valueLabel: '100%',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── ZEmptyState ───────────────────────────────────────────────────────────
+
+class _ZEmptyStateSection extends StatelessWidget {
+  const _ZEmptyStateSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _CatalogSection(
+      title: 'ZEmptyState',
+      child: ZEmptyState(
+        icon: Icons.bar_chart_outlined,
+        title: 'No data yet',
+        message: 'Connect a health app to get started.',
+        actionLabel: 'Connect App',
+        onAction: null,
       ),
     );
   }

@@ -8,10 +8,14 @@
 /// 2. If [AuthState.unauthenticated] and the destination is a protected route
 ///    → redirect to [RouteNames.welcomePath].
 /// 3. If [AuthState.authenticated] and the destination is a public auth route,
-///    **except** [RouteNames.profileQuestionnairePath] → redirect to
-///    [RouteNames.todayPath] (prevent back-navigation to login).
+///    **except** [RouteNames.profileQuestionnairePath] or
+///    [RouteNames.checkInboxPath] → redirect to [RouteNames.todayPath]
+///    (prevent back-navigation to login).
 ///    The questionnaire is excluded because authenticated new users must be
 ///    allowed to stay on it until [UserProfile.onboardingComplete] is `true`.
+///    The check-inbox screen is excluded because Supabase creates a session
+///    immediately on sign-up; without the exception the guard bounces the user
+///    away before they see the email-verification prompt.
 /// 4. Otherwise → return `null` (allow navigation).
 library;
 
@@ -48,9 +52,15 @@ String? authGuardRedirect({
   // reachable for authenticated users who haven't completed onboarding yet.
   // The onboarding guard in app_router.dart (Step 3) handles the redirect
   // to dashboard once onboardingComplete flips to true.
+  //
+  // Exception: checkInboxPath must also remain reachable for authenticated
+  // users. After registration Supabase creates a session immediately, making
+  // the user "authenticated" — but they still need to see the email-verification
+  // prompt before the app proceeds.
   if (authState == AuthState.authenticated &&
       isPublicPath &&
-      location != RouteNames.profileQuestionnairePath) {
+      location != RouteNames.profileQuestionnairePath &&
+      location != RouteNames.checkInboxPath) {
     return RouteNames.todayPath;
   }
 

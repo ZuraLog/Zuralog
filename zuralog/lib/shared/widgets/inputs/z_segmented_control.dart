@@ -22,7 +22,11 @@ class ZSegmentedControl extends StatelessWidget {
     required this.onChanged,
     required this.segments,
     this.enabled = true,
-  });
+  }) : assert(
+          segments.length == 0 ||
+              (selectedIndex >= 0 && selectedIndex < segments.length),
+          'selectedIndex must be a valid index into segments',
+        );
 
   /// Index of the currently selected segment.
   final int selectedIndex;
@@ -38,8 +42,12 @@ class ZSegmentedControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: enabled ? 1.0 : 0.4,
+    if (segments.isEmpty) return const SizedBox.shrink();
+    final colors = AppColorsOf(context);
+    return IgnorePointer(
+      ignoring: !enabled,
+      child: Opacity(
+      opacity: enabled ? 1.0 : AppDimens.disabledOpacity,
       child: LayoutBuilder(
       builder: (context, constraints) {
         final totalWidth = constraints.maxWidth;
@@ -52,7 +60,7 @@ class ZSegmentedControl extends StatelessWidget {
           child: Container(
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: colors.surface,
               borderRadius: BorderRadius.circular(AppDimens.shapePill),
             ),
             child: Stack(
@@ -75,8 +83,8 @@ class ZSegmentedControl extends StatelessWidget {
                   width: segmentWidth,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: AppColors.warmWhite,
-                      borderRadius: BorderRadius.circular(9),
+                      color: colors.warmWhite,
+                      borderRadius: BorderRadius.circular(AppDimens.shapeXs),
                     ),
                   ),
                 ),
@@ -95,8 +103,8 @@ class ZSegmentedControl extends StatelessWidget {
                                 duration: AppMotion.durationFast,
                                 style: AppTextStyles.labelMedium.copyWith(
                                   color: i == selectedIndex
-                                      ? AppColors.textOnWarmWhite
-                                      : AppColors.textSecondary,
+                                      ? colors.textOnWarmWhite
+                                      : colors.textSecondary,
                                 ),
                                 child: Text(segments[i]),
                               ),
@@ -112,6 +120,7 @@ class ZSegmentedControl extends StatelessWidget {
         );
       },
     ),
+      ),
     );
   }
 }

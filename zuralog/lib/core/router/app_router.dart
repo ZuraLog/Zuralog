@@ -46,7 +46,10 @@ import 'package:zuralog/core/monitoring/sentry_router_observer.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
 import 'package:zuralog/features/auth/domain/user_profile.dart';
-import 'package:zuralog/features/auth/presentation/auth/auth_screen.dart';
+import 'package:zuralog/features/auth/presentation/auth/login_screen.dart';
+import 'package:zuralog/features/auth/presentation/auth/register_screen.dart';
+import 'package:zuralog/features/auth/presentation/auth/forgot_password_screen.dart';
+import 'package:zuralog/features/auth/presentation/auth/check_inbox_screen.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/onboarding_page_view.dart';
 import 'package:zuralog/features/onboarding/presentation/onboarding_flow_screen.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/welcome_screen.dart';
@@ -218,16 +221,32 @@ List<RouteBase> _buildRoutes() {
       path: RouteNames.loginPath,
       name: RouteNames.login,
       builder: (context, state) => const SentryErrorBoundary(
-        module: 'auth.login',
-        child: AuthScreen(initialTab: 0),
+        module: 'login',
+        child: LoginScreen(),
       ),
     ),
     GoRoute(
       path: RouteNames.registerPath,
       name: RouteNames.register,
       builder: (context, state) => const SentryErrorBoundary(
-        module: 'auth.register',
-        child: AuthScreen(initialTab: 1),
+        module: 'register',
+        child: RegisterScreen(),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.forgotPasswordPath,
+      name: RouteNames.forgotPassword,
+      builder: (context, state) => const SentryErrorBoundary(
+        module: 'forgotPassword',
+        child: ForgotPasswordScreen(),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.checkInboxPath,
+      name: RouteNames.checkInbox,
+      builder: (context, state) => const SentryErrorBoundary(
+        module: 'checkInbox',
+        child: CheckInboxScreen(),
       ),
     ),
     GoRoute(
@@ -380,22 +399,24 @@ List<RouteBase> _buildRoutes() {
     ),
 
     // ── Developer Tools ───────────────────────────────────────────────────
-    GoRoute(
-      path: RouteNames.debugCatalogPath,
-      name: RouteNames.debugCatalog,
-      builder: (context, state) => const SentryErrorBoundary(
-        module: 'dev.catalog',
-        child: CatalogScreen(),
+    if (kDebugMode) ...[
+      GoRoute(
+        path: RouteNames.debugCatalogPath,
+        name: RouteNames.debugCatalog,
+        builder: (context, state) => const SentryErrorBoundary(
+          module: 'dev.catalog',
+          child: CatalogScreen(),
+        ),
       ),
-    ),
-    GoRoute(
-      path: RouteNames.componentShowcasePath,
-      name: RouteNames.componentShowcase,
-      builder: (context, state) => const SentryErrorBoundary(
-        module: 'dev.components',
-        child: ComponentShowcaseScreen(),
+      GoRoute(
+        path: RouteNames.componentShowcasePath,
+        name: RouteNames.componentShowcase,
+        builder: (context, state) => const SentryErrorBoundary(
+          module: 'dev.components',
+          child: ComponentShowcaseScreen(),
+        ),
       ),
-    ),
+    ],
 
     // ── Log Screens (pushed over shell — no bottom nav visible) ──────────
     GoRoute(

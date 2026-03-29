@@ -41,7 +41,7 @@ class ZTooltip extends StatelessWidget {
         vertical: AppDimens.spaceSm,
       ),
       decoration: BoxDecoration(
-        color: AppColors.surfaceRaised,
+        color: colors.surfaceRaised,
         borderRadius: BorderRadius.circular(AppDimens.shapeXs),
       ),
       textStyle: AppTextStyles.bodySmall.copyWith(

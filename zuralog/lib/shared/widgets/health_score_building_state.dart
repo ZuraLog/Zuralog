@@ -48,10 +48,7 @@ class HealthScoreBuildingState extends StatelessWidget {
     final colors = AppColorsOf(context);
     final remaining = (targetDays - dataDays).clamp(1, targetDays);
     final progress = (dataDays / targetDays).clamp(0.0, 1.0);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final trackColor = isDark
-        ? AppColors.cardBackgroundDark.withValues(alpha: 0.3)
-        : AppColors.textTertiary.withValues(alpha: 0.15);
+    final trackColor = colors.cardBackground.withValues(alpha: 0.3);
 
     return Column(
       mainAxisSize: MainAxisSize.min,

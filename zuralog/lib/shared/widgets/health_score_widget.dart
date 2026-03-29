@@ -214,10 +214,8 @@ class _AnimatedRingState extends State<_AnimatedRing>
   @override
   Widget build(BuildContext context) {
     final strokeWidth = widget.diameter * _kStrokeFraction;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final trackColor = isDark
-        ? AppColors.cardBackgroundDark.withValues(alpha: 0.3)
-        : AppColors.borderLight;
+    final colors = AppColorsOf(context);
+    final trackColor = colors.cardBackground.withValues(alpha: 0.3);
 
     return AnimatedBuilder(
       animation: _progress,
@@ -252,7 +250,7 @@ class _AnimatedRingState extends State<_AnimatedRing>
                       height: widget.diameter * 0.2,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: AppColors.textTertiary,
+                        color: colors.textTertiary,
                       ),
                     ),
             ),

@@ -29,9 +29,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'package:zuralog/core/theme/app_colors.dart';
-import 'package:zuralog/core/theme/app_dimens.dart';
-import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/theme/theme.dart';
 
 // ── ConfirmationItem ──────────────────────────────────────────────────────────
 
@@ -90,12 +88,11 @@ class ConfirmationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
-    final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final textSecondary =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final divider = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final colors = AppColorsOf(context);
+    final bg = colors.cardBackground;
+    final textPrimary = colors.textPrimary;
+    final textSecondary = colors.textSecondary;
+    final divider = colors.border;
 
     return Container(
       decoration: BoxDecoration(
@@ -177,19 +174,19 @@ class ConfirmationCard extends StatelessWidget {
                   child: FilledButton(
                     onPressed: isLoading ? null : onConfirm,
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.primaryButtonText,
+                      backgroundColor: colors.primary,
+                      foregroundColor: colors.textOnSage,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     child: isLoading
-                        ? const SizedBox(
+                        ? SizedBox(
                             height: 18,
                             width: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: AppColors.primaryButtonText,
+                              color: colors.textOnSage,
                             ),
                           )
                         : Text(confirmLabel),
