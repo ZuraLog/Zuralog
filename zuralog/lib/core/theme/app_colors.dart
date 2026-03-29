@@ -32,9 +32,9 @@ abstract final class AppColors {
   /// Deep Forest Green — Primary color for light mode only.
   ///
   /// Sage Green (#CFE1B9) has insufficient contrast (~1.4:1) on white
-  /// backgrounds. Deep Forest (#354E42) passes WCAG AA on white while
+  /// backgrounds. Deep Forest (#344E41) passes WCAG AA on white while
   /// remaining on-brand. Used as [ColorScheme.primary] in light theme.
-  static const Color primaryOnLight = Color(0xFF354E42);
+  static const Color primaryOnLight = Color(0xFF344E41);
 
   /// Sage Dark — Pressed states on primary elements.
   static const Color primaryDark = Color(0xFFA8C68A);
@@ -69,6 +69,7 @@ abstract final class AppColors {
   // ── Backgrounds ──────────────────────────────────────────────────────────
 
   /// Main scaffold background — light mode (Brand Cream — matches website light palette).
+  /// Kept for backwards compatibility. New code should use [canvasLight].
   static const Color backgroundLight = Color(0xFFFAFAF5);
 
   /// Main scaffold background — dark mode (Canvas per brand bible).
@@ -81,6 +82,20 @@ abstract final class AppColors {
   /// Canvas — screen/page background. Darkest level.
   /// Pure neutral grey (no blue tint) to prevent Impeller color shift.
   static const Color canvas = Color(0xFF161616);
+
+  // ── Light-mode Brand Bible surface tokens ────────────────────────────────
+
+  /// Canvas — light mode screen/page background (Brand Bible Warm White tint).
+  static const Color canvasLight = Color(0xFFF0EEE9);
+
+  /// Surface — light mode cards and content containers.
+  static const Color surfaceLightNew = Color(0xFFE8E6E1);
+
+  /// Surface Raised — light mode popovers, dropdowns, hover states.
+  static const Color surfaceRaisedLight = Color(0xFFDEDAD4);
+
+  /// Surface Overlay — light mode modals, bottom sheets, dialogs.
+  static const Color surfaceOverlayLight = Color(0xFFD4D0CA);
 
   /// Surface — cards, content containers. One step above canvas.
   static const Color surface = Color(0xFF1E1E1E);
@@ -119,20 +134,27 @@ abstract final class AppColors {
 
   // ── Text ─────────────────────────────────────────────────────────────────
 
-  /// Primary heading / body text — light mode (pure black).
-  static const Color textPrimaryLight = Color(0xFF000000);
+  /// Primary heading / body text — light mode (near-black per brand bible).
+  static const Color textPrimaryLight = Color(0xFF161618);
 
   /// Primary heading / body text — dark mode (Warm White per brand bible).
   static const Color textPrimaryDark = Color(0xFFF0EEE9);
 
-  /// Subtitles, captions, secondary metadata — light mode.
-  static const Color textSecondaryLight = Color(0xFF636366);
+  /// Subtitles, captions, secondary metadata — light mode (warm grey per brand bible).
+  static const Color textSecondaryLight = Color(0xFF6B6864);
 
   /// Subtitles, captions, secondary metadata — dark mode.
   static const Color textSecondaryDark = Color(0xFF9B9894);
 
-  /// Text on Sage-filled surfaces (buttons, toggles, checkboxes).
+  /// Text on Sage-filled surfaces — dark mode (deep forest for contrast on sage).
+  /// For backwards compatibility; prefer [textOnSageDark] in new code.
   static const Color textOnSage = Color(0xFF1A2E22);
+
+  /// Text on Sage-filled surfaces — dark mode (same as [textOnSage]).
+  static const Color textOnSageDark = Color(0xFF1A2E22);
+
+  /// Text on Sage-filled surfaces — light mode (light cream for contrast on sage).
+  static const Color textOnSageLight = Color(0xFFE8EDE0);
 
   /// Text on Warm White surfaces (active segmented control).
   static const Color textOnWarmWhite = Color(0xFF161618);
@@ -355,24 +377,24 @@ class AppColorsOf {
   Color get accent => _isDark ? AppColors.accentDark : AppColors.accentLight;
 
   // ── Canvas & Elevation (Brand Bible) ───────────────────────────────────
-  Color get canvas => _isDark ? AppColors.canvas : AppColors.backgroundLight;
-  Color get surfaceRaised => _isDark ? AppColors.surfaceRaised : AppColors.elevatedSurfaceLight;
-  Color get surfaceOverlay => _isDark ? AppColors.surfaceOverlay : AppColors.elevatedSurfaceLight;
+  Color get canvas => _isDark ? AppColors.canvas : AppColors.canvasLight;
+  Color get surfaceRaised => _isDark ? AppColors.surfaceRaised : AppColors.surfaceRaisedLight;
+  Color get surfaceOverlay => _isDark ? AppColors.surfaceOverlay : AppColors.surfaceOverlayLight;
 
   // ── Backgrounds ────────────────────────────────────────────────────────
-  Color get background => _isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+  Color get background => _isDark ? AppColors.backgroundDark : AppColors.canvasLight;
 
   // ── Surfaces ───────────────────────────────────────────────────────────
-  Color get surface => _isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-  Color get cardBackground => _isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
+  Color get surface => _isDark ? AppColors.surfaceDark : AppColors.surfaceLightNew;
+  Color get cardBackground => _isDark ? AppColors.cardBackgroundDark : AppColors.surfaceLightNew;
   Color get elevatedSurface => _isDark ? AppColors.elevatedSurfaceDark : AppColors.elevatedSurfaceLight;
-  Color get inputBackground => _isDark ? AppColors.inputBackgroundDark : AppColors.inputBackgroundLight;
+  Color get inputBackground => _isDark ? AppColors.inputBackgroundDark : AppColors.surfaceRaisedLight;
 
   // ── Text ───────────────────────────────────────────────────────────────
   Color get textPrimary => _isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
   Color get textSecondary => _isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
   Color get textTertiary => AppColors.textTertiary;
-  Color get textOnSage => AppColors.textOnSage;
+  Color get textOnSage => _isDark ? AppColors.textOnSageDark : AppColors.textOnSageLight;
   Color get textOnWarmWhite => AppColors.textOnWarmWhite;
   Color get warmWhite => AppColors.warmWhite;
 
@@ -412,9 +434,9 @@ class AppColorsOf {
   Color get progressStreakWarm => _isDark ? AppColors.progressStreakWarm : AppColors.progressStreakWarmLight;
 
   // ── Trends ────────────────────────────────────────────────────────────────
-  Color get trendsCanvas => _isDark ? AppColors.canvas : AppColors.backgroundLight;
-  Color get trendsSurface => _isDark ? AppColors.surface : AppColors.surfaceLight;
-  Color get trendsSurfaceRaised => _isDark ? AppColors.surfaceRaised : AppColors.elevatedSurfaceLight;
+  Color get trendsCanvas => _isDark ? AppColors.canvas : AppColors.canvasLight;
+  Color get trendsSurface => _isDark ? AppColors.surface : AppColors.surfaceLightNew;
+  Color get trendsSurfaceRaised => _isDark ? AppColors.surfaceRaised : AppColors.surfaceRaisedLight;
   Color get trendsTextPrimary => _isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
   Color get trendsTextSecondary => _isDark ? AppColors.primary : AppColors.primaryOnLight;
   Color get trendsTextMuted => _isDark ? AppColors.trendsTextMuted : AppColors.trendsTextMutedLight;
