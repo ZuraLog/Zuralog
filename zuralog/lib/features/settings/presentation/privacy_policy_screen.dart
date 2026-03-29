@@ -23,7 +23,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ZuralogScaffold(
-      appBar: ZuralogAppBar(title: 'Privacy Policy'),
+      appBar: const ZuralogAppBar(title: 'Privacy Policy', showProfileAvatar: false),
       body: ListView(
         padding: const EdgeInsets.symmetric(
           horizontal: AppDimens.spaceMd,
@@ -300,7 +300,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 'If you have any questions about this Privacy Policy or our '
                 'privacy practices, please contact us at:\n\n'
                 'Zuralog, Inc.\n'
-                'privacy@zuralog.com\n'
+                'support@zuralog.com\n'
                 'https://zuralog.com/privacy-policy',
           ),
           SizedBox(height: AppDimens.spaceXxl),
