@@ -332,7 +332,7 @@ abstract final class AppColors {
   /// Muted trends text — light mode static constant (Deep Forest at 40% opacity).
   ///
   /// Pre-computed to avoid calling [Color.withValues] at runtime.
-  static const Color trendsTextMutedLight = Color(0x66354E42);
+  static const Color trendsTextMutedLight = Color(0x66344E41);
 
   // ── Legacy compatibility alias ────────────────────────────────────────────
   // Kept to avoid breaking existing widgets that reference the old `nutrition`
