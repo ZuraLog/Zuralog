@@ -93,7 +93,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 return SingleChildScrollView(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                    child: Padding(
+                    child: IntrinsicHeight(
+                      child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.spaceLg,
                   vertical: AppDimens.spaceLg,
@@ -203,6 +204,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
               ),
             ),
+          ),
           );
         },
       ),

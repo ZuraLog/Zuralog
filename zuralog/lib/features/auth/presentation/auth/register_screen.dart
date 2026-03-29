@@ -229,7 +229,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 return SingleChildScrollView(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                    child: AutofillGroup(
+                    child: IntrinsicHeight(
+                      child: AutofillGroup(
                 child: Form(
                   key: _formKey,
                   child: Padding(
@@ -405,6 +406,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
               ),
             ),
+          ),
           );
         },
       ),

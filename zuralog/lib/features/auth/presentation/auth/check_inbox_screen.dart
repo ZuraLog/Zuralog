@@ -138,7 +138,8 @@ class _CheckInboxScreenState extends ConsumerState<CheckInboxScreen> {
                 return SingleChildScrollView(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                    child: Padding(
+                    child: IntrinsicHeight(
+                      child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.spaceLg,
                   vertical: AppDimens.spaceLg,
@@ -316,6 +317,7 @@ class _CheckInboxScreenState extends ConsumerState<CheckInboxScreen> {
                 ),
               ),
             ),
+          ),
           );
         },
       ),
