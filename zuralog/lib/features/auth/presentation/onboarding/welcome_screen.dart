@@ -179,7 +179,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 liveRegion: true,
                 label: 'Signing in',
                 child: ColoredBox(
-                  color: Colors.black54,
+                  color: Colors.black.withValues(alpha: 0.54),
                   child: Center(
                     child: CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(
