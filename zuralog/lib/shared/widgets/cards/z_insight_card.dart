@@ -32,7 +32,10 @@ class ZInsightCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final categoryColor = categoryColorFromString(insight.category);
+    final categoryColor = categoryColorFromString(
+      insight.category,
+      fallback: colors.primary,
+    );
     final isUnread = !insight.isRead;
 
     return ZuralogSpringButton(
