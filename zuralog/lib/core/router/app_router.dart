@@ -103,8 +103,6 @@ import 'package:zuralog/features/settings/presentation/privacy_data_screen.dart'
 import 'package:zuralog/features/settings/presentation/subscription_settings_screen.dart';
 import 'package:zuralog/features/settings/presentation/about_screen.dart';
 import 'package:zuralog/features/settings/presentation/edit_profile_screen.dart';
-import 'package:zuralog/features/settings/presentation/privacy_policy_screen.dart';
-import 'package:zuralog/features/settings/presentation/terms_of_service_screen.dart';
 
 // ── Profile (pushed over shell) ───────────────────────────────────────────────
 import 'package:zuralog/features/profile/presentation/profile_screen.dart';
@@ -647,22 +645,6 @@ List<RouteBase> _buildRoutes() {
           builder: (context, state) => const SentryErrorBoundary(
             module: 'settings.about',
             child: AboutScreen(),
-          ),
-        ),
-        GoRoute(
-          path: 'privacy-policy',
-          name: RouteNames.settingsPrivacyPolicy,
-          builder: (context, state) => const SentryErrorBoundary(
-            module: 'settings.privacy_policy',
-            child: PrivacyPolicyScreen(),
-          ),
-        ),
-        GoRoute(
-          path: 'terms',
-          name: RouteNames.settingsTerms,
-          builder: (context, state) => const SentryErrorBoundary(
-            module: 'settings.terms',
-            child: TermsOfServiceScreen(),
           ),
         ),
       ],

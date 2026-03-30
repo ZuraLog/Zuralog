@@ -18,14 +18,14 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/di/providers.dart';
-import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -388,14 +388,14 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                     icon: Icons.shield_outlined,
                     iconColor: colors.primary,
                     title: 'Privacy Policy',
-                    onTap: () => context.pushNamed(RouteNames.settingsPrivacyPolicy),
+                    onTap: () => launchUrl(Uri.parse('https://www.zuralog.com/privacy-policy'), mode: LaunchMode.externalApplication),
                   ),
                   const _Divider(),
                   ZSettingsTile(
                     icon: Icons.description_outlined,
                     iconColor: colors.primary,
                     title: 'Terms of Service',
-                    onTap: () => context.pushNamed(RouteNames.settingsTerms),
+                    onTap: () => launchUrl(Uri.parse('https://www.zuralog.com/terms'), mode: LaunchMode.externalApplication),
                   ),
                 ],
               ),
