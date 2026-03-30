@@ -50,6 +50,7 @@ import 'package:zuralog/features/auth/presentation/auth/login_screen.dart';
 import 'package:zuralog/features/auth/presentation/auth/register_screen.dart';
 import 'package:zuralog/features/auth/presentation/auth/forgot_password_screen.dart';
 import 'package:zuralog/features/auth/presentation/auth/check_inbox_screen.dart';
+import 'package:zuralog/features/auth/presentation/auth/reset_password_screen.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/onboarding_page_view.dart';
 import 'package:zuralog/features/onboarding/presentation/onboarding_flow_screen.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/welcome_screen.dart';
@@ -247,6 +248,14 @@ List<RouteBase> _buildRoutes() {
       builder: (context, state) => const SentryErrorBoundary(
         module: 'checkInbox',
         child: CheckInboxScreen(),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.resetPasswordPath,
+      name: RouteNames.resetPassword,
+      builder: (context, state) => const SentryErrorBoundary(
+        module: 'resetPassword',
+        child: ResetPasswordScreen(),
       ),
     ),
     GoRoute(

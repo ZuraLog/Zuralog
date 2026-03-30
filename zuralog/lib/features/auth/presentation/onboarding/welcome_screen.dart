@@ -545,27 +545,9 @@ class _LegalFooterState extends State<_LegalFooter> {
   void initState() {
     super.initState();
     _tosRecognizer = TapGestureRecognizer()
-      ..onTap = () async {
-        try {
-          await launchUrl(
-            Uri.parse('https://www.zuralog.com/terms'),
-            mode: LaunchMode.externalApplication,
-          );
-        } catch (_) {
-          // Silently ignore — do not crash if the URL cannot be opened.
-        }
-      };
+      ..onTap = () => context.push(RouteNames.settingsTermsPath);
     _privacyRecognizer = TapGestureRecognizer()
-      ..onTap = () async {
-        try {
-          await launchUrl(
-            Uri.parse('https://www.zuralog.com/privacy'),
-            mode: LaunchMode.externalApplication,
-          );
-        } catch (_) {
-          // Silently ignore — do not crash if the URL cannot be opened.
-        }
-      };
+      ..onTap = () => context.push(RouteNames.settingsPrivacyPolicyPath);
   }
 
   @override

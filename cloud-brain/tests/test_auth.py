@@ -168,3 +168,113 @@ def test_health_still_works(client):
     response = c.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "healthy"}
+
+
+# ---------------------------------------------------------------------------
+# Password Reset Tests
+# ---------------------------------------------------------------------------
+
+
+def test_reset_password_success(client):
+    """Reset password request returns 200 with confirmation message."""
+    c, mock_auth = client
+    mock_auth.request_password_reset.return_value = None
+
+    response = c.post(
+        "/api/v1/auth/reset-password",
+        json={"email": "test@example.com"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "reset link" in data["message"].lower()
+    mock_auth.request_password_reset.assert_called_once_with(
+        email="test@example.com",
+        redirect_to="https://zuralog.com/auth/reset-password",
+    )
+
+
+def test_reset_password_invalid_email(client):
+    """Reset password with invalid email returns 422."""
+    c, _ = client
+    response = c.post(
+        "/api/v1/auth/reset-password",
+        json={"email": "not-an-email"},
+    )
+    assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Resend Verification Tests
+# ---------------------------------------------------------------------------
+
+
+def test_resend_verification_success(client):
+    """Resend verification returns 200 with confirmation message."""
+    c, mock_auth = client
+    mock_auth.resend_confirmation.return_value = None
+
+    response = c.post(
+        "/api/v1/auth/resend-verification",
+        json={"email": "test@example.com"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "verification" in data["message"].lower()
+    mock_auth.resend_confirmation.assert_called_once_with(email="test@example.com")
+
+
+def test_resend_verification_invalid_email(client):
+    """Resend verification with invalid email returns 422."""
+    c, _ = client
+    response = c.post(
+        "/api/v1/auth/resend-verification",
+        json={"email": "bad"},
+    )
+    assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Set Password (Recovery) Tests
+# ---------------------------------------------------------------------------
+
+
+def test_set_password_success(client):
+    """Set password with recovery token returns 200."""
+    c, mock_auth = client
+    mock_auth.update_user_password.return_value = None
+
+    response = c.post(
+        "/api/v1/auth/set-password",
+        json={"new_password": "NewSecure1!"},
+        headers={"Authorization": "Bearer recovery-token-123"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "updated" in data["message"].lower()
+    mock_auth.update_user_password.assert_called_once_with(
+        "recovery-token-123", "NewSecure1!",
+    )
+
+
+def test_set_password_too_short(client):
+    """Set password with < 8 chars returns 422."""
+    c, _ = client
+    response = c.post(
+        "/api/v1/auth/set-password",
+        json={"new_password": "short"},
+        headers={"Authorization": "Bearer recovery-token-123"},
+    )
+    assert response.status_code == 422
+
+
+def test_set_password_no_auth(client):
+    """Set password without auth header returns 401 or 403 (HTTPBearer)."""
+    c, _ = client
+    response = c.post(
+        "/api/v1/auth/set-password",
+        json={"new_password": "NewSecure1!"},
+    )
+    assert response.status_code in (401, 403)

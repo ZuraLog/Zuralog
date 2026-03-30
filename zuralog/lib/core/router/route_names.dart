@@ -94,6 +94,12 @@ abstract final class RouteNames {
   /// Path for the check-inbox screen.
   static const String checkInboxPath = '/auth/check-inbox';
 
+  /// Name for the reset-password screen (deep link target).
+  static const String resetPassword = 'resetPassword';
+
+  /// Path for the reset-password screen.
+  static const String resetPasswordPath = '/auth/reset-password';
+
   // ── Tab 0: Today ─────────────────────────────────────────────────────────
 
   /// Name for the Today Feed tab root.
@@ -374,5 +380,8 @@ abstract final class RouteNames {
     profileQuestionnairePath,
     forgotPasswordPath,
     checkInboxPath,
+    resetPasswordPath,
+    settingsTermsPath,
+    settingsPrivacyPolicyPath,
   };
 }
