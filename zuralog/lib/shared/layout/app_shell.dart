@@ -148,11 +148,6 @@ class _FrostedNavigationBar extends StatefulWidget {
       activeIcon: Icons.trending_up_rounded,
       label: 'Trends',
     ),
-    _NavTab(
-      icon: Icons.settings_outlined,
-      activeIcon: Icons.settings_rounded,
-      label: 'Settings',
-    ),
   ];
 
   @override
@@ -170,7 +165,7 @@ class _FrostedNavigationBarState extends State<_FrostedNavigationBar>
       vsync: this,
       value: widget.currentIndex.toDouble(),
       lowerBound: -0.5,
-      upperBound: 5.5,
+      upperBound: 4.5,
     );
   }
 
