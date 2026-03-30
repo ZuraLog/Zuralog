@@ -40,35 +40,38 @@ class _CoachBlobState extends State<CoachBlob>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
-  // Four organic border-radius keyframes that create a living blob shape.
-  static const _shapes = [
-    BorderRadius.only(
-      topLeft: Radius.circular(60),
-      topRight: Radius.circular(38),
-      bottomLeft: Radius.circular(48),
-      bottomRight: Radius.circular(56),
-    ),
-    BorderRadius.only(
-      topLeft: Radius.circular(44),
-      topRight: Radius.circular(62),
-      bottomLeft: Radius.circular(56),
-      bottomRight: Radius.circular(36),
-    ),
-    BorderRadius.only(
-      topLeft: Radius.circular(54),
-      topRight: Radius.circular(44),
-      bottomLeft: Radius.circular(38),
-      bottomRight: Radius.circular(62),
-    ),
-    BorderRadius.only(
-      topLeft: Radius.circular(40),
-      topRight: Radius.circular(56),
-      bottomLeft: Radius.circular(60),
-      bottomRight: Radius.circular(42),
-    ),
-  ];
-
   late final Animation<BorderRadius?> _borderRadiusAnim;
+
+  // Four organic border-radius keyframes scaled relative to widget size so
+  // the shape stays visually organic at every size (28 px footer or 80 px hero).
+  List<BorderRadius> _computeShapes(double size) {
+    return [
+      BorderRadius.only(
+        topLeft: Radius.circular(size * 0.75),
+        topRight: Radius.circular(size * 0.47),
+        bottomLeft: Radius.circular(size * 0.60),
+        bottomRight: Radius.circular(size * 0.70),
+      ),
+      BorderRadius.only(
+        topLeft: Radius.circular(size * 0.55),
+        topRight: Radius.circular(size * 0.77),
+        bottomLeft: Radius.circular(size * 0.70),
+        bottomRight: Radius.circular(size * 0.45),
+      ),
+      BorderRadius.only(
+        topLeft: Radius.circular(size * 0.67),
+        topRight: Radius.circular(size * 0.55),
+        bottomLeft: Radius.circular(size * 0.47),
+        bottomRight: Radius.circular(size * 0.77),
+      ),
+      BorderRadius.only(
+        topLeft: Radius.circular(size * 0.50),
+        topRight: Radius.circular(size * 0.70),
+        bottomLeft: Radius.circular(size * 0.75),
+        bottomRight: Radius.circular(size * 0.52),
+      ),
+    ];
+  }
 
   Duration get _duration {
     return switch (widget.state) {
@@ -82,21 +85,22 @@ class _CoachBlobState extends State<CoachBlob>
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: _duration);
+    final shapes = _computeShapes(widget.size);
     _borderRadiusAnim = TweenSequence<BorderRadius?>([
       TweenSequenceItem(
-        tween: BorderRadiusTween(begin: _shapes[0], end: _shapes[1]),
+        tween: BorderRadiusTween(begin: shapes[0], end: shapes[1]),
         weight: 1,
       ),
       TweenSequenceItem(
-        tween: BorderRadiusTween(begin: _shapes[1], end: _shapes[2]),
+        tween: BorderRadiusTween(begin: shapes[1], end: shapes[2]),
         weight: 1,
       ),
       TweenSequenceItem(
-        tween: BorderRadiusTween(begin: _shapes[2], end: _shapes[3]),
+        tween: BorderRadiusTween(begin: shapes[2], end: shapes[3]),
         weight: 1,
       ),
       TweenSequenceItem(
-        tween: BorderRadiusTween(begin: _shapes[3], end: _shapes[0]),
+        tween: BorderRadiusTween(begin: shapes[3], end: shapes[0]),
         weight: 1,
       ),
     ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
@@ -124,7 +128,7 @@ class _CoachBlobState extends State<CoachBlob>
     return AnimatedBuilder(
       animation: _borderRadiusAnim,
       builder: (context, _) {
-        final radius = _borderRadiusAnim.value ?? _shapes[0];
+        final radius = _borderRadiusAnim.value ?? _computeShapes(widget.size)[0];
         return Container(
           width: widget.size,
           height: widget.size,
