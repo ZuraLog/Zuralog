@@ -199,7 +199,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                   Text(
                     'AI PERSONA',
                     style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.textTertiary,
+                      color: colors.textTertiary,
                       letterSpacing: 0.8,
                       fontWeight: FontWeight.w600,
                     ),
@@ -265,7 +265,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                   Text(
                     'PROACTIVITY',
                     style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.textTertiary,
+                      color: colors.textTertiary,
                       letterSpacing: 0.8,
                       fontWeight: FontWeight.w600,
                     ),
@@ -317,7 +317,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                   Text(
                     'RESPONSE LENGTH',
                     style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.textTertiary,
+                      color: colors.textTertiary,
                       letterSpacing: 0.8,
                       fontWeight: FontWeight.w600,
                     ),
@@ -360,7 +360,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
               child: Text(
                 'PREFERENCES',
                 style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.textTertiary,
+                  color: colors.textTertiary,
                   letterSpacing: 0.8,
                   fontWeight: FontWeight.w600,
                 ),
@@ -571,7 +571,7 @@ class _PersonaCard extends StatelessWidget {
                       : Icon(
                           Icons.radio_button_unchecked_rounded,
                           key: const ValueKey(false),
-                          color: AppColors.textTertiary,
+                          color: colors.textTertiary,
                           size: AppDimens.iconMd,
                         ),
                 ),
@@ -697,25 +697,9 @@ class _SaveButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: AppDimens.touchTargetMin,
-      child: FilledButton(
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.primaryButtonText,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
-          ),
-        ),
-        child: Text(
-          'Save Preferences',
-          style: AppTextStyles.titleMedium.copyWith(
-            color: AppColors.primaryButtonText,
-          ),
-        ),
-      ),
+    return ZButton(
+      label: 'Save Preferences',
+      onPressed: onPressed,
     );
   }
 }

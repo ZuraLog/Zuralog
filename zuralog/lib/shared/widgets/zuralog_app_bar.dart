@@ -1,18 +1,15 @@
 /// Zuralog — ZuralogAppBar shared widget.
 ///
 /// Zuralog shared AppBar — base properties hardcoded (elevation,
-/// scrolledUnderElevation, surfaceTintColor), ProfileAvatarButton
-/// always appended as last action. Used by every root tab screen.
+/// scrolledUnderElevation, surfaceTintColor). Used by every root tab screen.
 /// Background color is inherited from AppBarTheme in AppTheme.
 library;
 
 import 'package:flutter/material.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
-import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
-import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
 
 // ── ZuralogAppBarTooltipConfig ────────────────────────────────────────────────
 
@@ -35,13 +32,8 @@ class ZuralogAppBarTooltipConfig {
 // ── ZuralogAppBar ─────────────────────────────────────────────────────────────
 
 /// Zuralog shared AppBar — base properties hardcoded (elevation,
-/// scrolledUnderElevation, surfaceTintColor), ProfileAvatarButton
-/// always appended as last action. Background inherited from AppBarTheme.
-/// Used by every root tab screen.
-///
-/// Note: this widget embeds [ProfileAvatarButton], which is a Riverpod
-/// [ConsumerWidget] and requires a [ProviderScope] ancestor. Wrap with
-/// [ProviderScope] in widget tests.
+/// scrolledUnderElevation, surfaceTintColor). Background inherited from
+/// AppBarTheme. Used by every root tab screen.
 class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
   const ZuralogAppBar({
     super.key,
@@ -107,10 +99,6 @@ class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
 
     final fullActions = [
       ...?actions,
-      const Padding(
-        padding: EdgeInsets.only(right: AppDimens.spaceMd),
-        child: ProfileAvatarButton(),
-      ),
     ];
 
     return AppBar(
