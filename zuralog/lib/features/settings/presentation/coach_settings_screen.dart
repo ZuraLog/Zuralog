@@ -20,6 +20,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
+import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -65,7 +66,7 @@ const List<_PersonaOption> _personas = [
     label: 'Balanced',
     description: 'Supportive and honest. Celebrates wins, addresses gaps.',
     icon: Icons.balance_rounded,
-    iconColor: AppColors.primary,
+    iconColor: AppColors.categoryWellness,
   ),
   _PersonaOption(
     key: 'gentle',
@@ -107,9 +108,9 @@ const List<_ProactivityOption> _responseLengthOptions = [
 /// Coach Settings screen — AI persona, proactivity level, response length,
 /// suggested prompts and voice input configuration.
 ///
-/// Uses a [CustomScrollView] with [SliverAppBar] large-title and
-/// [SliverList] content sections. Local UI state is managed via
-/// [StateProvider]s and Riverpod's [ConsumerStatefulWidget].
+/// Uses [ZuralogScaffold] with [ZuralogAppBar] and a [ListView] for content.
+/// Local UI state is managed via [StateProvider]s and Riverpod's
+/// [ConsumerStatefulWidget].
 class CoachSettingsScreen extends ConsumerStatefulWidget {
   /// Creates a [CoachSettingsScreen].
   const CoachSettingsScreen({super.key});
@@ -162,312 +163,229 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
     final selectedVoiceInput = prefs?.voiceInputEnabled ?? true;
 
     return ZuralogScaffold(
-      body: CustomScrollView(
-        slivers: [
-          // ── Large-title header ─────────────────────────────────────────
-          SliverAppBar(
-            expandedHeight: 100,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              title: Text(
-                'Coach',
-                style: AppTextStyles.displaySmall.copyWith(
-                  color: colors.textPrimary,
-                ),
-              ),
-              titlePadding: const EdgeInsetsDirectional.only(
-                start: AppDimens.spaceMd,
-                bottom: AppDimens.spaceMd,
-              ),
-              collapseMode: CollapseMode.parallax,
-            ),
-          ),
+      appBar: const ZuralogAppBar(title: 'Coach', showProfileAvatar: false),
+      body: ListView(
+        padding: const EdgeInsets.only(bottom: AppDimens.spaceXl),
+        children: [
+          // ── AI PERSONA section ───────────────────────────────────────────
+          const SettingsSectionLabel('AI Persona'),
 
-          // ── AI PERSONA section ─────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppDimens.spaceMd,
-                AppDimens.spaceLg,
-                AppDimens.spaceMd,
-                AppDimens.spaceSm,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Section label
-                  Text(
-                    'AI PERSONA',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: colors.textTertiary,
-                      letterSpacing: 0.8,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: AppDimens.spaceXs),
-                  // Section subtitle
-                  Text(
-                    'Choose how your AI coach communicates',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ],
+          // Section subtitle
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppDimens.spaceMd,
+              0,
+              AppDimens.spaceMd,
+              AppDimens.spaceSm,
+            ),
+            child: Text(
+              'Choose how your AI coach communicates',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: colors.textSecondary,
               ),
             ),
           ),
 
-          // Persona cards
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppDimens.spaceMd,
-            ),
-            sliver: SliverList.separated(
-              itemCount: _personas.length,
-              separatorBuilder: (context, index) =>
-                  const SizedBox(height: AppDimens.spaceSm),
-              itemBuilder: (context, index) {
-                final persona = _personas[index];
-                final isActive = persona.key == selectedPersona;
-                return _PersonaCard(
-                  persona: persona,
-                  isActive: isActive,
-                  onTap: () {
-                    ref.read(userPreferencesProvider.notifier).mutate(
-                          (p) => p.copyWith(
-                            coachPersona:
-                                CoachPersona.fromValue(persona.key),
-                          ),
-                        );
-                    ref.read(analyticsServiceProvider).capture(
-                      event: AnalyticsEvents.personaChanged,
-                      properties: {'persona': persona.key},
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-
-          // ── PROACTIVITY section ────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppDimens.spaceMd,
-                AppDimens.spaceXl,
-                AppDimens.spaceMd,
-                AppDimens.spaceSm,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Section label
-                  Text(
-                    'PROACTIVITY',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: colors.textTertiary,
-                      letterSpacing: 0.8,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: AppDimens.spaceXs),
-                  // Section subtitle
-                  Text(
-                    'How often the coach proactively shares insights',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: AppDimens.spaceMd),
-                  // Chip row
-                  _ProactivityChipRow(
-                    options: _proactivityOptions,
-                    selectedKey: selectedProactivity,
-                    onSelected: (key) {
+          // Persona cards — manually separated with SizedBox
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+            child: Column(
+              children: [
+                for (int i = 0; i < _personas.length; i++) ...[
+                  _PersonaCard(
+                    persona: _personas[i],
+                    isActive: _personas[i].key == selectedPersona,
+                    onTap: () {
                       ref.read(userPreferencesProvider.notifier).mutate(
                             (p) => p.copyWith(
-                              proactivityLevel:
-                                  ProactivityLevel.fromValue(key),
+                              coachPersona:
+                                  CoachPersona.fromValue(_personas[i].key),
                             ),
                           );
                       ref.read(analyticsServiceProvider).capture(
-                        event: AnalyticsEvents.proactivityChanged,
-                        properties: {'level': key},
+                        event: AnalyticsEvents.personaChanged,
+                        properties: {'persona': _personas[i].key},
                       );
                     },
                   ),
+                  if (i < _personas.length - 1)
+                    const SizedBox(height: AppDimens.spaceSm),
                 ],
-              ),
+              ],
             ),
           ),
 
-          // ── RESPONSE LENGTH section ────────────────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppDimens.spaceMd,
-                AppDimens.spaceXl,
-                AppDimens.spaceMd,
-                AppDimens.spaceSm,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Section label
-                  Text(
-                    'RESPONSE LENGTH',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: colors.textTertiary,
-                      letterSpacing: 0.8,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: AppDimens.spaceXs),
-                  // Section subtitle
-                  Text(
-                    'How detailed AI responses should be',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: AppDimens.spaceMd),
-                  // Chip row
-                  _ProactivityChipRow(
-                    options: _responseLengthOptions,
-                    selectedKey: selectedResponseLength,
-                    onSelected: (key) {
-                      ref.read(userPreferencesProvider.notifier).mutate(
-                            (p) => p.copyWith(
-                              responseLength: ResponseLength.fromValue(key),
-                            ),
-                          );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
+          // ── PROACTIVITY section ──────────────────────────────────────────
+          const SettingsSectionLabel('Proactivity'),
 
-          // ── PREFERENCES section (toggles) ──────────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppDimens.spaceMd,
-                AppDimens.spaceXl,
-                AppDimens.spaceMd,
-                AppDimens.spaceSm,
-              ),
-              child: Text(
-                'PREFERENCES',
-                style: AppTextStyles.labelSmall.copyWith(
-                  color: colors.textTertiary,
-                  letterSpacing: 0.8,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppDimens.spaceMd,
+              0,
+              AppDimens.spaceMd,
+              AppDimens.spaceSm,
             ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-            sliver: SliverToBoxAdapter(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: colors.cardBackground,
-                  borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'How often the coach proactively shares insights',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: colors.textSecondary,
+                  ),
                 ),
-                child: Column(
-                  children: [
-                    SwitchListTile(
-                      title: Text(
-                        'Suggested Prompts',
-                        style: AppTextStyles.titleMedium.copyWith(
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                      subtitle: Text(
-                        'Show prompt chips in new conversations',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                      value: selectedSuggestedPrompts,
-                      onChanged: (v) =>
-                          ref.read(userPreferencesProvider.notifier).mutate(
-                                (p) => p.copyWith(suggestedPromptsEnabled: v),
-                              ),
-                      activeThumbColor: colors.primary,
-                      activeTrackColor: colors.primary.withValues(alpha: 0.5),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppDimens.spaceMd,
-                        vertical: AppDimens.spaceXs,
-                      ),
-                    ),
-                    Divider(
-                      height: 1,
-                      color: colors.border,
-                      indent: AppDimens.spaceMd,
-                    ),
-                    SwitchListTile(
-                      title: Text(
-                        'Voice Input',
-                        style: AppTextStyles.titleMedium.copyWith(
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                      subtitle: Text(
-                        'Enable hold-to-talk microphone button',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                      value: selectedVoiceInput,
-                      onChanged: (v) =>
-                          ref.read(userPreferencesProvider.notifier).mutate(
-                                (p) => p.copyWith(voiceInputEnabled: v),
-                              ),
-                      activeThumbColor: colors.primary,
-                      activeTrackColor: colors.primary.withValues(alpha: 0.5),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppDimens.spaceMd,
-                        vertical: AppDimens.spaceXs,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // ── Bottom padding + Save button ───────────────────────────────
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppDimens.spaceMd,
-                AppDimens.spaceXl,
-                AppDimens.spaceMd,
-                AppDimens.spaceXl,
-              ),
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: _SaveButton(
-                  onPressed: () {
-                    // Changes are already auto-saved via userPreferencesProvider.
-                    // This button provides explicit user confirmation.
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Preferences saved'),
-                        backgroundColor: colors.surface,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppDimens.radiusButtonMd),
-                        ),
-                      ),
+                const SizedBox(height: AppDimens.spaceMd),
+                _ProactivityChipRow(
+                  options: _proactivityOptions,
+                  selectedKey: selectedProactivity,
+                  onSelected: (key) {
+                    ref.read(userPreferencesProvider.notifier).mutate(
+                          (p) => p.copyWith(
+                            proactivityLevel:
+                                ProactivityLevel.fromValue(key),
+                          ),
+                        );
+                    ref.read(analyticsServiceProvider).capture(
+                      event: AnalyticsEvents.proactivityChanged,
+                      properties: {'level': key},
                     );
                   },
                 ),
+              ],
+            ),
+          ),
+
+          // ── RESPONSE LENGTH section ──────────────────────────────────────
+          const SettingsSectionLabel('Response Length'),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppDimens.spaceMd,
+              0,
+              AppDimens.spaceMd,
+              AppDimens.spaceSm,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'How detailed AI responses should be',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: AppDimens.spaceMd),
+                _ProactivityChipRow(
+                  options: _responseLengthOptions,
+                  selectedKey: selectedResponseLength,
+                  onSelected: (key) {
+                    ref.read(userPreferencesProvider.notifier).mutate(
+                          (p) => p.copyWith(
+                            responseLength: ResponseLength.fromValue(key),
+                          ),
+                        );
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          // ── PREFERENCES section (toggles) ────────────────────────────────
+          const SettingsSectionLabel('Preferences'),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+            child: Container(
+              decoration: BoxDecoration(
+                color: colors.surface,
+                borderRadius: BorderRadius.circular(AppDimens.radiusCard),
               ),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    title: Text(
+                      'Suggested Prompts',
+                      style: AppTextStyles.titleMedium.copyWith(
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Show prompt chips in new conversations',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                    value: selectedSuggestedPrompts,
+                    onChanged: (v) =>
+                        ref.read(userPreferencesProvider.notifier).mutate(
+                              (p) => p.copyWith(suggestedPromptsEnabled: v),
+                            ),
+                    activeThumbColor: colors.primary,
+                    activeTrackColor: colors.primary.withValues(alpha: 0.5),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppDimens.spaceMd,
+                      vertical: AppDimens.spaceXs,
+                    ),
+                  ),
+                  Divider(
+                    height: 1,
+                    color: colors.border,
+                    indent: AppDimens.spaceMd,
+                  ),
+                  SwitchListTile(
+                    title: Text(
+                      'Voice Input',
+                      style: AppTextStyles.titleMedium.copyWith(
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Enable hold-to-talk microphone button',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                    value: selectedVoiceInput,
+                    onChanged: (v) =>
+                        ref.read(userPreferencesProvider.notifier).mutate(
+                              (p) => p.copyWith(voiceInputEnabled: v),
+                            ),
+                    activeThumbColor: colors.primary,
+                    activeTrackColor: colors.primary.withValues(alpha: 0.5),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppDimens.spaceMd,
+                      vertical: AppDimens.spaceXs,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Save button ──────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppDimens.spaceMd,
+              AppDimens.spaceXl,
+              AppDimens.spaceMd,
+              AppDimens.spaceXl,
+            ),
+            child: _SaveButton(
+              onPressed: () {
+                // Changes are already auto-saved via userPreferencesProvider.
+                // This button provides explicit user confirmation.
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Preferences saved'),
+                    backgroundColor: colors.surface,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppDimens.radiusButtonMd),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -481,7 +399,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
 /// A tappable card representing a single AI persona option.
 ///
 /// Active state: `AppColors.primary` accent border (1.5px) + check icon.
-/// Inactive state: `AppColors.cardBackgroundDark` fill, no border accent.
+/// Inactive state: `colors.surface` fill, no border accent.
 class _PersonaCard extends StatelessWidget {
   /// Creates a [_PersonaCard].
   const _PersonaCard({
@@ -506,7 +424,7 @@ class _PersonaCard extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeInOut,
       decoration: BoxDecoration(
-        color: colors.cardBackground,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         border: isActive
             ? Border.all(color: colors.primary, width: 1.5)
@@ -590,7 +508,7 @@ class _PersonaCard extends StatelessWidget {
 ///
 /// Used for both proactivity level (3 chips) and response length (2 chips).
 /// The selected chip uses `AppColors.primary` background with dark text.
-/// Unselected chips use `AppColors.surfaceDark` background.
+/// Unselected chips use `colors.surface` background.
 class _ProactivityChipRow extends StatelessWidget {
   /// Creates a [_ProactivityChipRow].
   const _ProactivityChipRow({
