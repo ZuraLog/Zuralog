@@ -173,6 +173,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                                 feed.streak!.currentStreak >=
                                     (feed.streak!.longestStreak ?? 0),
                             isFrozen: feed.streak?.isFrozen ?? false,
+                            onTap: () => context.go(RouteNames.progressPath),
                           ),
                         ),
                       ),

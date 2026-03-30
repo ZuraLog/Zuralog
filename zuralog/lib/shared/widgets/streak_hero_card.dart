@@ -29,6 +29,7 @@ class StreakHeroCard extends StatelessWidget {
     required this.streakDays,
     this.isPersonalBest = false,
     this.isFrozen = false,
+    this.onTap,
   });
 
   /// The user's current streak in days. 0 shows the inviting zero state.
@@ -39,6 +40,9 @@ class StreakHeroCard extends StatelessWidget {
 
   /// Whether the streak is currently frozen (streak freeze active).
   final bool isFrozen;
+
+  /// Called when the card is tapped. If null, the card is not tappable.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -53,6 +57,7 @@ class StreakHeroCard extends StatelessWidget {
 
     return ZuralogCard(
       variant: ZCardVariant.feature,
+      onTap: onTap,
       padding: const EdgeInsets.symmetric(
         vertical: AppDimens.spaceLg,
         horizontal: AppDimens.spaceMd,
