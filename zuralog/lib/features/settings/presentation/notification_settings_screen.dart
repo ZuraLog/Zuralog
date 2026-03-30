@@ -234,7 +234,7 @@ class _NotificationSettingsScreenState
         );
 
     return ZuralogScaffold(
-      appBar: ZuralogAppBar(title: 'Notifications'),
+      appBar: ZuralogAppBar(title: 'Notifications', showProfileAvatar: false),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
         children: [
@@ -549,7 +549,7 @@ class _SettingsCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(children: children),
@@ -626,9 +626,6 @@ class _ToggleRow extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: colors.primary,
-            inactiveThumbColor: colors.textTertiary,
-            inactiveTrackColor: colors.border,
           ),
         ],
       ),
@@ -684,9 +681,6 @@ class _SubToggleRow extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: colors.primary,
-            inactiveThumbColor: colors.textTertiary,
-            inactiveTrackColor: colors.border,
           ),
         ],
       ),
@@ -816,8 +810,8 @@ class _TimePickerRow extends StatelessWidget {
           context: context,
           initialTime: time,
           builder: (context, child) => Theme(
-            data: ThemeData.dark().copyWith(
-              colorScheme: ColorScheme.dark(
+            data: Theme.of(context).copyWith(
+              colorScheme: Theme.of(context).colorScheme.copyWith(
                 primary: AppColorsOf(context).primary,
                 onPrimary: AppColors.primaryButtonText,
               ),
