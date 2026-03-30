@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 /// Journal Settings screen — choose the default journalling mode.
@@ -60,19 +61,14 @@ class _JournalSettingsScreenState extends State<JournalSettingsScreen> {
     final colors = AppColorsOf(context);
 
     return ZuralogScaffold(
-      appBar: const ZuralogAppBar(title: 'Journal'),
+      appBar: const ZuralogAppBar(title: 'Journal', showProfileAvatar: false),
       body: Padding(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Section label ────────────────────────────────────────────
-            Text(
-              'Preferred mode',
-              style: AppTextStyles.titleMedium.copyWith(
-                color: colors.textPrimary,
-              ),
-            ),
+            const SettingsSectionLabel('Preferred mode'),
 
             const SizedBox(height: AppDimens.spaceSm),
 
