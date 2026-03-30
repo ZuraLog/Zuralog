@@ -35,6 +35,7 @@ class AchievementsSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     // Badge row: show recents first, pad with placeholder slots up to 4
     final badgeSlots = recentAchievements.take(4).toList();
     final hasContent = nextAchievement != null || recentAchievements.isNotEmpty;
@@ -52,7 +53,7 @@ class AchievementsSectionCard extends StatelessWidget {
               Text(
                 'Achievements',
                 style: AppTextStyles.titleMedium.copyWith(
-                  color: AppColors.progressTextPrimary,
+                  color: colors.progressTextPrimary,
                 ),
               ),
               const Spacer(),
@@ -64,7 +65,7 @@ class AchievementsSectionCard extends StatelessWidget {
                   child: Text(
                     'Gallery',
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.progressTextSecondary,
+                      color: colors.progressTextSecondary,
                     ),
                   ),
                 ),
@@ -110,12 +111,13 @@ class _RecentBadgesRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.progressSurface,
+        color: colors.progressSurface,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        border: Border.all(color: AppColors.progressBorderDefault),
+        border: Border.all(color: colors.progressBorderDefault),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -123,7 +125,7 @@ class _RecentBadgesRow extends StatelessWidget {
           Text(
             'Recently Unlocked',
             style: AppTextStyles.labelSmall.copyWith(
-              color: AppColors.progressTextMuted,
+              color: colors.progressTextMuted,
               letterSpacing: 0.3,
             ),
           ),
@@ -144,6 +146,7 @@ class _BadgeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Expanded(
       child: Column(
         children: [
@@ -151,15 +154,15 @@ class _BadgeTile extends StatelessWidget {
             width: AppDimens.iconContainerMd,
             height: AppDimens.iconContainerMd,
             decoration: BoxDecoration(
-              color: AppColors.progressSurfaceRaised,
+              color: colors.progressSurfaceRaised,
               borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-              border: Border.all(color: AppColors.progressBorderStrong),
+              border: Border.all(color: colors.progressBorderStrong),
             ),
             child: Center(
               child: Icon(
                 iconMap[achievement.iconName] ?? Icons.emoji_events_rounded,
                 size: 20,
-                color: AppColors.progressSage,
+                color: colors.progressSage,
               ),
             ),
           ),
@@ -167,7 +170,7 @@ class _BadgeTile extends StatelessWidget {
           Text(
             achievement.title,
             style: AppTextStyles.labelSmall.copyWith(
-              color: AppColors.progressTextSecondary,
+              color: colors.progressTextSecondary,
             ),
             textAlign: TextAlign.center,
             maxLines: 2,

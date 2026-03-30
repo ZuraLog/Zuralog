@@ -33,6 +33,7 @@ class NextAchievementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final current = achievement.progressCurrent ?? 0;
     final total = achievement.progressTotal ?? 1;
     final fraction = (total > 0) ? (current / total).clamp(0.0, 1.0) : 0.0;
@@ -45,9 +46,9 @@ class NextAchievementCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppDimens.spaceMd),
             decoration: BoxDecoration(
-              color: AppColors.progressSurface,
+              color: colors.progressSurface,
               borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-              border: Border.all(color: AppColors.progressBorderDefault),
+              border: Border.all(color: colors.progressBorderDefault),
             ),
             child: Row(
               children: [
@@ -55,14 +56,14 @@ class NextAchievementCard extends StatelessWidget {
                   width: AppDimens.iconContainerMd,
                   height: AppDimens.iconContainerMd,
                   decoration: BoxDecoration(
-                    color: AppColors.progressSurfaceRaised,
+                    color: colors.progressSurfaceRaised,
                     borderRadius: BorderRadius.circular(AppDimens.radiusSm),
                   ),
                   child: Center(
                     child: Icon(
                       _iconMap[achievement.iconName] ?? Icons.emoji_events_rounded,
                       size: 22,
-                      color: AppColors.progressTextSecondary,
+                      color: colors.progressTextSecondary,
                     ),
                   ),
                 ),
@@ -74,14 +75,14 @@ class NextAchievementCard extends StatelessWidget {
                       Text(
                         achievement.title,
                         style: AppTextStyles.titleMedium.copyWith(
-                          color: AppColors.progressTextPrimary,
+                          color: colors.progressTextPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         achievement.description,
                         style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.progressTextMuted,
+                          color: colors.progressTextMuted,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -96,7 +97,7 @@ class NextAchievementCard extends StatelessWidget {
                           Text(
                             achievement.progressLabel ?? '$current/$total',
                             style: AppTextStyles.labelSmall.copyWith(
-                              color: AppColors.progressTextSecondary,
+                              color: colors.progressTextSecondary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),

@@ -26,7 +26,7 @@ import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── Helper Functions ──────────────────────────────────────────────────────────
 
-Color _categoryColor(String category) {
+Color _categoryColor(String category, BuildContext context) {
   switch (category) {
     case 'sleep':
       return AppColors.categorySleep;
@@ -41,7 +41,7 @@ Color _categoryColor(String category) {
     case 'wellness':
       return AppColors.categoryWellness;
     default:
-      return AppColors.trendsSage;
+      return AppColorsOf(context).trendsSage;
   }
 }
 
@@ -160,7 +160,7 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody>
     final feed = filtered.length > 1 ? filtered.sublist(1) : <CorrelationHighlight>[];
 
     return RefreshIndicator(
-      color: AppColors.trendsSage,
+      color: AppColorsOf(context).trendsSage,
       onRefresh: () async {
         ref.read(hapticServiceProvider).light();
         ref.invalidate(trendsHomeProvider);
@@ -213,7 +213,7 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody>
                         ? 'No patterns found yet — keep logging and we\'ll discover your first connection soon.'
                         : 'No ${_capitalize(category)} patterns found.\nTry a different category or log more $category data.',
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.trendsTextMuted,
+                      color: AppColorsOf(context).trendsTextMuted,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -343,7 +343,7 @@ class _HeroPatternCardState extends ConsumerState<_HeroPatternCard> {
   @override
   Widget build(BuildContext context) {
     final h = widget.highlight;
-    final catColor = _categoryColor(h.category);
+    final catColor = _categoryColor(h.category, context);
     final strength = _strengthLabel(h.coefficient);
     final directionText = h.direction == CorrelationDirection.positive
         ? 'Positive relationship'
@@ -393,7 +393,7 @@ class _HeroPatternCardState extends ConsumerState<_HeroPatternCard> {
             Text(
               h.headline,
               style: AppTextStyles.titleLarge.copyWith(
-                color: AppColors.trendsTextPrimary,
+                color: AppColorsOf(context).trendsTextPrimary,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -430,7 +430,7 @@ class _HeroPatternCardState extends ConsumerState<_HeroPatternCard> {
                 Text(
                   h.coefficient.toStringAsFixed(2),
                   style: AppTextStyles.labelMedium.copyWith(
-                    color: AppColors.trendsTextSecondary,
+                    color: AppColorsOf(context).trendsTextSecondary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -438,7 +438,7 @@ class _HeroPatternCardState extends ConsumerState<_HeroPatternCard> {
                 Text(
                   '·  $directionText',
                   style: AppTextStyles.labelMedium.copyWith(
-                    color: AppColors.trendsTextMuted,
+                    color: AppColorsOf(context).trendsTextMuted,
                   ),
                 ),
               ],
@@ -450,7 +450,7 @@ class _HeroPatternCardState extends ConsumerState<_HeroPatternCard> {
               Text(
                 'Tap to explore',
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.trendsTextMuted,
+                  color: AppColorsOf(context).trendsTextMuted,
                 ),
               ),
             ],
@@ -522,7 +522,7 @@ class _PatternCardState extends ConsumerState<_PatternCard> {
   @override
   Widget build(BuildContext context) {
     final h = widget.highlight;
-    final catColor = _categoryColor(h.category);
+    final catColor = _categoryColor(h.category, context);
     final strength = _strengthLabel(h.coefficient);
     final isExpanded = ref.watch(expandedPatternIdsProvider).contains(h.id);
 
@@ -530,16 +530,16 @@ class _PatternCardState extends ConsumerState<_PatternCard> {
       onTap: _handleTap,
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.trendsSurface,
+          color: AppColorsOf(context).trendsSurface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
           border: h.isNew
               ? Border(
                   left: BorderSide(width: 3, color: catColor),
-                  top: BorderSide(color: AppColors.trendsBorderDefault),
-                  right: BorderSide(color: AppColors.trendsBorderDefault),
-                  bottom: BorderSide(color: AppColors.trendsBorderDefault),
+                  top: BorderSide(color: AppColorsOf(context).trendsBorderDefault),
+                  right: BorderSide(color: AppColorsOf(context).trendsBorderDefault),
+                  bottom: BorderSide(color: AppColorsOf(context).trendsBorderDefault),
                 )
-              : Border.all(color: AppColors.trendsBorderDefault),
+              : Border.all(color: AppColorsOf(context).trendsBorderDefault),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         child: Column(
@@ -570,7 +570,7 @@ class _PatternCardState extends ConsumerState<_PatternCard> {
             Text(
               h.headline,
               style: AppTextStyles.titleMedium.copyWith(
-                color: AppColors.trendsTextPrimary,
+                color: AppColorsOf(context).trendsTextPrimary,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -581,7 +581,7 @@ class _PatternCardState extends ConsumerState<_PatternCard> {
             Text(
               h.body,
               style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.trendsTextSecondary,
+                color: AppColorsOf(context).trendsTextSecondary,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -639,20 +639,20 @@ class _ExpandedPatternContent extends ConsumerWidget {
     final expandAsync = ref.watch(patternExpandProvider(patternId));
 
     return expandAsync.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.only(top: AppDimens.spaceMd),
+      loading: () => Padding(
+        padding: const EdgeInsets.only(top: AppDimens.spaceMd),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Divider(color: AppColors.trendsBorderDefault),
-            SizedBox(height: AppDimens.spaceSm),
-            ZLoadingSkeleton(width: double.infinity, height: 120),
-            SizedBox(height: AppDimens.spaceSm),
-            ZLoadingSkeleton(width: double.infinity, height: 16),
-            SizedBox(height: AppDimens.spaceXs),
-            ZLoadingSkeleton(width: 200, height: 16),
-            SizedBox(height: AppDimens.spaceSm),
-            ZLoadingSkeleton(width: double.infinity, height: 14),
+            Divider(color: AppColorsOf(context).trendsBorderDefault),
+            const SizedBox(height: AppDimens.spaceSm),
+            const ZLoadingSkeleton(width: double.infinity, height: 120),
+            const SizedBox(height: AppDimens.spaceSm),
+            const ZLoadingSkeleton(width: double.infinity, height: 16),
+            const SizedBox(height: AppDimens.spaceXs),
+            const ZLoadingSkeleton(width: 200, height: 16),
+            const SizedBox(height: AppDimens.spaceSm),
+            const ZLoadingSkeleton(width: double.infinity, height: 14),
           ],
         ),
       ),
@@ -662,7 +662,7 @@ class _ExpandedPatternContent extends ConsumerWidget {
           child: Text(
             "Couldn't load details",
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.trendsTextMuted,
+              color: AppColorsOf(context).trendsTextMuted,
             ),
           ),
         ),
@@ -672,7 +672,7 @@ class _ExpandedPatternContent extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Divider(color: AppColors.trendsBorderDefault),
+            Divider(color: AppColorsOf(context).trendsBorderDefault),
             const SizedBox(height: AppDimens.spaceSm),
 
             // Time range chips (static — 30D active)
@@ -689,13 +689,13 @@ class _ExpandedPatternContent extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: isActive
                           ? categoryColor.withValues(alpha: 0.15)
-                          : AppColors.trendsBorderDefault,
+                          : AppColorsOf(context).trendsBorderDefault,
                       borderRadius:
                           BorderRadius.circular(AppDimens.radiusChip),
                       border: Border.all(
                         color: isActive
                             ? categoryColor.withValues(alpha: 0.4)
-                            : AppColors.trendsBorderDefault,
+                            : AppColorsOf(context).trendsBorderDefault,
                       ),
                     ),
                     child: Text(
@@ -703,7 +703,7 @@ class _ExpandedPatternContent extends ConsumerWidget {
                       style: AppTextStyles.labelSmall.copyWith(
                         color: isActive
                             ? categoryColor
-                            : AppColors.trendsTextMuted,
+                            : AppColorsOf(context).trendsTextMuted,
                       ),
                     ),
                   ),
@@ -738,7 +738,7 @@ class _ExpandedPatternContent extends ConsumerWidget {
                   child: Text(
                     data.seriesALabel,
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.trendsTextSecondary,
+                      color: AppColorsOf(context).trendsTextSecondary,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -749,7 +749,7 @@ class _ExpandedPatternContent extends ConsumerWidget {
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: AppColors.trendsTextMuted,
+                    color: AppColorsOf(context).trendsTextMuted,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -758,7 +758,7 @@ class _ExpandedPatternContent extends ConsumerWidget {
                   child: Text(
                     data.seriesBLabel,
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.trendsTextMuted,
+                      color: AppColorsOf(context).trendsTextMuted,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -773,7 +773,7 @@ class _ExpandedPatternContent extends ConsumerWidget {
               Text(
                 data.aiExplanation,
                 style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.trendsTextSecondary,
+                  color: AppColorsOf(context).trendsTextSecondary,
                 ),
               ),
               const SizedBox(height: AppDimens.spaceSm),
@@ -783,7 +783,7 @@ class _ExpandedPatternContent extends ConsumerWidget {
             Text(
               'Based on ${data.dataDays} days of data',
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.trendsTextMuted,
+                color: AppColorsOf(context).trendsTextMuted,
               ),
             ),
             const SizedBox(height: AppDimens.spaceSm),
@@ -797,8 +797,8 @@ class _ExpandedPatternContent extends ConsumerWidget {
                     .map(
                       (src) => ZBadge(
                         label: src,
-                        color: AppColors.trendsBorderDefault,
-                        textColor: AppColors.trendsTextMuted,
+                        color: AppColorsOf(context).trendsBorderDefault,
+                        textColor: AppColorsOf(context).trendsTextMuted,
                       ),
                     )
                     .toList(),
@@ -884,7 +884,7 @@ class _SparklineChart extends StatelessWidget {
               LineChartBarData(
                 spots: spotsB,
                 isCurved: true,
-                color: AppColors.trendsTextMuted,
+                color: AppColorsOf(context).trendsTextMuted,
                 barWidth: 2,
                 dotData: const FlDotData(show: false),
                 belowBarData: BarAreaData(show: false),
@@ -930,7 +930,7 @@ class _FilterChipsRow extends ConsumerWidget {
       child: Row(
         children: _categories.map((cat) {
           final isActive = cat == selected;
-          final catColor = _categoryColor(cat);
+          final catColor = _categoryColor(cat, context);
 
           return Padding(
             padding: const EdgeInsets.only(right: AppDimens.spaceSm),
@@ -952,18 +952,18 @@ class _FilterChipsRow extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: isActive
                       ? catColor.withValues(alpha: 0.15)
-                      : AppColors.trendsSurface,
+                      : AppColorsOf(context).trendsSurface,
                   borderRadius: BorderRadius.circular(AppDimens.radiusChip),
                   border: Border.all(
                     color: isActive
                         ? catColor.withValues(alpha: 0.4)
-                        : AppColors.trendsBorderDefault,
+                        : AppColorsOf(context).trendsBorderDefault,
                   ),
                 ),
                 child: Text(
                   _capitalize(cat),
                   style: AppTextStyles.labelMedium.copyWith(
-                    color: isActive ? catColor : AppColors.trendsTextMuted,
+                    color: isActive ? catColor : AppColorsOf(context).trendsTextMuted,
                   ),
                 ),
               ),
@@ -998,7 +998,7 @@ class _TrendsEmptyState extends StatelessWidget {
               const SizedBox(width: AppDimens.spaceSm),
               _CategoryDot(
                 icon: Icons.auto_awesome_rounded,
-                color: AppColors.trendsSage,
+                color: AppColorsOf(context).trendsSage,
                 size: 52,
               ),
               const SizedBox(width: AppDimens.spaceSm),
@@ -1012,7 +1012,7 @@ class _TrendsEmptyState extends StatelessWidget {
           Text(
             'This is where patterns hide',
             style: AppTextStyles.titleMedium.copyWith(
-              color: AppColors.trendsTextPrimary,
+              color: AppColorsOf(context).trendsTextPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -1020,7 +1020,7 @@ class _TrendsEmptyState extends StatelessWidget {
           Text(
             'Keep logging for 7+ days and Zuralog will surface hidden connections — like how your sleep affects your workouts.',
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.trendsTextSecondary,
+              color: AppColorsOf(context).trendsTextSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -1031,13 +1031,13 @@ class _TrendsEmptyState extends StatelessWidget {
               Icon(
                 Icons.calendar_today_rounded,
                 size: 14,
-                color: AppColors.trendsSage.withValues(alpha: 0.7),
+                color: AppColorsOf(context).trendsSage.withValues(alpha: 0.7),
               ),
               const SizedBox(width: AppDimens.spaceSm),
               Text(
                 'Keep logging for 7 days to unlock your first pattern.',
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.trendsTextMuted,
+                  color: AppColorsOf(context).trendsTextMuted,
                 ),
               ),
             ],
@@ -1063,14 +1063,14 @@ class _TrendsNoCorrelationsState extends StatelessWidget {
           // Single centered icon
           _CategoryDot(
             icon: Icons.search_off_rounded,
-            color: AppColors.trendsSage,
+            color: AppColorsOf(context).trendsSage,
             size: 52,
           ),
           const SizedBox(height: AppDimens.spaceMd),
           Text(
             'Your data is ready',
             style: AppTextStyles.titleMedium.copyWith(
-              color: AppColors.trendsTextPrimary,
+              color: AppColorsOf(context).trendsTextPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -1078,7 +1078,7 @@ class _TrendsNoCorrelationsState extends StatelessWidget {
           Text(
             'No strong patterns have surfaced yet. Keep logging consistently and we\'ll let you know when a connection appears.',
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.trendsTextSecondary,
+              color: AppColorsOf(context).trendsTextSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -1197,7 +1197,7 @@ class _SectionHeader extends StatelessWidget {
     return Text(
       title,
       style: AppTextStyles.displaySmall.copyWith(
-        color: AppColors.trendsTextPrimary,
+        color: AppColorsOf(context).trendsTextPrimary,
       ),
     );
   }

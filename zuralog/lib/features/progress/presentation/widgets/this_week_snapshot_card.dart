@@ -133,7 +133,7 @@ class ThisWeekSnapshotCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('💡', style: TextStyle(fontSize: 13)),
+              const Icon(Icons.lightbulb_outline_rounded, size: 13, color: Color(0xFFFF9F0A)),
               const SizedBox(width: AppDimens.spaceXs),
               Expanded(
                 child: Text(

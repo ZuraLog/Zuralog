@@ -18,28 +18,28 @@ class GoalTrajectoryCard extends StatelessWidget {
   final Goal goal;
   final VoidCallback onTap;
 
-  static const Map<GoalType, (String, Color)> _typeInfo = {
-    GoalType.weightTarget: ('🎯', Color(0xFF64D2FF)),
-    GoalType.weeklyRunCount: ('🏃', Color(0xFF30D158)),
-    GoalType.dailyCalorieLimit: ('🥗', Color(0xFFFF9F0A)),
-    GoalType.sleepDuration: ('😴', Color(0xFF5E5CE6)),
-    GoalType.stepCount: ('👟', Color(0xFF30D158)),
-    GoalType.waterIntake: ('💧', Color(0xFF64D2FF)),
-    GoalType.custom: ('✨', AppColors.progressSage),
+  static const Map<GoalType, (IconData, Color)> _typeInfo = {
+    GoalType.weightTarget: (Icons.gps_fixed_rounded, Color(0xFF64D2FF)),
+    GoalType.weeklyRunCount: (Icons.directions_run_rounded, Color(0xFF30D158)),
+    GoalType.dailyCalorieLimit: (Icons.restaurant_rounded, Color(0xFFFF9F0A)),
+    GoalType.sleepDuration: (Icons.bedtime_rounded, Color(0xFF5E5CE6)),
+    GoalType.stepCount: (Icons.directions_walk_rounded, Color(0xFF30D158)),
+    GoalType.waterIntake: (Icons.water_drop_rounded, Color(0xFF64D2FF)),
   };
 
   @override
   Widget build(BuildContext context) {
-    final typeData = _typeInfo[goal.type] ?? ('✨', AppColors.progressSage);
-    final emoji = typeData.$1;
-    final color = typeData.$2;
+    final colors = AppColorsOf(context);
+    final typeData = _typeInfo[goal.type];
+    final iconData = typeData?.$1 ?? Icons.auto_awesome_rounded;
+    final color = typeData?.$2 ?? colors.progressSage;
     final pct = goal.progressFraction;
     final pctInt = (pct * 100).round();
 
     final badgeColor = (goal.trendDirection == 'completed' ||
             goal.trendDirection == 'on_track')
         ? AppColors.statusConnected
-        : AppColors.progressStreakWarm;
+        : colors.progressStreakWarm;
     final pctColor = badgeColor;
 
     return PressableCard(
@@ -48,9 +48,9 @@ class GoalTrajectoryCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: AppColors.progressSurface,
+          color: colors.progressSurface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-          border: Border.all(color: AppColors.progressBorderDefault),
+          border: Border.all(color: colors.progressBorderDefault),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,7 +65,7 @@ class GoalTrajectoryCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(AppDimens.radiusSm),
                   ),
                   child: Center(
-                    child: Text(emoji, style: const TextStyle(fontSize: 16)),
+                    child: Icon(iconData, size: 16, color: color),
                   ),
                 ),
                 const SizedBox(width: AppDimens.spaceSm),
@@ -73,7 +73,7 @@ class GoalTrajectoryCard extends StatelessWidget {
                   child: Text(
                     goal.title,
                     style: AppTextStyles.titleMedium.copyWith(
-                      color: AppColors.progressTextPrimary,
+                      color: colors.progressTextPrimary,
                     ),
                   ),
                 ),
@@ -105,7 +105,7 @@ class GoalTrajectoryCard extends StatelessWidget {
                   child: Text(
                     '${_fmt(goal.currentValue)} / ${_fmt(goal.targetValue)} ${goal.unit}',
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.progressTextMuted,
+                      color: colors.progressTextMuted,
                     ),
                   ),
                 ),
@@ -146,8 +146,9 @@ class _TrendBadge extends StatelessWidget {
         ),
       );
     }
+    final colors = AppColorsOf(context);
     final isOnTrack = direction == 'on_track';
-    final color = isOnTrack ? AppColors.statusConnected : AppColors.progressStreakWarm;
+    final color = isOnTrack ? AppColors.statusConnected : colors.progressStreakWarm;
     final label = isOnTrack ? '▲ On track' : '⚠ Behind';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

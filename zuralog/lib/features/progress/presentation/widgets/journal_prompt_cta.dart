@@ -51,6 +51,7 @@ class JournalPromptCta extends StatelessWidget {
   Widget build(BuildContext context) {
     if (journalledToday) return const SizedBox.shrink();
 
+    final colors = AppColorsOf(context);
     final prompt = _buildPrompt();
     final subLabel = _buildSubLabel();
 
@@ -59,14 +60,14 @@ class JournalPromptCta extends StatelessWidget {
       borderRadius: AppDimens.radiusCard,
       child: CustomPaint(
         painter: _DashedBorderPainter(
-          color: AppColors.progressBorderStrong,
+          color: colors.progressBorderStrong,
           radius: AppDimens.radiusCard.toDouble(),
         ),
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.spaceMd),
           child: Row(
             children: [
-              const Text('✍️', style: TextStyle(fontSize: 22)),
+              const Icon(Icons.edit_rounded, size: 22, color: Color(0xFF4A7C3F)),
               const SizedBox(width: AppDimens.spaceSm),
               Expanded(
                 child: Column(
@@ -75,7 +76,7 @@ class JournalPromptCta extends StatelessWidget {
                     Text(
                       '"$prompt"',
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.progressTextSecondary,
+                        color: colors.progressTextSecondary,
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -83,7 +84,7 @@ class JournalPromptCta extends StatelessWidget {
                     Text(
                       subLabel,
                       style: AppTextStyles.labelSmall.copyWith(
-                        color: AppColors.progressTextMuted,
+                        color: colors.progressTextMuted,
                       ),
                     ),
                   ],
@@ -93,14 +94,14 @@ class JournalPromptCta extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: AppColors.progressSurfaceRaised,
+                  color: colors.progressSurfaceRaised,
                   borderRadius: BorderRadius.circular(AppDimens.radiusButton),
-                  border: Border.all(color: AppColors.progressBorderStrong),
+                  border: Border.all(color: colors.progressBorderStrong),
                 ),
                 child: Text(
                   'Write',
                   style: AppTextStyles.labelMedium.copyWith(
-                    color: AppColors.progressTextSecondary,
+                    color: colors.progressTextSecondary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
