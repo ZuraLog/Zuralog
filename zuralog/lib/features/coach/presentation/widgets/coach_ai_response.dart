@@ -123,7 +123,7 @@ class CoachAiResponse extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              CoachBlob(state: blobState, size: 16),
+              CoachBlob(state: blobState, size: 28),
               const SizedBox(width: AppDimens.spaceSm),
               Expanded(
                 child: Text(
