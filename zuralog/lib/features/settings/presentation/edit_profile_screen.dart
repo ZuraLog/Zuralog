@@ -101,6 +101,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   // ── Avatar upload ──────────────────────────────────────────────────────────
 
   Future<void> _pickAndUploadAvatar() async {
+    final colors = AppColorsOf(context);
     final picker = ImagePicker();
     final file = await picker.pickImage(
       source: ImageSource.gallery,
@@ -121,11 +122,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e is DioException
-                ? (e.response?.data?['detail'] as String? ??
-                    'Photo upload failed. Try again.')
-                : 'Photo upload failed. Try again.'),
+            content: Text(
+              e is DioException
+                  ? (e.response?.data?['detail'] as String? ??
+                      'Photo upload failed. Try again.')
+                  : 'Photo upload failed. Try again.',
+              style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
+            ),
+            backgroundColor: colors.surface,
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+            ),
           ),
         );
       }
@@ -199,7 +207,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         return Container(
           margin: const EdgeInsets.all(AppDimens.spaceMd),
           decoration: BoxDecoration(
-            color: colors.cardBackground,
+            color: colors.surface,
             borderRadius: BorderRadius.circular(AppDimens.shapeLg),
           ),
           child: Column(
@@ -260,7 +268,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         return Container(
           margin: const EdgeInsets.all(AppDimens.spaceMd),
           decoration: BoxDecoration(
-            color: colors.cardBackground,
+            color: colors.surface,
             borderRadius: BorderRadius.circular(AppDimens.shapeLg),
           ),
           padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -360,6 +368,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     return ZuralogScaffold(
       appBar: ZuralogAppBar(
         title: 'Edit Profile',
+        showProfileAvatar: false,
         actions: [
           if (_saving)
             const SizedBox(
@@ -515,7 +524,7 @@ class _AvatarSection extends StatelessWidget {
                       color: colors.primary,
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: colors.cardBackground,
+                        color: colors.surface,
                         width: 2,
                       ),
                     ),
@@ -596,7 +605,7 @@ class _FieldEditSheetState extends State<_FieldEditSheet> {
       child: Container(
         margin: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.shapeLg),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceLg),
@@ -740,7 +749,7 @@ class _HeightPickerSheetState extends State<_HeightPickerSheet> {
       child: Container(
         margin: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.shapeLg),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceLg),

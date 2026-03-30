@@ -38,7 +38,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     return ZuralogScaffold(
-      appBar: ZuralogAppBar(title: 'Account'),
+      appBar: const ZuralogAppBar(title: 'Account', showProfileAvatar: false),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceMd),
         children: [
@@ -743,7 +743,7 @@ void _showDeleteAccountStep1Dialog(BuildContext context, WidgetRef ref) {
   showDialog<void>(
     context: context,
     builder: (dialogCtx) => AlertDialog(
-      backgroundColor: colors.cardBackground,
+      backgroundColor: colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
@@ -842,7 +842,7 @@ class _DeleteConfirmDialogState extends ConsumerState<_DeleteConfirmDialog> {
     final confirmed = _controller.text == 'DELETE';
 
     return AlertDialog(
-      backgroundColor: colors.cardBackground,
+      backgroundColor: colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
