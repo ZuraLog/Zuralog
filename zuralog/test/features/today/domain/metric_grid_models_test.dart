@@ -1,4 +1,5 @@
 // zuralog/test/features/today/domain/metric_grid_models_test.dart
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zuralog/features/today/domain/metric_grid_models.dart';
 
@@ -8,7 +9,7 @@ void main() {
       const tile = MetricTileData(
         metricType: 'water',
         label: 'Water',
-        emoji: '💧',
+        icon: Icons.water_drop_rounded,
         categoryColor: 0xFF64D2FF,
         value: null,
         unit: null,
@@ -20,7 +21,7 @@ void main() {
       const tile = MetricTileData(
         metricType: 'water',
         label: 'Water',
-        emoji: '💧',
+        icon: Icons.water_drop_rounded,
         categoryColor: 0xFF64D2FF,
         value: '2.1L',
         unit: null,
@@ -32,7 +33,7 @@ void main() {
       const tile = MetricTileData(
         metricType: 'steps',
         label: 'Steps',
-        emoji: '👣',
+        icon: Icons.directions_walk_rounded,
         categoryColor: 0xFF30D158,
         value: null,
         unit: null,
@@ -47,7 +48,7 @@ void main() {
       const tile = MetricTileData(
         metricType: 'water',
         label: 'Water',
-        emoji: '💧',
+        icon: Icons.water_drop_rounded,
         categoryColor: 0xFF64D2FF,
         value: '2.1L',
       );
