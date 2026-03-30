@@ -37,16 +37,16 @@ export function PhoneMockupSection() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
             className="mb-4 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-widest"
-            style={{ backgroundColor: "rgba(52, 78, 65, 0.06)", border: "1px solid rgba(52, 78, 65, 0.10)", color: "rgba(52, 78, 65, 0.55)" }}
+            style={{ backgroundColor: "rgba(207,225,185,0.08)", border: "1px solid rgba(207,225,185,0.15)", color: "#9B9894" }}
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-[#344E41] animate-pulse" />
+            <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ backgroundColor: "#CFE1B9" }} />
             Preview
           </motion.span>
 
-          <h2 className="mt-4 text-3xl font-bold sm:text-4xl md:text-5xl tracking-tight" style={{ color: "#1A2E22" }}>
+          <h2 className="mt-4 text-3xl font-bold sm:text-4xl md:text-5xl tracking-tight" style={{ color: "#F0EEE9" }}>
             Your health, one conversation away
           </h2>
-          <p className="mx-auto mt-4 max-w-lg text-base" style={{ color: "rgba(52, 78, 65, 0.50)" }}>
+          <p className="mx-auto mt-4 max-w-lg text-base" style={{ color: "#9B9894" }}>
             Chat with Zuralog to get real-time insights from all your connected health apps — sleep, heart rate, stress, and more.
           </p>
         </motion.div>

@@ -84,11 +84,11 @@ export function HowItWorksSection() {
       <div className="relative z-10 max-w-6xl mx-auto px-6 lg:px-12">
         {/* Header */}
         <div className="text-center mb-12 md:mb-16">
-          <div className="mx-auto mb-6 h-px w-16" style={{ background: "linear-gradient(to right, transparent, #344E41, transparent)" }} />
-          <p className="text-sm font-semibold tracking-[0.25em] uppercase mb-4" style={{ color: "#344E41" }}>
+          <div className="mx-auto mb-6 h-px w-16" style={{ background: "linear-gradient(to right, transparent, rgba(207,225,185,0.5), transparent)" }} />
+          <p className="text-sm font-semibold tracking-[0.25em] uppercase mb-4" style={{ color: "#CFE1B9" }}>
             How It Works
           </p>
-          <h2 className="text-4xl sm:text-5xl lg:text-[56px] font-bold tracking-tight leading-[1.1]" style={{ color: "#1A2E22" }}>
+          <h2 className="text-4xl sm:text-5xl lg:text-[56px] font-bold tracking-tight leading-[1.1]" style={{ color: "#F0EEE9" }}>
             How ZuraLog Works
           </h2>
         </div>
@@ -97,7 +97,7 @@ export function HowItWorksSection() {
         <div className="flex justify-center mb-14 md:mb-20">
           <div
             className="inline-flex rounded-full p-1.5 gap-1"
-            style={{ backgroundColor: "rgba(52, 78, 65, 0.04)", border: "1px solid rgba(52, 78, 65, 0.08)" }}
+            style={{ backgroundColor: "rgba(30,30,32,0.72)", border: "1px solid rgba(207,225,185,0.10)" }}
           >
             {TABS.map((t, i) => {
               const Icon = t.icon;
@@ -108,7 +108,7 @@ export function HowItWorksSection() {
                   onClick={() => handleTabClick(i)}
                   onMouseEnter={handleTabHover}
                   className="relative flex items-center gap-2 rounded-full px-5 md:px-6 py-3 text-xs md:text-sm font-semibold transition-all duration-300"
-                  style={{ color: isActive ? "#141E18" : "rgba(52, 78, 65, 0.45)" }}
+                  style={{ color: isActive ? "#141E18" : "#9B9894" }}
                 >
                   {isActive && (
                     <motion.div
@@ -146,14 +146,14 @@ export function HowItWorksSection() {
               {/* Tab number badge */}
               <div
                 className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold"
-                style={{ backgroundColor: `${tab.accent}30`, color: "#344E41" }}
+                style={{ backgroundColor: `${tab.accent}20`, color: "#CFE1B9" }}
               >
                 {activeTab + 1}
               </div>
-              <h3 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1]" style={{ color: "#1A2E22" }}>
+              <h3 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1]" style={{ color: "#F0EEE9" }}>
                 {tab.headline}
               </h3>
-              <p className="text-base md:text-lg leading-relaxed max-w-md" style={{ color: "rgba(52, 78, 65, 0.55)" }}>
+              <p className="text-base md:text-lg leading-relaxed max-w-md" style={{ color: "#9B9894" }}>
                 {tab.description}
               </p>
               {/* Decorative accent bar */}

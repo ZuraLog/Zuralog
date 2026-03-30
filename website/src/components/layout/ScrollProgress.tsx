@@ -46,7 +46,7 @@ export function ScrollProgress() {
                 ref={barRef}
                 className="h-full w-0"
                 style={{
-                    background: "linear-gradient(to right, rgba(207,225,185,0.6), rgba(212,242,145,0.5))",
+                    background: "#CFE1B9",
                     transition: "width 80ms linear",
                 }}
             />

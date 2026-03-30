@@ -180,15 +180,15 @@ export function MobileSection() {
                     <div className="container mx-auto px-6 lg:px-12 flex flex-col md:flex-row items-center gap-8 lg:gap-16">
                         {/* Left: Typography block */}
                         <div className="w-full md:w-[50%] flex flex-col items-center md:items-start">
-                            <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-gray-500 mb-4">
+                            <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase mb-4" style={{ color: "#9B9894" }}>
                                 One App to Rule Them All
                             </span>
-                            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-[1.1] tracking-tight">
+                            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight" style={{ color: "#F0EEE9" }}>
                                 All your apps.
                                 <br />
-                                <span className="text-[#5A9BD5]">One place.</span>
+                                <span style={{ color: "#CFE1B9" }}>One place.</span>
                             </h2>
-                            <p className="mt-6 text-lg text-gray-600 max-w-[420px] leading-relaxed">
+                            <p className="mt-6 text-lg max-w-[420px] leading-relaxed" style={{ color: "#9B9894" }}>
                                 Strava for runs. CalAI for meals. Fitbit for steps. Oura for sleep. You shouldn&apos;t
                                 need five apps to understand one body.
                             </p>
@@ -197,14 +197,15 @@ export function MobileSection() {
                             <div className="mt-8 flex flex-wrap gap-3 justify-center md:justify-start pointer-events-auto">
                                 {[
                                     { icon: <FaStrava className="text-[#FC4C02]" size={16} />, name: "Strava" },
-                                    { icon: <FaApple className="text-black" size={16} />, name: "Apple Health" },
+                                    { icon: <FaApple className="text-[#F0EEE9]" size={16} />, name: "Apple Health" },
                                     { icon: <FcGoogle size={16} />, name: "Health Connect" },
                                     { icon: <SiFitbit className="text-[#00B0B9]" size={16} />, name: "Fitbit" },
                                     { icon: <IoIosFitness className="text-[#FA114F]" size={16} />, name: "Oura" },
                                 ].map((app) => (
                                     <div
                                         key={app.name}
-                                        className="flex items-center gap-2 bg-white/70 backdrop-blur-sm border border-black/5 rounded-full px-4 py-2 text-sm font-medium text-gray-700 shadow-sm"
+                                        className="flex items-center gap-2 backdrop-blur-sm rounded-full px-4 py-2 text-sm font-medium"
+                                        style={{ backgroundColor: "rgba(30,30,32,0.72)", border: "1px solid rgba(207,225,185,0.10)", color: "#F0EEE9" }}
                                     >
                                         {app.icon}
                                         {app.name}
@@ -229,30 +230,30 @@ export function MobileSection() {
                     <div className="container mx-auto px-6 lg:px-12 flex flex-col md:flex-row items-center gap-8 lg:gap-16">
                         {/* Left: Large quote style */}
                         <div className="w-full md:w-[50%] flex flex-col items-center md:items-start">
-                            <div className="text-5xl sm:text-7xl lg:text-8xl font-black text-gray-900/5 leading-none select-none mb-[-20px] lg:mb-[-30px]">
+                            <div className="text-5xl sm:text-7xl lg:text-8xl font-black leading-none select-none mb-[-20px] lg:mb-[-30px]" style={{ color: "rgba(207,225,185,0.08)" }}>
                                 &ldquo;
                             </div>
-                            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-gray-900 leading-[1.2] tracking-tight italic text-center md:text-left">
+                            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold leading-[1.2] tracking-tight italic text-center md:text-left" style={{ color: "#F0EEE9" }}>
                                 Why am I not
                                 <br />
                                 losing weight?
                             </h2>
                             <div className="mt-6 w-16 h-1 bg-[#E88BA7] rounded-full mx-auto md:mx-0" />
-                            <p className="mt-6 text-lg text-gray-600 max-w-[440px] leading-relaxed">
-                                Other apps store data. Zuralog <span className="font-semibold text-gray-900">reasons</span> with it.
+                            <p className="mt-6 text-lg max-w-[440px] leading-relaxed" style={{ color: "#9B9894" }}>
+                                Other apps store data. Zuralog <span className="font-semibold" style={{ color: "#F0EEE9" }}>reasons</span> with it.
                                 It cross-references your nutrition, exercise, sleep, and recovery
                                 to surface answers that no single app could find alone.
                             </p>
 
                             {/* Insight example card */}
-                            <div className="mt-8 bg-white/80 backdrop-blur-sm rounded-2xl p-5 shadow-lg border border-black/5 max-w-[440px] mx-auto md:mx-0 pointer-events-auto">
+                            <div className="mt-8 backdrop-blur-sm rounded-2xl p-5 max-w-[440px] mx-auto md:mx-0 pointer-events-auto" style={{ backgroundColor: "rgba(30,30,32,0.72)", border: "1px solid rgba(207,225,185,0.10)" }}>
                                 <div className="flex items-center gap-2 mb-3">
                                     <TbBrain className="text-[#E88BA7]" size={20} />
                                     <span className="text-xs font-semibold tracking-wide uppercase text-[#E88BA7]">
                                         AI Insight
                                     </span>
                                 </div>
-                                <p className="text-sm text-gray-700 leading-relaxed">
+                                <p className="text-sm leading-relaxed" style={{ color: "#9B9894" }}>
                                     &ldquo;Your CalAI data shows an avg. 2,180 cal/day, but Strava activity
                                     puts maintenance at ~1,950. You&apos;re in a 230 cal surplus. Running dropped
                                     from 8 to 3 sessions this month.&rdquo;
@@ -276,13 +277,13 @@ export function MobileSection() {
                     <div className="container mx-auto px-6 lg:px-12 flex flex-col md:flex-row items-center gap-8 lg:gap-16">
                         {/* Left: Feature list */}
                         <div className="w-full md:w-[50%] flex flex-col items-center md:items-start">
-                            <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-gray-500 mb-4 text-center md:text-left">
+                            <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase mb-4 text-center md:text-left" style={{ color: "#9B9894" }}>
                                 Your AI Chief of Staff
                             </span>
-                            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-[1.1] tracking-tight text-center md:text-left">
+                            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight text-center md:text-left" style={{ color: "#F0EEE9" }}>
                                 Say it.
                                 <br />
-                                <span className="text-[#E8A855]">It&apos;s done.</span>
+                                <span style={{ color: "#CFE1B9" }}>It&apos;s done.</span>
                             </h2>
 
                             {/* Command examples */}
@@ -306,14 +307,15 @@ export function MobileSection() {
                                 ].map((item) => (
                                     <div
                                         key={item.command}
-                                        className="flex items-start gap-4 bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-black/5 pointer-events-auto"
+                                        className="flex items-start gap-4 backdrop-blur-sm rounded-xl p-4 pointer-events-auto"
+                                        style={{ backgroundColor: "rgba(30,30,32,0.72)", border: "1px solid rgba(207,225,185,0.10)" }}
                                     >
-                                        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center">
+                                        <div className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: "rgba(207,225,185,0.08)" }}>
                                             {item.icon}
                                         </div>
                                         <div>
-                                            <p className="text-sm font-semibold text-gray-900">{item.command}</p>
-                                            <p className="text-sm text-gray-500 mt-0.5">{item.result}</p>
+                                            <p className="text-sm font-semibold" style={{ color: "#F0EEE9" }}>{item.command}</p>
+                                            <p className="text-sm mt-0.5" style={{ color: "#9B9894" }}>{item.result}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -336,35 +338,35 @@ export function MobileSection() {
                     <div className="container mx-auto px-6 lg:px-12 flex flex-col md:flex-row items-center gap-8 lg:gap-16">
                         {/* Left: Centered dramatic statement */}
                         <div className="w-full md:w-[50%] flex flex-col items-center md:items-start text-center md:text-left">
-                            <MdOutlineAutoAwesome className="text-[#6BC9A0] mb-4" size={36} />
-                            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-[1.1] tracking-tight">
+                            <MdOutlineAutoAwesome className="text-[#CFE1B9] mb-4" size={36} />
+                            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight" style={{ color: "#F0EEE9" }}>
                                 Knows you.
                                 <br />
-                                <span className="text-[#6BC9A0]">Before you ask.</span>
+                                <span style={{ color: "#CFE1B9" }}>Before you ask.</span>
                             </h2>
-                            <p className="mt-6 text-lg text-gray-600 max-w-[440px] leading-relaxed">
+                            <p className="mt-6 text-lg max-w-[440px] leading-relaxed" style={{ color: "#9B9894" }}>
                                 Zuralog isn&apos;t passive. It watches your trends, spots when things slip,
                                 and speaks up. A tough-love coach that lives in your pocket.
                             </p>
 
                             {/* Proactive notification examples */}
                             <div className="mt-8 flex flex-col gap-3 w-full max-w-[400px]">
-                                <div className="flex items-center gap-3 bg-white/70 backdrop-blur-sm rounded-full px-5 py-3 border border-black/5 shadow-sm pointer-events-auto">
+                                <div className="flex items-center gap-3 backdrop-blur-sm rounded-full px-5 py-3 pointer-events-auto" style={{ backgroundColor: "rgba(30,30,32,0.72)", border: "1px solid rgba(207,225,185,0.10)" }}>
                                      <TbMoon className="text-indigo-400 flex-shrink-0" size={18} />
-                                     <p className="text-xs sm:text-sm text-gray-700">
-                                         <span className="font-semibold">5hr sleep detected.</span> Keep today&apos;s run in Zone 2.
+                                     <p className="text-xs sm:text-sm" style={{ color: "#9B9894" }}>
+                                         <span className="font-semibold" style={{ color: "#F0EEE9" }}>5hr sleep detected.</span> Keep today&apos;s run in Zone 2.
                                      </p>
                                 </div>
-                                <div className="flex items-center gap-3 bg-white/70 backdrop-blur-sm rounded-full px-5 py-3 border border-black/5 shadow-sm pointer-events-auto">
+                                <div className="flex items-center gap-3 backdrop-blur-sm rounded-full px-5 py-3 pointer-events-auto" style={{ backgroundColor: "rgba(30,30,32,0.72)", border: "1px solid rgba(207,225,185,0.10)" }}>
                                      <TbRun className="text-orange-400 flex-shrink-0" size={18} />
-                                     <p className="text-xs sm:text-sm text-gray-700">
-                                         <span className="font-semibold">No run in 5 days.</span> Forgetting something?
+                                     <p className="text-xs sm:text-sm" style={{ color: "#9B9894" }}>
+                                         <span className="font-semibold" style={{ color: "#F0EEE9" }}>No run in 5 days.</span> Forgetting something?
                                      </p>
                                 </div>
-                                <div className="flex items-center gap-3 bg-white/70 backdrop-blur-sm rounded-full px-5 py-3 border border-black/5 shadow-sm pointer-events-auto">
+                                <div className="flex items-center gap-3 backdrop-blur-sm rounded-full px-5 py-3 pointer-events-auto" style={{ backgroundColor: "rgba(30,30,32,0.72)", border: "1px solid rgba(207,225,185,0.10)" }}>
                                      <TbApple className="text-green-500 flex-shrink-0" size={18} />
-                                     <p className="text-xs sm:text-sm text-gray-700">
-                                         <span className="font-semibold">Calories up 15%</span> vs last week. Want a plan?
+                                     <p className="text-xs sm:text-sm" style={{ color: "#9B9894" }}>
+                                         <span className="font-semibold" style={{ color: "#F0EEE9" }}>Calories up 15%</span> vs last week. Want a plan?
                                      </p>
                                 </div>
                             </div>
@@ -389,7 +391,8 @@ export function MobileSection() {
                     {SLIDES.map((slide, i) => (
                         <div
                             key={slide.id}
-                            className="slide-dot w-2 h-2 rounded-full bg-gray-900/20 transition-all duration-300"
+                            className="slide-dot w-2 h-2 rounded-full transition-all duration-300"
+                            style={{ backgroundColor: "rgba(207,225,185,0.25)" }}
                             data-dot-index={i}
                         />
                     ))}

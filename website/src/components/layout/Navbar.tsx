@@ -1,11 +1,11 @@
 "use client";
 
 /**
- * Navbar — premium frosted-cream navigation for the ZuraLog marketing site.
+ * Navbar — premium dark navigation for the ZuraLog marketing site.
  *
- * Light mode design:
- *   - Transparent at top, frosted cream glassmorphism on scroll.
- *   - Deep Forest text with sage accents.
+ * Dark mode design:
+ *   - Transparent at top, frosted dark glassmorphism on scroll.
+ *   - Warm white (#F0EEE9) text with sage accents.
  *   - Sage pattern-filled CTA button.
  *   - Subtle sound effects on interactions.
  */
@@ -76,11 +76,11 @@ export function Navbar() {
       <div
         className="transition-all duration-500"
         style={{
-          background: scrolled ? "rgba(250, 250, 245, 0.80)" : "transparent",
-          backdropFilter: scrolled ? "blur(20px)" : "none",
-          WebkitBackdropFilter: scrolled ? "blur(20px)" : "none",
+          background: scrolled ? "rgba(22, 22, 24, 0.85)" : "transparent",
+          backdropFilter: scrolled ? "blur(16px)" : "none",
+          WebkitBackdropFilter: scrolled ? "blur(16px)" : "none",
           borderBottom: scrolled
-            ? "1px solid rgba(52, 78, 65, 0.06)"
+            ? "1px solid rgba(207, 225, 185, 0.08)"
             : "1px solid transparent",
         }}
       >
@@ -96,7 +96,7 @@ export function Navbar() {
             onMouseEnter={handleLinkHover}
           >
             <img src="/logo/ZuraLog-Sage.svg" alt="ZuraLog" width={22} height={22} className="object-contain" />
-            <span className="font-semibold tracking-tight" style={{ color: "#344E41", fontSize: "13px" }}>
+            <span className="font-semibold tracking-tight" style={{ color: "#F0EEE9", fontSize: "13px" }}>
               ZuraLog
             </span>
           </Link>
@@ -109,9 +109,9 @@ export function Navbar() {
                 onClick={() => { handleLinkHover(); handleNav(id); }}
                 onMouseEnter={handleLinkHover}
                 className="nav-link-underline text-xs font-medium transition-colors duration-300"
-                style={{ color: "var(--text-secondary)" }}
-                onMouseOver={(e) => { e.currentTarget.style.color = "#344E41"; }}
-                onMouseOut={(e) => { e.currentTarget.style.color = "var(--text-secondary)"; }}
+                style={{ color: "#9B9894" }}
+                onMouseOver={(e) => { e.currentTarget.style.color = "#F0EEE9"; }}
+                onMouseOut={(e) => { e.currentTarget.style.color = "#9B9894"; }}
               >
                 {label}
               </button>
@@ -122,9 +122,9 @@ export function Navbar() {
                 href={href}
                 onMouseEnter={handleLinkHover}
                 className="nav-link-underline text-xs font-medium transition-colors duration-300"
-                style={{ color: "var(--text-secondary)" }}
-                onMouseOver={(e) => { e.currentTarget.style.color = "#344E41"; }}
-                onMouseOut={(e) => { e.currentTarget.style.color = "var(--text-secondary)"; }}
+                style={{ color: "#9B9894" }}
+                onMouseOver={(e) => { e.currentTarget.style.color = "#F0EEE9"; }}
+                onMouseOut={(e) => { e.currentTarget.style.color = "#9B9894"; }}
               >
                 {label}
               </Link>
@@ -157,7 +157,7 @@ export function Navbar() {
                   key={i}
                   className="block h-px w-4 transition-all duration-300"
                   style={{
-                    backgroundColor: "var(--text-primary)",
+                    backgroundColor: "#F0EEE9",
                     ...(i === 0 && menuOpen ? { transform: "translateY(5px) rotate(45deg)" } : {}),
                     ...(i === 1 ? { opacity: menuOpen ? 0 : 1 } : {}),
                     ...(i === 2 && menuOpen ? { transform: "translateY(-7px) rotate(-45deg)" } : {}),
@@ -169,7 +169,7 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Mobile dropdown — frosted cream */}
+      {/* Mobile dropdown — frosted dark */}
       <AnimatePresence>
         {menuOpen && (
           <motion.div
@@ -180,10 +180,10 @@ export function Navbar() {
             transition={{ duration: 0.3, ease: EXPO_OUT }}
             className="overflow-hidden md:hidden"
             style={{
-              backgroundColor: "rgba(250, 250, 245, 0.96)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              borderBottom: "1px solid rgba(52, 78, 65, 0.06)",
+              backgroundColor: "rgba(22, 22, 24, 0.95)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              borderBottom: "1px solid rgba(207, 225, 185, 0.08)",
             }}
           >
             <nav className="flex flex-col gap-0.5 px-4 py-4" aria-label="Mobile navigation">
@@ -194,8 +194,8 @@ export function Navbar() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.06, duration: 0.35, ease: EXPO_OUT }}
                   onClick={() => { handleLinkHover(); handleNav(id); }}
-                  className="rounded-lg px-3 py-2.5 text-left text-xs font-medium transition-colors duration-200 hover:bg-black/5"
-                  style={{ color: "var(--text-primary)" }}
+                  className="rounded-lg px-3 py-2.5 text-left text-xs font-medium transition-colors duration-200 hover:bg-white/5"
+                  style={{ color: "#9B9894" }}
                 >
                   {label}
                 </motion.button>
@@ -210,8 +210,8 @@ export function Navbar() {
                   <Link
                     href={href}
                     onClick={() => { handleLinkHover(); setMenuOpen(false); }}
-                    className="block rounded-lg px-3 py-2.5 text-left text-xs font-medium transition-colors duration-200 hover:bg-black/5"
-                    style={{ color: "var(--text-primary)" }}
+                    className="block rounded-lg px-3 py-2.5 text-left text-xs font-medium transition-colors duration-200 hover:bg-white/5"
+                    style={{ color: "#9B9894" }}
                   >
                     {label}
                   </Link>

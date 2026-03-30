@@ -47,16 +47,17 @@ export function WaitlistSection() {
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary-lime/40 bg-primary-lime/15 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-dark-charcoal/70"
+            className="mb-4 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-widest"
+            style={{ backgroundColor: "rgba(207,225,185,0.08)", border: "1px solid rgba(207,225,185,0.20)", color: "#9B9894" }}
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-accent-lime animate-pulse" />
+            <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ backgroundColor: "#CFE1B9" }} />
             Early Access
           </motion.span>
 
-          <h2 className="mt-4 text-4xl font-bold text-dark-charcoal sm:text-5xl md:text-6xl tracking-tight">
+          <h2 className="mt-4 text-4xl font-bold sm:text-5xl md:text-6xl tracking-tight" style={{ color: "#F0EEE9" }}>
             Join the waitlist
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-black/50 text-lg">
+          <p className="mx-auto mt-4 max-w-xl text-lg" style={{ color: "#9B9894" }}>
             Secure your spot first — then answer 3 quick questions so we can
             personalise your experience before launch.
           </p>
