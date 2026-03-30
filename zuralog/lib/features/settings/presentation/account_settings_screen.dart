@@ -78,7 +78,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
             child: Container(
               decoration: BoxDecoration(
-                color: colors.cardBackground,
+                color: colors.surface,
                 borderRadius: BorderRadius.circular(AppDimens.radiusCard),
               ),
               child: const _UnitsTile(),
@@ -169,7 +169,7 @@ class _ProfileSummaryCard extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Row(
@@ -453,7 +453,7 @@ class _ChangeEmailSheetState extends ConsumerState<_ChangeEmailSheet> {
       child: Container(
         margin: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.shapeLg),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceLg),
@@ -604,7 +604,7 @@ class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
       child: Container(
         margin: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.shapeLg),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceLg),
