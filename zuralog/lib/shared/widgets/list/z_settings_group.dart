@@ -20,7 +20,7 @@ class ZSettingsGroup extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(

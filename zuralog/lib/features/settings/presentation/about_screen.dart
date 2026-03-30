@@ -10,6 +10,7 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── AboutScreen ───────────────────────────────────────────────────────────────
@@ -30,9 +31,9 @@ class AboutScreen extends StatelessWidget {
           const _AppIdentityHero(),
           const SizedBox(height: AppDimens.spaceXl),
 
-          const _SectionHeader('SUPPORT'),
-          _SettingsGroup(
-            children: [
+          const SettingsSectionLabel('SUPPORT'),
+          ZSettingsGroup(
+            tiles: [
               ZSettingsTile(
                 icon: Icons.help_rounded,
                 iconColor: AppColors.categoryBody,
@@ -40,7 +41,6 @@ class AboutScreen extends StatelessWidget {
                 subtitle: 'FAQs, guides, and tutorials',
                 onTap: () => _showSnackBar(context, 'Opening Help Center'),
               ),
-              const _Divider(),
               ZSettingsTile(
                 icon: Icons.mail_rounded,
                 iconColor: colors.primary,
@@ -48,7 +48,6 @@ class AboutScreen extends StatelessWidget {
                 subtitle: 'support@zuralog.com',
                 onTap: () => _showSnackBar(context, 'Opening email\u2026'),
               ),
-              const _Divider(),
               ZSettingsTile(
                 icon: Icons.people_rounded,
                 iconColor: AppColors.categorySleep,
@@ -59,23 +58,21 @@ class AboutScreen extends StatelessWidget {
             ],
           ),
 
-          const _SectionHeader('LEGAL'),
-          _SettingsGroup(
-            children: [
+          const SettingsSectionLabel('LEGAL'),
+          ZSettingsGroup(
+            tiles: [
               ZSettingsTile(
                 icon: Icons.policy_rounded,
                 iconColor: AppColors.categoryVitals,
                 title: 'Privacy Policy',
                 onTap: () => context.pushNamed(RouteNames.settingsPrivacyPolicy),
               ),
-              const _Divider(),
               ZSettingsTile(
                 icon: Icons.description_rounded,
                 iconColor: AppColors.categoryWellness,
                 title: 'Terms of Service',
                 onTap: () => context.pushNamed(RouteNames.settingsTerms),
               ),
-              const _Divider(),
               ZSettingsTile(
                 icon: Icons.gavel_rounded,
                 iconColor: colors.textTertiary,
@@ -202,76 +199,6 @@ class _WhatsNewChip extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ── _SectionHeader ─────────────────────────────────────────────────────────────
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceLg,
-        AppDimens.spaceMd,
-        AppDimens.spaceXs,
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.labelSmall.copyWith(
-          color: colors.textTertiary,
-          letterSpacing: 0.8,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
-
-// ── _SettingsGroup ─────────────────────────────────────────────────────────────
-
-class _SettingsGroup extends StatelessWidget {
-  const _SettingsGroup({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-      child: Container(
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        ),
-        child: Column(children: children),
-      ),
-    );
-  }
-}
-
-// ── _Divider ───────────────────────────────────────────────────────────────────
-
-class _Divider extends StatelessWidget {
-  const _Divider();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.only(left: 68),
-      child: Container(
-        height: 1,
-        color: colors.border.withValues(alpha: 0.5),
       ),
     );
   }
