@@ -530,10 +530,7 @@ class _AvatarSection extends StatelessWidget {
                     child: uploading
                         ? const Padding(
                             padding: EdgeInsets.all(5),
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
+                            child: ZCircularProgress(size: 18, strokeWidth: 2, color: Colors.white),
                           )
                         : const Icon(
                             Icons.camera_alt_rounded,
