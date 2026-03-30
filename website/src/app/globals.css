@@ -370,6 +370,53 @@ body {
 }
 
 /* ─────────────────────────────────────────────────────────────
+   Premium Dark Redesign — Topographic drift + Bento border sweep
+───────────────────────────────────────────────────────────── */
+
+/* Topographic pattern drift — used on hero background overlay and
+   headline text fill. Both share the same keyframe so they move
+   in perfect unison (synchronized motion). */
+@keyframes topoDrift {
+  0%   { transform: translate(0, 0); }
+  50%  { transform: translate(20px, 14px); }
+  100% { transform: translate(0, 0); }
+}
+.animate-topo-drift {
+  animation: topoDrift 28s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Topographic pattern fill on text — headline treatment.
+   Apply to a <span> wrapping the headline text. */
+.text-topo-pattern {
+  background-image: url('/patterns/original.png');
+  background-size: 400px 400px;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: topoDrift 28s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Bento glassmorphism card — animated conic-gradient border sweep.
+   Requires @property to animate --border-angle (Chrome 85+, Safari 16.4+). */
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes borderSweep {
+  to { --border-angle: 360deg; }
+}
+
+/* Glow orb — used in hero and bento sections */
+.glow-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────────────────────
    Native scrollbar — hidden (unreliable on pinned-scroll pages).
    Progress is shown by the custom ScrollProgress bar instead.
 ───────────────────────────────────────────────────────────── */

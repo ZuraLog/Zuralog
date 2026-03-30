@@ -3,21 +3,16 @@
 /**
  * PageBackground.tsx
  *
- * Single fixed full-viewport background layer that drives the page's ambient
+ * Single fixed full-viewport background layer driving the page's ambient
  * color for the ENTIRE page via scroll position. Sections are transparent.
  *
- * Color journey:
- *   Hero                  → #FAFAF5  (cream)
- *   MobileSection slide 1 → #CFE1B9  (sage green)
- *   MobileSection slide 2 → #DAEEF7  (blue)
- *   MobileSection slide 3 → #F7DAE4  (pink)
- *   MobileSection slide 4 → #D6F0E0  (light green)
- *   BentoSection          → #2D2D2D  (dark charcoal)
- *   WaitlistSection       → #FAFAF5  (cream)
- *
- * For MobileSection the waypoints are evenly distributed across its scroll
- * height (SLIDE_COUNT × 100vh of pinned scroll). For other sections the
- * transition completes over the first 40% of the section's height.
+ * Premium dark redesign color journey:
+ *   Hero                  → #161618  (dark canvas)
+ *   MobileSection         → #1A1C1F  (very subtle warm lift — the "breathing" zone)
+ *   HowItWorksSection     → #161618  (back to canvas)
+ *   BentoSection          → #161618  (dark canvas)
+ *   PhoneMockupSection    → #161618  (dark canvas)
+ *   WaitlistSection       → #161618  (dark canvas)
  */
 
 import { useEffect, useRef } from "react";
@@ -30,16 +25,20 @@ if (typeof window !== "undefined") {
 
 const SLIDE_COUNT = 4;
 
-/** Mobile section slide colors — must match MobileSection.tsx SLIDES array */
-const MOBILE_COLORS = [
-    { bgFrom: "#CFE1B9", bgTo: "#DAEEF7" },
-    { bgFrom: "#DAEEF7", bgTo: "#F7DAE4" },
-    { bgFrom: "#F7DAE4", bgTo: "#FDF0E0" },
-    { bgFrom: "#FDF0E0", bgTo: "#D6F0E0" },
-];
+/** Dark canvas — the page base */
+const DARK_CANVAS = "#161618";
+/** Subtle warm dark lift for the MobileSection "breathing" zone */
+const DARK_LIFT = "#1A1C1F";
+/** Slightly lighter dark for transitions */
+const DARK_MID = "#18181A";
 
-/** Starting color — matches HeroSection bg-cream */
-const HERO_COLOR = "#FAFAF5";
+/** Mobile section — subtle dark variations (keeps the "breathing" feel) */
+const MOBILE_COLORS = [
+    { bgFrom: DARK_CANVAS, bgTo: DARK_LIFT },
+    { bgFrom: DARK_LIFT, bgTo: DARK_MID },
+    { bgFrom: DARK_MID, bgTo: DARK_LIFT },
+    { bgFrom: DARK_LIFT, bgTo: DARK_CANVAS },
+];
 
 export function PageBackground() {
     const bgRef = useRef<HTMLDivElement>(null);
@@ -48,142 +47,82 @@ export function PageBackground() {
         const el = bgRef.current;
         if (!el) return;
 
-        el.style.backgroundColor = HERO_COLOR;
-
-        // ── Build waypoint list ──────────────────────────────────────────────
-        // Each waypoint: { scrollY, color }
-        // scrollY is the scroll position at which this color is fully reached.
+        el.style.backgroundColor = DARK_CANVAS;
 
         const getWaypoints = () => {
             const waypoints: Array<{ scrollY: number; color: string }> = [
-                { scrollY: 0, color: HERO_COLOR },
+                { scrollY: 0, color: DARK_CANVAS },
             ];
 
             // ── MobileSection waypoints ──
             const mobileSection = document.getElementById("mobile-section");
             if (mobileSection) {
                 const mobileTop = mobileSection.offsetTop;
-                // Total scroll distance for the pinned animation = SLIDE_COUNT × vh
                 const mobilePinHeight = SLIDE_COUNT * window.innerHeight;
 
                 MOBILE_COLORS.forEach((slide, i) => {
-                    // Each slide occupies 1/SLIDE_COUNT of the total pin scroll
                     const sliceHeight = mobilePinHeight / SLIDE_COUNT;
-                    // Midpoint of each slide is where the blend completes
                     waypoints.push({
                         scrollY: mobileTop + i * sliceHeight + sliceHeight * 0.5,
                         color: slide.bgFrom,
                     });
                 });
 
-                // After last slide, hold final color
                 waypoints.push({
                     scrollY: mobileTop + mobilePinHeight,
-                    color: MOBILE_COLORS[MOBILE_COLORS.length - 1].bgTo,
+                    color: DARK_CANVAS,
                 });
             }
 
-            // ── HowItWorksSection waypoint ──
-            // Transition from MobileSection's green through sage tones
+            // ── HowItWorksSection ── (stay on canvas dark)
             const howSection = document.getElementById("how-it-works-section");
             if (howSection) {
                 const howTop = howSection.offsetTop;
                 const howHeight = howSection.offsetHeight;
-                waypoints.push({
-                    scrollY: howTop + howHeight * 0.05,
-                    color: "#D6E0C8",
-                });
-                waypoints.push({
-                    scrollY: howTop + howHeight * 0.25,
-                    color: "#E4ECD8",
-                });
-                waypoints.push({
-                    scrollY: howTop + howHeight * 0.50,
-                    color: "#EBF0E2",
-                });
-                waypoints.push({
-                    scrollY: howTop + howHeight * 0.75,
-                    color: "#E4ECD8",
-                });
-                waypoints.push({
-                    scrollY: howTop + howHeight * 0.95,
-                    color: "#E0E8D2",
-                });
+                waypoints.push({ scrollY: howTop + howHeight * 0.5, color: DARK_CANVAS });
+                waypoints.push({ scrollY: howTop + howHeight * 0.95, color: DARK_CANVAS });
             }
 
-            // ── BentoSection (Master Your Metrics) waypoint ──
-            // Continues sage from HowItWorks, holds through cards, eases out
+            // ── BentoSection ── (stay on canvas dark)
             const bentoSection = document.getElementById("bento-section");
             if (bentoSection) {
                 const bentoTop = bentoSection.offsetTop;
                 const bentoHeight = bentoSection.offsetHeight;
-                waypoints.push({
-                    scrollY: bentoTop + bentoHeight * 0.10,
-                    color: "#E4ECD8",
-                });
-                waypoints.push({
-                    scrollY: bentoTop + bentoHeight * 0.40,
-                    color: "#EBF0E2",
-                });
-                waypoints.push({
-                    scrollY: bentoTop + bentoHeight * 0.70,
-                    color: "#F0F3EA",
-                });
-                waypoints.push({
-                    scrollY: bentoTop + bentoHeight * 0.95,
-                    color: "#EEF2E6",
-                });
+                waypoints.push({ scrollY: bentoTop + bentoHeight * 0.5, color: DARK_CANVAS });
+                waypoints.push({ scrollY: bentoTop + bentoHeight * 0.95, color: DARK_CANVAS });
             }
 
-            // ── PhoneMockupSection waypoint ──
-            // Continue the sage atmosphere, peak in the middle, then ease to cream
+            // ── PhoneMockupSection ── (stay on canvas dark)
             const phoneSection = document.getElementById("phone-mockup-section");
             if (phoneSection) {
                 const phoneTop = phoneSection.offsetTop;
                 const phoneHeight = phoneSection.offsetHeight;
-                waypoints.push({
-                    scrollY: phoneTop + phoneHeight * 0.10,
-                    color: "#E8EDD9",
-                });
-                waypoints.push({
-                    scrollY: phoneTop + phoneHeight * 0.40,
-                    color: "#E0E8D2",
-                });
-                waypoints.push({
-                    scrollY: phoneTop + phoneHeight * 0.70,
-                    color: "#EBF0E2",
-                });
-                waypoints.push({
-                    scrollY: phoneTop + phoneHeight * 0.95,
-                    color: "#FAFAF5",
-                });
+                waypoints.push({ scrollY: phoneTop + phoneHeight * 0.5, color: DARK_CANVAS });
+                waypoints.push({ scrollY: phoneTop + phoneHeight * 0.95, color: DARK_CANVAS });
             }
 
-            // ── WaitlistSection waypoint ──
+            // ── WaitlistSection ── (stay on canvas dark)
             const waitlistSection = document.getElementById("waitlist");
             if (waitlistSection) {
                 const waitlistTop = waitlistSection.offsetTop;
                 const waitlistHeight = waitlistSection.offsetHeight;
                 waypoints.push({
                     scrollY: waitlistTop + waitlistHeight * 0.4,
-                    color: HERO_COLOR,
+                    color: DARK_CANVAS,
                 });
             }
 
-            // Sort ascending by scrollY
             waypoints.sort((a, b) => a.scrollY - b.scrollY);
             return waypoints;
         };
 
         let waypoints = getWaypoints();
 
-        // Recompute on resize (section heights change)
         const onResize = () => {
             waypoints = getWaypoints();
         };
         window.addEventListener("resize", onResize);
 
-        // ── Single master ScrollTrigger ──────────────────────────────────────
         const masterTrigger = ScrollTrigger.create({
             trigger: document.body,
             start: "top top",
@@ -192,7 +131,6 @@ export function PageBackground() {
             onUpdate() {
                 const scrollY = window.scrollY;
 
-                // Find the segment we're in
                 let fromWP = waypoints[0];
                 let toWP = waypoints[0];
 
@@ -202,7 +140,6 @@ export function PageBackground() {
                         toWP = waypoints[i + 1];
                         break;
                     }
-                    // Past all waypoints — hold last color
                     fromWP = waypoints[waypoints.length - 1];
                     toWP = waypoints[waypoints.length - 1];
                 }
@@ -234,7 +171,7 @@ export function PageBackground() {
             ref={bgRef}
             aria-hidden="true"
             className="fixed inset-0 -z-10 pointer-events-none"
-            style={{ backgroundColor: HERO_COLOR }}
+            style={{ backgroundColor: DARK_CANVAS }}
         />
     );
 }
