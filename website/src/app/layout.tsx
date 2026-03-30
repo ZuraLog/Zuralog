@@ -91,47 +91,10 @@ export default function RootLayout({
             On non-home pages it dismisses quickly; on the home page it acts
             as a fallback if LoadingScreen's 3D progress tracking fails. */}
         <OverlayDismisser />
-        {/* SSR loading overlay: rendered in the initial HTML so it's visible
-            from the very first paint. Client-side LoadingScreen.tsx will
-            fade this out and remove it once 3D assets finish loading.
-            ID "ssr-loading-overlay" is the contract between server and client.
-
-            The spinner uses a pure-CSS rotating dot pattern (no JS needed). */}
-        {/* eslint-disable-next-line @next/next/no-css-tags -- inline style tag for SSR overlay */}
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `
-              @keyframes ssr-loader-spin {
-                100% { transform: rotate(.5turn); }
-              }
-              #ssr-loader {
-                width: 50px;
-                aspect-ratio: 1;
-                display: grid;
-                margin-top: 28px;
-              }
-              #ssr-loader::before,
-              #ssr-loader::after {
-                content: "";
-                grid-area: 1/1;
-                --c: no-repeat radial-gradient(farthest-side, #CFE1B9 92%, #0000);
-                background:
-                  var(--c) 50%  0,
-                  var(--c) 50%  100%,
-                  var(--c) 100% 50%,
-                  var(--c) 0    50%;
-                background-size: 12px 12px;
-                animation: ssr-loader-spin 1s infinite;
-              }
-              #ssr-loader::before {
-                margin: 4px;
-                --c: no-repeat radial-gradient(farthest-side, #E8F5A8 92%, #0000);
-                background-size: 8px 8px;
-                animation-timing-function: linear;
-              }
-            `,
-          }}
-        />
+        {/* SSR loading overlay: visible from first paint; dismissed by client JS.
+            Spinner CSS lives in globals.css to avoid a React hydration mismatch
+            from Next.js hoisting inline style tags out of the body element.
+            ID "ssr-loading-overlay" is the contract between server and client. */}
         <div
           id="ssr-loading-overlay"
           suppressHydrationWarning
@@ -142,7 +105,7 @@ export default function RootLayout({
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "#FAFAF5",
+            backgroundColor: "#161618",
             zIndex: 9999,
             transition: "opacity 0.6s ease",
           }}
@@ -153,7 +116,7 @@ export default function RootLayout({
               fontSize: "1.5rem",
               fontWeight: 300,
               letterSpacing: "0.3em",
-              color: "#2D2D2D",
+              color: "#F0EEE9",
               textTransform: "uppercase" as const,
               opacity: 0.85,
             }}

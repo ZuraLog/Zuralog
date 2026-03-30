@@ -219,6 +219,44 @@ body {
 }
 
 /* ─────────────────────────────────────────────────────────────
+   SSR Loading Overlay — spinner animation
+   Defined here (not inline in layout.tsx) to avoid Next.js
+   hoisting the <style> tag from body to head, which causes a
+   React hydration mismatch.
+───────────────────────────────────────────────────────────── */
+@keyframes ssr-loader-spin {
+  100% { transform: rotate(.5turn); }
+}
+
+#ssr-loader {
+  width: 50px;
+  aspect-ratio: 1;
+  display: grid;
+  margin-top: 28px;
+}
+
+#ssr-loader::before,
+#ssr-loader::after {
+  content: "";
+  grid-area: 1/1;
+  --c: no-repeat radial-gradient(farthest-side, #CFE1B9 92%, #0000);
+  background:
+    var(--c) 50%  0,
+    var(--c) 50%  100%,
+    var(--c) 100% 50%,
+    var(--c) 0    50%;
+  background-size: 12px 12px;
+  animation: ssr-loader-spin 1s infinite;
+}
+
+#ssr-loader::before {
+  margin: 4px;
+  --c: no-repeat radial-gradient(farthest-side, #E8F5A8 92%, #0000);
+  background-size: 8px 8px;
+  animation-timing-function: linear;
+}
+
+/* ─────────────────────────────────────────────────────────────
    Bento Section — Integrations card: diagonal icon drift
 ───────────────────────────────────────────────────────────── */
 @keyframes diagonalDrift {
