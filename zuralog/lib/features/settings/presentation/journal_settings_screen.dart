@@ -73,19 +73,10 @@ class _JournalSettingsScreenState extends State<JournalSettingsScreen> {
             const SizedBox(height: AppDimens.spaceSm),
 
             // ── Mode toggle ──────────────────────────────────────────────
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(
-                  value: 'diary',
-                  label: Text('Write yourself'),
-                ),
-                ButtonSegment(
-                  value: 'conversational',
-                  label: Text('Talk to Coach'),
-                ),
-              ],
-              selected: {_mode ?? 'diary'},
-              onSelectionChanged: (selection) => _setMode(selection.first),
+            ZSegmentedControl(
+              segments: const ['Write yourself', 'Talk to Coach'],
+              selectedIndex: (_mode ?? 'diary') == 'diary' ? 0 : 1,
+              onChanged: (index) => _setMode(index == 0 ? 'diary' : 'conversational'),
             ),
 
             const SizedBox(height: AppDimens.spaceSm),

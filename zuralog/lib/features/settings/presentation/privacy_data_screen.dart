@@ -435,14 +435,7 @@ class _Divider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.only(left: 68),
-      child: Container(
-        height: 1,
-        color: colors.border.withValues(alpha: 0.5),
-      ),
-    );
+    return const ZDivider(indent: 68);
   }
 }
 
@@ -554,12 +547,9 @@ class _ToggleRow extends StatelessWidget {
               ],
             ),
           ),
-          Switch(
+          ZToggle(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: colors.primary,
-            inactiveThumbColor: colors.textTertiary,
-            inactiveTrackColor: colors.border,
           ),
         ],
       ),
@@ -591,24 +581,19 @@ Future<void> _showClearMemoryDialog(
         ),
       ),
       actions: [
-        TextButton(
+        ZButton(
+          label: 'Cancel',
           onPressed: () => Navigator.of(ctx).pop(false),
-          child: Text(
-            'Cancel',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
+          variant: ZButtonVariant.text,
+          size: ZButtonSize.small,
+          isFullWidth: false,
         ),
-        TextButton(
+        ZButton(
+          label: 'Clear All',
           onPressed: () => Navigator.of(ctx).pop(true),
-          child: Text(
-            'Clear All',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: colors.accent,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          variant: ZButtonVariant.destructive,
+          size: ZButtonSize.small,
+          isFullWidth: false,
         ),
       ],
     ),
@@ -641,24 +626,19 @@ Future<void> _showDeleteDataDialog(
         ),
       ),
       actions: [
-        TextButton(
+        ZButton(
+          label: 'Cancel',
           onPressed: () => Navigator.of(ctx).pop(false),
-          child: Text(
-            'Cancel',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
+          variant: ZButtonVariant.text,
+          size: ZButtonSize.small,
+          isFullWidth: false,
         ),
-        TextButton(
+        ZButton(
+          label: 'Delete',
           onPressed: () => Navigator.of(ctx).pop(true),
-          child: Text(
-            'Delete',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: colors.accent,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+          variant: ZButtonVariant.destructive,
+          size: ZButtonSize.small,
+          isFullWidth: false,
         ),
       ],
     ),

@@ -539,7 +539,7 @@ class _StatusIndicator extends StatelessWidget {
   }
 }
 
-/// Small "Connect" FilledButton for available integrations.
+/// Small "Connect" button for available integrations.
 ///
 /// Calls [IntegrationsNotifier.connect] with the real integration ID,
 /// triggering the actual OAuth flow or device permission request.
@@ -552,33 +552,19 @@ class _ConnectButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Disable the button if the integration isn't compatible with this device.
     final isCompatible = integration.isCompatibleWithCurrentPlatform;
-    final colors = AppColorsOf(context);
 
-    return FilledButton(
-      style: FilledButton.styleFrom(
-        backgroundColor:
-            isCompatible ? colors.primary : colors.textTertiary,
-        foregroundColor: AppColors.primaryButtonText,
-        minimumSize: const Size(72, 32),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: AppDimens.spaceXs,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
-        ),
-        textStyle: AppTextStyles.bodySmall.copyWith(
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+    return ZButton(
+      label: isCompatible
+          ? 'Connect'
+          : (integration.incompatibilityNote ?? 'Unavailable'),
       onPressed: isCompatible
           ? () => ref
               .read(integrationsProvider.notifier)
               .connect(integration.id, context)
           : null,
-      child: Text(isCompatible
-          ? 'Connect'
-          : (integration.incompatibilityNote ?? 'Unavailable')),
+      variant: ZButtonVariant.primary,
+      size: ZButtonSize.small,
+      isFullWidth: false,
     );
   }
 }
@@ -711,25 +697,12 @@ class _ConnectedBottomSheet extends ConsumerWidget {
           const SizedBox(height: AppDimens.spaceLg),
 
           // Disconnect action — calls the real disconnect method
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  vertical: AppDimens.spaceMd,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-                ),
-              ),
-              onPressed: () => _confirmDisconnect(context, ref),
-              child: Text(
-                'Disconnect',
-                style: AppTextStyles.titleMedium.copyWith(
-                  color: colors.accent,
-                ),
-              ),
-            ),
+          ZButton(
+            label: 'Disconnect',
+            onPressed: () => _confirmDisconnect(context, ref),
+            variant: ZButtonVariant.destructive,
+            size: ZButtonSize.medium,
+            isFullWidth: true,
           ),
         ],
       ),
@@ -756,16 +729,15 @@ class _ConnectedBottomSheet extends ConsumerWidget {
           ),
         ),
         actions: [
-          TextButton(
+          ZButton(
+            label: 'Cancel',
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              'Cancel',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
+            variant: ZButtonVariant.text,
+            size: ZButtonSize.small,
+            isFullWidth: false,
           ),
-          TextButton(
+          ZButton(
+            label: 'Disconnect',
             onPressed: () {
               // Actually disconnect via the real provider.
               ref
@@ -774,13 +746,9 @@ class _ConnectedBottomSheet extends ConsumerWidget {
               Navigator.of(ctx).pop();
               if (context.mounted) Navigator.of(context).pop();
             },
-            child: Text(
-              'Disconnect',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: colors.accent,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            variant: ZButtonVariant.destructive,
+            size: ZButtonSize.small,
+            isFullWidth: false,
           ),
         ],
       ),

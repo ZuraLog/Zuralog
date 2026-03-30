@@ -235,10 +235,15 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: AppDimens.spaceMd),
-                _ProactivityChipRow(
-                  options: _proactivityOptions,
-                  selectedKey: selectedProactivity,
-                  onSelected: (key) {
+                ZSegmentedControl(
+                  selectedIndex: _proactivityOptions.indexWhere(
+                    (o) => o.key == selectedProactivity,
+                  ),
+                  segments: _proactivityOptions
+                      .map((o) => o.label)
+                      .toList(),
+                  onChanged: (index) {
+                    final key = _proactivityOptions[index].key;
                     ref.read(userPreferencesProvider.notifier).mutate(
                           (p) => p.copyWith(
                             proactivityLevel:
@@ -275,10 +280,15 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: AppDimens.spaceMd),
-                _ProactivityChipRow(
-                  options: _responseLengthOptions,
-                  selectedKey: selectedResponseLength,
-                  onSelected: (key) {
+                ZSegmentedControl(
+                  selectedIndex: _responseLengthOptions.indexWhere(
+                    (o) => o.key == selectedResponseLength,
+                  ),
+                  segments: _responseLengthOptions
+                      .map((o) => o.label)
+                      .toList(),
+                  onChanged: (index) {
+                    final key = _responseLengthOptions[index].key;
                     ref.read(userPreferencesProvider.notifier).mutate(
                           (p) => p.copyWith(
                             responseLength: ResponseLength.fromValue(key),
@@ -302,60 +312,46 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
               ),
               child: Column(
                 children: [
-                  SwitchListTile(
-                    title: Text(
-                      'Suggested Prompts',
-                      style: AppTextStyles.titleMedium.copyWith(
-                        color: colors.textPrimary,
-                      ),
+                  ZSettingsTile(
+                    icon: Icons.lightbulb_outline_rounded,
+                    iconColor: AppColors.categoryWellness,
+                    title: 'Suggested Prompts',
+                    subtitle: 'Show prompt chips in new conversations',
+                    showChevron: false,
+                    trailing: ZToggle(
+                      value: selectedSuggestedPrompts,
+                      onChanged: (v) =>
+                          ref.read(userPreferencesProvider.notifier).mutate(
+                                (p) => p.copyWith(suggestedPromptsEnabled: v),
+                              ),
                     ),
-                    subtitle: Text(
-                      'Show prompt chips in new conversations',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                    value: selectedSuggestedPrompts,
-                    onChanged: (v) =>
+                    onTap: () =>
                         ref.read(userPreferencesProvider.notifier).mutate(
-                              (p) => p.copyWith(suggestedPromptsEnabled: v),
+                              (p) => p.copyWith(
+                                suggestedPromptsEnabled:
+                                    !selectedSuggestedPrompts,
+                              ),
                             ),
-                    activeThumbColor: colors.primary,
-                    activeTrackColor: colors.primary.withValues(alpha: 0.5),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppDimens.spaceMd,
-                      vertical: AppDimens.spaceXs,
-                    ),
                   ),
-                  Divider(
-                    height: 1,
-                    color: colors.border,
-                    indent: AppDimens.spaceMd,
-                  ),
-                  SwitchListTile(
-                    title: Text(
-                      'Voice Input',
-                      style: AppTextStyles.titleMedium.copyWith(
-                        color: colors.textPrimary,
-                      ),
+                  const ZDivider(indent: 68),
+                  ZSettingsTile(
+                    icon: Icons.mic_rounded,
+                    iconColor: AppColors.categoryActivity,
+                    title: 'Voice Input',
+                    subtitle: 'Enable hold-to-talk microphone button',
+                    showChevron: false,
+                    trailing: ZToggle(
+                      value: selectedVoiceInput,
+                      onChanged: (v) =>
+                          ref.read(userPreferencesProvider.notifier).mutate(
+                                (p) => p.copyWith(voiceInputEnabled: v),
+                              ),
                     ),
-                    subtitle: Text(
-                      'Enable hold-to-talk microphone button',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                    value: selectedVoiceInput,
-                    onChanged: (v) =>
+                    onTap: () =>
                         ref.read(userPreferencesProvider.notifier).mutate(
-                              (p) => p.copyWith(voiceInputEnabled: v),
+                              (p) =>
+                                  p.copyWith(voiceInputEnabled: !selectedVoiceInput),
                             ),
-                    activeThumbColor: colors.primary,
-                    activeTrackColor: colors.primary.withValues(alpha: 0.5),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppDimens.spaceMd,
-                      vertical: AppDimens.spaceXs,
-                    ),
                   ),
                 ],
               ),
@@ -494,107 +490,6 @@ class _PersonaCard extends StatelessWidget {
                         ),
                 ),
               ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Proactivity / Response Length Chip Row ────────────────────────────────────
-
-/// A row of segmented chips for selecting a value from a list of options.
-///
-/// Used for both proactivity level (3 chips) and response length (2 chips).
-/// The selected chip uses `AppColors.primary` background with dark text.
-/// Unselected chips use `colors.surface` background.
-class _ProactivityChipRow extends StatelessWidget {
-  /// Creates a [_ProactivityChipRow].
-  const _ProactivityChipRow({
-    required this.options,
-    required this.selectedKey,
-    required this.onSelected,
-  });
-
-  /// The ordered list of options to render as chips.
-  final List<_ProactivityOption> options;
-
-  /// The currently selected option key.
-  final String selectedKey;
-
-  /// Callback invoked with the new key when a chip is tapped.
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (int i = 0; i < options.length; i++) ...[
-          Expanded(
-            child: _ProactivityChip(
-              option: options[i],
-              isSelected: options[i].key == selectedKey,
-              onTap: () => onSelected(options[i].key),
-            ),
-          ),
-          if (i < options.length - 1)
-            const SizedBox(width: AppDimens.spaceSm),
-        ],
-      ],
-    );
-  }
-}
-
-// ── Proactivity Chip ──────────────────────────────────────────────────────────
-
-/// A single selectable chip for one option in a chip row.
-class _ProactivityChip extends StatelessWidget {
-  /// Creates a [_ProactivityChip].
-  const _ProactivityChip({
-    required this.option,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  /// The option this chip represents.
-  final _ProactivityOption option;
-
-  /// Whether this chip is currently selected.
-  final bool isSelected;
-
-  /// Callback invoked when the chip is tapped.
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeInOut,
-      decoration: BoxDecoration(
-        color: isSelected ? colors.primary : colors.surface,
-        borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
-          child: SizedBox(
-            height: AppDimens.touchTargetMin,
-            child: Center(
-              child: Text(
-                option.label,
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: isSelected
-                      ? AppColors.primaryButtonText
-                      : colors.textSecondary,
-                  fontWeight:
-                      isSelected ? FontWeight.w600 : FontWeight.w500,
-                ),
-              ),
             ),
           ),
         ),

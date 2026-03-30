@@ -256,7 +256,7 @@ class _NotificationSettingsScreenState
                 },
               ),
               if (state.morningBriefingEnabled) ...[
-                _Divider(),
+                const ZDivider(indent: 68),
                 _TimePickerRow(
                   icon: Icons.access_time_rounded,
                   iconColor: AppColors.categoryNutrition,
@@ -290,7 +290,7 @@ class _NotificationSettingsScreenState
                 },
               ),
               if (state.smartRemindersEnabled) ...[
-                _Divider(),
+                const ZDivider(indent: 68),
                 _SubToggleRow(
                   title: 'Pattern-based',
                   subtitle: 'Reminders based on your behavior history',
@@ -302,7 +302,7 @@ class _NotificationSettingsScreenState
                       trackToggle('pattern_reminders', v);
                     },
                 ),
-                _Divider(),
+                const ZDivider(indent: 68),
                 _SubToggleRow(
                   title: 'Data gaps',
                   subtitle: 'Remind when expected data is missing',
@@ -314,7 +314,7 @@ class _NotificationSettingsScreenState
                       trackToggle('gap_reminders', v);
                     },
                 ),
-                _Divider(),
+                const ZDivider(indent: 68),
                 _SubToggleRow(
                   title: 'Goal progress',
                   subtitle: 'Nudges when you\'re close to your goals',
@@ -326,7 +326,7 @@ class _NotificationSettingsScreenState
                       trackToggle('goal_reminders', v);
                     },
                 ),
-                _Divider(),
+                const ZDivider(indent: 68),
                 _SubToggleRow(
                   title: 'Celebrations',
                   subtitle: 'Positive milestones and personal bests',
@@ -339,7 +339,7 @@ class _NotificationSettingsScreenState
                       trackToggle('celebration_reminders', v);
                     },
                 ),
-                _Divider(),
+                const ZDivider(indent: 68),
                 _FrequencyRow(
                   value: state.reminderFrequency,
                   onChanged: (v) {
@@ -375,7 +375,7 @@ class _NotificationSettingsScreenState
                   trackToggle('streak_reminders', v);
                 },
               ),
-              _Divider(),
+              const ZDivider(indent: 68),
               _ToggleRow(
                 icon: Icons.emoji_events_rounded,
                 iconColor: AppColors.categoryNutrition,
@@ -390,7 +390,7 @@ class _NotificationSettingsScreenState
                   trackToggle('achievement_notifications', v);
                 },
               ),
-              _Divider(),
+              const ZDivider(indent: 68),
               _ToggleRow(
                 icon: Icons.warning_amber_rounded,
                 iconColor: AppColors.statusConnecting,
@@ -404,7 +404,7 @@ class _NotificationSettingsScreenState
                   trackToggle('anomaly_alerts', v);
                 },
               ),
-              _Divider(),
+              const ZDivider(indent: 68),
               _ToggleRow(
                 icon: Icons.sync_problem_rounded,
                 iconColor: AppColors.categoryBody,
@@ -439,7 +439,7 @@ class _NotificationSettingsScreenState
                 },
               ),
               if (state.wellnessCheckinEnabled) ...[
-                _Divider(),
+                const ZDivider(indent: 68),
                 _TimePickerRow(
                   icon: Icons.access_time_rounded,
                   iconColor: AppColors.categoryWellness,
@@ -473,7 +473,7 @@ class _NotificationSettingsScreenState
                 },
               ),
               if (state.quietHoursEnabled) ...[
-                _Divider(),
+                const ZDivider(indent: 68),
                 _TimePickerRow(
                   icon: Icons.bedtime_rounded,
                   iconColor: AppColors.categorySleep,
@@ -485,7 +485,7 @@ class _NotificationSettingsScreenState
                     _persist(updated);
                   },
                 ),
-                _Divider(),
+                const ZDivider(indent: 68),
                 _TimePickerRow(
                   icon: Icons.wb_twilight_rounded,
                   iconColor: AppColors.categorySleep,
@@ -558,22 +558,6 @@ class _SettingsCard extends StatelessWidget {
   }
 }
 
-class _Divider extends StatelessWidget {
-  const _Divider();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.only(left: 68),
-      child: Container(
-        height: 1,
-        color: colors.border.withValues(alpha: 0.5),
-      ),
-    );
-  }
-}
-
 class _ToggleRow extends StatelessWidget {
   const _ToggleRow({
     required this.icon,
@@ -623,7 +607,7 @@ class _ToggleRow extends StatelessWidget {
               ],
             ),
           ),
-          Switch(
+          ZToggle(
             value: value,
             onChanged: onChanged,
           ),
@@ -678,7 +662,7 @@ class _SubToggleRow extends StatelessWidget {
               ],
             ),
           ),
-          Switch(
+          ZToggle(
             value: value,
             onChanged: onChanged,
           ),
@@ -710,76 +694,12 @@ class _FrequencyRow extends StatelessWidget {
             style: AppTextStyles.bodyLarge.copyWith(color: colors.textPrimary),
           ),
           const SizedBox(height: AppDimens.spaceSm),
-          Row(
-            children: [
-              _FrequencyChip(
-                label: 'Low\n1/day',
-                selected: value == 1,
-                onTap: () => onChanged(1),
-              ),
-              const SizedBox(width: AppDimens.spaceSm),
-              _FrequencyChip(
-                label: 'Medium\n2/day',
-                selected: value == 2,
-                onTap: () => onChanged(2),
-              ),
-              const SizedBox(width: AppDimens.spaceSm),
-              _FrequencyChip(
-                label: 'High\n3/day',
-                selected: value == 3,
-                onTap: () => onChanged(3),
-              ),
-            ],
+          ZSegmentedControl(
+            selectedIndex: value - 1,
+            segments: const ['Low (1/day)', 'Medium (2/day)', 'High (3/day)'],
+            onChanged: (i) => onChanged(i + 1),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _FrequencyChip extends StatelessWidget {
-  const _FrequencyChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(
-            vertical: AppDimens.spaceSm,
-            horizontal: AppDimens.spaceSm,
-          ),
-          decoration: BoxDecoration(
-            color: selected
-                ? colors.primary.withValues(alpha: 0.15)
-                : colors.surface,
-            borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-            border: Border.all(
-              color: selected
-                  ? colors.primary.withValues(alpha: 0.6)
-                  : Colors.transparent,
-            ),
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: selected ? colors.primary : colors.textSecondary,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-            ),
-          ),
-        ),
       ),
     );
   }
