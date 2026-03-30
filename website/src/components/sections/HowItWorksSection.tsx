@@ -1,396 +1,844 @@
 "use client";
 
 /**
- * HowItWorksSection — Interactive tabs with bold, premium visuals.
+ * HowItWorksSection — Cinematic scroll-driven feature showcase.
  *
- * 4 clickable tabs with large morphing visual panels.
- * Rich colors, depth, glows, and animated elements.
+ * 6 full-viewport panels driven by a single GSAP ScrollTrigger:
+ *   00 · Connect     — integrations hub
+ *   01 · Today       — daily insights & quick-log
+ *   02 · Data        — personalised metrics grid
+ *   03 · Coach       — AI conversation
+ *   04 · Progress    — goals, achievements, journal
+ *   05 · Trends      — AI correlation discovery
+ *
+ * Each panel slides in from the right (translateX 60 → 0, opacity 0 → 1)
+ * and exits to the left. A single ScrollTrigger scrubs through all 6
+ * panels — no per-panel triggers, no repaints.
  */
 
-import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Zap, Brain, TrendingUp, MessageCircle, Sparkles,
-  Smartphone, ArrowRight, Heart, Moon, Flame, Footprints,
-  Activity, Shield,
-} from "lucide-react";
+import { useRef, useEffect } from "react";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import { FaStrava, FaApple } from "react-icons/fa";
 import { SiFitbit, SiGarmin } from "react-icons/si";
-import { playClick, playTick } from "@/lib/sounds";
+import { FcGoogle } from "react-icons/fc";
+import {
+  Zap, Calendar, LayoutGrid, MessageSquare, Target, TrendingUp,
+  Moon, Footprints, Flame, Heart, Activity,
+  ArrowRight, Trophy, Star, CheckCircle2, BookOpen,
+  Plus, Droplets,
+} from "lucide-react";
 
-const TABS = [
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
+// ── Feature data ─────────────────────────────────────────────
+const FEATURES = [
   {
     id: "connect",
-    label: "Connect",
-    icon: Zap,
-    headline: "Link your world",
-    description: "One tap to connect Strava, Apple Health, Fitbit, and 50+ more. Your data flows in automatically — no exports, no friction, no manual entry ever again.",
+    number: "00",
+    eyebrow: "Connect",
+    headline: "Everything,\nconnected.",
+    description:
+      "One tap. Apple Health, Google Health Connect, Strava, Fitbit, and 50+ more flow in automatically. No exports, no friction, no manual entry. Ever.",
     accent: "#CFE1B9",
+    glowColor: "rgba(207,225,185,0.16)",
   },
   {
-    id: "analyze",
-    label: "Analyze",
-    icon: Brain,
-    headline: "AI that reasons",
-    description: "ZuraLog cross-references sleep, nutrition, activity, and recovery across every app. It doesn't just store your data — it thinks with it.",
-    accent: "#D4F291",
+    id: "today",
+    number: "01",
+    eyebrow: "Today Tab",
+    headline: "Your day,\nat a glance.",
+    description:
+      "Daily insights delivered fresh every morning. Log water, meals, and workouts in one tap. Your AI surfaces what matters — before you even ask.",
+    accent: "#64D2FF",
+    glowColor: "rgba(100,210,255,0.13)",
   },
   {
-    id: "insights",
-    label: "Insights",
-    icon: TrendingUp,
-    headline: "Actions, not charts",
-    description: "Get told what to eat, when to rest, and why your weight stalled. Real answers derived from your real data across every source.",
-    accent: "#E8F5A8",
+    id: "data",
+    number: "02",
+    eyebrow: "Data Tab",
+    headline: "Your body,\nyour data.",
+    description:
+      "Personalised exactly to you. Organise, customise, and own every metric. No generic dashboards — only the numbers you actually care about.",
+    accent: "#BF5AF2",
+    glowColor: "rgba(191,90,242,0.13)",
   },
   {
     id: "coach",
-    label: "Coach",
-    icon: MessageCircle,
-    headline: "Talk to your data",
-    description: "Ask anything in plain English. \"Why am I tired?\" \"What should I eat tonight?\" Your AI health coach has all the context it needs.",
-    accent: "#CFE1B9",
+    number: "03",
+    eyebrow: "Coach Tab",
+    headline: "Ask\nanything.",
+    description:
+      "Your AI coach knows every metric, every trend, every goal. Ask why you're tired, what to eat tonight, or how to finally break your plateau.",
+    accent: "#30D158",
+    glowColor: "rgba(48,209,88,0.13)",
+  },
+  {
+    id: "progress",
+    number: "04",
+    eyebrow: "Progress Tab",
+    headline: "Goals. Wins.\nGrowth.",
+    description:
+      "Set goals, earn achievements, journal your journey. Progress isn't just a number — it's a story only you can write.",
+    accent: "#FF9F0A",
+    glowColor: "rgba(255,159,10,0.13)",
+  },
+  {
+    id: "trends",
+    number: "05",
+    eyebrow: "Trends Tab",
+    headline: "The AI sees\nthe patterns.",
+    description:
+      "Your pace was off because your sleep was short. Your recovery dipped when your nutrition did. Correlations most people never find — surfaced automatically.",
+    accent: "#FF375F",
+    glowColor: "rgba(255,55,95,0.13)",
   },
 ] as const;
 
-const EXPO_OUT = [0.16, 1, 0.3, 1] as [number, number, number, number];
+type FeatureId = (typeof FEATURES)[number]["id"];
+const FEATURE_COUNT = FEATURES.length;
 
+// ── Sparkline SVG ─────────────────────────────────────────────
+function Sparkline({ values, color, w = 72, h = 28 }: { values: number[]; color: string; w?: number; h?: number }) {
+  const max = Math.max(...values), min = Math.min(...values);
+  const range = max - min || 1;
+  const pts = values
+    .map((v, i) => `${(i / (values.length - 1)) * w},${h - ((v - min) / range) * (h - 2) - 1}`)
+    .join(" ");
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} fill="none" aria-hidden="true">
+      <polyline points={pts} stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// ── Glassmorphism card wrapper ─────────────────────────────────
+function AppCard({ accent, children }: { accent: string; children: React.ReactNode }) {
+  return (
+    <div
+      className="w-full max-w-[420px] rounded-[28px] overflow-hidden"
+      style={{
+        backgroundColor: "rgba(18,18,20,0.82)",
+        backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)",
+        border: `1px solid ${accent}1A`,
+        boxShadow: `0 40px 80px rgba(0,0,0,0.55), 0 0 0 1px ${accent}0D`,
+      }}
+    >
+      {/* Mac-style window chrome */}
+      <div
+        className="flex items-center gap-2 px-4 py-3 border-b"
+        style={{ borderColor: `${accent}12` }}
+      >
+        {["#FF5F57", "#FFBD2E", "#28C840"].map((c) => (
+          <div key={c} className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c, opacity: 0.7 }} />
+        ))}
+        <div className="flex-1 mx-2 h-px" style={{ backgroundColor: "rgba(240,238,233,0.05)" }} />
+        <div
+          className="text-[10px] font-medium px-2.5 py-0.5 rounded-md"
+          style={{ backgroundColor: `${accent}12`, color: accent }}
+        >
+          ZuraLog
+        </div>
+      </div>
+      <div className="p-5">{children}</div>
+    </div>
+  );
+}
+
+// ── Preview: Connect ──────────────────────────────────────────
+function ConnectPreview({ accent }: { accent: string }) {
+  const apps = [
+    { Icon: FaApple, color: "#F0EEE9", label: "Apple Health" },
+    { Icon: FaStrava, color: "#FC4C02", label: "Strava" },
+    { Icon: SiFitbit, color: "#00B0B9", label: "Fitbit" },
+    { Icon: SiGarmin, color: "#009DDC", label: "Garmin" },
+    { Icon: FcGoogle, color: "", label: "Health Connect" },
+  ];
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: `${accent}80` }}>
+        Connected Sources
+      </p>
+      <div className="grid grid-cols-5 gap-2">
+        {apps.map(({ Icon, color, label }) => (
+          <div key={label} className="flex flex-col items-center gap-1.5">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: "rgba(255,255,255,0.06)", border: "1px solid rgba(207,225,185,0.08)" }}
+            >
+              <Icon size={17} color={color || undefined} />
+            </div>
+            <span className="text-[9px] text-center leading-tight" style={{ color: "rgba(240,238,233,0.35)" }}>
+              {label.split(" ")[0]}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-col items-center gap-0.5">
+        <div className="w-px h-5" style={{ background: `linear-gradient(to bottom, transparent, ${accent})` }} />
+        <div
+          className="w-2 h-2 rotate-45"
+          style={{ borderRight: `1.5px solid ${accent}`, borderBottom: `1.5px solid ${accent}`, marginTop: -4 }}
+        />
+      </div>
+      <div
+        className="flex items-center gap-3 rounded-2xl px-4 py-3"
+        style={{
+          backgroundColor: `${accent}12`,
+          border: `1px solid ${accent}28`,
+          boxShadow: `0 0 28px ${accent}14`,
+        }}
+      >
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${accent}22` }}>
+          <Zap size={15} style={{ color: accent }} />
+        </div>
+        <div className="flex-1">
+          <p className="text-xs font-semibold" style={{ color: "#F0EEE9" }}>ZuraLog Hub</p>
+          <p className="text-[10px]" style={{ color: "#9B9894" }}>5 sources · syncing live</p>
+        </div>
+        <div className="flex gap-1">
+          {[0, 1, 2].map((d) => (
+            <div
+              key={d}
+              className="w-1 h-1 rounded-full animate-pulse"
+              style={{ backgroundColor: accent, animationDelay: `${d * 200}ms` }}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { label: "Apps", value: "8+" },
+          { label: "Last sync", value: "2m ago" },
+          { label: "Data pts", value: "14.2k" },
+        ].map(({ label, value }) => (
+          <div
+            key={label}
+            className="rounded-xl p-2.5"
+            style={{ backgroundColor: "rgba(255,255,255,0.04)", border: "1px solid rgba(240,238,233,0.06)" }}
+          >
+            <p className="text-xs font-semibold" style={{ color: "#F0EEE9" }}>{value}</p>
+            <p className="text-[9px] mt-0.5" style={{ color: "#9B9894" }}>{label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Preview: Today ────────────────────────────────────────────
+function TodayPreview({ accent }: { accent: string }) {
+  const metrics = [
+    { icon: Footprints, label: "Steps", value: "8,432", sub: "/ 10k", color: "#30D158", pct: 84 },
+    { icon: Flame, label: "Calories", value: "1,840", sub: "kcal", color: "#FF9F0A", pct: 72 },
+    { icon: Moon, label: "Sleep", value: "7h 22m", sub: "last night", color: "#5E5CE6", pct: 92 },
+  ];
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-semibold" style={{ color: "#F0EEE9" }}>Good morning, Fernando</p>
+          <p className="text-[10px]" style={{ color: "#9B9894" }}>Monday, 25 March · 7:42 AM</p>
+        </div>
+        <Calendar size={15} style={{ color: accent }} />
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {metrics.map(({ icon: Icon, label, value, sub, color, pct }) => (
+          <div
+            key={label}
+            className="rounded-2xl p-3 flex flex-col items-center gap-1.5"
+            style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(240,238,233,0.06)" }}
+          >
+            <div className="relative w-9 h-9">
+              <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2.5" />
+                <circle
+                  cx="18" cy="18" r="14" fill="none" stroke={color} strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 14}`}
+                  strokeDashoffset={`${2 * Math.PI * 14 * (1 - pct / 100)}`}
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Icon size={11} style={{ color }} />
+              </div>
+            </div>
+            <p className="text-[11px] font-semibold text-center leading-tight" style={{ color: "#F0EEE9" }}>{value}</p>
+            <p className="text-[9px] text-center" style={{ color: "#9B9894" }}>{label}</p>
+          </div>
+        ))}
+      </div>
+      <div
+        className="rounded-xl px-3 py-2.5"
+        style={{ backgroundColor: `${accent}0F`, border: `1px solid ${accent}1E` }}
+      >
+        <p className="text-[11px] leading-relaxed" style={{ color: "#F0EEE9" }}>
+          <span style={{ color: accent }}>✦ </span>
+          1,568 steps from your goal. A 12-minute walk would close it.
+        </p>
+      </div>
+      <div className="flex gap-2">
+        {[
+          { icon: Droplets, label: "Water" },
+          { icon: Flame, label: "Meal" },
+          { icon: Activity, label: "Workout" },
+        ].map(({ icon: Icon, label }) => (
+          <button
+            key={label}
+            className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl"
+            style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(240,238,233,0.07)" }}
+          >
+            <Icon size={12} style={{ color: accent }} />
+            <span className="text-[9px]" style={{ color: "#9B9894" }}>
+              <Plus size={7} className="inline" /> {label}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Preview: Data ─────────────────────────────────────────────
+function DataPreview({ accent }: { accent: string }) {
+  const tiles = [
+    { label: "HRV", value: "72", unit: "ms", data: [60, 65, 58, 72, 70, 68, 72], color: accent },
+    { label: "Resting HR", value: "58", unit: "bpm", data: [65, 62, 60, 58, 60, 57, 58], color: "#FF375F" },
+    { label: "VO₂ Max", value: "48.2", unit: "ml/kg", data: [44, 45, 46, 47, 47, 48, 48], color: "#30D158" },
+    { label: "Body Fat", value: "18.4", unit: "%", data: [20, 19.5, 19, 18.8, 18.6, 18.5, 18.4], color: "#FF9F0A" },
+  ];
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: `${accent}80` }}>
+          My Data
+        </p>
+        <button className="flex items-center gap-1 text-[10px]" style={{ color: "#9B9894" }}>
+          Customise <ArrowRight size={9} />
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-2.5">
+        {tiles.map(({ label, value, unit, data, color }) => (
+          <div
+            key={label}
+            className="rounded-xl p-3"
+            style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(240,238,233,0.06)" }}
+          >
+            <p className="text-[10px]" style={{ color: "#9B9894" }}>{label}</p>
+            <p className="text-base font-bold leading-tight mt-0.5" style={{ color: "#F0EEE9" }}>
+              {value}
+              <span className="text-[9px] font-normal ml-0.5" style={{ color: "#9B9894" }}>{unit}</span>
+            </p>
+            <div className="mt-2">
+              <Sparkline values={data} color={color} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div
+        className="rounded-xl px-3 py-2"
+        style={{ backgroundColor: `${accent}0F`, border: `1px solid ${accent}1E` }}
+      >
+        <p className="text-[10px]" style={{ color: "#9B9894" }}>
+          <span style={{ color: accent }}>↑ </span>HRV improved 20% this month. Recovery trending up.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── Preview: Coach ────────────────────────────────────────────
+function CoachPreview({ accent }: { accent: string }) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center gap-2 mb-1">
+        <div
+          className="w-7 h-7 rounded-full flex items-center justify-center"
+          style={{ backgroundColor: `${accent}1E`, border: `1px solid ${accent}2E` }}
+        >
+          <MessageSquare size={12} style={{ color: accent }} />
+        </div>
+        <div>
+          <p className="text-xs font-semibold" style={{ color: "#F0EEE9" }}>Coach</p>
+          <div className="flex items-center gap-1">
+            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: accent }} />
+            <p className="text-[9px]" style={{ color: "#9B9894" }}>knows all your data</p>
+          </div>
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <div
+          className="rounded-2xl rounded-br-sm px-3.5 py-2.5 max-w-[78%]"
+          style={{ backgroundColor: "rgba(207,225,185,0.14)", border: "1px solid rgba(207,225,185,0.24)" }}
+        >
+          <p className="text-[11px]" style={{ color: "#F0EEE9" }}>Why didn&apos;t I hit 6min/km today?</p>
+        </div>
+      </div>
+      <div className="flex justify-start">
+        <div
+          className="rounded-2xl rounded-bl-sm px-3.5 py-3 max-w-[88%]"
+          style={{ backgroundColor: "rgba(255,255,255,0.07)", border: "1px solid rgba(240,238,233,0.09)" }}
+        >
+          <p className="text-[11px] leading-relaxed" style={{ color: "#9B9894" }}>
+            Your sleep last night was{" "}
+            <span style={{ color: "#F0EEE9", fontWeight: 600 }}>5h 12m</span> — 2h under baseline. Short sleep
+            raises cortisol and cuts neuromuscular efficiency by{" "}
+            <span style={{ color: accent, fontWeight: 600 }}>8–15%</span>. Your Strava pace reflects
+            exactly that.
+          </p>
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <div
+          className="rounded-2xl rounded-br-sm px-3.5 py-2.5 max-w-[78%]"
+          style={{ backgroundColor: "rgba(207,225,185,0.14)", border: "1px solid rgba(207,225,185,0.24)" }}
+        >
+          <p className="text-[11px]" style={{ color: "#F0EEE9" }}>What should I eat tonight?</p>
+        </div>
+      </div>
+      <div className="flex gap-1 px-1 pt-0.5">
+        {[0, 1, 2].map((d) => (
+          <div
+            key={d}
+            className="w-1.5 h-1.5 rounded-full animate-pulse"
+            style={{ backgroundColor: `${accent}55`, animationDelay: `${d * 200}ms` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Preview: Progress ─────────────────────────────────────────
+function ProgressPreview({ accent }: { accent: string }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: `${accent}80` }}>
+        My Goals
+      </p>
+      <div
+        className="rounded-xl p-3.5"
+        style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(240,238,233,0.07)" }}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-xs font-semibold" style={{ color: "#F0EEE9" }}>Run 5K in under 25 min</p>
+            <p className="text-[10px] mt-0.5" style={{ color: "#9B9894" }}>PB: 26:42 · Target: 15 Apr</p>
+          </div>
+          <Target size={15} style={{ color: accent }} />
+        </div>
+        <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "rgba(255,255,255,0.08)" }}>
+          <div className="h-full rounded-full" style={{ width: "68%", backgroundColor: accent }} />
+        </div>
+        <p className="mt-1.5 text-[9px]" style={{ color: "#9B9894" }}>68% · 2 training weeks left</p>
+      </div>
+      <div>
+        <p className="text-[10px] mb-2" style={{ color: "#9B9894" }}>Recent Achievements</p>
+        <div className="flex gap-2">
+          {[
+            { icon: Trophy, label: "First 5K", color: "#FF9F0A" },
+            { icon: Star, label: "7-Day Run", color: "#FF375F" },
+            { icon: CheckCircle2, label: "Goal Set", color: "#30D158" },
+            { icon: Activity, label: "1K Active", color: "#5E5CE6" },
+          ].map(({ icon: Icon, label, color }) => (
+            <div key={label} className="flex flex-col items-center gap-1 flex-1">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: `${color}14`, border: `1px solid ${color}22` }}
+              >
+                <Icon size={13} style={{ color }} />
+              </div>
+              <p className="text-[8px] text-center leading-tight" style={{ color: "#9B9894" }}>{label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div
+        className="rounded-xl p-3"
+        style={{ backgroundColor: `${accent}08`, border: `1px solid ${accent}14` }}
+      >
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <BookOpen size={10} style={{ color: accent }} />
+          <p className="text-[10px] font-medium" style={{ color: accent }}>Journal · Today</p>
+        </div>
+        <p className="text-[10px] leading-relaxed" style={{ color: "#9B9894" }}>
+          &ldquo;Felt strong on the last 800m. Breathing finally clicked. Next week push the
+          interval pace...&rdquo;
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── Preview: Trends ───────────────────────────────────────────
+function TrendsPreview({ accent }: { accent: string }) {
+  const sleepPts = [7.2, 5.1, 8.0, 6.5, 4.8, 7.8, 6.2];
+  const pacePts  = [6.1, 7.2, 5.8, 6.5, 7.8, 6.0, 6.8];
+  const w = 200, h = 52;
+  const sMax = Math.max(...sleepPts), sMin = Math.min(...sleepPts);
+  const pMax = Math.max(...pacePts),  pMin = Math.min(...pacePts);
+  const toSvg = (arr: number[], mn: number, mx: number) =>
+    arr.map((v, i) => `${(i / (arr.length - 1)) * w},${h - ((v - mn) / (mx - mn)) * (h - 4) - 2}`).join(" ");
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div
+        className="flex items-center gap-2.5 rounded-xl px-3 py-2.5"
+        style={{ backgroundColor: `${accent}10`, border: `1px solid ${accent}24` }}
+      >
+        <span className="text-sm">🔍</span>
+        <div className="flex-1">
+          <p className="text-[11px] font-semibold" style={{ color: "#F0EEE9" }}>New Correlation Found</p>
+          <p className="text-[9px]" style={{ color: "#9B9894" }}>Sleep Duration ↔ 5K Pace</p>
+        </div>
+        <div
+          className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+          style={{ backgroundColor: `${accent}1E`, color: accent }}
+        >
+          94%
+        </div>
+      </div>
+      <div
+        className="rounded-xl p-3.5"
+        style={{ backgroundColor: "rgba(255,255,255,0.04)", border: "1px solid rgba(240,238,233,0.06)" }}
+      >
+        <div className="flex gap-4 mb-2.5">
+          {[
+            { color: "#64D2FF", label: "Sleep (hrs)" },
+            { color: accent, label: "5K Pace (min/km)" },
+          ].map(({ color, label }) => (
+            <div key={label} className="flex items-center gap-1.5">
+              <div className="w-3 h-0.5 rounded" style={{ backgroundColor: color }} />
+              <p className="text-[9px]" style={{ color: "#9B9894" }}>{label}</p>
+            </div>
+          ))}
+        </div>
+        <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true">
+          <polyline points={toSvg(sleepPts, sMin, sMax)} fill="none" stroke="#64D2FF" strokeWidth="1.5" strokeLinecap="round" />
+          <polyline points={toSvg(pacePts, pMin, pMax)} fill="none" stroke={accent} strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+        <p className="text-[9px] mt-1.5" style={{ color: "#9B9894" }}>Last 7 sessions</p>
+      </div>
+      <div
+        className="rounded-xl px-3.5 py-3"
+        style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(240,238,233,0.07)" }}
+      >
+        <p className="text-[11px] leading-relaxed" style={{ color: "#9B9894" }}>
+          On nights under 7 hours, your 5K pace slows by{" "}
+          <span style={{ color: "#F0EEE9", fontWeight: 600 }}>45 sec/km</span> on average.
+          Across <span style={{ color: accent, fontWeight: 600 }}>3 months</span> of data.
+        </p>
+      </div>
+      <div className="flex gap-2">
+        {[
+          { text: "Nutrition → HRV", conf: "87%" },
+          { text: "Stress → Sleep", conf: "91%" },
+        ].map(({ text, conf }) => (
+          <div
+            key={text}
+            className="flex-1 rounded-lg px-2.5 py-2"
+            style={{ backgroundColor: "rgba(255,255,255,0.04)", border: "1px solid rgba(240,238,233,0.06)" }}
+          >
+            <p className="text-[9px] font-medium" style={{ color: "#9B9894" }}>{text}</p>
+            <p className="text-[9px] font-semibold mt-0.5" style={{ color: accent }}>{conf} conf.</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Preview map ───────────────────────────────────────────────
+const PREVIEWS: Record<FeatureId, React.ComponentType<{ accent: string }>> = {
+  connect:  ConnectPreview,
+  today:    TodayPreview,
+  data:     DataPreview,
+  coach:    CoachPreview,
+  progress: ProgressPreview,
+  trends:   TrendsPreview,
+};
+
+// ── Main section ──────────────────────────────────────────────
 export function HowItWorksSection() {
-  const [activeTab, setActiveTab] = useState(0);
-  const hasInteracted = useRef(false);
+  const sectionRef  = useRef<HTMLElement>(null);
+  const pinnedRef   = useRef<HTMLDivElement>(null);
+  const panelEls    = useRef<(Element | null)[]>([]);
+  const glowEls     = useRef<(Element | null)[]>([]);
+  const dotEls      = useRef<(Element | null)[]>([]);
+  const progressRef = useRef<HTMLDivElement>(null);
 
-  if (typeof window !== "undefined" && !hasInteracted.current) {
-    const unlock = () => { hasInteracted.current = true; };
-    window.addEventListener("click", unlock, { once: true });
-  }
+  // Cache DOM refs once on mount
+  useEffect(() => {
+    if (!pinnedRef.current) return;
+    panelEls.current = FEATURES.map((f) => pinnedRef.current!.querySelector(`[data-panel="${f.id}"]`));
+    glowEls.current  = FEATURES.map((f) => pinnedRef.current!.querySelector(`[data-glow="${f.id}"]`));
+    dotEls.current   = FEATURES.map((_, i) => pinnedRef.current!.querySelector(`[data-dot="${i}"]`));
 
-  const handleTabClick = (i: number) => {
-    if (hasInteracted.current) playClick();
-    setActiveTab(i);
-  };
+    panelEls.current.forEach((el) => {
+      if (el) (el as HTMLElement).style.willChange = "transform, opacity";
+    });
 
-  const handleTabHover = () => {
-    if (hasInteracted.current) playTick();
-  };
+    return () => {
+      panelEls.current = [];
+      glowEls.current  = [];
+      dotEls.current   = [];
+    };
+  }, []);
 
-  const tab = TABS[activeTab];
+  useGSAP(() => {
+    if (!sectionRef.current || !pinnedRef.current) return;
+
+    const dur = 1 / FEATURE_COUNT; // fraction of total scroll per panel
+
+    const trigger = ScrollTrigger.create({
+      trigger: sectionRef.current,
+      start: "top top",
+      end: () => `+=${window.innerHeight * FEATURE_COUNT}`,
+      pin: pinnedRef.current,
+      scrub: true,
+      onUpdate(self) {
+        const p = self.progress;
+        const activeIdx = Math.min(Math.floor(p * FEATURE_COUNT), FEATURE_COUNT - 1);
+
+        FEATURES.forEach((f, i) => {
+          const panel = panelEls.current[i];
+          const glow  = glowEls.current[i];
+          const dot   = dotEls.current[i];
+          if (!panel) return;
+
+          const enterStart = i * dur;
+          const enterEnd   = enterStart + dur * 0.20;
+          const exitStart  = enterStart + dur * 0.80;
+          const exitEnd    = enterStart + dur;
+
+          let opacity = 0, x = 60, scale = 0.96;
+
+          if (i === 0) {
+            // First panel: visible from progress=0
+            if (p <= exitStart) {
+              opacity = 1; x = 0; scale = 1;
+            } else if (p <= exitEnd) {
+              const t = (p - exitStart) / (exitEnd - exitStart);
+              opacity = 1 - t; x = -55 * t; scale = 1 - 0.04 * t;
+            }
+          } else if (i === FEATURE_COUNT - 1) {
+            // Last panel: stays after fully visible
+            if (p >= enterStart && p <= enterEnd) {
+              const t = (p - enterStart) / (enterEnd - enterStart);
+              opacity = t; x = 60 * (1 - t); scale = 0.96 + 0.04 * t;
+            } else if (p > enterEnd) {
+              opacity = 1; x = 0; scale = 1;
+            }
+          } else {
+            if (p >= enterStart && p <= enterEnd) {
+              const t = (p - enterStart) / (enterEnd - enterStart);
+              opacity = t; x = 60 * (1 - t); scale = 0.96 + 0.04 * t;
+            } else if (p > enterEnd && p <= exitStart) {
+              opacity = 1; x = 0; scale = 1;
+            } else if (p > exitStart && p <= exitEnd) {
+              const t = (p - exitStart) / (exitEnd - exitStart);
+              opacity = 1 - t; x = -55 * t; scale = 1 - 0.04 * t;
+            }
+          }
+
+          gsap.set(panel, { opacity, x, scale });
+          if (glow) gsap.set(glow, { opacity: opacity * 0.9 });
+
+          // Animate indicator dots
+          if (dot) {
+            const isActive = i === activeIdx;
+            (dot as HTMLElement).style.width = isActive ? "24px" : "8px";
+            (dot as HTMLElement).style.backgroundColor = isActive
+              ? f.accent
+              : "rgba(240,238,233,0.15)";
+          }
+        });
+
+        // Bottom progress line
+        if (progressRef.current) {
+          progressRef.current.style.transform = `scaleX(${p})`;
+        }
+      },
+    });
+
+    return () => { trigger.kill(); };
+  }, { scope: sectionRef });
 
   return (
     <section
+      ref={sectionRef}
       id="how-it-works-section"
-      className="relative w-full py-20 md:py-32 lg:py-40 overflow-hidden"
-      style={{ backgroundColor: "transparent" }}
+      className="relative w-full"
+      style={{ height: `${(FEATURE_COUNT + 1) * 100}vh` }}
     >
-      <div className="relative z-10 max-w-6xl mx-auto px-6 lg:px-12">
-        {/* Header */}
-        <div className="text-center mb-12 md:mb-16">
-          <div className="mx-auto mb-6 h-px w-16" style={{ background: "linear-gradient(to right, transparent, rgba(207,225,185,0.5), transparent)" }} />
-          <p className="text-sm font-semibold tracking-[0.25em] uppercase mb-4" style={{ color: "#CFE1B9" }}>
-            How It Works
-          </p>
-          <h2 className="text-4xl sm:text-5xl lg:text-[56px] font-bold tracking-tight leading-[1.1]" style={{ color: "#F0EEE9" }}>
-            How ZuraLog Works
-          </h2>
-        </div>
+      {/* ── Pinned viewport ── */}
+      <div
+        ref={pinnedRef}
+        className="w-full h-screen relative overflow-hidden"
+        style={{ backgroundColor: "transparent" }}
+      >
+        {/* Topo texture */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: "url(/patterns/original.png)",
+            backgroundSize: "600px auto",
+            backgroundRepeat: "repeat",
+            opacity: 0.045,
+            mixBlendMode: "screen",
+          }}
+        />
 
-        {/* Tab bar */}
-        <div className="flex justify-center mb-14 md:mb-20">
+        {/* Per-feature ambient glow orbs */}
+        {FEATURES.map((f) => (
           <div
-            className="inline-flex rounded-full p-1.5 gap-1"
-            style={{ backgroundColor: "rgba(30,30,32,0.72)", border: "1px solid rgba(207,225,185,0.10)" }}
-          >
-            {TABS.map((t, i) => {
-              const Icon = t.icon;
-              const isActive = i === activeTab;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => handleTabClick(i)}
-                  onMouseEnter={handleTabHover}
-                  className="relative flex items-center gap-2 rounded-full px-5 md:px-6 py-3 text-xs md:text-sm font-semibold transition-all duration-300"
-                  style={{ color: isActive ? "#141E18" : "#9B9894" }}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeTab"
-                      className="absolute inset-0 rounded-full"
-                      style={{
-                        backgroundColor: "#CFE1B9",
-                        boxShadow: "0 2px 16px rgba(207, 225, 185, 0.45)",
-                      }}
-                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                    />
-                  )}
-                  <span className="relative z-10 flex items-center gap-2">
-                    <Icon size={15} />
-                    <span className="hidden sm:inline">{t.label}</span>
+            key={f.id}
+            data-glow={f.id}
+            aria-hidden="true"
+            className="absolute pointer-events-none"
+            style={{
+              right: "10%",
+              top: "50%",
+              transform: "translateY(-50%)",
+              width: 560,
+              height: 560,
+              borderRadius: "50%",
+              background: `radial-gradient(circle, ${f.glowColor} 0%, transparent 68%)`,
+              opacity: 0,
+            }}
+          />
+        ))}
+
+        {/* ── Feature panels ── */}
+        {FEATURES.map((f, i) => {
+          const Preview = PREVIEWS[f.id as FeatureId];
+          return (
+            <div
+              key={f.id}
+              data-panel={f.id}
+              className="absolute inset-0 flex items-center"
+              style={{ opacity: i === 0 ? 1 : 0 }}
+            >
+              <div
+                className="w-full mx-auto px-6 lg:px-16 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20 items-center"
+                style={{ maxWidth: 1280 }}
+              >
+                {/* ── Left: Typography ── */}
+                <div className="flex flex-col gap-5">
+                  {/* Ghost number — large decorative */}
+                  <span
+                    aria-hidden="true"
+                    className="font-black leading-none select-none pointer-events-none"
+                    style={{
+                      fontSize: "clamp(5rem, 14vw, 11rem)",
+                      color: `${f.accent}09`,
+                      lineHeight: 0.88,
+                      letterSpacing: "-0.04em",
+                      marginBottom: "-1.2rem",
+                      display: "block",
+                    }}
+                  >
+                    {f.number}
                   </span>
-                </button>
-              );
-            })}
-          </div>
+
+                  {/* Eyebrow */}
+                  <div className="flex items-center gap-3">
+                    <div className="h-px w-7" style={{ backgroundColor: f.accent }} />
+                    <span
+                      className="text-[11px] font-semibold uppercase tracking-[0.24em]"
+                      style={{ color: f.accent }}
+                    >
+                      {f.eyebrow}
+                    </span>
+                  </div>
+
+                  {/* Headline */}
+                  <h2
+                    className="font-bold tracking-tight leading-[1.04]"
+                    style={{
+                      fontSize: "clamp(2.6rem, 4.5vw, 4.2rem)",
+                      color: "#F0EEE9",
+                      whiteSpace: "pre-line",
+                    }}
+                  >
+                    {f.headline}
+                  </h2>
+
+                  {/* Description */}
+                  <p
+                    className="leading-relaxed"
+                    style={{
+                      fontSize: "clamp(0.875rem, 1.1vw, 1rem)",
+                      color: "#9B9894",
+                      maxWidth: "36ch",
+                    }}
+                  >
+                    {f.description}
+                  </p>
+
+                  {/* Accent rule */}
+                  <div
+                    className="h-0.5 w-10 rounded-full"
+                    style={{ backgroundColor: f.accent }}
+                  />
+                </div>
+
+                {/* ── Right: App preview card ── */}
+                <div className="hidden lg:flex justify-end">
+                  <AppCard accent={f.accent}>
+                    <Preview accent={f.accent} />
+                  </AppCard>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* ── Scroll indicator dots ── */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
+          {FEATURES.map((f, i) => (
+            <div
+              key={i}
+              data-dot={i}
+              className="h-1.5 rounded-full"
+              style={{
+                width: i === 0 ? 24 : 8,
+                backgroundColor: i === 0 ? f.accent : "rgba(240,238,233,0.15)",
+                transition: "width 200ms ease, background-color 200ms ease",
+              }}
+            />
+          ))}
         </div>
 
-        {/* Content area */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-          {/* Left: Text */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={tab.id + "-text"}
-              initial={{ opacity: 0, x: -24, filter: "blur(6px)" }}
-              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, x: 24, filter: "blur(6px)" }}
-              transition={{ duration: 0.4, ease: EXPO_OUT }}
-              className="flex flex-col gap-6"
+        {/* ── Feature counter — bottom right ── */}
+        <div className="absolute bottom-7 right-8 z-30 hidden md:flex items-center gap-1.5">
+          {FEATURES.map((f, i) => (
+            <span
+              key={i}
+              className="text-[10px] font-semibold tabular-nums"
+              data-counter={i}
+              style={{ color: i === 0 ? "#9B9894" : "rgba(240,238,233,0.14)" }}
             >
-              {/* Tab number badge */}
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold"
-                style={{ backgroundColor: `${tab.accent}20`, color: "#CFE1B9" }}
-              >
-                {activeTab + 1}
-              </div>
-              <h3 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1]" style={{ color: "#F0EEE9" }}>
-                {tab.headline}
-              </h3>
-              <p className="text-base md:text-lg leading-relaxed max-w-md" style={{ color: "#9B9894" }}>
-                {tab.description}
-              </p>
-              {/* Decorative accent bar */}
-              <div className="h-1 w-16 rounded-full" style={{ backgroundColor: tab.accent }} />
-            </motion.div>
-          </AnimatePresence>
+              {f.number}
+            </span>
+          ))}
+        </div>
 
-          {/* Right: Visual */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={tab.id + "-visual"}
-              initial={{ opacity: 0, scale: 0.92, y: 20, filter: "blur(10px)" }}
-              animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, scale: 0.92, y: -20, filter: "blur(10px)" }}
-              transition={{ duration: 0.5, ease: EXPO_OUT }}
-              className="flex justify-center relative"
-            >
-              {/* Ambient glow behind card */}
-              <div
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full pointer-events-none"
-                style={{ background: `radial-gradient(circle, ${tab.accent}25 0%, transparent 70%)` }}
-              />
-
-              <div
-                className="relative w-full max-w-lg rounded-3xl p-8 md:p-10"
-                style={{
-                  backgroundColor: "rgba(30, 46, 36, 0.85)",
-                  backdropFilter: "blur(20px)",
-                  WebkitBackdropFilter: "blur(20px)",
-                  border: "1px solid rgba(207, 225, 185, 0.10)",
-                  boxShadow: `0 12px 48px rgba(20, 30, 24, 0.25), 0 0 0 1px rgba(207, 225, 185, 0.06), 0 0 80px ${tab.accent}10`,
-                  minHeight: "400px",
-                }}
-              >
-                {/* ── Connect Visual ── */}
-                {activeTab === 0 && (
-                  <div className="flex flex-col items-center gap-7">
-                    <div className="grid grid-cols-4 gap-3">
-                      {[
-                        { icon: <FaStrava className="text-[#FC4C02]" size={22} />, bg: "rgba(252,76,2,0.08)" },
-                        { icon: <FaApple className="text-gray-800" size={22} />, bg: "rgba(0,0,0,0.05)" },
-                        { icon: <SiFitbit className="text-[#00B0B9]" size={22} />, bg: "rgba(0,176,185,0.08)" },
-                        { icon: <SiGarmin className="text-[#000]" size={22} />, bg: "rgba(0,0,0,0.05)" },
-                      ].map((app, idx) => (
-                        <motion.div
-                          key={idx}
-                          initial={{ scale: 0.8, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={{ delay: idx * 0.08, duration: 0.4, ease: EXPO_OUT }}
-                          className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                          style={{ backgroundColor: "rgba(255,255,255,0.08)", border: "1px solid rgba(207,225,185,0.10)", boxShadow: "0 2px 8px rgba(0,0,0,0.10)" }}
-                        >
-                          {app.icon}
-                        </motion.div>
-                      ))}
-                    </div>
-
-                    {/* Flow arrow */}
-                    <motion.div
-                      initial={{ opacity: 0, scaleX: 0 }}
-                      animate={{ opacity: 1, scaleX: 1 }}
-                      transition={{ delay: 0.3, duration: 0.5, ease: EXPO_OUT }}
-                      className="flex items-center gap-2 w-full max-w-[200px]"
-                    >
-                      <div className="flex-1 h-px" style={{ background: "linear-gradient(to right, transparent, #CFE1B9)" }} />
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: "#CFE1B9", boxShadow: "0 2px 16px rgba(207,225,185,0.4)" }}>
-                        <ArrowRight size={16} style={{ color: "#141E18" }} />
-                      </div>
-                      <div className="flex-1 h-px" style={{ background: "linear-gradient(to left, transparent, #CFE1B9)" }} />
-                    </motion.div>
-
-                    {/* Central hub */}
-                    <motion.div
-                      initial={{ scale: 0.5, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ delay: 0.4, duration: 0.5, ease: EXPO_OUT }}
-                      className="w-20 h-20 rounded-2xl flex items-center justify-center"
-                      style={{ backgroundColor: "#CFE1B9", boxShadow: "0 4px 20px rgba(207,225,185,0.4)" }}
-                    >
-                      <Smartphone size={32} style={{ color: "#141E18" }} />
-                    </motion.div>
-
-                    {/* Metric tags */}
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {[
-                        { label: "Sleep", icon: Moon },
-                        { label: "Heart", icon: Heart },
-                        { label: "Steps", icon: Footprints },
-                        { label: "Calories", icon: Flame },
-                        { label: "Activity", icon: Activity },
-                      ].map((m, idx) => (
-                        <motion.div
-                          key={m.label}
-                          initial={{ y: 10, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.5 + idx * 0.06, duration: 0.4, ease: EXPO_OUT }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
-                          style={{ backgroundColor: "rgba(207,225,185,0.10)", border: "1px solid rgba(207,225,185,0.20)", color: "#CFE1B9" }}
-                        >
-                          <m.icon size={11} />
-                          {m.label}
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Analyze Visual ── */}
-                {activeTab === 1 && (
-                  <div className="flex flex-col items-center gap-6">
-                    <motion.div
-                      initial={{ scale: 0.5, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ duration: 0.5, ease: EXPO_OUT }}
-                      className="w-24 h-24 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: "rgba(212,242,145,0.15)", border: "2px solid rgba(212,242,145,0.35)", boxShadow: "0 0 40px rgba(212,242,145,0.2)" }}
-                    >
-                      <Brain size={40} style={{ color: "#CFE1B9" }} />
-                    </motion.div>
-
-                    {/* Animated connection lines */}
-                    <div className="flex items-center gap-1">
-                      {[0,1,2].map((d) => (
-                        <motion.div
-                          key={d}
-                          initial={{ scaleY: 0 }}
-                          animate={{ scaleY: 1 }}
-                          transition={{ delay: 0.2 + d * 0.1, duration: 0.4, ease: EXPO_OUT }}
-                          className="w-0.5 h-4 rounded-full"
-                          style={{ backgroundColor: "rgba(212,242,145,0.5)" }}
-                        />
-                      ))}
-                    </div>
-
-                    <div className="w-full grid grid-cols-2 gap-2.5">
-                      {[
-                        { label: "Sleep vs Recovery", icon: Moon, color: "#5E5CE6" },
-                        { label: "Nutrition vs Output", icon: Flame, color: "#FF9F0A" },
-                        { label: "Heart vs Stress", icon: Heart, color: "#FF375F" },
-                        { label: "Activity Trends", icon: Activity, color: "#30D158" },
-                        { label: "Body Composition", icon: Shield, color: "#64D2FF" },
-                        { label: "Cycle Patterns", icon: Sparkles, color: "#BF5AF2" },
-                      ].map((item, idx) => (
-                        <motion.div
-                          key={item.label}
-                          initial={{ x: idx % 2 === 0 ? -20 : 20, opacity: 0 }}
-                          animate={{ x: 0, opacity: 1 }}
-                          transition={{ delay: 0.3 + idx * 0.07, duration: 0.5, ease: EXPO_OUT }}
-                          className="flex items-center gap-2.5 rounded-xl px-3.5 py-3"
-                          style={{ backgroundColor: `${item.color}08`, border: `1px solid ${item.color}18` }}
-                        >
-                          <item.icon size={14} style={{ color: item.color }} />
-                          <span className="text-xs font-semibold" style={{ color: "#E8EDE0" }}>{item.label}</span>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Insights Visual ── */}
-                {activeTab === 2 && (
-                  <div className="flex flex-col gap-3.5">
-                    {[
-                      { text: "You're in a 230 cal surplus — evening snacking is the culprit.", icon: Flame, iconColor: "#FF9F0A", bg: "rgba(255,159,10,0.06)", border: "rgba(255,159,10,0.15)" },
-                      { text: "Only 5hr sleep. Keep today's workout in Zone 2.", icon: Moon, iconColor: "#5E5CE6", bg: "rgba(94,92,230,0.06)", border: "rgba(94,92,230,0.15)" },
-                      { text: "HRV trending up 12% this week. Recovery on track.", icon: Heart, iconColor: "#30D158", bg: "rgba(48,209,88,0.06)", border: "rgba(48,209,88,0.15)" },
-                      { text: "Weight plateau detected — increase protein by 15g/day.", icon: TrendingUp, iconColor: "#FF375F", bg: "rgba(255,55,95,0.06)", border: "rgba(255,55,95,0.15)" },
-                    ].map((item, idx) => (
-                      <motion.div
-                        key={idx}
-                        initial={{ x: -30, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ delay: idx * 0.1, duration: 0.5, ease: EXPO_OUT }}
-                        className="flex items-start gap-3 rounded-2xl px-4 py-4"
-                        style={{ backgroundColor: item.bg, border: `1px solid ${item.border}` }}
-                      >
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ backgroundColor: `${item.iconColor}15` }}>
-                          <item.icon size={16} style={{ color: item.iconColor }} />
-                        </div>
-                        <p className="text-sm font-medium leading-snug" style={{ color: "#E8EDE0" }}>
-                          {item.text}
-                        </p>
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
-
-                {/* ── Coach Visual ── */}
-                {activeTab === 3 && (
-                  <div className="flex flex-col gap-3">
-                    {[
-                      { side: "right", text: "Why am I not losing weight?", delay: 0 },
-                      { side: "left", text: "Your CalAI data shows 2,180 cal/day avg, but Strava puts your maintenance at ~1,950. That's a 230 cal surplus. Plus running dropped from 8 to 3 sessions this month.", delay: 0.15 },
-                      { side: "right", text: "What should I change?", delay: 0.3 },
-                      { side: "left", text: "Cut 250 cals (skip the post-dinner snack) and get back to 5+ runs per week. You'll be in deficit within 3 days.", delay: 0.45 },
-                    ].map((msg, idx) => (
-                      <motion.div
-                        key={idx}
-                        initial={{ opacity: 0, y: 12, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        transition={{ delay: msg.delay, duration: 0.4, ease: EXPO_OUT }}
-                        className={`flex ${msg.side === "right" ? "justify-end" : "justify-start"}`}
-                      >
-                        <div
-                          className={`rounded-2xl px-4 py-3 max-w-[85%] ${msg.side === "right" ? "rounded-br-md" : "rounded-bl-md"}`}
-                          style={{
-                            backgroundColor: msg.side === "right" ? "rgba(207,225,185,0.18)" : "rgba(255,255,255,0.10)",
-                            border: `1px solid ${msg.side === "right" ? "rgba(207,225,185,0.30)" : "rgba(207,225,185,0.12)"}`,
-                            boxShadow: msg.side === "right" ? "0 2px 8px rgba(207,225,185,0.08)" : "none",
-                          }}
-                        >
-                          <p className="text-sm leading-relaxed" style={{ color: "#E8EDE0" }}>
-                            {msg.text}
-                          </p>
-                        </div>
-                      </motion.div>
-                    ))}
-                    {/* Typing indicator */}
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.7 }}
-                      className="flex gap-1 px-4 py-2"
-                    >
-                      {[0,1,2].map((d) => (
-                        <div
-                          key={d}
-                          className="w-1.5 h-1.5 rounded-full animate-pulse"
-                          style={{ backgroundColor: "rgba(207,225,185,0.30)", animationDelay: `${d * 200}ms` }}
-                        />
-                      ))}
-                    </motion.div>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </AnimatePresence>
+        {/* ── Bottom progress bar ── */}
+        <div
+          className="absolute bottom-0 inset-x-0 h-px"
+          style={{ backgroundColor: "rgba(207,225,185,0.06)" }}
+        >
+          <div
+            ref={progressRef}
+            className="h-full origin-left"
+            style={{ backgroundColor: "#CFE1B9", transform: "scaleX(0)" }}
+          />
         </div>
       </div>
     </section>
