@@ -76,8 +76,7 @@ import 'package:zuralog/features/data/presentation/metric_detail_screen.dart' as
 import 'package:zuralog/features/data/presentation/score_breakdown_screen.dart' as data_score;
 
 // ── Tab 2: Coach ──────────────────────────────────────────────────────────────
-import 'package:zuralog/features/coach/presentation/new_chat_screen.dart';
-import 'package:zuralog/features/coach/presentation/chat_thread_screen.dart';
+import 'package:zuralog/features/coach/presentation/coach_screen.dart';
 
 // ── Tab 3: Progress ───────────────────────────────────────────────────────────
 import 'package:zuralog/features/progress/presentation/progress_home_screen.dart';
@@ -451,20 +450,8 @@ List<RouteBase> _buildRoutes() {
               name: RouteNames.coach,
               builder: (context, state) => const SentryErrorBoundary(
                 module: 'coach',
-                child: NewChatScreen(),
+                child: CoachScreen(),
               ),
-              routes: [
-                GoRoute(
-                  path: 'thread/:id',
-                  name: RouteNames.coachThread,
-                  builder: (context, state) => SentryErrorBoundary(
-                    module: 'coach.thread',
-                    child: ChatThreadScreen(
-                      conversationId: state.pathParameters['id']!,
-                    ),
-                  ),
-                ),
-              ],
             ),
           ],
         ),
