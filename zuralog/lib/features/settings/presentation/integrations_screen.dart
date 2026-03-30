@@ -208,6 +208,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.only(
@@ -219,7 +220,7 @@ class _SectionHeader extends StatelessWidget {
         child: Text(
           label,
           style: AppTextStyles.labelSmall.copyWith(
-            color: AppColors.textTertiary,
+            color: colors.textTertiary,
             letterSpacing: 0.8,
             fontWeight: FontWeight.w600,
           ),
@@ -242,7 +243,7 @@ class _ConnectedCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
     final icon = _integrationIcons[integration.id] ?? Icons.extension_rounded;
-    final iconColor = _integrationColors[integration.id] ?? AppColors.primary;
+    final iconColor = _integrationColors[integration.id] ?? colors.primary;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -341,7 +342,7 @@ class _AvailableCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
     final icon = _integrationIcons[integration.id] ?? Icons.extension_rounded;
-    final iconColor = _integrationColors[integration.id] ?? AppColors.primary;
+    final iconColor = _integrationColors[integration.id] ?? colors.primary;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -430,7 +431,7 @@ class _ComingSoonRow extends StatelessWidget {
               // Greyed-out icon badge
               _IntegrationIconBadge(
                 icon: icon,
-                iconColor: AppColors.textTertiary,
+                iconColor: colors.textTertiary,
               ),
               const SizedBox(width: AppDimens.spaceMd),
 
@@ -503,12 +504,12 @@ class _PlatformBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 10, color: AppColors.textTertiary),
+          Icon(icon, size: 10, color: colors.textTertiary),
           const SizedBox(width: 2),
           Text(
             label,
             style: AppTextStyles.labelSmall.copyWith(
-              color: AppColors.textTertiary,
+              color: colors.textTertiary,
             ),
           ),
         ],
@@ -525,12 +526,13 @@ class _StatusIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final (dotColor, label) = switch (status) {
       IntegrationStatus.connected => (AppColors.statusConnected, 'Connected'),
       IntegrationStatus.syncing => (AppColors.statusConnecting, 'Syncing'),
       IntegrationStatus.error => (AppColors.statusError, 'Error'),
-      IntegrationStatus.available => (AppColors.textTertiary, 'Available'),
-      IntegrationStatus.comingSoon => (AppColors.textTertiary, 'Coming soon'),
+      IntegrationStatus.available => (colors.textTertiary, 'Available'),
+      IntegrationStatus.comingSoon => (colors.textTertiary, 'Coming soon'),
     };
 
     return Row(
@@ -568,11 +570,12 @@ class _ConnectButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Disable the button if the integration isn't compatible with this device.
     final isCompatible = integration.isCompatibleWithCurrentPlatform;
+    final colors = AppColorsOf(context);
 
     return FilledButton(
       style: FilledButton.styleFrom(
         backgroundColor:
-            isCompatible ? AppColors.primary : AppColors.textTertiary,
+            isCompatible ? colors.primary : colors.textTertiary,
         foregroundColor: AppColors.primaryButtonText,
         minimumSize: const Size(72, 32),
         padding: const EdgeInsets.symmetric(
@@ -614,7 +617,7 @@ class _ComingSoonChip extends StatelessWidget {
       child: Text(
         'Coming soon',
         style: AppTextStyles.labelSmall.copyWith(
-          color: AppColors.textTertiary,
+          color: colors.textTertiary,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -635,7 +638,7 @@ class _ConnectedBottomSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
     final icon = _integrationIcons[integration.id] ?? Icons.extension_rounded;
-    final iconColor = _integrationColors[integration.id] ?? AppColors.primary;
+    final iconColor = _integrationColors[integration.id] ?? colors.primary;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -699,7 +702,7 @@ class _ConnectedBottomSheet extends ConsumerWidget {
                 Text(
                   'SYNC DETAILS',
                   style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.textTertiary,
+                    color: colors.textTertiary,
                     letterSpacing: 0.8,
                     fontWeight: FontWeight.w600,
                   ),

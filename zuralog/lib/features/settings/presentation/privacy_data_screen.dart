@@ -159,9 +159,11 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                           style: AppTextStyles.bodyMedium.copyWith(color: AppColors.statusError),
                         ),
                       ),
-                      TextButton(
+                      ZButton(
+                        label: 'Retry',
                         onPressed: () => ref.invalidate(memoryItemsProvider),
-                        child: const Text('Retry'),
+                        variant: ZButtonVariant.text,
+                        isFullWidth: false,
                       ),
                     ],
                   ),
@@ -184,7 +186,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                             child: Text(
                               'No memory stored',
                               style: AppTextStyles.bodyMedium.copyWith(
-                                color: AppColors.textTertiary,
+                                color: colors.textTertiary,
                               ),
                             ),
                           )
@@ -466,10 +468,10 @@ class _MemoryItemRow extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.close_rounded,
               size: 18,
-              color: AppColors.textTertiary,
+              color: colors.textTertiary,
             ),
             onPressed: onDelete,
             padding: EdgeInsets.zero,
@@ -538,7 +540,7 @@ class _ToggleRow extends StatelessWidget {
                 Text(
                   subtitle,
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textTertiary,
+                    color: colors.textTertiary,
                   ),
                 ),
               ],
@@ -548,7 +550,7 @@ class _ToggleRow extends StatelessWidget {
             value: value,
             onChanged: onChanged,
             activeThumbColor: colors.primary,
-            inactiveThumbColor: AppColors.textTertiary,
+            inactiveThumbColor: colors.textTertiary,
             inactiveTrackColor: colors.border,
           ),
         ],

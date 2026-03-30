@@ -517,6 +517,7 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceMd,
@@ -527,7 +528,7 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         label.toUpperCase(),
         style: AppTextStyles.labelSmall.copyWith(
-          color: AppColors.textTertiary,
+          color: colors.textTertiary,
           letterSpacing: 0.8,
           fontWeight: FontWeight.w600,
         ),
@@ -626,7 +627,7 @@ class _ToggleRow extends StatelessWidget {
             value: value,
             onChanged: onChanged,
             activeThumbColor: colors.primary,
-            inactiveThumbColor: AppColors.textTertiary,
+            inactiveThumbColor: colors.textTertiary,
             inactiveTrackColor: colors.border,
           ),
         ],
@@ -684,7 +685,7 @@ class _SubToggleRow extends StatelessWidget {
             value: value,
             onChanged: onChanged,
             activeThumbColor: colors.primary,
-            inactiveThumbColor: AppColors.textTertiary,
+            inactiveThumbColor: colors.textTertiary,
             inactiveTrackColor: colors.border,
           ),
         ],
@@ -816,8 +817,8 @@ class _TimePickerRow extends StatelessWidget {
           initialTime: time,
           builder: (context, child) => Theme(
             data: ThemeData.dark().copyWith(
-              colorScheme: const ColorScheme.dark(
-                primary: AppColors.primary,
+              colorScheme: ColorScheme.dark(
+                primary: AppColorsOf(context).primary,
                 onPrimary: AppColors.primaryButtonText,
               ),
             ),
