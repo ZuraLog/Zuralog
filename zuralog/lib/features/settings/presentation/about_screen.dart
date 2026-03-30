@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -16,9 +17,28 @@ import 'package:zuralog/shared/widgets/widgets.dart';
 // ── AboutScreen ───────────────────────────────────────────────────────────────
 
 /// About screen — app identity, support links, legal pages, open-source licenses.
-class AboutScreen extends StatelessWidget {
+class AboutScreen extends StatefulWidget {
   /// Creates the [AboutScreen].
   const AboutScreen({super.key});
+
+  @override
+  State<AboutScreen> createState() => _AboutScreenState();
+}
+
+class _AboutScreenState extends State<AboutScreen> {
+  String _version = '...';
+
+  @override
+  void initState() {
+    super.initState();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) {
+        setState(() {
+          _version = 'Version ${info.version} (Build ${info.buildNumber})';
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +48,7 @@ class AboutScreen extends StatelessWidget {
       body: ListView(
         children: [
           const SizedBox(height: AppDimens.spaceLg),
-          const _AppIdentityHero(),
+          _AppIdentityHero(version: _version),
           const SizedBox(height: AppDimens.spaceXl),
 
           const SettingsSectionLabel('SUPPORT'),
@@ -80,7 +100,7 @@ class AboutScreen extends StatelessWidget {
                 onTap: () => showLicensePage(
                   context: context,
                   applicationName: 'ZuraLog',
-                  applicationVersion: '1.0.0',
+                  applicationVersion: _version,
                 ),
               ),
             ],
@@ -116,7 +136,9 @@ class AboutScreen extends StatelessWidget {
 // ── _AppIdentityHero ───────────────────────────────────────────────────────────
 
 class _AppIdentityHero extends StatelessWidget {
-  const _AppIdentityHero();
+  const _AppIdentityHero({required this.version});
+
+  final String version;
 
   @override
   Widget build(BuildContext context) {
@@ -148,9 +170,9 @@ class _AppIdentityHero extends StatelessWidget {
           ),
           const SizedBox(height: AppDimens.spaceXs),
 
-          // Version string
+          // Version string — loaded from PackageInfo.fromPlatform(); shows '...' until ready
           Text(
-            'Version 1.0.0 (Build 42)',
+            version,
             style: AppTextStyles.bodySmall.copyWith(
               color: colors.textSecondary,
             ),
@@ -176,6 +198,7 @@ class _WhatsNewChip extends StatelessWidget {
     return ZuralogSpringButton(
       onTap: () => _showSnackBar(context, "What's New in 1.0.0"),
       child: Container(
+        // 14×6 — intentional tight chip padding; no AppDimens token matches these values
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
           color: colors.primary.withValues(alpha: 0.12),
@@ -206,6 +229,7 @@ class _WhatsNewChip extends StatelessWidget {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
+// Called synchronously from onTap — context is always valid here.
 void _showSnackBar(BuildContext context, String message) {
   final colors = AppColorsOf(context);
   ScaffoldMessenger.of(context).showSnackBar(

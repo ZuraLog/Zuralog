@@ -29,6 +29,7 @@ class ZSettingsGroup extends StatelessWidget {
               tiles[i],
               if (i < tiles.length - 1)
                 Padding(
+                  // 16px tile padding + 36px icon badge + 16px gap (matches ZSettingsTile leading column)
                   padding: const EdgeInsets.only(left: 68),
                   child: Container(
                     height: 1,
