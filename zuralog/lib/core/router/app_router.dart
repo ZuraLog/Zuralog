@@ -4,7 +4,7 @@
 /// [GoRouter] instance ONCE and uses [refreshListenable] to re-trigger the
 /// [redirect] callback whenever auth state or first-launch flag changes.
 ///
-/// **6-tab route tree:**
+/// **5-tab route tree:**
 /// ```
 /// /today                            → TodayFeedScreen (tab 0)
 ///   /today/insight/:id              → InsightDetailScreen
@@ -23,7 +23,7 @@
 ///   /progress/journal               → JournalScreen
 ///   /progress/journal/diary         → JournalDiaryScreen
 /// /trends                           → TrendsHomeScreen (tab 4)
-/// /settings                         → SettingsHubScreen (tab 5)
+/// /settings                         → SettingsHubScreen (pushed over shell — full-screen)
 ///   /settings/journal               → JournalSettingsScreen
 ///   /settings/account … /settings/about  → sub-screens
 /// /profile                          → ProfileScreen (pushed over shell)
@@ -555,118 +555,115 @@ List<RouteBase> _buildRoutes() {
           ],
         ),
 
-        // ── Tab 5: Settings ──────────────────────────────────────────────
-        StatefulShellBranch(
+      ],
+    ),
+
+    // ── Settings (pushed over shell — full-screen) ────────────────────────
+    GoRoute(
+      path: RouteNames.settingsPath,
+      name: RouteNames.settings,
+      builder: (context, state) => const SentryErrorBoundary(
+        module: 'settings',
+        child: SettingsHubScreen(),
+      ),
+      routes: [
+        GoRoute(
+          path: 'account',
+          name: RouteNames.settingsAccount,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.account',
+            child: AccountSettingsScreen(),
+          ),
           routes: [
             GoRoute(
-              path: RouteNames.settingsPath,
-              name: RouteNames.settings,
+              path: 'edit-profile',
+              name: RouteNames.editProfile,
               builder: (context, state) => const SentryErrorBoundary(
-                module: 'settings',
-                child: SettingsHubScreen(),
+                module: 'settings.account.editProfile',
+                child: EditProfileScreen(),
               ),
-              routes: [
-                GoRoute(
-                  path: 'account',
-                  name: RouteNames.settingsAccount,
-                  builder: (context, state) => const SentryErrorBoundary(
-                    module: 'settings.account',
-                    child: AccountSettingsScreen(),
-                  ),
-                  routes: [
-                    GoRoute(
-                      path: 'edit-profile',
-                      name: RouteNames.editProfile,
-                      builder: (context, state) => const SentryErrorBoundary(
-                        module: 'settings.account.editProfile',
-                        child: EditProfileScreen(),
-                      ),
-                    ),
-                  ],
-                ),
-                GoRoute(
-                  path: 'notifications',
-                  name: RouteNames.settingsNotifications,
-                  builder: (context, state) => const SentryErrorBoundary(
-                    module: 'settings.notifications',
-                    child: NotificationSettingsScreen(),
-                  ),
-                ),
-                GoRoute(
-                  path: 'appearance',
-                  name: RouteNames.settingsAppearance,
-                  builder: (context, state) => const SentryErrorBoundary(
-                    module: 'settings.appearance',
-                    child: AppearanceSettingsScreen(),
-                  ),
-                ),
-                GoRoute(
-                  path: 'coach',
-                  name: RouteNames.settingsCoach,
-                  builder: (context, state) => const SentryErrorBoundary(
-                    module: 'settings.coach',
-                    child: CoachSettingsScreen(),
-                  ),
-                ),
-                GoRoute(
-                  path: 'journal',
-                  name: RouteNames.settingsJournal,
-                  builder: (context, state) => const SentryErrorBoundary(
-                    module: 'settings.journal',
-                    child: JournalSettingsScreen(),
-                  ),
-                ),
-                GoRoute(
-                  path: 'integrations',
-                  name: RouteNames.settingsIntegrations,
-                  builder: (context, state) => const SentryErrorBoundary(
-                    module: 'settings.integrations',
-                    child: IntegrationsScreen(),
-                  ),
-                ),
-                GoRoute(
-                  path: 'privacy',
-                  name: RouteNames.settingsPrivacy,
-                  builder: (context, state) => const SentryErrorBoundary(
-                    module: 'settings.privacy',
-                    child: PrivacyDataScreen(),
-                  ),
-                ),
-                GoRoute(
-                  path: 'subscription',
-                  name: RouteNames.settingsSubscription,
-                  builder: (context, state) => const SentryErrorBoundary(
-                    module: 'settings.subscription',
-                    child: SubscriptionSettingsScreen(),
-                  ),
-                ),
-                GoRoute(
-                  path: 'about',
-                  name: RouteNames.settingsAbout,
-                  builder: (context, state) => const SentryErrorBoundary(
-                    module: 'settings.about',
-                    child: AboutScreen(),
-                  ),
-                ),
-                GoRoute(
-                  path: 'privacy-policy',
-                  name: RouteNames.settingsPrivacyPolicy,
-                  builder: (context, state) => const SentryErrorBoundary(
-                    module: 'settings.privacy_policy',
-                    child: PrivacyPolicyScreen(),
-                  ),
-                ),
-                GoRoute(
-                  path: 'terms',
-                  name: RouteNames.settingsTerms,
-                  builder: (context, state) => const SentryErrorBoundary(
-                    module: 'settings.terms',
-                    child: TermsOfServiceScreen(),
-                  ),
-                ),
-              ],
             ),
           ],
+        ),
+        GoRoute(
+          path: 'notifications',
+          name: RouteNames.settingsNotifications,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.notifications',
+            child: NotificationSettingsScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'appearance',
+          name: RouteNames.settingsAppearance,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.appearance',
+            child: AppearanceSettingsScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'coach',
+          name: RouteNames.settingsCoach,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.coach',
+            child: CoachSettingsScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'journal',
+          name: RouteNames.settingsJournal,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.journal',
+            child: JournalSettingsScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'integrations',
+          name: RouteNames.settingsIntegrations,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.integrations',
+            child: IntegrationsScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'privacy',
+          name: RouteNames.settingsPrivacy,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.privacy',
+            child: PrivacyDataScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'subscription',
+          name: RouteNames.settingsSubscription,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.subscription',
+            child: SubscriptionSettingsScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'about',
+          name: RouteNames.settingsAbout,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.about',
+            child: AboutScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'privacy-policy',
+          name: RouteNames.settingsPrivacyPolicy,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.privacy_policy',
+            child: PrivacyPolicyScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'terms',
+          name: RouteNames.settingsTerms,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.terms',
+            child: TermsOfServiceScreen(),
+          ),
         ),
       ],
     ),

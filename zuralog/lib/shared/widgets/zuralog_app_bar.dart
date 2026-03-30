@@ -8,8 +8,10 @@ library;
 import 'package:flutter/material.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
+import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
 
 // ── ZuralogAppBarTooltipConfig ────────────────────────────────────────────────
 
@@ -99,6 +101,10 @@ class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
 
     final fullActions = [
       ...?actions,
+      const Padding(
+        padding: EdgeInsets.only(right: AppDimens.spaceMd),
+        child: ProfileAvatarButton(),
+      ),
     ];
 
     return AppBar(
