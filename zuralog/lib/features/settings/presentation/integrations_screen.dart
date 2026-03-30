@@ -98,7 +98,7 @@ class IntegrationsScreen extends ConsumerWidget {
             const SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.all(AppDimens.spaceLg),
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: ZCircularProgress()),
               ),
             ),
 
