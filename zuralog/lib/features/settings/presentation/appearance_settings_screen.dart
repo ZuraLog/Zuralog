@@ -54,95 +54,78 @@ class AppearanceSettingsScreen extends ConsumerWidget {
     final colors = AppColorsOf(context);
 
     return ZuralogScaffold(
-      body: CustomScrollView(
-        slivers: [
-          // ── Large-title app bar ───────────────────────────────────────────
-          SliverAppBar(
-            expandedHeight: 100,
-            pinned: true,
-            elevation: 0,
-            scrolledUnderElevation: 0,
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(
-                left: AppDimens.spaceMd,
-                bottom: 14,
-              ),
-              collapseMode: CollapseMode.parallax,
-              title: Text(
-                'Appearance',
-                style: AppTextStyles.displaySmall.copyWith(color: colors.textPrimary),
-              ),
-            ),
+      appBar: ZuralogAppBar(title: 'Appearance', showProfileAvatar: false),
+      body: ListView(
+        padding: const EdgeInsets.only(bottom: AppDimens.spaceXxl),
+        children: [
+          // ── THEME section ─────────────────────────────────────────────
+          const SettingsSectionLabel('THEME'),
+          _ThemeSelector(
+            selected: themeMode,
+            onSelected: (v) {
+              ref.read(themeModeProvider.notifier).setTheme(v);
+              ref.read(analyticsServiceProvider).capture(
+                event: AnalyticsEvents.themeChanged,
+                properties: {'theme': v.name},
+              );
+            },
           ),
 
-          SliverList(
-            delegate: SliverChildListDelegate([
-              // ── THEME section ─────────────────────────────────────────────
-              const SettingsSectionLabel('THEME'),
-              _ThemeSelector(
-                selected: themeMode,
-                onSelected: (v) {
-                  ref.read(themeModeProvider.notifier).setTheme(v);
+          // ── EXPERIENCE section ────────────────────────────────────────
+          const SettingsSectionLabel('EXPERIENCE'),
+          _SettingsCard(
+            children: [
+              _ToggleRow(
+                icon: Icons.vibration_rounded,
+                iconColor: AppColors.categoryActivity,
+                title: 'Haptic Feedback',
+                subtitle: 'Vibration on interactions',
+                value: hapticEnabled,
+                onChanged: (v) {
+                  ref.read(hapticEnabledProvider.notifier).setEnabled(v);
                   ref.read(analyticsServiceProvider).capture(
-                    event: AnalyticsEvents.themeChanged,
-                    properties: {'theme': v.name},
+                    event: AnalyticsEvents.hapticToggled,
+                    properties: {'enabled': v},
                   );
                 },
               ),
+            ],
+          ),
 
-              // ── EXPERIENCE section ────────────────────────────────────────
-              const SettingsSectionLabel('EXPERIENCE'),
-              _SettingsGroup(
-                children: [
-                  _ToggleRow(
-                    icon: Icons.vibration_rounded,
-                    iconColor: AppColors.categoryActivity,
-                    title: 'Haptic Feedback',
-                    subtitle: 'Vibration on interactions',
-                    value: hapticEnabled,
-                    onChanged: (v) {
-                      ref.read(hapticEnabledProvider.notifier).setEnabled(v);
-                      ref.read(analyticsServiceProvider).capture(
-                        event: AnalyticsEvents.hapticToggled,
-                        properties: {'enabled': v},
-                      );
-                    },
-                  ),
-                ],
+          // ── TOOLTIPS section ──────────────────────────────────────────
+          const SettingsSectionLabel('TOOLTIPS'),
+          _SettingsCard(
+            children: [
+              _ToggleRow(
+                icon: Icons.help_outline_rounded,
+                iconColor: AppColors.categoryVitals,
+                title: 'Disable Tooltips',
+                subtitle: 'Hide contextual help overlays',
+                // The toggle shows "Disable Tooltips", so its value is
+                // the inverse of tooltipsEnabled.
+                value: !tooltipsEnabled,
+                onChanged: (v) => ref
+                    .read(tooltipsEnabledProvider.notifier)
+                    .setEnabled(!v),
               ),
-
-              // ── TOOLTIPS section ──────────────────────────────────────────
-              const SettingsSectionLabel('TOOLTIPS'),
-              _SettingsGroup(
-                children: [
-                  _ToggleRow(
-                    icon: Icons.help_outline_rounded,
-                    iconColor: AppColors.categoryVitals,
-                    title: 'Disable Tooltips',
-                    subtitle: 'Hide contextual help overlays',
-                    // The toggle shows "Disable Tooltips", so its value is
-                    // the inverse of tooltipsEnabled.
-                    value: !tooltipsEnabled,
-                    onChanged: (v) => ref
-                        .read(tooltipsEnabledProvider.notifier)
-                        .setEnabled(!v),
-                  ),
-                  const _Divider(),
-                  ZSettingsTile(
-                    icon: Icons.refresh_rounded,
-                    iconColor: AppColors.categoryWellness,
-                    title: 'Reset Onboarding Tooltips',
-                    subtitle: 'Show all tooltips again from scratch',
-                    onTap: () {
-                      ref.read(tooltipSeenProvider.notifier).reset();
-                      _showResetTooltipsSnackBar(context);
-                    },
-                  ),
-                ],
+              Padding(
+                padding: const EdgeInsets.only(left: 68),
+                child: Container(
+                  height: 1,
+                  color: colors.border.withValues(alpha: 0.5),
+                ),
               ),
-
-              const SizedBox(height: AppDimens.spaceXxl),
-            ]),
+              ZSettingsTile(
+                icon: Icons.refresh_rounded,
+                iconColor: AppColors.categoryWellness,
+                title: 'Reset Onboarding Tooltips',
+                subtitle: 'Show all tooltips again from scratch',
+                onTap: () {
+                  ref.read(tooltipSeenProvider.notifier).reset();
+                  _showResetTooltipsSnackBar(context);
+                },
+              ),
+            ],
           ),
         ],
       ),
@@ -150,10 +133,12 @@ class AppearanceSettingsScreen extends ConsumerWidget {
   }
 }
 
-// ── _SettingsGroup ─────────────────────────────────────────────────────────────
+// ── _SettingsCard ──────────────────────────────────────────────────────────────
 
-class _SettingsGroup extends StatelessWidget {
-  const _SettingsGroup({required this.children});
+/// A card container for mixed groups (toggles + tiles) that cannot use
+/// [ZSettingsGroup] (which only accepts [ZSettingsTile] instances).
+class _SettingsCard extends StatelessWidget {
+  const _SettingsCard({required this.children});
 
   final List<Widget> children;
 
@@ -168,23 +153,6 @@ class _SettingsGroup extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(children: children),
-      ),
-    );
-  }
-}
-
-// ── _Divider ───────────────────────────────────────────────────────────────────
-
-class _Divider extends StatelessWidget {
-  const _Divider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 68),
-      child: Container(
-        height: 1,
-        color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
       ),
     );
   }
