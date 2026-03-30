@@ -51,8 +51,6 @@ class AppearanceSettingsScreen extends ConsumerWidget {
     final tooltipsEnabled =
         ref.watch(tooltipsEnabledProvider).valueOrNull ?? true;
 
-    final colors = AppColorsOf(context);
-
     return ZuralogScaffold(
       appBar: ZuralogAppBar(title: 'Appearance', showProfileAvatar: false),
       body: ListView(
@@ -108,13 +106,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                     .read(tooltipsEnabledProvider.notifier)
                     .setEnabled(!v),
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: 68),
-                child: Container(
-                  height: 1,
-                  color: colors.border.withValues(alpha: 0.5),
-                ),
-              ),
+              const ZDivider(indent: 68),
               ZSettingsTile(
                 icon: Icons.refresh_rounded,
                 iconColor: AppColors.categoryWellness,
@@ -206,10 +198,7 @@ class _ToggleRow extends StatelessWidget {
               ],
             ),
           ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-          ),
+          ZToggle(value: value, onChanged: onChanged),
         ],
       ),
     );
