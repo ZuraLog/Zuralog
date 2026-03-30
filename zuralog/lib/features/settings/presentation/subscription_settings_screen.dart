@@ -167,7 +167,7 @@ class _CurrentPlanCard extends StatelessWidget {
             Text(
               'Free forever \u2014 no credit card required',
               style: AppTextStyles.bodySmall
-                  .copyWith(color: AppColors.textTertiary),
+                  .copyWith(color: colors.textTertiary),
             ),
           ],
         ),
@@ -189,7 +189,7 @@ class _PlanBadge extends StatelessWidget {
     final backgroundColor = isPro
         ? colors.primary.withValues(alpha: 0.2)
         : colors.border.withValues(alpha: 0.6);
-    final textColor = isPro ? colors.primary : AppColors.textTertiary;
+    final textColor = isPro ? colors.primary : colors.textTertiary;
     final label = isPro ? 'Pro' : 'Free';
 
     return Container(
@@ -239,7 +239,7 @@ class _FeatureItem extends StatelessWidget {
           label,
           style: AppTextStyles.bodyMedium.copyWith(
             color: dimmed
-                ? AppColors.textTertiary
+                ? colors.textTertiary
                 : colors.textPrimary,
           ),
         ),
@@ -337,27 +337,9 @@ class _UpgradeCard extends ConsumerWidget {
             const SizedBox(height: AppDimens.spaceLg),
 
             // CTA button
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: onUpgradeTap,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.primaryButtonText,
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppDimens.radiusButtonMd),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppDimens.spaceMd,
-                  ),
-                ),
-                child: Text(
-                  'Upgrade to Pro',
-                  style: AppTextStyles.titleMedium
-                      .copyWith(color: AppColors.primaryButtonText),
-                ),
-              ),
+            ZButton(
+              label: 'Upgrade to Pro',
+              onPressed: onUpgradeTap,
             ),
             const SizedBox(height: AppDimens.spaceSm),
 
@@ -366,7 +348,7 @@ class _UpgradeCard extends ConsumerWidget {
               child: Text(
                 'Cancel anytime',
                 style: AppTextStyles.bodySmall
-                    .copyWith(color: AppColors.textTertiary),
+                    .copyWith(color: colors.textTertiary),
               ),
             ),
           ],
@@ -426,6 +408,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceMd,
@@ -436,7 +419,7 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         label,
         style: AppTextStyles.labelSmall.copyWith(
-          color: AppColors.textTertiary,
+          color: colors.textTertiary,
           letterSpacing: 0.8,
           fontWeight: FontWeight.w600,
         ),

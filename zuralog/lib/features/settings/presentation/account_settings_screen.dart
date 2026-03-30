@@ -104,7 +104,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
             tiles: [
               ZSettingsTile(
                 icon: Icons.logout_rounded,
-                iconColor: AppColors.primary,
+                iconColor: colors.primary,
                 title: 'Sign Out',
                 subtitle: 'Sign out of your account',
                 showChevron: false,
@@ -203,7 +203,7 @@ class _ProfileSummaryCard extends ConsumerWidget {
             Icon(
               Icons.chevron_right_rounded,
               size: AppDimens.iconMd,
-              color: AppColors.textTertiary,
+              color: colors.textTertiary,
             ),
           ],
         ),
@@ -714,17 +714,21 @@ void _showSignOutDialog(BuildContext context, WidgetRef ref) {
       title: const Text('Sign Out?'),
       content: const Text('You can sign back in any time.'),
       actions: [
-        TextButton(
+        ZButton(
+          label: 'Cancel',
           onPressed: () => Navigator.pop(dialogCtx),
-          child: const Text('Cancel'),
+          variant: ZButtonVariant.text,
+          isFullWidth: false,
         ),
-        TextButton(
+        ZButton(
+          label: 'Sign Out',
           onPressed: () {
             Navigator.pop(dialogCtx);
             ref.read(hapticServiceProvider).warning();
             ref.read(authStateProvider.notifier).logout();
           },
-          child: const Text('Sign Out'),
+          variant: ZButtonVariant.text,
+          isFullWidth: false,
         ),
       ],
     ),
@@ -753,27 +757,20 @@ void _showDeleteAccountStep1Dialog(BuildContext context, WidgetRef ref) {
         style: AppTextStyles.bodyMedium.copyWith(color: colors.textSecondary),
       ),
       actions: [
-        TextButton(
+        ZButton(
+          label: 'Cancel',
           onPressed: () => Navigator.pop(dialogCtx),
-          child: Text(
-            'Cancel',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
+          variant: ZButtonVariant.text,
+          isFullWidth: false,
         ),
-        TextButton(
+        ZButton(
+          label: 'Continue',
           onPressed: () {
             Navigator.pop(dialogCtx);
             _showDeleteAccountStep2Dialog(context, ref);
           },
-          child: Text(
-            'Continue',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.statusError,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          variant: ZButtonVariant.destructive,
+          isFullWidth: false,
         ),
       ],
     ),
@@ -873,14 +870,11 @@ class _DeleteConfirmDialogState extends ConsumerState<_DeleteConfirmDialog> {
         ],
       ),
       actions: [
-        TextButton(
+        ZButton(
+          label: 'Cancel',
           onPressed: _loading ? null : () => Navigator.pop(context),
-          child: Text(
-            'Cancel',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
+          variant: ZButtonVariant.text,
+          isFullWidth: false,
         ),
         _loading
             ? const Padding(
@@ -891,17 +885,11 @@ class _DeleteConfirmDialogState extends ConsumerState<_DeleteConfirmDialog> {
                   child: CircularProgressIndicator(strokeWidth: 2.5),
                 ),
               )
-            : TextButton(
+            : ZButton(
+                label: 'Delete Account',
                 onPressed: confirmed ? _confirm : null,
-                child: Text(
-                  'Delete Account',
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    color: confirmed
-                        ? AppColors.statusError
-                        : AppColors.textTertiary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                variant: ZButtonVariant.destructive,
+                isFullWidth: false,
               ),
       ],
     );
