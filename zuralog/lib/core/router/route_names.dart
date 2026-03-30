@@ -310,18 +310,6 @@ abstract final class RouteNames {
   /// Path for the About screen.
   static const String settingsAboutPath = '/settings/about';
 
-  /// Name for the Privacy Policy screen.
-  static const String settingsPrivacyPolicy = 'settingsPrivacyPolicy';
-
-  /// Path for the Privacy Policy screen.
-  static const String settingsPrivacyPolicyPath = '/settings/privacy-policy';
-
-  /// Name for the Terms of Service screen.
-  static const String settingsTerms = 'settingsTerms';
-
-  /// Path for the Terms of Service screen.
-  static const String settingsTermsPath = '/settings/terms';
-
   // ── Profile (pushed over shell) ───────────────────────────────────────────
 
   /// Name for the Profile screen (pushed over the shell, not a tab).
@@ -375,7 +363,5 @@ abstract final class RouteNames {
     forgotPasswordPath,
     checkInboxPath,
     resetPasswordPath,
-    settingsTermsPath,
-    settingsPrivacyPolicyPath,
   };
 }

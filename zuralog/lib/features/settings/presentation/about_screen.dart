@@ -5,9 +5,8 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:zuralog/core/router/route_names.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -85,13 +84,13 @@ class _AboutScreenState extends State<AboutScreen> {
                 icon: Icons.policy_rounded,
                 iconColor: AppColors.categoryVitals,
                 title: 'Privacy Policy',
-                onTap: () => context.pushNamed(RouteNames.settingsPrivacyPolicy),
+                onTap: () => launchUrl(Uri.parse('https://www.zuralog.com/privacy-policy'), mode: LaunchMode.externalApplication),
               ),
               ZSettingsTile(
                 icon: Icons.description_rounded,
                 iconColor: AppColors.categoryWellness,
                 title: 'Terms of Service',
-                onTap: () => context.pushNamed(RouteNames.settingsTerms),
+                onTap: () => launchUrl(Uri.parse('https://www.zuralog.com/terms-of-service'), mode: LaunchMode.externalApplication),
               ),
               ZSettingsTile(
                 icon: Icons.gavel_rounded,
