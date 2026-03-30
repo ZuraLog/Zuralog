@@ -135,7 +135,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
               memoriesAsync.when(
                 loading: () => const Padding(
                   padding: EdgeInsets.all(AppDimens.spaceMd),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: Center(child: ZCircularProgress()),
                 ),
                 error: (e, _) => Padding(
                   padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
@@ -324,11 +324,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                     subtitle: _isExporting ? 'Exporting…' : 'Download your data as JSON',
                     showChevron: false,
                     trailing: _isExporting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
+                        ? const ZCircularProgress(size: 20, strokeWidth: 2)
                         : null,
                     onTap: _isExporting
                         ? null
