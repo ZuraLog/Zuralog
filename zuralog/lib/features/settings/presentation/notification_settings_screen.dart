@@ -29,6 +29,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
+import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 
 // ── Local provider ─────────────────────────────────────────────────────────────
@@ -239,7 +240,7 @@ class _NotificationSettingsScreenState
         padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
         children: [
           // ── Morning Briefing ───────────────────────────────────────────
-          _SectionLabel('Morning Briefing'),
+          SettingsSectionLabel('Morning Briefing'),
           _SettingsCard(
             children: [
               _ToggleRow(
@@ -273,7 +274,7 @@ class _NotificationSettingsScreenState
           ),
 
           // ── Smart Reminders ────────────────────────────────────────────
-          _SectionLabel('Smart Reminders'),
+          SettingsSectionLabel('Smart Reminders'),
           _SettingsCard(
             children: [
               _ToggleRow(
@@ -359,7 +360,7 @@ class _NotificationSettingsScreenState
           ),
 
           // ── Activity Notifications ────────────────────────────────────
-          _SectionLabel('Activity Notifications'),
+          SettingsSectionLabel('Activity Notifications'),
           _SettingsCard(
             children: [
               _ToggleRow(
@@ -422,7 +423,7 @@ class _NotificationSettingsScreenState
           ),
 
           // ── Wellness Check-in ─────────────────────────────────────────
-          _SectionLabel('Wellness Check-in'),
+          SettingsSectionLabel('Wellness Check-in'),
           _SettingsCard(
             children: [
               _ToggleRow(
@@ -456,7 +457,7 @@ class _NotificationSettingsScreenState
           ),
 
           // ── Quiet Hours ───────────────────────────────────────────────
-          _SectionLabel('Quiet Hours'),
+          SettingsSectionLabel('Quiet Hours'),
           _SettingsCard(
             children: [
               _ToggleRow(
@@ -509,33 +510,6 @@ class _NotificationSettingsScreenState
 }
 
 // ── Shared sub-widgets ────────────────────────────────────────────────────────
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceLg,
-        AppDimens.spaceMd,
-        AppDimens.spaceXs,
-      ),
-      child: Text(
-        label.toUpperCase(),
-        style: AppTextStyles.labelSmall.copyWith(
-          color: colors.textTertiary,
-          letterSpacing: 0.8,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
 
 class _SettingsCard extends StatelessWidget {
   const _SettingsCard({required this.children});
