@@ -54,7 +54,6 @@ import 'package:zuralog/features/auth/presentation/auth/reset_password_screen.da
 import 'package:zuralog/features/auth/presentation/onboarding/onboarding_page_view.dart';
 import 'package:zuralog/features/onboarding/presentation/onboarding_flow_screen.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/welcome_screen.dart';
-import 'package:zuralog/features/catalog/catalog_screen.dart';
 import 'package:zuralog/features/dev/component_showcase_screen.dart';
 import 'package:zuralog/core/router/auth_guard.dart';
 import 'package:zuralog/core/router/route_names.dart';
@@ -299,14 +298,6 @@ List<RouteBase> _buildRoutes() {
 
     // ── Developer Tools ───────────────────────────────────────────────────
     if (kDebugMode) ...[
-      GoRoute(
-        path: RouteNames.debugCatalogPath,
-        name: RouteNames.debugCatalog,
-        builder: (context, state) => const SentryErrorBoundary(
-          module: 'dev.catalog',
-          child: CatalogScreen(),
-        ),
-      ),
       GoRoute(
         path: RouteNames.componentShowcasePath,
         name: RouteNames.componentShowcase,

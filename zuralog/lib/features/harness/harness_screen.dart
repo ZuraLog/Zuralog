@@ -18,7 +18,6 @@ import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
-import 'package:zuralog/features/catalog/catalog_screen.dart';
 import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
 import 'package:zuralog/features/subscription/presentation/paywall_screen.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
@@ -754,24 +753,9 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
               color: _Colors.textSecondary,
               onTap: _clearOutput,
             ),
-            _ActionChip(
-              icon: Icons.palette_outlined,
-              label: 'Design Catalog',
-              color: const Color(0xFF5B7C99),
-              onTap: _openDesignCatalog,
-            ),
           ],
         ),
       ],
-    );
-  }
-
-  /// Navigates to the Phase 2.1 design system visual catalog.
-  void _openDesignCatalog() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const CatalogScreen(),
-      ),
     );
   }
 

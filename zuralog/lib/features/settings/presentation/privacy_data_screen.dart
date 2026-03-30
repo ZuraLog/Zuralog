@@ -50,6 +50,9 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
 
   Future<void> _exportData() async {
     setState(() => _isExporting = true);
+    // Capture colors and messenger before any await to avoid async BuildContext issues.
+    final colors = AppColorsOf(context);
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final apiClient = ref.read(apiClientProvider);
       final response = await apiClient.get(
@@ -61,7 +64,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
       final date = DateTime.now().toIso8601String().substring(0, 10);
       final file = File('${dir.path}/zuralog-export-$date.json');
       await file.writeAsBytes(bytes);
-      await Share.shareXFiles([XFile(file.path)], text: 'Zuralog Data Export');
+      await Share.shareXFiles([XFile(file.path)], text: 'ZuraLog Data Export');
     } catch (e) {
       if (mounted) {
         String errorMessage;
@@ -79,10 +82,17 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
         } else {
           errorMessage = 'Export failed. Please try again.';
         }
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
-            content: Text(errorMessage),
+            content: Text(
+              errorMessage,
+              style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
+            ),
+            backgroundColor: colors.surface,
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+            ),
           ),
         );
       }
@@ -103,31 +113,9 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
     final memoriesAsync = ref.watch(memoryItemsProvider);
 
     return ZuralogScaffold(
-      body: CustomScrollView(
-        slivers: [
-          // ── Large-title header ───────────────────────────────────────────
-          SliverAppBar(
-            expandedHeight: 100,
-            pinned: true,
-            scrolledUnderElevation: 0,
-            elevation: 0,
-            flexibleSpace: FlexibleSpaceBar(
-              collapseMode: CollapseMode.parallax,
-              titlePadding: const EdgeInsets.only(
-                left: AppDimens.spaceMd,
-                bottom: AppDimens.spaceMd,
-              ),
-              title: Text(
-                'Privacy & Data',
-                style: AppTextStyles.displaySmall.copyWith(
-                  color: colors.textPrimary,
-                ),
-              ),
-            ),
-          ),
-
-          SliverList(
-            delegate: SliverChildListDelegate([
+      appBar: ZuralogAppBar(title: 'Privacy & Data', showProfileAvatar: false),
+      body: ListView(
+        children: [
               // ── AI MEMORY section ──────────────────────────────────────
               const SettingsSectionLabel('AI Memory'),
               Padding(
@@ -172,7 +160,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: colors.cardBackground,
+                      color: colors.surface,
                       borderRadius: BorderRadius.circular(AppDimens.radiusCard),
                     ),
                     child: Column(
@@ -199,6 +187,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                                 _MemoryItemRow(
                                   item: item,
                                   onDelete: () async {
+                                    final messenger = ScaffoldMessenger.of(context);
                                     try {
                                       await ref.read(memoryItemsProvider.notifier).delete(item.id);
                                       ref.read(analyticsServiceProvider).capture(
@@ -206,10 +195,17 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                                       );
                                     } catch (e) {
                                       if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        messenger.showSnackBar(
                                           SnackBar(
-                                            content: Text('Failed to delete memory: $e'),
+                                            content: Text(
+                                              'Failed to delete memory: $e',
+                                              style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
+                                            ),
+                                            backgroundColor: colors.surface,
                                             behavior: SnackBarBehavior.floating,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                                            ),
                                           ),
                                         );
                                       }
@@ -238,7 +234,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                   ),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: colors.cardBackground,
+                      color: colors.surface,
                       borderRadius: BorderRadius.circular(AppDimens.radiusCard),
                     ),
                     child: ZSettingsTile(
@@ -255,6 +251,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                           ? () => _showClearMemoryDialog(
                               context,
                               onConfirmed: () async {
+                                final messenger = ScaffoldMessenger.of(context);
                                 try {
                                   await ref.read(memoryItemsProvider.notifier).clearAll();
                                   ref.read(analyticsServiceProvider).capture(
@@ -262,10 +259,17 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                                   );
                                 } catch (e) {
                                   if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    messenger.showSnackBar(
                                       SnackBar(
-                                        content: Text('Failed to clear memories: $e'),
+                                        content: Text(
+                                          'Failed to clear memories: $e',
+                                          style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
+                                        ),
+                                        backgroundColor: colors.surface,
                                         behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                                        ),
                                       ),
                                     );
                                   }
@@ -345,6 +349,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                     onTap: () => _showDeleteDataDialog(
                       context,
                       onConfirmed: () async {
+                        final messenger = ScaffoldMessenger.of(context);
                         ref.read(analyticsServiceProvider).capture(
                           event: AnalyticsEvents.accountDeleteRequested,
                         );
@@ -354,13 +359,18 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                           // Ignore errors — show success message regardless.
                         }
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                          messenger.showSnackBar(
+                            SnackBar(
                               content: Text(
                                 'AI memories deleted. To delete your account and all health data, go to Account Settings → Delete Account.',
+                                style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
                               ),
+                              backgroundColor: colors.surface,
                               behavior: SnackBarBehavior.floating,
-                              duration: Duration(seconds: 6),
+                              duration: const Duration(seconds: 6),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                              ),
                             ),
                           );
                         }
@@ -391,8 +401,6 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
               ),
 
               const SizedBox(height: AppDimens.spaceXxl),
-            ]),
-          ),
         ],
       ),
     );
@@ -413,7 +421,7 @@ class _SettingsCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(children: children),

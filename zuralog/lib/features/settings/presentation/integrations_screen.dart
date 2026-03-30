@@ -42,7 +42,7 @@ const Map<String, Color> _integrationColors = {
   'oura': AppColors.categorySleep,
   'withings': AppColors.categoryVitals,
   'polar': AppColors.categoryHeart,
-  'google_health_connect': AppColors.primary,
+  'google_health_connect': AppColors.categoryActivity,
   'garmin': AppColors.categoryVitals,
   'whoop': AppColors.categoryHeart,
 };
@@ -90,27 +90,9 @@ class IntegrationsScreen extends ConsumerWidget {
         .toList();
 
     return ZuralogScaffold(
+      appBar: const ZuralogAppBar(title: 'Integrations', showProfileAvatar: false),
       body: CustomScrollView(
         slivers: [
-          // ── Large-title app bar ────────────────────────────────────────────
-          SliverAppBar(
-            expandedHeight: 100,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              collapseMode: CollapseMode.parallax,
-              titlePadding: const EdgeInsets.only(
-                left: AppDimens.spaceMd,
-                bottom: AppDimens.spaceMd,
-              ),
-              title: Text(
-                'Integrations',
-                style: AppTextStyles.displaySmall.copyWith(
-                  color: AppColorsOf(context).textPrimary,
-                ),
-              ),
-            ),
-          ),
-
           // ── Loading indicator ──────────────────────────────────────────────
           if (intState.isLoading)
             const SliverToBoxAdapter(
@@ -251,7 +233,7 @@ class _ConnectedCard extends ConsumerWidget {
         vertical: AppDimens.spaceXs,
       ),
       child: Material(
-        color: colors.cardBackground,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
@@ -351,7 +333,7 @@ class _AvailableCard extends ConsumerWidget {
       ),
       child: Container(
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         padding: const EdgeInsets.symmetric(
@@ -419,7 +401,7 @@ class _ComingSoonRow extends StatelessWidget {
         opacity: 0.5,
         child: Container(
           decoration: BoxDecoration(
-            color: colors.cardBackground,
+            color: colors.surface,
             borderRadius: BorderRadius.circular(AppDimens.radiusCard),
           ),
           padding: const EdgeInsets.symmetric(
@@ -693,7 +675,7 @@ class _ConnectedBottomSheet extends ConsumerWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(AppDimens.spaceMd),
             decoration: BoxDecoration(
-              color: colors.cardBackground,
+              color: colors.surface,
               borderRadius: BorderRadius.circular(AppDimens.radiusCard),
             ),
             child: Column(

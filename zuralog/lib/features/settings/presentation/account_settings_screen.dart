@@ -38,7 +38,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     return ZuralogScaffold(
-      appBar: ZuralogAppBar(title: 'Account'),
+      appBar: const ZuralogAppBar(title: 'Account', showProfileAvatar: false),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceMd),
         children: [
@@ -78,7 +78,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
             child: Container(
               decoration: BoxDecoration(
-                color: colors.cardBackground,
+                color: colors.surface,
                 borderRadius: BorderRadius.circular(AppDimens.radiusCard),
               ),
               child: const _UnitsTile(),
@@ -169,7 +169,7 @@ class _ProfileSummaryCard extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Row(
@@ -453,7 +453,7 @@ class _ChangeEmailSheetState extends ConsumerState<_ChangeEmailSheet> {
       child: Container(
         margin: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.shapeLg),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceLg),
@@ -604,7 +604,7 @@ class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
       child: Container(
         margin: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.shapeLg),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceLg),
@@ -743,7 +743,7 @@ void _showDeleteAccountStep1Dialog(BuildContext context, WidgetRef ref) {
   showDialog<void>(
     context: context,
     builder: (dialogCtx) => AlertDialog(
-      backgroundColor: colors.cardBackground,
+      backgroundColor: colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
@@ -842,7 +842,7 @@ class _DeleteConfirmDialogState extends ConsumerState<_DeleteConfirmDialog> {
     final confirmed = _controller.text == 'DELETE';
 
     return AlertDialog(
-      backgroundColor: colors.cardBackground,
+      backgroundColor: colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
