@@ -1,4 +1,4 @@
-/// Zuralog Edge Agent — App Shell (5-Tab Bottom Navigation Scaffold).
+/// Zuralog Edge Agent — App Shell (6-Tab Bottom Navigation Scaffold).
 library;
 
 import 'dart:ui';
@@ -10,17 +10,12 @@ import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/state/log_sheet_provider.dart';
-import 'package:zuralog/core/state/side_panel_provider.dart';
 import 'package:zuralog/core/theme/app_colors.dart' show AppColorsOf;
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_motion.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
-import 'package:zuralog/shared/widgets/profile_side_panel.dart';
 import 'package:zuralog/shared/widgets/sheets/z_log_grid_sheet.dart';
-
-const double _kPanelWidth = 320.0;
-const Duration _kPanelDuration = Duration(milliseconds: 300);
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, required this.navigationShell});
@@ -73,9 +68,6 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   void _onDestinationSelected(int index) {
-    if (ref.read(sidePanelOpenProvider)) {
-      ref.read(sidePanelOpenProvider.notifier).state = false;
-    }
     ref.read(hapticServiceProvider).selectionTick();
     widget.navigationShell.goBranch(
       index,
@@ -85,64 +77,9 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    final isPanelOpen = ref.watch(sidePanelOpenProvider);
-    final isPanelVisible = ref.watch(sidePanelVisibleProvider);
-
     return Scaffold(
       extendBody: true,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Main content — always full size, no transforms.
-          widget.navigationShell,
-
-          // Backdrop — only present when panel is open.
-          if (isPanelOpen)
-            GestureDetector(
-              onTap: () =>
-                  ref.read(sidePanelOpenProvider.notifier).state = false,
-              child: ColoredBox(
-                color: Colors.black.withValues(alpha: 0.45),
-                child: const SizedBox.expand(),
-              ),
-            ),
-
-          // Side panel — slides in from the right.
-          //
-          // The Positioned node is ONLY in the Stack while sidePanelVisibleProvider
-          // is true (panel open or mid-close-animation). When false the node is
-          // absent, so it cannot interfere with AppBar hit-testing on any tab.
-          //
-          // sidePanelVisibleProvider lives in Riverpod (not widget-local state)
-          // so it survives GoRouter rebuilds. AnimatedSlide.onEnd clears it once
-          // the close animation completes.
-          if (isPanelVisible)
-            Positioned(
-              top: 0,
-              bottom: 0,
-              right: 0,
-              width: _kPanelWidth,
-              child: ClipRect(
-                child: AnimatedSlide(
-                  duration: _kPanelDuration,
-                  curve: Curves.easeInOutCubic,
-                  offset: isPanelOpen ? Offset.zero : const Offset(1, 0),
-                  onEnd: () {
-                    // Animation finished. If the panel is now closed, remove
-                    // the Positioned node from the Stack entirely.
-                    if (!isPanelOpen) {
-                      ref.read(sidePanelVisibleProvider.notifier).state = false;
-                    }
-                  },
-                  child: ProfileSidePanelWidget(
-                    onClose: () =>
-                        ref.read(sidePanelOpenProvider.notifier).state = false,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
+      body: widget.navigationShell,
       bottomNavigationBar: _FrostedNavigationBar(
         currentIndex: widget.navigationShell.currentIndex,
         onDestinationSelected: _onDestinationSelected,
@@ -211,6 +148,11 @@ class _FrostedNavigationBar extends StatefulWidget {
       activeIcon: Icons.trending_up_rounded,
       label: 'Trends',
     ),
+    _NavTab(
+      icon: Icons.settings_outlined,
+      activeIcon: Icons.settings_rounded,
+      label: 'Settings',
+    ),
   ];
 
   @override
@@ -228,7 +170,7 @@ class _FrostedNavigationBarState extends State<_FrostedNavigationBar>
       vsync: this,
       value: widget.currentIndex.toDouble(),
       lowerBound: -0.5,
-      upperBound: 4.5,
+      upperBound: 5.5,
     );
   }
 
