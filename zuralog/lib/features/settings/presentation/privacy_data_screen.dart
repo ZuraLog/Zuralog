@@ -50,8 +50,9 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
 
   Future<void> _exportData() async {
     setState(() => _isExporting = true);
-    // Capture colors before any await to avoid async BuildContext issues.
+    // Capture colors and messenger before any await to avoid async BuildContext issues.
     final colors = AppColorsOf(context);
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final apiClient = ref.read(apiClientProvider);
       final response = await apiClient.get(
@@ -81,7 +82,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
         } else {
           errorMessage = 'Export failed. Please try again.';
         }
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: Text(
               errorMessage,
