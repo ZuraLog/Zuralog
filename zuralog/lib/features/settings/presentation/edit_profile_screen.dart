@@ -371,10 +371,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         showProfileAvatar: false,
         actions: [
           if (_saving)
-            const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2.5),
+            const Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: ZCircularProgress(size: 18, strokeWidth: 2.5),
             )
           else
             ZButton(
@@ -630,15 +629,12 @@ class _FieldEditSheetState extends State<_FieldEditSheet> {
               },
             ),
             const SizedBox(height: AppDimens.spaceMd),
-            SizedBox(
-              width: double.infinity,
-              child: PrimaryButton(
-                label: 'Save',
-                onPressed: () {
-                  widget.onSave(_controller.text);
-                  Navigator.pop(context);
-                },
-              ),
+            ZButton(
+              label: 'Save',
+              onPressed: () {
+                widget.onSave(_controller.text);
+                Navigator.pop(context);
+              },
             ),
           ],
         ),
@@ -806,12 +802,9 @@ class _HeightPickerSheetState extends State<_HeightPickerSheet> {
               ),
             ],
             const SizedBox(height: AppDimens.spaceMd),
-            SizedBox(
-              width: double.infinity,
-              child: PrimaryButton(
-                label: 'Save',
-                onPressed: _save,
-              ),
+            ZButton(
+              label: 'Save',
+              onPressed: _save,
             ),
           ],
         ),
