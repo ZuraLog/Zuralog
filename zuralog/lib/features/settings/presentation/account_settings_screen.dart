@@ -261,109 +261,24 @@ class _UnitsTile extends ConsumerWidget {
           ),
           const SizedBox(width: AppDimens.spaceSm),
           // Segmented control.
-          _UnitsSegmentedButton(current: current),
-        ],
-      ),
-    );
-  }
-}
-
-/// Compact two-option segmented button for metric / imperial.
-class _UnitsSegmentedButton extends ConsumerWidget {
-  const _UnitsSegmentedButton({required this.current});
-
-  final UnitsSystem current;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColorsOf(context);
-    return Container(
-      height: 32,
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _Segment(
-            label: 'Metric',
-            selected: current == UnitsSystem.metric,
-            isLeft: true,
-            onTap: () {
-              if (current != UnitsSystem.metric) {
-                ref.read(hapticServiceProvider).selectionTick();
-                ref
-                    .read(userPreferencesProvider.notifier)
-                    .mutate((p) => p.copyWith(unitsSystem: UnitsSystem.metric));
-              }
-            },
-          ),
-          _Segment(
-            label: 'Imperial',
-            selected: current == UnitsSystem.imperial,
-            isLeft: false,
-            onTap: () {
-              if (current != UnitsSystem.imperial) {
-                ref.read(hapticServiceProvider).selectionTick();
-                ref
-                    .read(userPreferencesProvider.notifier)
-                    .mutate(
-                      (p) => p.copyWith(unitsSystem: UnitsSystem.imperial),
-                    );
-              }
-            },
+          SizedBox(
+            width: 160,
+            child: ZSegmentedControl(
+              selectedIndex: current == UnitsSystem.metric ? 0 : 1,
+              segments: const ['Metric', 'Imperial'],
+              onChanged: (i) {
+                final unit =
+                    i == 0 ? UnitsSystem.metric : UnitsSystem.imperial;
+                if (unit != current) {
+                  ref.read(hapticServiceProvider).selectionTick();
+                  ref.read(userPreferencesProvider.notifier).mutate(
+                    (p) => p.copyWith(unitsSystem: unit),
+                  );
+                }
+              },
+            ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// A single tab within [_UnitsSegmentedButton].
-class _Segment extends StatelessWidget {
-  const _Segment({
-    required this.label,
-    required this.selected,
-    required this.isLeft,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final bool isLeft;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    final radius = BorderRadius.horizontal(
-      left: isLeft ? const Radius.circular(AppDimens.radiusSm) : Radius.zero,
-      right: isLeft ? Radius.zero : const Radius.circular(AppDimens.radiusSm),
-    );
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: selected
-              ? colors.primary.withValues(alpha: 0.18)
-              : Colors.transparent,
-          borderRadius: radius,
-          border: selected
-              ? Border.all(
-                  color: colors.primary.withValues(alpha: 0.55),
-                )
-              : null,
-        ),
-        child: Text(
-          label,
-          style: AppTextStyles.labelSmall.copyWith(
-            color: selected ? colors.primary : colors.textSecondary,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-          ),
-        ),
       ),
     );
   }
