@@ -51,7 +51,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
     final tooltipsEnabled =
         ref.watch(tooltipsEnabledProvider).valueOrNull ?? true;
 
-    final cs = Theme.of(context).colorScheme;
+    final colors = AppColorsOf(context);
 
     return ZuralogScaffold(
       body: CustomScrollView(
@@ -70,7 +70,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
               collapseMode: CollapseMode.parallax,
               title: Text(
                 'Appearance',
-                style: AppTextStyles.displaySmall.copyWith(color: cs.onSurface),
+                style: AppTextStyles.displaySmall.copyWith(color: colors.textPrimary),
               ),
             ),
           ),
@@ -159,11 +159,12 @@ class _SettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(children: children),
@@ -210,7 +211,6 @@ class _ToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -227,7 +227,7 @@ class _ToggleRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: AppTextStyles.bodyLarge.copyWith(color: cs.onSurface),
+                  style: AppTextStyles.bodyLarge.copyWith(color: colors.textPrimary),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -311,7 +311,6 @@ class _ThemeOptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final colors = AppColorsOf(context);
     return Expanded(
       child: GestureDetector(
@@ -324,12 +323,12 @@ class _ThemeOptionCard extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: selected
-                ? cs.primary.withValues(alpha: 0.12)
-                : cs.surface,
+                ? colors.primary.withValues(alpha: 0.12)
+                : colors.surface,
             borderRadius: BorderRadius.circular(AppDimens.radiusCard),
             border: Border.all(
               color: selected
-                  ? cs.primary.withValues(alpha: 0.55)
+                  ? colors.primary.withValues(alpha: 0.55)
                   : Colors.transparent,
               width: 1.5,
             ),
@@ -343,14 +342,14 @@ class _ThemeOptionCard extends StatelessWidget {
                   icon,
                   key: ValueKey<bool>(selected),
                   size: 26,
-                  color: selected ? cs.primary : AppColors.textTertiary,
+                  color: selected ? colors.primary : colors.textTertiary,
                 ),
               ),
               const SizedBox(height: AppDimens.spaceXs),
               Text(
                 label,
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: selected ? cs.primary : colors.textSecondary,
+                  color: selected ? colors.primary : colors.textSecondary,
                   fontWeight:
                       selected ? FontWeight.w600 : FontWeight.w400,
                 ),
@@ -366,14 +365,14 @@ class _ThemeOptionCard extends StatelessWidget {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 void _showResetTooltipsSnackBar(BuildContext context) {
-  final cs = Theme.of(context).colorScheme;
+  final colors = AppColorsOf(context);
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(
         'All onboarding tooltips have been reset.',
-        style: AppTextStyles.bodyMedium.copyWith(color: cs.onSurface),
+        style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
       ),
-      backgroundColor: cs.surface,
+      backgroundColor: colors.surface,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusSm),

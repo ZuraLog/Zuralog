@@ -109,7 +109,7 @@ class AboutScreen extends StatelessWidget {
                 const _Divider(),
                 ZSettingsTile(
                   icon: Icons.gavel_rounded,
-                  iconColor: AppColors.textTertiary,
+                  iconColor: colors.textTertiary,
                   title: 'Open-Source Licenses',
                   onTap: () => showLicensePage(
                     context: context,
@@ -136,7 +136,7 @@ class AboutScreen extends StatelessWidget {
                     'Made with ❤️ for your health journey',
                     textAlign: TextAlign.center,
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textTertiary,
+                      color: colors.textTertiary,
                     ),
                   ),
                   const SizedBox(height: AppDimens.spaceXs),
@@ -144,7 +144,7 @@ class AboutScreen extends StatelessWidget {
                     '© 2026 Zuralog. All rights reserved.',
                     textAlign: TextAlign.center,
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textTertiary,
+                      color: colors.textTertiary,
                     ),
                   ),
                 ],
@@ -257,6 +257,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceMd,
@@ -267,7 +268,7 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         label,
         style: AppTextStyles.labelSmall.copyWith(
-          color: AppColors.textTertiary,
+          color: colors.textTertiary,
           letterSpacing: 0.8,
           fontWeight: FontWeight.w600,
         ),

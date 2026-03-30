@@ -72,7 +72,7 @@ class SettingsHubScreen extends ConsumerWidget {
           _SectionHeader(title: 'Account'),
 
           SliverToBoxAdapter(
-            child: _SettingsGroup(
+            child: ZSettingsGroup(
               tiles: [
                 ZSettingsTile(
                   icon: Icons.person_rounded,
@@ -96,7 +96,7 @@ class SettingsHubScreen extends ConsumerWidget {
           _SectionHeader(title: 'Experience'),
 
           SliverToBoxAdapter(
-            child: _SettingsGroup(
+            child: ZSettingsGroup(
               tiles: [
                 ZSettingsTile(
                   icon: Icons.notifications_rounded,
@@ -108,7 +108,7 @@ class SettingsHubScreen extends ConsumerWidget {
                 ),
                 ZSettingsTile(
                   icon: Icons.palette_rounded,
-                  iconColor: colors.isDark ? AppColors.primaryDark : AppColors.primaryOnLight,
+                  iconColor: colors.primary,
                   title: 'Appearance',
                   subtitle: 'Theme, haptics, tooltips',
                   onTap: () => openSection('Appearance', RouteNames.settingsAppearancePath),
@@ -135,7 +135,7 @@ class SettingsHubScreen extends ConsumerWidget {
           _SectionHeader(title: 'Data & Privacy'),
 
           SliverToBoxAdapter(
-            child: _SettingsGroup(
+            child: ZSettingsGroup(
               tiles: [
                 ZSettingsTile(
                   icon: Icons.extension_rounded,
@@ -160,7 +160,7 @@ class SettingsHubScreen extends ConsumerWidget {
           _SectionHeader(title: 'About'),
 
           SliverToBoxAdapter(
-            child: _SettingsGroup(
+            child: ZSettingsGroup(
               tiles: [
                 ZSettingsTile(
                   icon: Icons.info_rounded,
@@ -178,11 +178,11 @@ class SettingsHubScreen extends ConsumerWidget {
             _SectionHeader(title: 'Developer'),
 
             SliverToBoxAdapter(
-              child: _SettingsGroup(
+              child: ZSettingsGroup(
                 tiles: [
                   ZSettingsTile(
                     icon: Icons.grid_view_rounded,
-                    iconColor: AppColors.primary,
+                    iconColor: colors.primary,
                     title: 'Component Showcase',
                     subtitle: 'View every design system lego',
                     onTap: () => context.push(RouteNames.componentShowcasePath),
@@ -217,6 +217,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -228,7 +229,7 @@ class _SectionHeader extends StatelessWidget {
         child: Text(
           title.toUpperCase(),
           style: AppTextStyles.labelSmall.copyWith(
-            color: AppColors.textTertiary,
+            color: colors.textTertiary,
             letterSpacing: 0.8,
             fontWeight: FontWeight.w600,
           ),
@@ -238,42 +239,5 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ── _SettingsGroup ────────────────────────────────────────────────────────────
-
-/// Grouped container for a set of settings tiles — rounded card, no shadow.
-class _SettingsGroup extends StatelessWidget {
-  const _SettingsGroup({required this.tiles});
-
-  final List<ZSettingsTile> tiles;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-      child: Container(
-        decoration: BoxDecoration(
-          color: colors.cardBackground,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        ),
-        child: Column(
-          children: [
-            for (int i = 0; i < tiles.length; i++) ...[
-              tiles[i],
-              if (i < tiles.length - 1)
-                Padding(
-                  padding: const EdgeInsets.only(left: 68),
-                  child: Container(
-                    height: 1,
-                    color: colors.border.withValues(alpha: 0.5),
-                  ),
-                ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 
