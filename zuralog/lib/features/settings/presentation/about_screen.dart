@@ -90,7 +90,7 @@ class _AboutScreenState extends State<AboutScreen> {
                 icon: Icons.description_rounded,
                 iconColor: AppColors.categoryWellness,
                 title: 'Terms of Service',
-                onTap: () => launchUrl(Uri.parse('https://www.zuralog.com/terms'), mode: LaunchMode.externalApplication),
+                onTap: () => launchUrl(Uri.parse('https://www.zuralog.com/terms-of-service'), mode: LaunchMode.externalApplication),
               ),
               ZSettingsTile(
                 icon: Icons.gavel_rounded,

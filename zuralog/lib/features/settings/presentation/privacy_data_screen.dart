@@ -395,7 +395,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                     icon: Icons.description_outlined,
                     iconColor: colors.primary,
                     title: 'Terms of Service',
-                    onTap: () => launchUrl(Uri.parse('https://www.zuralog.com/terms'), mode: LaunchMode.externalApplication),
+                    onTap: () => launchUrl(Uri.parse('https://www.zuralog.com/terms-of-service'), mode: LaunchMode.externalApplication),
                   ),
                 ],
               ),

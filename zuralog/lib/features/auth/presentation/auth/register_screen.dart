@@ -74,7 +74,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     // ToS / Privacy links.
     _tosRecognizer = TapGestureRecognizer()
       ..onTap = () => launchUrl(
-            Uri.parse('https://www.zuralog.com/terms'),
+            Uri.parse('https://www.zuralog.com/terms-of-service'),
             mode: LaunchMode.externalApplication,
           );
     _privacyRecognizer = TapGestureRecognizer()
