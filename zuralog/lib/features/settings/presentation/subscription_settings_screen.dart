@@ -251,7 +251,7 @@ class _UpgradeCard extends ConsumerWidget {
                 ),
                 const SizedBox(width: AppDimens.spaceSm),
                 Text(
-                  'Zuralog Pro',
+                  'ZuraLog Pro',
                   style: AppTextStyles.titleMedium
                       .copyWith(color: colors.textPrimary),
                 ),
