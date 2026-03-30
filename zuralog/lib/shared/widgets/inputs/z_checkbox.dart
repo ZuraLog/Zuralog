@@ -104,7 +104,7 @@ class _ZCheckboxState extends State<ZCheckbox>
             borderRadius: BorderRadius.circular(4),
             child: Stack(
               children: [
-                // Background — sage pattern when checked, border when unchecked.
+                // Layer 1: border fades out as progress reaches 1.
                 Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(4),
@@ -120,7 +120,18 @@ class _ZCheckboxState extends State<ZCheckbox>
                         : null,
                   ),
                 ),
-                // Pattern layer fades in on top when checked.
+                // Layer 2: sage fill fades in when checked.
+                if (progress > 0)
+                  Opacity(
+                    opacity: progress,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: colors.primary,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                // Layer 3: pattern fades in on top of sage fill.
                 if (progress > 0)
                   Opacity(
                     opacity: progress * patternOpacity,
@@ -134,7 +145,7 @@ class _ZCheckboxState extends State<ZCheckbox>
                       ),
                     ),
                   ),
-                // Checkmark icon.
+                // Layer 4: checkmark icon fades in after 30% progress.
                 if (progress > 0.3)
                   Center(
                     child: Opacity(
