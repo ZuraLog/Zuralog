@@ -403,7 +403,7 @@ class _ChangeEmailSheetState extends ConsumerState<_ChangeEmailSheet> {
             const SizedBox(height: AppDimens.spaceMd),
             SizedBox(
               width: double.infinity,
-              child: PrimaryButton(
+              child: ZButton(
                 label: 'Update Email',
                 isLoading: _loading,
                 onPressed: _submit,
@@ -607,7 +607,7 @@ class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
             const SizedBox(height: AppDimens.spaceMd),
             SizedBox(
               width: double.infinity,
-              child: PrimaryButton(
+              child: ZButton(
                 label: 'Update Password',
                 isLoading: _loading,
                 onPressed: canSubmit ? _submit : null,
@@ -791,21 +791,13 @@ class _DeleteConfirmDialogState extends ConsumerState<_DeleteConfirmDialog> {
           variant: ZButtonVariant.text,
           isFullWidth: false,
         ),
-        _loading
-            ? const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2.5),
-                ),
-              )
-            : ZButton(
-                label: 'Delete Account',
-                onPressed: confirmed ? _confirm : null,
-                variant: ZButtonVariant.destructive,
-                isFullWidth: false,
-              ),
+        ZButton(
+          label: 'Delete Account',
+          onPressed: (_loading || !confirmed) ? null : _confirm,
+          variant: ZButtonVariant.destructive,
+          isFullWidth: false,
+          isLoading: _loading,
+        ),
       ],
     );
   }
