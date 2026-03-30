@@ -127,9 +127,8 @@ class _ZButtonState extends State<ZButton> {
   // ── Pattern config ──────────────────────────────────────────────────────
 
   bool get _hasPattern =>
-      !_isDisabled &&
-      (widget.variant == ZButtonVariant.primary ||
-          widget.variant == ZButtonVariant.destructive);
+      widget.variant == ZButtonVariant.primary ||
+      widget.variant == ZButtonVariant.destructive;
 
   ZPatternVariant get _patternVariant => widget.variant == ZButtonVariant.primary
       ? ZPatternVariant.sage
