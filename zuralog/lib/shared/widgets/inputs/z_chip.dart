@@ -47,8 +47,7 @@ class ZChip extends StatelessWidget {
     final isLight = Theme.of(context).brightness == Brightness.light;
 
     // Active chip: solid in light mode, pattern fill in dark mode.
-    final Color? activeBackgroundColor =
-        (isActive && isLight) ? colors.primary : (isActive ? null : colors.surface);
+    final Color activeBackgroundColor = isActive ? colors.primary : colors.surface;
     final DecorationImage? activeImage = (isActive && !isLight)
         ? DecorationImage(
             image: AssetImage(
