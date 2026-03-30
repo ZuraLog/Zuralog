@@ -187,13 +187,6 @@ class SettingsHubScreen extends ConsumerWidget {
                     subtitle: 'View every design system lego',
                     onTap: () => context.push(RouteNames.componentShowcasePath),
                   ),
-                  ZSettingsTile(
-                    icon: Icons.palette_outlined,
-                    iconColor: AppColors.categoryMobility,
-                    title: 'Design Catalog',
-                    subtitle: 'Legacy component catalog',
-                    onTap: () => context.push(RouteNames.debugCatalogPath),
-                  ),
                 ],
               ),
             ),
