@@ -21,54 +21,54 @@ const _kMetricCatalogue = <_MetricCategory>[
     name: 'Wellness',
     color: AppColors.categoryWellness,
     metrics: [
-      _MetricEntry(type: 'mood',   label: 'Mood',   emoji: '😊'),
-      _MetricEntry(type: 'energy', label: 'Energy', emoji: '⚡'),
-      _MetricEntry(type: 'stress', label: 'Stress', emoji: '😤'),
+      _MetricEntry(type: 'mood',   label: 'Mood',   icon: Icons.mood_rounded),
+      _MetricEntry(type: 'energy', label: 'Energy', icon: Icons.bolt_rounded),
+      _MetricEntry(type: 'stress', label: 'Stress', icon: Icons.whatshot_rounded),
     ],
   ),
   _MetricCategory(
     name: 'Body',
     color: AppColors.categoryBody,
     metrics: [
-      _MetricEntry(type: 'weight', label: 'Weight', emoji: '⚖️'),
-      _MetricEntry(type: 'water',  label: 'Water',  emoji: '💧'),
+      _MetricEntry(type: 'weight', label: 'Weight', icon: Icons.monitor_weight_rounded),
+      _MetricEntry(type: 'water',  label: 'Water',  icon: Icons.water_drop_rounded),
     ],
   ),
   _MetricCategory(
     name: 'Activity',
     color: AppColors.categoryActivity,
     metrics: [
-      _MetricEntry(type: 'steps', label: 'Steps', emoji: '👣'),
-      _MetricEntry(type: 'run',   label: 'Run',   emoji: '🏃'),
+      _MetricEntry(type: 'steps', label: 'Steps', icon: Icons.directions_walk_rounded),
+      _MetricEntry(type: 'run',   label: 'Run',   icon: Icons.directions_run_rounded),
     ],
   ),
   _MetricCategory(
     name: 'Sleep',
     color: AppColors.categorySleep,
     metrics: [
-      _MetricEntry(type: 'sleep', label: 'Sleep', emoji: '😴'),
+      _MetricEntry(type: 'sleep', label: 'Sleep', icon: Icons.bedtime_rounded),
     ],
   ),
   _MetricCategory(
     name: 'Nutrition',
     color: AppColors.categoryNutrition,
     metrics: [
-      _MetricEntry(type: 'meal', label: 'Calories', emoji: '🍽️'),
+      _MetricEntry(type: 'meal', label: 'Calories', icon: Icons.restaurant_rounded),
     ],
   ),
   _MetricCategory(
     name: 'Heart',
     color: AppColors.categoryHeart,
     metrics: [
-      _MetricEntry(type: 'heart_rate', label: 'Heart Rate', emoji: '❤️'),
+      _MetricEntry(type: 'heart_rate', label: 'Heart Rate', icon: Icons.favorite_rounded),
     ],
   ),
   _MetricCategory(
     name: 'Health',
     color: AppColors.categoryVitals,
     metrics: [
-      _MetricEntry(type: 'supplement', label: 'Supplements', emoji: '💊'),
-      _MetricEntry(type: 'symptom',    label: 'Symptom',     emoji: '🩹'),
+      _MetricEntry(type: 'supplement', label: 'Supplements', icon: Icons.medication_rounded),
+      _MetricEntry(type: 'symptom',    label: 'Symptom',     icon: Icons.healing_rounded),
     ],
   ),
 ];
@@ -182,7 +182,7 @@ class _MetricRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Text(metric.emoji, style: TextStyle(fontSize: AppDimens.emojiSm)),
+              Icon(metric.icon, size: AppDimens.emojiSm, color: categoryColor),
               const SizedBox(width: AppDimens.spaceMd),
               Expanded(
                 child: Text(
@@ -223,9 +223,9 @@ class _MetricEntry {
   const _MetricEntry({
     required this.type,
     required this.label,
-    required this.emoji,
+    required this.icon,
   });
   final String type;
   final String label;
-  final String emoji;
+  final IconData icon;
 }

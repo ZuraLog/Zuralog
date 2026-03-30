@@ -11,6 +11,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/buttons/z_button.dart';
+import 'package:zuralog/shared/widgets/inputs/app_text_field.dart';
 
 // ── Data model ─────────────────────────────────────────────────────────────────
 
@@ -114,7 +116,7 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
 
           // ── Mood slider ───────────────────────────────────────────────────
           _SliderRow(
-            emoji: '😊',
+            icon: Icons.mood_rounded,
             label: 'Mood',
             value: _moodValue,
             isTouched: _moodTouched,
@@ -129,7 +131,7 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
 
           // ── Energy slider ─────────────────────────────────────────────────
           _SliderRow(
-            emoji: '⚡',
+            icon: Icons.bolt_rounded,
             label: 'Energy',
             value: _energyValue,
             isTouched: _energyTouched,
@@ -144,7 +146,7 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
 
           // ── Stress slider ─────────────────────────────────────────────────
           _SliderRow(
-            emoji: '😤',
+            icon: Icons.whatshot_rounded,
             label: 'Stress',
             value: _stressValue,
             isTouched: _stressTouched,
@@ -158,38 +160,17 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
           const SizedBox(height: AppDimens.spaceLg),
 
           // ── Notes field ───────────────────────────────────────────────────
-          TextField(
+          AppTextField(
             controller: _notesController,
-            maxLength: 500,
-            maxLines: 1,
-            decoration: InputDecoration(
-              hintText: "How's your day going?",
-              hintStyle:
-                  AppTextStyles.bodyMedium.copyWith(color: colors.textTertiary),
-              counterStyle: AppTextStyles.labelSmall
-                  .copyWith(color: colors.textTertiary),
-            ),
-            cursorColor: colors.primary,
+            hintText: "How's your day going?",
           ),
 
           const SizedBox(height: AppDimens.spaceMd),
 
           // ── Save button ───────────────────────────────────────────────────
-          FilledButton(
+          ZButton(
+            label: 'Save Check-in',
             onPressed: _canSave ? _handleSave : null,
-            style: FilledButton.styleFrom(
-              backgroundColor: colors.primary,
-              foregroundColor: colors.textOnSage,
-              shape: RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(AppDimens.radiusButton),
-              ),
-              minimumSize: const Size.fromHeight(AppDimens.touchTargetMin),
-            ),
-            child: Text(
-              'Save Check-in',
-              style: AppTextStyles.labelLarge,
-            ),
           ),
         ],
       ),
@@ -199,10 +180,10 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
 
 // ── _SliderRow ─────────────────────────────────────────────────────────────────
 
-/// A labelled slider row with an emoji, label, and value display.
+/// A labelled slider row with an icon, label, and value display.
 class _SliderRow extends StatelessWidget {
   const _SliderRow({
-    required this.emoji,
+    required this.icon,
     required this.label,
     required this.value,
     required this.isTouched,
@@ -210,7 +191,7 @@ class _SliderRow extends StatelessWidget {
     required this.onChanged,
   });
 
-  final String emoji;
+  final IconData icon;
   final String label;
   final double value;
   final bool isTouched;
@@ -224,7 +205,7 @@ class _SliderRow extends StatelessWidget {
 
     return Row(
       children: [
-        Text(emoji, style: const TextStyle(fontSize: 20)),
+        Icon(icon, size: 20, color: colors.textSecondary),
         const SizedBox(width: AppDimens.spaceSm),
         SizedBox(
           width: 60,

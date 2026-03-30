@@ -16,7 +16,6 @@ import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 const _kActivities = ['Run', 'Walk', 'Cycle', 'Swim', 'Hike', 'Other'];
-const _kEffortEmojis = ['😌', '😤', '🔥', '💀'];
 const _kEffortLabels = ['Easy', 'Steady', 'Hard', 'Max'];
 
 enum _RunMode { picker, manualForm }
@@ -161,6 +160,7 @@ class _RunLogScreenState extends ConsumerState<RunLogScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final bottomPad = MediaQuery.of(context).padding.bottom;
 
     return ZuralogScaffold(
@@ -181,10 +181,10 @@ class _RunLogScreenState extends ConsumerState<RunLogScreen> {
                       Wrap(
                         spacing: AppDimens.spaceSm,
                         runSpacing: AppDimens.spaceSm,
-                        children: _kActivities.map((a) => ChoiceChip(
-                          label: Text(a),
-                          selected: _activityType == a,
-                          onSelected: (_) => setState(() => _activityType = a),
+                        children: _kActivities.map((a) => ZChip(
+                          label: a,
+                          isActive: _activityType == a,
+                          onTap: () => setState(() => _activityType = a),
                         )).toList(),
                       ),
                       const SizedBox(height: AppDimens.spaceLg),
@@ -202,12 +202,17 @@ class _RunLogScreenState extends ConsumerState<RunLogScreen> {
                         ],
                       ),
                       const SizedBox(height: AppDimens.spaceSm),
-                      TextField(
+                      AppTextField(
                         controller: _distanceCtrl,
+                        hintText: '0.0',
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: InputDecoration(
-                          hintText: '0.0',
-                          suffixText: _useMetric ? 'km' : 'mi',
+                        suffixIcon: Align(
+                          widthFactor: 1.0,
+                          heightFactor: 1.0,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: AppDimens.spaceMd),
+                            child: Text(_useMetric ? 'km' : 'mi', style: AppTextStyles.labelMedium.copyWith(color: colors.textSecondary)),
+                          ),
                         ),
                         onChanged: (_) => setState(() {}),
                       ),
@@ -217,19 +222,35 @@ class _RunLogScreenState extends ConsumerState<RunLogScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: TextField(
+                            child: AppTextField(
                               controller: _minutesCtrl,
+                              hintText: '00',
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(hintText: '00', suffixText: 'min'),
+                              suffixIcon: Align(
+                                widthFactor: 1.0,
+                                heightFactor: 1.0,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: AppDimens.spaceMd),
+                                  child: Text('min', style: AppTextStyles.labelMedium.copyWith(color: colors.textSecondary)),
+                                ),
+                              ),
                               onChanged: (_) => setState(() {}),
                             ),
                           ),
                           const SizedBox(width: AppDimens.spaceMd),
                           Expanded(
-                            child: TextField(
+                            child: AppTextField(
                               controller: _secondsCtrl,
+                              hintText: '00',
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(hintText: '00', suffixText: 'sec'),
+                              suffixIcon: Align(
+                                widthFactor: 1.0,
+                                heightFactor: 1.0,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: AppDimens.spaceMd),
+                                  child: Text('sec', style: AppTextStyles.labelMedium.copyWith(color: colors.textSecondary)),
+                                ),
+                              ),
                               onChanged: (_) => setState(() {}),
                             ),
                           ),
@@ -250,36 +271,32 @@ class _RunLogScreenState extends ConsumerState<RunLogScreen> {
                       const SizedBox(height: AppDimens.spaceLg),
                       ZSectionLabel(label: 'Effort', isOptional: true),
                       const SizedBox(height: AppDimens.spaceSm),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: List.generate(4, (i) {
-                          final selected = _effortIndex == i;
-                          return GestureDetector(
-                            onTap: () => setState(() => _effortIndex = selected ? null : i),
-                            child: Column(
-                              children: [
-                                Text(_kEffortEmojis[i], style: TextStyle(fontSize: selected ? 32 : 24)),
-                                Text(_kEffortLabels[i], style: AppTextStyles.caption.copyWith(
-                                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                                )),
-                              ],
-                            ),
-                          );
-                        }),
+                      Wrap(
+                        spacing: AppDimens.spaceSm,
+                        runSpacing: AppDimens.spaceSm,
+                        children: List.generate(_kEffortLabels.length, (i) => ZChip(
+                          label: _kEffortLabels[i],
+                          isActive: _effortIndex == i,
+                          onTap: () => setState(() => _effortIndex = _effortIndex == i ? null : i),
+                        )),
                       ),
                       const SizedBox(height: AppDimens.spaceLg),
                       ZSectionLabel(label: 'Notes', isOptional: true),
                       const SizedBox(height: AppDimens.spaceSm),
-                      TextField(controller: _notesCtrl, maxLength: 500, decoration: const InputDecoration(hintText: 'How did it go?')),
+                      ZTextArea(
+                        controller: _notesCtrl,
+                        placeholder: 'How did it go?',
+                        maxLength: 500,
+                      ),
                     ],
                   ),
                 ),
                 Container(
                   padding: EdgeInsets.fromLTRB(AppDimens.spaceMd, AppDimens.spaceSm, AppDimens.spaceMd, AppDimens.spaceSm + bottomPad),
-                  child: FilledButton(
+                  child: ZButton(
+                    label: 'Save Run',
                     onPressed: _canSave ? _save : null,
-                    style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                    child: _isSaving ? const CircularProgressIndicator.adaptive() : const Text('Save Run'),
+                    isLoading: _isSaving,
                   ),
                 ),
               ],
@@ -295,13 +312,14 @@ class _UnitToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return GestureDetector(
       onTap: onToggle,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+          borderRadius: BorderRadius.circular(AppDimens.shapePill),
+          border: Border.all(color: colors.primary.withValues(alpha: 0.4)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -311,7 +329,7 @@ class _UnitToggle extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: useMetric ? FontWeight.w700 : FontWeight.w400,
-                color: useMetric ? AppColors.primary : Colors.grey,
+                color: useMetric ? colors.primary : Colors.grey,
               ),
             ),
             const Padding(
@@ -323,7 +341,7 @@ class _UnitToggle extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: !useMetric ? FontWeight.w700 : FontWeight.w400,
-                color: !useMetric ? AppColors.primary : Colors.grey,
+                color: !useMetric ? colors.primary : Colors.grey,
               ),
             ),
           ],
@@ -380,7 +398,7 @@ class _ModePicker extends StatelessWidget {
           onTap: () => ScaffoldMessenger.of(ctx).showSnackBar(
             SnackBar(
               content: const Text('Live GPS recording is coming soon.'),
-              backgroundColor: AppColors.primary,
+              backgroundColor: AppColorsOf(ctx).primary,
               duration: const Duration(seconds: 3),
             ),
           ),
@@ -397,8 +415,8 @@ class _ModePicker extends StatelessWidget {
                 const SizedBox(width: AppDimens.spaceSm),
                 ZBadge(
                   label: 'Soon',
-                  color: AppColors.primary.withValues(alpha: 0.2),
-                  textColor: AppColors.primary,
+                  color: AppColorsOf(ctx).primary.withValues(alpha: 0.2),
+                  textColor: AppColorsOf(ctx).primary,
                 ),
               ]),
             ),

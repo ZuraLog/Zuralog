@@ -4,6 +4,7 @@ library;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,7 +13,9 @@ import 'package:zuralog/core/state/log_sheet_provider.dart';
 import 'package:zuralog/core/state/side_panel_provider.dart';
 import 'package:zuralog/core/theme/app_colors.dart' show AppColorsOf;
 import 'package:zuralog/core/theme/app_dimens.dart';
+import 'package:zuralog/core/theme/app_motion.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 import 'package:zuralog/shared/widgets/profile_side_panel.dart';
 import 'package:zuralog/shared/widgets/sheets/z_log_grid_sheet.dart';
 
@@ -173,7 +176,7 @@ class _NavTab {
 /// - Inactive tabs: Text Secondary (#9B9894 dark / #6B6864 light).
 /// - Icons 22px, labels Label Medium scaled to 11pt for 5-tab fit.
 /// - Bottom padding: safe area + 18px.
-class _FrostedNavigationBar extends StatelessWidget {
+class _FrostedNavigationBar extends StatefulWidget {
   const _FrostedNavigationBar({
     required this.currentIndex,
     required this.onDestinationSelected,
@@ -211,16 +214,54 @@ class _FrostedNavigationBar extends StatelessWidget {
   ];
 
   @override
+  State<_FrostedNavigationBar> createState() => _FrostedNavigationBarState();
+}
+
+class _FrostedNavigationBarState extends State<_FrostedNavigationBar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pillController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pillController = AnimationController(
+      vsync: this,
+      value: widget.currentIndex.toDouble(),
+      lowerBound: -0.5,
+      upperBound: 4.5,
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _FrostedNavigationBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.currentIndex != oldWidget.currentIndex) {
+      final sim = SpringSimulation(
+        AppMotion.defaultSpatial,
+        _pillController.value,
+        widget.currentIndex.toDouble(),
+        _pillController.velocity,
+      );
+      _pillController.animateWith(sim);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pillController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    // Active pill bg: subtle tint in dark, solid Deep Forest in light.
-    // Active icon/label: Sage (#CFE1B9) in dark, Warm Cream (#E8EDE0) in light.
-    final activePillBg = colors.primary.withValues(alpha: colors.isDark ? 0.12 : 1.0);
-    final activeItemColor = colors.isDark ? colors.primary : colors.textOnSage;
+    final activePillBg =
+        colors.primary.withValues(alpha: colors.isDark ? 0.12 : 1.0);
+    final activeItemColor =
+        colors.isDark ? colors.primary : colors.textOnSage;
     final bottomSafeArea = MediaQuery.of(context).padding.bottom;
 
     return Padding(
-      // 20px horizontal margin from screen edges, 18px + safe area from bottom.
       padding: EdgeInsets.fromLTRB(
         AppDimens.spaceMdPlus,
         0,
@@ -237,75 +278,122 @@ class _FrostedNavigationBar extends StatelessWidget {
           child: Container(
             height: 64,
             decoration: BoxDecoration(
-              // Surface background at 0.92 opacity — translucent enough for
-              // the blur to show through but solid enough to read the labels.
               color: colors.surface.withValues(alpha: 0.92),
               borderRadius: BorderRadius.circular(AppDimens.shapePill),
             ),
-            child: Row(
-              children: List.generate(_tabs.length, (index) {
-                final isActive = index == currentIndex;
-                final tab = _tabs[index];
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final tabCount = _FrostedNavigationBar._tabs.length;
+                final tabWidth = constraints.maxWidth / tabCount;
 
-                return Expanded(
-                  child: Semantics(
-                    label: tab.label,
-                    selected: isActive,
-                    button: true,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => onDestinationSelected(index),
-                      child: SizedBox(
-                        // Ensures minimum 44px touch target height.
-                        height: 64,
-                        child: Center(
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            curve: Curves.easeInOut,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isActive ? activePillBg : Colors.transparent,
-                              borderRadius: BorderRadius.circular(
-                                AppDimens.shapePill,
+                return Stack(
+                  children: [
+                    // Sliding pill — driven by spring physics.
+                    AnimatedBuilder(
+                      animation: _pillController,
+                      builder: (context, _) {
+                        return Positioned(
+                          left: _pillController.value * tabWidth,
+                          top: 0,
+                          bottom: 0,
+                          width: tabWidth,
+                          child: Center(
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 8,
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(
+                                  AppDimens.shapePill,
+                                ),
+                                child: ColoredBox(
+                                  color: activePillBg,
+                                  // OverflowBox forces a wide non-square context
+                                  // so BoxFit.cover creates vertical overflow,
+                                  // giving the alignment drift room to move.
+                                  // ClipRRect above handles the visual clipping.
+                                  child: OverflowBox(
+                                    maxWidth: double.infinity,
+                                    maxHeight: double.infinity,
+                                    child: SizedBox(
+                                      width: 160,
+                                      height: 48,
+                                      child: ZPatternOverlay(
+                                        variant: ZPatternVariant.sage,
+                                        opacity: 0.35,
+                                        animate: true,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  isActive ? tab.activeIcon : tab.icon,
-                                  size: 22,
-                                  color: isActive
-                                      ? activeItemColor
-                                      : colors.textSecondary,
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  tab.label,
-                                  style: AppTextStyles.labelMedium.copyWith(
-                                    color: isActive
-                                        ? activeItemColor
-                                        : colors.textSecondary,
-                                    // Scaled down from 13pt to 11pt so all 5
-                                    // labels (including "Progress") fit inside
-                                    // the pill without clipping.
-                                    fontSize: 11,
+                          ),
+                        );
+                      },
+                    ),
+                    // Tab icons and labels.
+                    Row(
+                      children: List.generate(tabCount, (index) {
+                        final isActive = index == widget.currentIndex;
+                        final tab = _FrostedNavigationBar._tabs[index];
+
+                        return Expanded(
+                          child: Semantics(
+                            label: tab.label,
+                            selected: isActive,
+                            button: true,
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () =>
+                                  widget.onDestinationSelected(index),
+                              child: SizedBox(
+                                height: 64,
+                                child: Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          isActive
+                                              ? tab.activeIcon
+                                              : tab.icon,
+                                          size: 22,
+                                          color: isActive
+                                              ? activeItemColor
+                                              : colors.textSecondary,
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          tab.label,
+                                          style: AppTextStyles.labelMedium
+                                              .copyWith(
+                                            color: isActive
+                                                ? activeItemColor
+                                                : colors.textSecondary,
+                                            fontSize: 11,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
-                      ),
+                        );
+                      }),
                     ),
-                  ),
+                  ],
                 );
-              }),
+              },
             ),
           ),
         ),

@@ -77,11 +77,11 @@ abstract final class AppColors {
 
   // ── Canvas & Elevation (Brand Bible v4.0) ────────────────────────────────
   // Dark mode uses a four-level brightness hierarchy — no borders, no shadows.
-  // Each step is +8 brighter across all RGB channels.
+  // Each step is ~8 brighter per channel with a subtle warm tint.
 
   /// Canvas — screen/page background. Darkest level.
-  /// Pure neutral grey (no blue tint) to prevent Impeller color shift.
-  static const Color canvas = Color(0xFF161616);
+  /// Subtle warm tint (+2 blue channel) per brand bible.
+  static const Color canvas = Color(0xFF161618);
 
   // ── Light-mode Brand Bible surface tokens ────────────────────────────────
 
@@ -98,13 +98,13 @@ abstract final class AppColors {
   static const Color surfaceOverlayLight = Color(0xFFD4D0CA);
 
   /// Surface — cards, content containers. One step above canvas.
-  static const Color surface = Color(0xFF1E1E1E);
+  static const Color surface = Color(0xFF1E1E20);
 
   /// Surface Raised — popovers, dropdowns, tooltips, hover states.
-  static const Color surfaceRaised = Color(0xFF272727);
+  static const Color surfaceRaised = Color(0xFF272729);
 
   /// Surface Overlay — modals, bottom sheets, dialogs. Highest level.
-  static const Color surfaceOverlay = Color(0xFF313131);
+  static const Color surfaceOverlay = Color(0xFF313133);
 
   // ── Legacy surface aliases (light/dark) ─────────────────────────────────
 
@@ -399,8 +399,8 @@ class AppColorsOf {
   Color get warmWhite => AppColors.warmWhite;
 
   // ── Borders ────────────────────────────────────────────────────────────
-  Color get border => _isDark ? AppColors.borderDark : AppColors.borderLight;
-  Color get divider => _isDark ? AppColors.dividerDefault : AppColors.borderLight;
+  Color get border => _isDark ? AppColors.dividerDefault : const Color(0x14161618);
+  Color get divider => _isDark ? AppColors.dividerDefault : const Color(0x14161618);
 
   // ── Semantic Status ────────────────────────────────────────────────────
   Color get success => AppColors.success;

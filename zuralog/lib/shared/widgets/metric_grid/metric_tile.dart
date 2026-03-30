@@ -95,7 +95,7 @@ class MetricTile extends StatelessWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+        borderRadius: BorderRadius.circular(AppDimens.shapeMd),
       ),
       padding: const EdgeInsets.symmetric(
         vertical: AppDimens.spaceSm,
@@ -105,8 +105,8 @@ class MetricTile extends StatelessWidget {
         mainAxisSize: MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Emoji
-          Text(data.emoji, style: TextStyle(fontSize: AppDimens.emojiSm)),
+          // Icon
+          Icon(data.icon, size: AppDimens.emojiSm, color: categoryColor),
           const SizedBox(height: AppDimens.spaceXxs),
           // Today's value (lit) or last-logged value (unlit, if available)
           Text(

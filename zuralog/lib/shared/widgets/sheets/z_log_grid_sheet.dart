@@ -44,23 +44,23 @@ class _TileDef {
   });
 
   final String key;
-  final String icon;
+  final IconData icon;
   final String label;
   final _TileBehaviour behaviour;
 }
 
 /// The ordered list of 10 loggable metric tiles.
 const List<_TileDef> _tiles = [
-  _TileDef(key: 'mood',       icon: '✨', label: 'Wellness',     behaviour: _TileBehaviour.inline),
-  _TileDef(key: 'water',      icon: '💧', label: 'Water',        behaviour: _TileBehaviour.inline),
-  _TileDef(key: 'sleep',      icon: '😴', label: 'Sleep',        behaviour: _TileBehaviour.fullScreen),
-  _TileDef(key: 'weight',     icon: '⚖️', label: 'Weight',       behaviour: _TileBehaviour.inline),
-  _TileDef(key: 'steps',      icon: '👟', label: 'Steps',        behaviour: _TileBehaviour.inline),
-  _TileDef(key: 'run',        icon: '🏃', label: 'Run / Cardio', behaviour: _TileBehaviour.fullScreen),
-  _TileDef(key: 'meal',       icon: '🍽️', label: 'Meal',         behaviour: _TileBehaviour.fullScreen),
-  _TileDef(key: 'supplement', icon: '💊', label: 'Supplements',  behaviour: _TileBehaviour.fullScreen),
-  _TileDef(key: 'symptom',    icon: '🩹', label: 'Symptom',      behaviour: _TileBehaviour.fullScreen),
-  _TileDef(key: 'workout',    icon: '🏋️', label: 'Workout',      behaviour: _TileBehaviour.comingSoon),
+  _TileDef(key: 'mood',       icon: Icons.self_improvement_rounded, label: 'Wellness',     behaviour: _TileBehaviour.inline),
+  _TileDef(key: 'water',      icon: Icons.water_drop_rounded,       label: 'Water',        behaviour: _TileBehaviour.inline),
+  _TileDef(key: 'sleep',      icon: Icons.bedtime_rounded,          label: 'Sleep',        behaviour: _TileBehaviour.fullScreen),
+  _TileDef(key: 'weight',     icon: Icons.monitor_weight_rounded,   label: 'Weight',       behaviour: _TileBehaviour.inline),
+  _TileDef(key: 'steps',      icon: Icons.directions_walk_rounded,  label: 'Steps',        behaviour: _TileBehaviour.inline),
+  _TileDef(key: 'run',        icon: Icons.directions_run_rounded,   label: 'Run / Cardio', behaviour: _TileBehaviour.fullScreen),
+  _TileDef(key: 'meal',       icon: Icons.restaurant_rounded,       label: 'Meal',         behaviour: _TileBehaviour.fullScreen),
+  _TileDef(key: 'supplement', icon: Icons.medication_rounded,       label: 'Supplements',  behaviour: _TileBehaviour.fullScreen),
+  _TileDef(key: 'symptom',    icon: Icons.healing_rounded,          label: 'Symptom',      behaviour: _TileBehaviour.fullScreen),
+  _TileDef(key: 'workout',    icon: Icons.fitness_center_rounded,   label: 'Workout',      behaviour: _TileBehaviour.comingSoon),
 ];
 
 /// Maps each tile key to the canonical backend metric-type slug reported
@@ -204,7 +204,7 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
 
     final title = _selectedTile == null
         ? 'What do you want to log?'
-        : '${_selectedTile!.icon} ${_selectedTile!.label}';
+        : _selectedTile!.label;
 
     return Container(
       decoration: BoxDecoration(

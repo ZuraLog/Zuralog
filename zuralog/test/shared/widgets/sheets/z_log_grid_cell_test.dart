@@ -10,14 +10,14 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: ZLogGridCell(
-              icon: '💧',
+              icon: Icons.water_drop_rounded,
               label: 'Water',
               onTap: () {},
             ),
           ),
         ),
       );
-      expect(find.text('💧'), findsOneWidget);
+      expect(find.byIcon(Icons.water_drop_rounded), findsOneWidget);
       expect(find.text('Water'), findsOneWidget);
     });
 
@@ -27,7 +27,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: ZLogGridCell(
-              icon: '💧',
+              icon: Icons.water_drop_rounded,
               label: 'Water',
               isLogged: true,
               onTap: () {},
@@ -44,7 +44,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: ZLogGridCell(
-              icon: '💧',
+              icon: Icons.water_drop_rounded,
               label: 'Water',
               onTap: () {},
             ),
@@ -60,7 +60,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: ZLogGridCell(
-              icon: '🏋️',
+              icon: Icons.fitness_center_rounded,
               label: 'Workout',
               isComingSoon: true,
               onTap: () {},
@@ -78,7 +78,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: ZLogGridCell(
-              icon: '🏋️',
+              icon: Icons.fitness_center_rounded,
               label: 'Workout',
               isComingSoon: true,
               onTap: () {},
@@ -96,7 +96,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: ZLogGridCell(
-              icon: '💧',
+              icon: Icons.water_drop_rounded,
               label: 'Water',
               onTap: () => tapped = true,
             ),

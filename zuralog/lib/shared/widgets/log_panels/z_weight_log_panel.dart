@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/buttons/z_button.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
@@ -287,21 +288,9 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
           const SizedBox(height: AppDimens.spaceLg),
 
           // ── Save button ───────────────────────────────────────────────────
-          FilledButton(
+          ZButton(
+            label: 'Save Weight',
             onPressed: _handleSave,
-            style: FilledButton.styleFrom(
-              backgroundColor: colors.primary,
-              foregroundColor: colors.textOnSage,
-              shape: RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(AppDimens.radiusButton),
-              ),
-              minimumSize: const Size.fromHeight(AppDimens.touchTargetMin),
-            ),
-            child: Text(
-              'Save Weight',
-              style: AppTextStyles.labelLarge,
-            ),
           ),
         ],
       ),
