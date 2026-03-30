@@ -64,7 +64,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
       final date = DateTime.now().toIso8601String().substring(0, 10);
       final file = File('${dir.path}/zuralog-export-$date.json');
       await file.writeAsBytes(bytes);
-      await Share.shareXFiles([XFile(file.path)], text: 'Zuralog Data Export');
+      await Share.shareXFiles([XFile(file.path)], text: 'ZuraLog Data Export');
     } catch (e) {
       if (mounted) {
         String errorMessage;

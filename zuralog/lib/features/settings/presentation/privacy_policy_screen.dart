@@ -31,14 +31,14 @@ class PrivacyPolicyScreen extends StatelessWidget {
         ),
         children: const [
           _PolicyHeader(
-            title: 'Zuralog Privacy Policy',
+            title: 'ZuraLog Privacy Policy',
             subtitle: 'Effective Date: March 14, 2026',
           ),
           SizedBox(height: AppDimens.spaceLg),
           _PolicySection(
             title: '1. Introduction',
             body:
-                'Zuralog ("we," "our," or "us") respects your privacy and is '
+                'ZuraLog ("we," "our," or "us") respects your privacy and is '
                 'committed to protecting your personal health information. This '
                 'Privacy Policy explains how we collect, use, disclose, and '
                 'safeguard your information when you use our mobile application '
@@ -49,7 +49,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 'including those in Virginia, Colorado, Connecticut, Utah, Oregon, '
                 'Texas, and Montana. If you are located outside the United States, '
                 'please see Section 14 ("International Users").\n\n'
-                'Zuralog is a consumer wellness application. We are not a covered '
+                'ZuraLog is a consumer wellness application. We are not a covered '
                 'entity or business associate under HIPAA. Health data you share '
                 'with us is processed under this Privacy Policy, not HIPAA.\n\n'
                 'By using the Service, you agree to the collection and use of '
@@ -299,7 +299,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
             body:
                 'If you have any questions about this Privacy Policy or our '
                 'privacy practices, please contact us at:\n\n'
-                'Zuralog, Inc.\n'
+                'ZuraLog, Inc.\n'
                 'support@zuralog.com\n'
                 'https://zuralog.com/privacy-policy',
           ),
@@ -384,7 +384,7 @@ class _PolicyFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Text(
-        '© 2026 Zuralog, Inc. All rights reserved.',
+        '© 2026 ZuraLog, Inc. All rights reserved.',
         style: AppTextStyles.bodySmall.copyWith(color: AppColors.textTertiary),
         textAlign: TextAlign.center,
       ),

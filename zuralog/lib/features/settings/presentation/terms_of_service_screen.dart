@@ -31,24 +31,24 @@ class TermsOfServiceScreen extends StatelessWidget {
         ),
         children: const [
           _TermsHeader(
-            title: 'Zuralog Terms of Service',
+            title: 'ZuraLog Terms of Service',
             subtitle: 'Last Updated: March 1, 2026',
           ),
           SizedBox(height: AppDimens.spaceLg),
           _TermsSection(
             title: '1. Acceptance of Terms',
             body:
-                'By downloading, installing, or using the Zuralog mobile application '
+                'By downloading, installing, or using the ZuraLog mobile application '
                 'or related services (the "Service"), you agree to be bound by these '
                 'Terms of Service ("Terms"). If you do not agree to these Terms, do '
                 'not use the Service.\n\n'
                 'These Terms constitute a legally binding agreement between you and '
-                'Zuralog, Inc. ("Zuralog," "we," "our," or "us").',
+                'ZuraLog, Inc. ("ZuraLog," "we," "our," or "us").',
           ),
           _TermsSection(
             title: '2. Description of Service',
             body:
-                'Zuralog is a personal health intelligence platform that aggregates '
+                'ZuraLog is a personal health intelligence platform that aggregates '
                 'health and fitness data from multiple sources, provides AI-powered '
                 'coaching, trend analysis, and personalized insights to help you '
                 'achieve your health goals.\n\n'
@@ -58,7 +58,7 @@ class TermsOfServiceScreen extends StatelessWidget {
           _TermsSection(
             title: '3. Medical Disclaimer',
             body:
-                'IMPORTANT: Zuralog is NOT a medical device and does NOT provide '
+                'IMPORTANT: ZuraLog is NOT a medical device and does NOT provide '
                 'medical advice, diagnosis, or treatment. The information provided '
                 'through the Service, including AI-generated insights, is for '
                 'informational and wellness purposes only.\n\n'
@@ -119,10 +119,10 @@ class TermsOfServiceScreen extends StatelessWidget {
             title: '8. Intellectual Property',
             body:
                 'The Service and its original content, features, and functionality '
-                'are owned by Zuralog and are protected by copyright, trademark, '
+                'are owned by ZuraLog and are protected by copyright, trademark, '
                 'and other intellectual property laws.\n\n'
                 'You retain ownership of all health data you input into the Service. '
-                'By using the Service, you grant Zuralog a limited license to use '
+                'By using the Service, you grant ZuraLog a limited license to use '
                 'your data solely to provide and improve the Service.',
           ),
           _TermsSection(
@@ -166,7 +166,7 @@ class TermsOfServiceScreen extends StatelessWidget {
             title: '13. Contact',
             body:
                 'Questions about these Terms? Contact us at:\n\n'
-                'Zuralog, Inc.\n'
+                'ZuraLog, Inc.\n'
                 'support@zuralog.com\n'
                 'https://zuralog.com/terms',
           ),
@@ -251,7 +251,7 @@ class _TermsFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Text(
-        '© 2026 Zuralog, Inc. All rights reserved.',
+        '© 2026 ZuraLog, Inc. All rights reserved.',
         style: AppTextStyles.bodySmall.copyWith(color: AppColors.textTertiary),
         textAlign: TextAlign.center,
       ),
