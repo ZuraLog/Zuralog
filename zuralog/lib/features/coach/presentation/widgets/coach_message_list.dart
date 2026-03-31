@@ -137,7 +137,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
         ),
         if (_showScrollToBottom)
           Positioned(
-            bottom: AppDimens.spaceMd,
+            bottom: widget.bottomPadding + AppDimens.spaceSm,
             right: AppDimens.spaceMd,
             child: FloatingActionButton.small(
               onPressed: _scrollToBottom,
