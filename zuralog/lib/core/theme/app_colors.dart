@@ -87,6 +87,10 @@ abstract final class AppColors {
   /// Darker than canvas to signal a different mode.
   static const Color canvasGhost = Color(0xFF111113);
 
+  /// Ghost mode canvas background — light mode. A muted cool-grey tint to
+  /// visually separate the privacy context from the normal canvas.
+  static const Color canvasGhostLight = Color(0xFFE8E8E4);
+
   // ── Light-mode Brand Bible surface tokens ────────────────────────────────
 
   /// Canvas — light mode screen/page background (Brand Bible Warm White tint).
@@ -382,6 +386,7 @@ class AppColorsOf {
 
   // ── Canvas & Elevation (Brand Bible) ───────────────────────────────────
   Color get canvas => _isDark ? AppColors.canvas : AppColors.canvasLight;
+  Color get canvasGhost => _isDark ? AppColors.canvasGhost : AppColors.canvasGhostLight;
   Color get surfaceRaised => _isDark ? AppColors.surfaceRaised : AppColors.surfaceRaisedLight;
   Color get surfaceOverlay => _isDark ? AppColors.surfaceOverlay : AppColors.surfaceOverlayLight;
 

@@ -108,6 +108,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Stack(
       children: [
         ListView.builder(
@@ -128,8 +129,8 @@ class _CoachMessageListState extends State<CoachMessageList> {
             right: AppDimens.spaceMd,
             child: FloatingActionButton.small(
               onPressed: _scrollToBottom,
-              backgroundColor: AppColors.surface,
-              foregroundColor: AppColors.textSecondary,
+              backgroundColor: colors.surface,
+              foregroundColor: colors.textSecondary,
               elevation: 2,
               child: const Icon(Icons.keyboard_arrow_down_rounded),
             ),

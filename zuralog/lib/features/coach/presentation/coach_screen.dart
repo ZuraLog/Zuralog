@@ -326,7 +326,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
         ],
       ),
       body: ColoredBox(
-        color: isGhost ? AppColors.canvasGhost : colors.canvas,
+        color: isGhost ? colors.canvasGhost : colors.canvas,
         child: Column(
           children: [
             if (isGhost) CoachGhostBanner(onExit: _showExitGhostSheet),
@@ -560,7 +560,7 @@ class _CoachConversationDrawerState
                             decoration: InputDecoration(
                               hintText: 'Search conversations...',
                               hintStyle: AppTextStyles.bodyLarge.copyWith(
-                                color: AppColors.textTertiary,
+                                color: colors.textTertiary,
                               ),
                               border: InputBorder.none,
                               contentPadding: const EdgeInsets.symmetric(
@@ -568,10 +568,10 @@ class _CoachConversationDrawerState
                                 vertical: AppDimens.spaceSm,
                               ),
                               suffixIcon: IconButton(
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.close_rounded,
                                   size: 18,
-                                  color: AppColors.textTertiary,
+                                  color: colors.textTertiary,
                                 ),
                                 onPressed: () {
                                   setState(() {
@@ -601,7 +601,7 @@ class _CoachConversationDrawerState
                     child: Text(
                       'Could not load conversations',
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textTertiary,
+                        color: colors.textTertiary,
                       ),
                     ),
                   ),
@@ -616,21 +616,21 @@ class _CoachConversationDrawerState
                               Icon(
                                 Icons.chat_bubble_outline_rounded,
                                 size: 48,
-                                color: AppColors.textTertiary
+                                color: colors.textTertiary
                                     .withValues(alpha: 0.4),
                               ),
                               const SizedBox(height: AppDimens.spaceMd),
                               Text(
                                 'No conversations yet',
                                 style: AppTextStyles.bodyLarge.copyWith(
-                                  color: AppColors.textTertiary,
+                                  color: colors.textTertiary,
                                 ),
                               ),
                               const SizedBox(height: AppDimens.spaceSm),
                               Text(
                                 'Start a new chat to get started',
                                 style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.textTertiary,
+                                  color: colors.textTertiary,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -652,16 +652,16 @@ class _CoachConversationDrawerState
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.search_off_rounded,
                                 size: 48,
-                                color: AppColors.textTertiary,
+                                color: colors.textTertiary,
                               ),
                               const SizedBox(height: AppDimens.spaceMd),
                               Text(
                                 'No conversations match your search',
                                 style: AppTextStyles.bodyLarge.copyWith(
-                                  color: AppColors.textTertiary,
+                                  color: colors.textTertiary,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
