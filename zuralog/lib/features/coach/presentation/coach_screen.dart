@@ -22,6 +22,7 @@ import 'package:zuralog/features/coach/presentation/widgets/coach_idle_state.dar
 import 'package:zuralog/features/coach/presentation/widgets/coach_message_list.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/features/coach/presentation/coach_history_screen.dart';
 import 'package:zuralog/shared/widgets/coach_input_bar.dart';
 import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
@@ -83,19 +84,28 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
 
   void _openDrawer() {
     ref.read(hapticServiceProvider).light();
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _CoachConversationDrawer(
-        onConversationTap: (id) {
-          Navigator.of(context).pop();
-          _loadConversation(id);
+    Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            CoachHistoryScreen(
+          onConversationTap: _loadConversation,
+          onNewConversation: _startNewConversation,
+        ),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final offsetAnimation = Tween<Offset>(
+            begin: const Offset(-1.0, 0.0),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeInOut,
+          ));
+          return SlideTransition(
+            position: offsetAnimation,
+            child: child,
+          );
         },
-        onNewConversation: () {
-          Navigator.of(context).pop();
-          _startNewConversation();
-        },
+        transitionDuration: const Duration(milliseconds: 280),
+        reverseTransitionDuration: const Duration(milliseconds: 280),
       ),
     );
   }
@@ -425,331 +435,3 @@ class _ErrorBanner extends StatelessWidget {
   }
 }
 
-// ── _CoachConversationDrawer ──────────────────────────────────────────────────
-// Adapted from _ConversationDrawer in new_chat_screen.dart.
-// Key difference: tapping a conversation fires onConversationTap(id)
-// instead of navigating to a new route.
-
-class _CoachConversationDrawer extends ConsumerStatefulWidget {
-  const _CoachConversationDrawer({
-    required this.onConversationTap,
-    required this.onNewConversation,
-  });
-
-  final void Function(String conversationId) onConversationTap;
-  final VoidCallback onNewConversation;
-
-  @override
-  ConsumerState<_CoachConversationDrawer> createState() =>
-      _CoachConversationDrawerState();
-}
-
-class _CoachConversationDrawerState
-    extends ConsumerState<_CoachConversationDrawer> {
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocus = FocusNode();
-  bool _isSearching = false;
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _searchFocus.dispose();
-    super.dispose();
-  }
-
-  List<Conversation> _filterConversations(
-    List<Conversation> conversations,
-    String query,
-  ) {
-    if (query.isEmpty) return conversations;
-    final lower = query.toLowerCase();
-    return conversations.where((c) {
-      final titleMatch = c.title.toLowerCase().contains(lower);
-      final previewMatch =
-          c.preview != null && c.preview!.toLowerCase().contains(lower);
-      return titleMatch || previewMatch;
-    }).toList();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final conversationsAsync = ref.watch(coachConversationsProvider);
-    final colors = AppColorsOf(context);
-
-    return DraggableScrollableSheet(
-      initialChildSize: 0.75,
-      minChildSize: 0.4,
-      maxChildSize: 0.92,
-      expand: false,
-      builder: (ctx, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: colors.cardBackground,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(AppDimens.radiusCard),
-            ),
-          ),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: AppDimens.spaceMd),
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: colors.border,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceMd,
-                  AppDimens.spaceMd,
-                  AppDimens.spaceSm,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Conversations',
-                        style: AppTextStyles.titleMedium,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.search_rounded),
-                      onPressed: () => setState(() => _isSearching = true),
-                      tooltip: 'Search conversations',
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add_rounded),
-                      onPressed: () {
-                        ref.read(hapticServiceProvider).light();
-                        Navigator.of(ctx).pop();
-                        widget.onNewConversation();
-                      },
-                      tooltip: 'New conversation',
-                    ),
-                  ],
-                ),
-              ),
-              AnimatedSize(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeInOut,
-                child: _isSearching
-                    ? Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppDimens.spaceMd,
-                          0,
-                          AppDimens.spaceMd,
-                          AppDimens.spaceSm,
-                        ),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: colors.inputBackground,
-                            borderRadius: BorderRadius.circular(
-                              AppDimens.radiusInput,
-                            ),
-                          ),
-                          child: TextField(
-                            controller: _searchController,
-                            focusNode: _searchFocus,
-                            autofocus: true,
-                            style: AppTextStyles.bodyLarge,
-                            decoration: InputDecoration(
-                              hintText: 'Search conversations...',
-                              hintStyle: AppTextStyles.bodyLarge.copyWith(
-                                color: colors.textTertiary,
-                              ),
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: AppDimens.spaceMd,
-                                vertical: AppDimens.spaceSm,
-                              ),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  Icons.close_rounded,
-                                  size: 18,
-                                  color: colors.textTertiary,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _isSearching = false;
-                                    _searchController.clear();
-                                  });
-                                  _searchFocus.unfocus();
-                                },
-                              ),
-                            ),
-                            onChanged: (_) => setState(() {}),
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-              Divider(height: 1, color: colors.border),
-              Expanded(
-                child: conversationsAsync.when(
-                  loading: () => Center(
-                    child: CircularProgressIndicator(
-                      color: colors.primary,
-                      strokeWidth: 2,
-                    ),
-                  ),
-                  error: (e, _) => Center(
-                    child: Text(
-                      'Could not load conversations',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: colors.textTertiary,
-                      ),
-                    ),
-                  ),
-                  data: (conversations) {
-                    if (conversations.isEmpty) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(AppDimens.spaceXl),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.chat_bubble_outline_rounded,
-                                size: 48,
-                                color: colors.textTertiary
-                                    .withValues(alpha: 0.4),
-                              ),
-                              const SizedBox(height: AppDimens.spaceMd),
-                              Text(
-                                'No conversations yet',
-                                style: AppTextStyles.bodyLarge.copyWith(
-                                  color: colors.textTertiary,
-                                ),
-                              ),
-                              const SizedBox(height: AppDimens.spaceSm),
-                              Text(
-                                'Start a new chat to get started',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: colors.textTertiary,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-
-                    final filtered = _filterConversations(
-                      conversations,
-                      _searchController.text.trim(),
-                    );
-
-                    if (filtered.isEmpty) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(AppDimens.spaceXl),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.search_off_rounded,
-                                size: 48,
-                                color: colors.textTertiary,
-                              ),
-                              const SizedBox(height: AppDimens.spaceMd),
-                              Text(
-                                'No conversations match your search',
-                                style: AppTextStyles.bodyLarge.copyWith(
-                                  color: colors.textTertiary,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-
-                    return ListView.separated(
-                      controller: scrollController,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: AppDimens.spaceSm,
-                      ),
-                      itemCount: filtered.length,
-                      separatorBuilder: (_, _) => Divider(
-                        height: 1,
-                        indent: AppDimens.spaceMd,
-                        color: colors.border,
-                      ),
-                      itemBuilder: (_, i) => _CoachConversationTile(
-                        conversation: filtered[i],
-                        onTap: () {
-                          ref.read(hapticServiceProvider).light();
-                          widget.onConversationTap(filtered[i].id);
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-// ── _CoachConversationTile ────────────────────────────────────────────────────
-
-class _CoachConversationTile extends StatelessWidget {
-  const _CoachConversationTile({
-    required this.conversation,
-    required this.onTap,
-  });
-
-  final Conversation conversation;
-  final VoidCallback onTap;
-
-  String _formatDate(DateTime dt) {
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    return '${dt.day}/${dt.month}/${dt.year % 100}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return ListTile(
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppDimens.spaceMd,
-        vertical: AppDimens.spaceSm,
-      ),
-      title: Text(
-        conversation.title,
-        style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: conversation.preview != null
-          ? Text(
-              conversation.preview!,
-              style: AppTextStyles.bodySmall
-                  .copyWith(color: colors.textSecondary),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            )
-          : null,
-      trailing: Text(
-        _formatDate(conversation.createdAt),
-        style:
-            AppTextStyles.bodySmall.copyWith(color: colors.textTertiary),
-      ),
-    );
-  }
-}
