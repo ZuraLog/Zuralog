@@ -4,13 +4,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_thinking_layer.dart';
 
 void main() {
-  testWidgets('CoachThinkingLayer shows default "Thinking…" text when no content', (tester) async {
+  testWidgets('CoachThinkingLayer shows a rotating word label when no content', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(body: CoachThinkingLayer()),
       ),
     );
-    expect(find.text('Thinking…'), findsOneWidget);
+    // The label is a random word from the thinking-words list followed by "…".
+    // We can't assert a specific word, so just verify some text ending with "…"
+    // is present.
+    expect(find.textContaining('…'), findsOneWidget);
   });
 
   testWidgets('CoachThinkingLayer shows tool name when activeToolName is set', (tester) async {
@@ -40,11 +43,11 @@ void main() {
     expect(find.text('Reasoning about step one'), findsOneWidget);
   });
 
-  testWidgets('CoachThinkingLayer shows only the last 160 chars of long thinking content',
+  testWidgets('CoachThinkingLayer shows only the last 120 chars of long thinking content',
       (tester) async {
-    // Build a string longer than 160 characters.
+    // Build a string longer than 120 characters (widget's truncation threshold).
     final prefix = 'A' * 50; // 50 chars that should be trimmed
-    final tail = 'B' * 160; // 160 chars that should be shown
+    final tail = 'B' * 120; // 120 chars that should be shown
     final longContent = prefix + tail;
 
     await tester.pumpWidget(
@@ -58,7 +61,7 @@ void main() {
 
     // The full string must not appear.
     expect(find.text(longContent), findsNothing);
-    // Only the tail (last 160 chars) should appear.
+    // Only the tail (last 120 chars) should appear.
     expect(find.text(tail), findsOneWidget);
   });
 }
