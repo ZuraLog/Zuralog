@@ -45,6 +45,7 @@ class CoachInputBar extends ConsumerStatefulWidget {
     this.attachmentCountNotifier,
     this.placeholder = 'Message Zura…',
     this.isFloating = false,
+    this.isGhost = false,
   });
 
   final TextEditingController controller;
@@ -88,6 +89,12 @@ class CoachInputBar extends ConsumerStatefulWidget {
   /// Bottom padding is reduced to [AppDimens.spaceSm] (the pill handles
   /// its own vertical positioning). Defaults to false.
   final bool isFloating;
+
+  /// When true, the attachment panel shows a ghost-mode info banner instead of
+  /// the file/camera/gallery pickers, since ghost sessions cannot upload files.
+  ///
+  /// Defaults to false.
+  final bool isGhost;
 
   /// Maximum allowed message length.
   static const int maxLength = 4000;
@@ -301,6 +308,7 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
                           _attachments.add(a);
                           _updateAttachmentCount();
                         }),
+                        isGhost: widget.isGhost,
                       ),
                     );
                   },

@@ -467,6 +467,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                   conversationId: effectiveConversationId,
                   isSending: chatState.isSending,
                   isFloating: true,
+                  isGhost: isGhost,
                 ),
               ),
             ),

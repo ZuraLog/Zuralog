@@ -55,7 +55,7 @@ const _personas = [
 
 /// Full-screen attachment and session-settings panel for the Coach chat.
 ///
-/// Replaces [AttachmentPickerSheet] with a scrollable panel that includes:
+/// Intended as the full-screen successor to [AttachmentPickerSheet] with a scrollable panel that includes:
 /// - Three attachment pickers (Camera, Photos, Files)
 /// - Inline AI Persona selector
 /// - Proactivity and Response Length segmented controls
@@ -64,9 +64,14 @@ const _personas = [
 /// All settings read from and write to [userPreferencesProvider], so changes
 /// sync automatically with the Settings tab.
 class CoachAttachmentPanel extends ConsumerStatefulWidget {
-  const CoachAttachmentPanel({super.key, required this.onAttachment});
+  const CoachAttachmentPanel({
+    super.key,
+    required this.onAttachment,
+    this.isGhost = false,
+  });
 
   final ValueChanged<PendingAttachment> onAttachment;
+  final bool isGhost;
 
   @override
   ConsumerState<CoachAttachmentPanel> createState() =>
@@ -151,7 +156,7 @@ class _CoachAttachmentPanelState extends ConsumerState<CoachAttachmentPanel> {
       }
       if (!await _checkSize(pf.path!)) return;
       if (!context.mounted) return;
-      final type = pf.extension == 'pdf'
+      final type = (pf.extension ?? '').toLowerCase() == 'pdf'
           ? AttachmentType.pdf
           : AttachmentType.document;
       Navigator.of(context).pop();
@@ -219,26 +224,49 @@ class _CoachAttachmentPanelState extends ConsumerState<CoachAttachmentPanel> {
               children: [
                 const _OverlineLabel('ATTACH FROM'),
                 const SizedBox(height: AppDimens.spaceMd),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _PickerOption(
-                      icon: Icons.camera_alt_rounded,
-                      label: 'Camera',
-                      onTap: _picking ? null : _pickCamera,
+                if (widget.isGhost)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.sentiment_very_dissatisfied_rounded,
+                          size: AppDimens.iconSm,
+                          color: AppColorsOf(context).textSecondary,
+                        ),
+                        const SizedBox(width: AppDimens.spaceSm),
+                        Expanded(
+                          child: Text(
+                            'Attachments are not available in Ghost Mode — nothing is saved.',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColorsOf(context).textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    _PickerOption(
-                      icon: Icons.photo_library_rounded,
-                      label: 'Photos',
-                      onTap: _picking ? null : _pickGallery,
-                    ),
-                    _PickerOption(
-                      icon: Icons.attach_file_rounded,
-                      label: 'Files',
-                      onTap: _picking ? null : _pickFile,
-                    ),
-                  ],
-                ),
+                  )
+                else
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _PickerOption(
+                        icon: Icons.camera_alt_rounded,
+                        label: 'Camera',
+                        onTap: _picking ? null : _pickCamera,
+                      ),
+                      _PickerOption(
+                        icon: Icons.photo_library_rounded,
+                        label: 'Photos',
+                        onTap: _picking ? null : _pickGallery,
+                      ),
+                      _PickerOption(
+                        icon: Icons.attach_file_rounded,
+                        label: 'Files',
+                        onTap: _picking ? null : _pickFile,
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: AppDimens.spaceXl),
 
                 const _OverlineLabel('SESSION SETTINGS'),
@@ -428,31 +456,36 @@ class _PickerOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    return GestureDetector(
-      onTap: onTap,
-      child: Opacity(
-        opacity: onTap == null ? 0.4 : 1.0,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: AppColors.primary, size: 28),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: AppTextStyles.caption.copyWith(
-                color: colors.textSecondary,
+    return Opacity(
+      opacity: onTap == null ? 0.4 : 1.0,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Material(
+            color: Colors.transparent,
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onTap,
+              child: Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: AppColors.primary, size: 28),
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: AppTextStyles.caption.copyWith(
+              color: colors.textSecondary,
+            ),
+          ),
+        ],
       ),
     );
   }
