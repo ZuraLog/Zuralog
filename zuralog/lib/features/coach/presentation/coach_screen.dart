@@ -378,6 +378,12 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                       : CoachMessageList(
                           messages: messages,
                           isStreaming: chatState.isSending,
+                          // True from send until the first StreamToken sets
+                          // streamingContent — covers tool calls, thinking
+                          // tokens, and the initial wait. Mutually exclusive
+                          // with the synthetic streaming message in
+                          // _buildMessages which only renders when
+                          // streamingContent != null.
                           isThinking: chatState.isSending && chatState.streamingContent == null,
                           thinkingContent: chatState.thinkingContent,
                           activeToolName: chatState.activeToolName,
