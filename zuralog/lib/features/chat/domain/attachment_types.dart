@@ -2,7 +2,7 @@
 ///
 /// Single canonical definition of all attachment-related types used across
 /// both the data layer (AttachmentRepository) and the UI layer
-/// (AttachmentPickerSheet, AttachmentPreviewBar, chat screens).
+/// (CoachAttachmentPanel, AttachmentPreviewBar, chat screens).
 library;
 
 import 'dart:io';

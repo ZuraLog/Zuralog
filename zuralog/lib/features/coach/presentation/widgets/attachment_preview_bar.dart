@@ -6,7 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
-import 'attachment_picker_sheet.dart';
+import 'package:zuralog/features/chat/domain/attachment_types.dart';
 
 // ── AttachmentPreviewBar ──────────────────────────────────────────────────────
 
