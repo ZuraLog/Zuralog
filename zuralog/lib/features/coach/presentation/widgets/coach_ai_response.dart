@@ -44,6 +44,7 @@ class CoachAiResponse extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final blobState = isThinking
         ? BlobState.thinking
         : isStreaming
@@ -68,19 +69,19 @@ class CoachAiResponse extends StatelessWidget {
                 data: content,
                 styleSheet: MarkdownStyleSheet(
                   p: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.warmWhite,
+                    color: colors.textPrimary,
                   ),
                   code: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.warmWhite,
-                    backgroundColor: AppColors.surfaceRaised,
+                    color: colors.textPrimary,
+                    backgroundColor: colors.surfaceRaised,
                     fontFamily: 'monospace',
                   ),
                   codeblockDecoration: BoxDecoration(
-                    color: AppColors.surfaceRaised,
+                    color: colors.surfaceRaised,
                     borderRadius: BorderRadius.circular(AppDimens.radiusSm),
                   ),
                   blockquote: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colors.textSecondary,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -129,7 +130,7 @@ class CoachAiResponse extends StatelessWidget {
                 child: Text(
                   'AI can make mistakes. Please double-check responses.',
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colors.textSecondary,
                   ),
                 ),
               ),
@@ -154,11 +155,12 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return IconButton(
       onPressed: onTap,
       icon: Icon(icon),
       iconSize: AppDimens.iconSm,
-      color: AppColors.textSecondary,
+      color: colors.textSecondary,
       tooltip: tooltip,
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceXs,

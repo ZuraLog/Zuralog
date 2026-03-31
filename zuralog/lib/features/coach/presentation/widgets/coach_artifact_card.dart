@@ -56,11 +56,11 @@ class CoachArtifactCard extends StatelessWidget {
   /// Optional tap handler. Shows a snackbar stub if null.
   final VoidCallback? onTap;
 
-  Color get _borderColor {
+  Color _resolveBorderColor(AppColorsOf colors) {
     return switch (type) {
-      ArtifactType.memory => AppColors.primary,
-      ArtifactType.journal => const Color(0xFF4CAF50),
-      ArtifactType.dataCheck => const Color(0xFF2196F3),
+      ArtifactType.memory => colors.primary,
+      ArtifactType.journal => AppColors.success,
+      ArtifactType.dataCheck => AppColors.syncing,
     };
   }
 
@@ -82,6 +82,8 @@ class CoachArtifactCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final borderColor = _resolveBorderColor(colors);
     return GestureDetector(
       onTap: onTap ??
           () => ScaffoldMessenger.of(context).showSnackBar(
@@ -93,10 +95,10 @@ class CoachArtifactCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: AppDimens.spaceXs),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusSm),
           border: Border(
-            left: BorderSide(color: _borderColor, width: 3),
+            left: BorderSide(color: borderColor, width: 3),
           ),
         ),
         child: Padding(
@@ -106,7 +108,7 @@ class CoachArtifactCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(_icon, color: _borderColor, size: AppDimens.iconSm),
+              Icon(_icon, color: borderColor, size: AppDimens.iconSm),
               const SizedBox(width: AppDimens.spaceSm),
               Expanded(
                 child: Column(
@@ -116,7 +118,7 @@ class CoachArtifactCard extends StatelessWidget {
                     Text(
                       _label,
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.warmWhite,
+                        color: colors.textPrimary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -124,7 +126,7 @@ class CoachArtifactCard extends StatelessWidget {
                       Text(
                         description,
                         style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
+                          color: colors.textSecondary,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -132,10 +134,10 @@ class CoachArtifactCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.arrow_forward_ios_rounded,
                 size: 12,
-                color: AppColors.textSecondary,
+                color: colors.textSecondary,
               ),
             ],
           ),
@@ -151,6 +153,7 @@ class CoachArtifactDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
       child: Row(
@@ -158,7 +161,7 @@ class CoachArtifactDivider extends StatelessWidget {
           Expanded(
             child: Divider(
               height: 1,
-              color: AppColors.textSecondary.withValues(alpha: 0.3),
+              color: colors.textSecondary.withValues(alpha: 0.3),
             ),
           ),
           Padding(
@@ -166,14 +169,14 @@ class CoachArtifactDivider extends StatelessWidget {
             child: Text(
               'Zura did this',
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
+                color: colors.textSecondary,
               ),
             ),
           ),
           Expanded(
             child: Divider(
               height: 1,
-              color: AppColors.textSecondary.withValues(alpha: 0.3),
+              color: colors.textSecondary.withValues(alpha: 0.3),
             ),
           ),
         ],

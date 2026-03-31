@@ -29,15 +29,16 @@ class _CoachThinkingLayerState extends State<CoachThinkingLayer> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return GestureDetector(
       onTap: () => setState(() => _expanded = !_expanded),
       child: Container(
         margin: const EdgeInsets.only(bottom: AppDimens.spaceSm),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-          border: const Border(
-            left: BorderSide(color: AppColors.primary, width: 4),
+          border: Border(
+            left: BorderSide(color: colors.primary, width: 4),
           ),
         ),
         child: Column(
@@ -58,7 +59,7 @@ class _CoachThinkingLayerState extends State<CoachThinkingLayer> {
                     child: Text(
                       'Zura is thinking...',
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
+                        color: colors.textSecondary,
                       ),
                     ),
                   ),
@@ -67,7 +68,7 @@ class _CoachThinkingLayerState extends State<CoachThinkingLayer> {
                         ? Icons.keyboard_arrow_up_rounded
                         : Icons.keyboard_arrow_down_rounded,
                     size: AppDimens.iconSm,
-                    color: AppColors.textSecondary,
+                    color: colors.textSecondary,
                   ),
                 ],
               ),
@@ -83,11 +84,11 @@ class _CoachThinkingLayerState extends State<CoachThinkingLayer> {
                   AppDimens.spaceSm,
                 ),
                 child: widget.steps.isEmpty
-                    ? const SizedBox(
+                    ? SizedBox(
                         height: 32,
                         child: Center(
                           child: CircularProgressIndicator(
-                            color: AppColors.primary,
+                            color: colors.primary,
                             strokeWidth: 1.5,
                           ),
                         ),
@@ -104,7 +105,7 @@ class _CoachThinkingLayerState extends State<CoachThinkingLayer> {
                                   child: Text(
                                     step,
                                     style: AppTextStyles.bodySmall.copyWith(
-                                      color: AppColors.textSecondary,
+                                      color: colors.textSecondary,
                                     ),
                                   ),
                                 ),

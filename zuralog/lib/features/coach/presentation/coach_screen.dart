@@ -131,7 +131,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
             Text(
               'Nothing you say here will be saved or remembered by Zura. This conversation disappears when you leave.',
               style: AppTextStyles.bodyMedium
-                  .copyWith(color: AppColors.textSecondary),
+                  .copyWith(color: colors.textSecondary),
             ),
             const SizedBox(height: AppDimens.spaceMd),
             Row(
@@ -184,7 +184,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
             Text(
               'This conversation will be cleared.',
               style: AppTextStyles.bodyMedium
-                  .copyWith(color: AppColors.textSecondary),
+                  .copyWith(color: colors.textSecondary),
             ),
             const SizedBox(height: AppDimens.spaceMd),
             Row(
@@ -306,6 +306,8 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
             ? null
             : _activeConversationId;
 
+    final colors = AppColorsOf(context);
+
     return ZuralogScaffold(
       appBar: ZuralogAppBar(
         title: 'Coach',
@@ -317,14 +319,14 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.visibility_off_rounded),
-            color: isGhost ? AppColors.primary : AppColors.textSecondary,
+            color: isGhost ? colors.primary : colors.textSecondary,
             onPressed: _onGhostModeButtonTap,
             tooltip: isGhost ? 'Exit Ghost Mode' : 'Ghost Mode',
           ),
         ],
       ),
       body: ColoredBox(
-        color: isGhost ? const Color(0xFF111113) : AppColors.canvas,
+        color: isGhost ? AppColors.canvasGhost : colors.canvas,
         child: Column(
           children: [
             if (isGhost) CoachGhostBanner(onExit: _showExitGhostSheet),
@@ -393,7 +395,7 @@ class _ErrorBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: AppColors.statusError.withValues(alpha: 0.15),
+      color: AppColors.error.withValues(alpha: 0.15),
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: AppDimens.spaceMd,
@@ -405,13 +407,13 @@ class _ErrorBanner extends StatelessWidget {
               child: Text(
                 message,
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.statusError,
+                  color: AppColors.error,
                 ),
               ),
             ),
             IconButton(
               icon: const Icon(Icons.close_rounded, size: 16),
-              color: AppColors.statusError,
+              color: AppColors.error,
               onPressed: onDismiss,
               constraints: const BoxConstraints(),
               padding: EdgeInsets.zero,
@@ -589,9 +591,9 @@ class _CoachConversationDrawerState
               Divider(height: 1, color: colors.border),
               Expanded(
                 child: conversationsAsync.when(
-                  loading: () => const Center(
+                  loading: () => Center(
                     child: CircularProgressIndicator(
-                      color: AppColors.primary,
+                      color: colors.primary,
                       strokeWidth: 2,
                     ),
                   ),
@@ -721,6 +723,7 @@ class _CoachConversationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(
@@ -729,7 +732,7 @@ class _CoachConversationTile extends StatelessWidget {
       ),
       title: Text(
         conversation.title,
-        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warmWhite),
+        style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
@@ -737,7 +740,7 @@ class _CoachConversationTile extends StatelessWidget {
           ? Text(
               conversation.preview!,
               style: AppTextStyles.bodySmall
-                  .copyWith(color: AppColors.textSecondary),
+                  .copyWith(color: colors.textSecondary),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             )

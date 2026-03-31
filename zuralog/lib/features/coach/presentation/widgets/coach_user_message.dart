@@ -30,10 +30,11 @@ class CoachUserMessage extends StatelessWidget {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (sheetCtx) {
+        final colors = AppColorsOf(sheetCtx);
         return Container(
-          decoration: const BoxDecoration(
-            color: AppColors.surfaceOverlay,
-            borderRadius: BorderRadius.vertical(
+          decoration: BoxDecoration(
+            color: colors.surfaceOverlay,
+            borderRadius: const BorderRadius.vertical(
               top: Radius.circular(AppDimens.shapeXl),
             ),
           ),
@@ -45,13 +46,13 @@ class CoachUserMessage extends StatelessWidget {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.textSecondary.withValues(alpha: 0.4),
+                  color: colors.textSecondary.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(height: AppDimens.spaceSm),
               ListTile(
-                leading: const Icon(Icons.copy_rounded, color: AppColors.primary),
+                leading: Icon(Icons.copy_rounded, color: colors.primary),
                 title: Text('Copy', style: AppTextStyles.bodyMedium),
                 onTap: () {
                   Clipboard.setData(ClipboardData(text: content));
@@ -59,7 +60,7 @@ class CoachUserMessage extends StatelessWidget {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.edit_rounded, color: AppColors.primary),
+                leading: Icon(Icons.edit_rounded, color: colors.primary),
                 title: Text('Edit', style: AppTextStyles.bodyMedium),
                 onTap: () {
                   Navigator.pop(sheetCtx);
@@ -76,6 +77,7 @@ class CoachUserMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.only(
         left: AppDimens.spaceXl,
@@ -94,7 +96,7 @@ class CoachUserMessage extends StatelessWidget {
                   vertical: AppDimens.spaceSm,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceRaised,
+                  color: colors.surfaceRaised,
                   borderRadius: BorderRadius.circular(AppDimens.radiusCard),
                 ),
                 child: Column(
@@ -125,7 +127,7 @@ class CoachUserMessage extends StatelessWidget {
                     Text(
                       content,
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.warmWhite,
+                        color: colors.textPrimary,
                       ),
                     ),
                   ],

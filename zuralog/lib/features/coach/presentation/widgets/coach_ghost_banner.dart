@@ -16,8 +16,9 @@ class CoachGhostBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return ColoredBox(
-      color: AppColors.surface,
+      color: colors.surface,
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: AppDimens.spaceMd,
@@ -27,7 +28,7 @@ class CoachGhostBanner extends StatelessWidget {
           children: [
             Icon(
               Icons.visibility_off_rounded,
-              color: AppColors.primary,
+              color: colors.primary,
               size: AppDimens.iconSm,
             ),
             const SizedBox(width: AppDimens.spaceSm),
@@ -35,14 +36,14 @@ class CoachGhostBanner extends StatelessWidget {
               child: Text(
                 'Ghost Mode — nothing is being saved',
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.primary,
+                  color: colors.primary,
                 ),
               ),
             ),
             TextButton(
               onPressed: onExit,
               style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary,
+                foregroundColor: colors.primary,
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.spaceSm,
                 ),
@@ -52,7 +53,7 @@ class CoachGhostBanner extends StatelessWidget {
               child: Text(
                 'Exit',
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.primary,
+                  color: colors.primary,
                   fontWeight: FontWeight.w600,
                 ),
               ),

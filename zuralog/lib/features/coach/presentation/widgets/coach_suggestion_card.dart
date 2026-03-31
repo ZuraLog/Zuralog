@@ -29,6 +29,7 @@ class CoachSuggestionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return ZuralogSpringButton(
       onTap: onTap,
       child: Container(
@@ -38,13 +39,13 @@ class CoachSuggestionCard extends StatelessWidget {
           vertical: AppDimens.spaceMd,
         ),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(icon, color: AppColors.primary, size: AppDimens.iconMd),
+            Icon(icon, color: colors.primary, size: AppDimens.iconMd),
             const SizedBox(width: AppDimens.spaceMd),
             Expanded(
               child: Column(
@@ -54,14 +55,14 @@ class CoachSuggestionCard extends StatelessWidget {
                   Text(
                     title,
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.warmWhite,
+                      color: colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: AppDimens.spaceXxs),
                   Text(
                     subtitle,
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
+                      color: colors.textSecondary,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,

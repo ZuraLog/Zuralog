@@ -124,6 +124,7 @@ class _CoachBlobState extends State<CoachBlob>
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final showShadow = widget.state == BlobState.idle;
     return AnimatedBuilder(
       animation: _borderRadiusAnim,
@@ -133,16 +134,16 @@ class _CoachBlobState extends State<CoachBlob>
           width: widget.size,
           height: widget.size,
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.15),
+            color: colors.primary.withValues(alpha: 0.15),
             borderRadius: radius,
             border: Border.all(
-              color: AppColors.primary,
+              color: colors.primary,
               width: 1.5,
             ),
             boxShadow: showShadow
                 ? [
                     BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.20),
+                      color: colors.primary.withValues(alpha: 0.20),
                       blurRadius: 12,
                       spreadRadius: 0,
                     ),

@@ -71,6 +71,7 @@ class CoachIdleState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Column(
@@ -84,7 +85,7 @@ class CoachIdleState extends StatelessWidget {
           Text(
             _greeting(),
             style: AppTextStyles.displayMedium.copyWith(
-              color: AppColors.warmWhite,
+              color: colors.textPrimary,
             ),
             textAlign: TextAlign.center,
           ),

@@ -83,6 +83,10 @@ abstract final class AppColors {
   /// Subtle warm tint (+2 blue channel) per brand bible.
   static const Color canvas = Color(0xFF161618);
 
+  /// Ghost mode canvas background — intentional dark tint for privacy context.
+  /// Darker than canvas to signal a different mode.
+  static const Color canvasGhost = Color(0xFF111113);
+
   // ── Light-mode Brand Bible surface tokens ────────────────────────────────
 
   /// Canvas — light mode screen/page background (Brand Bible Warm White tint).
