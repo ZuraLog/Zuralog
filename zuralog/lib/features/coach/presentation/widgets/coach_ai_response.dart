@@ -83,7 +83,10 @@ class CoachAiResponse extends StatelessWidget {
                   p: AppTextStyles.bodyMedium.copyWith(
                     color: colors.textPrimary,
                   ),
-                  strong: const TextStyle(fontWeight: FontWeight.w600),
+                  strong: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: colors.textPrimary,
+                  ),
                   em: TextStyle(
                     fontStyle: FontStyle.italic,
                     color: colors.textSecondary,
