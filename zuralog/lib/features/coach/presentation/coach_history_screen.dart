@@ -13,6 +13,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/coach/domain/coach_models.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
+import 'package:zuralog/shared/widgets/inputs/z_search_bar.dart';
 import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
@@ -78,10 +79,10 @@ class _CoachHistoryScreenState extends ConsumerState<CoachHistoryScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.search_rounded),
-            onPressed: () => setState(() {
-              _isSearching = !_isSearching;
-              if (!_isSearching) _searchController.clear();
-            }),
+            onPressed: () {
+              ref.read(hapticServiceProvider).light();
+              setState(() => _isSearching = !_isSearching);
+            },
             tooltip: 'Search conversations',
           ),
           IconButton(
@@ -104,49 +105,21 @@ class _CoachHistoryScreenState extends ConsumerState<CoachHistoryScreen> {
                 ? Padding(
                     padding: const EdgeInsets.fromLTRB(
                       AppDimens.spaceMd,
-                      AppDimens.spaceSm,
+                      0,
                       AppDimens.spaceMd,
                       AppDimens.spaceSm,
                     ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: colors.inputBackground,
-                        borderRadius: BorderRadius.circular(
-                          AppDimens.radiusInput,
-                        ),
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        focusNode: _searchFocus,
-                        autofocus: true,
-                        style: AppTextStyles.bodyLarge,
-                        decoration: InputDecoration(
-                          hintText: 'Search conversations...',
-                          hintStyle: AppTextStyles.bodyLarge.copyWith(
-                            color: colors.textTertiary,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: AppDimens.spaceMd,
-                            vertical: AppDimens.spaceSm,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              Icons.close_rounded,
-                              size: 18,
-                              color: colors.textTertiary,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _isSearching = false;
-                                _searchController.clear();
-                              });
-                              _searchFocus.unfocus();
-                            },
-                          ),
-                        ),
-                        onChanged: (_) => setState(() {}),
-                      ),
+                    child: ZSearchBar(
+                      controller: _searchController,
+                      placeholder: 'Search conversations...',
+                      onChanged: (_) => setState(() {}),
+                      onClear: () {
+                        setState(() {
+                          _isSearching = false;
+                          _searchController.clear();
+                        });
+                        _searchFocus.unfocus();
+                      },
                     ),
                   )
                 : const SizedBox.shrink(),
