@@ -20,6 +20,8 @@ import 'package:zuralog/features/coach/presentation/widgets/coach_thinking_layer
 /// - [content] is the accumulated markdown text (may be partial while streaming).
 /// - [isStreaming] hides the action row and keeps the blob in talking/thinking state.
 /// - [isThinking] shows Layer 0 (thinking strip) and suppresses text.
+/// - [thinkingContent] is the accumulated reasoning text passed to Layer 0.
+/// - [activeToolName] is the raw name of the tool currently executing, passed to Layer 0.
 class CoachAiResponse extends StatelessWidget {
   const CoachAiResponse({
     super.key,
@@ -30,7 +32,8 @@ class CoachAiResponse extends StatelessWidget {
     required this.onThumbUp,
     required this.onThumbDown,
     required this.onRedo,
-    this.thinkingSteps = const [],
+    this.thinkingContent,
+    this.activeToolName,
     this.showFooter = false,
   });
 
@@ -41,7 +44,8 @@ class CoachAiResponse extends StatelessWidget {
   final VoidCallback onThumbUp;
   final VoidCallback onThumbDown;
   final VoidCallback onRedo;
-  final List<String> thinkingSteps;
+  final String? thinkingContent;
+  final String? activeToolName;
   final bool showFooter;
 
   @override
@@ -61,7 +65,10 @@ class CoachAiResponse extends StatelessWidget {
         children: [
           // ── Layer 0: Thinking ─────────────────────────────────────────
           if (isThinking)
-            CoachThinkingLayer(steps: thinkingSteps),
+            CoachThinkingLayer(
+              thinkingContent: thinkingContent,
+              activeToolName: activeToolName,
+            ),
 
           // ── Layer 1: Response text ────────────────────────────────────
           if (content.isNotEmpty)

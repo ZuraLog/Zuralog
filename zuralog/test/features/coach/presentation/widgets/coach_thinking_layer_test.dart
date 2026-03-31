@@ -1,43 +1,42 @@
 // zuralog/test/features/coach/presentation/widgets/coach_thinking_layer_test.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:zuralog/features/coach/presentation/widgets/coach_blob.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_thinking_layer.dart';
 
 void main() {
-  testWidgets('CoachThinkingLayer shows "Zura is thinking..." text', (tester) async {
+  testWidgets('CoachThinkingLayer shows default "Thinking…" text when no content', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(body: CoachThinkingLayer()),
       ),
     );
-    expect(find.text('Zura is thinking...'), findsOneWidget);
+    expect(find.text('Thinking…'), findsOneWidget);
   });
 
-  testWidgets('CoachThinkingLayer starts collapsed (shows chevron_down icon)', (tester) async {
+  testWidgets('CoachThinkingLayer shows tool name when activeToolName is set', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(body: CoachThinkingLayer()),
+        home: Scaffold(
+          body: CoachThinkingLayer(activeToolName: 'strava_get_activities'),
+        ),
       ),
     );
-    expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
+    expect(find.text('Checking Strava…'), findsOneWidget);
   });
 
-  testWidgets('CoachThinkingLayer expands on tap and shows steps', (tester) async {
+  testWidgets('CoachThinkingLayer shows thinking content when provided', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
+      const MaterialApp(
         home: Scaffold(
           body: CoachThinkingLayer(
-            steps: const ['Step one'],
+            thinkingContent: 'Reasoning about step one',
           ),
         ),
       ),
     );
-    await tester.tap(find.byType(CoachThinkingLayer));
     // Use pump instead of pumpAndSettle because CoachBlob uses a repeating
-    // animation that never settles. A single frame pump is enough for the
-    // synchronous setState expand toggle to take effect.
+    // animation that never settles. A single frame pump is enough to render.
     await tester.pump();
-    expect(find.text('Step one'), findsOneWidget);
+    expect(find.text('Reasoning about step one'), findsOneWidget);
   });
 }

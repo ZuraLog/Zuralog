@@ -378,7 +378,9 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                       : CoachMessageList(
                           messages: messages,
                           isStreaming: chatState.isSending,
-                          isThinking: chatState.activeToolName != null,
+                          isThinking: chatState.isSending && chatState.streamingContent == null,
+                          thinkingContent: chatState.thinkingContent,
+                          activeToolName: chatState.activeToolName,
                           bottomPadding: _kInputPillHeight +
                               AppDimens.bottomClearance(context) +
                               _kPillBottomGap * 2,

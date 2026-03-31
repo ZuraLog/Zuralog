@@ -26,6 +26,8 @@ class CoachMessageList extends StatefulWidget {
     required this.messages,
     required this.isStreaming,
     required this.isThinking,
+    this.thinkingContent,
+    this.activeToolName,
     this.onEditMessage,
     this.onCopyMessage,
     this.onThumbUp,
@@ -37,6 +39,8 @@ class CoachMessageList extends StatefulWidget {
   final List<ChatMessage> messages;
   final bool isStreaming;
   final bool isThinking;
+  final String? thinkingContent;
+  final String? activeToolName;
 
   /// Extra bottom padding added to the scroll list so the last message is
   /// never hidden behind the floating input pill.
@@ -170,6 +174,8 @@ class _CoachMessageListState extends State<CoachMessageList> {
             content: message.content,
             isStreaming: isLast && widget.isStreaming,
             isThinking: isLast && widget.isThinking,
+            thinkingContent: isLast ? widget.thinkingContent : null,
+            activeToolName: isLast ? widget.activeToolName : null,
             showFooter: index == lastAssistantIndex,
             onCopy: () => widget.onCopyMessage?.call(message.content),
             onThumbUp: () => widget.onThumbUp?.call(index),
