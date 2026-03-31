@@ -111,6 +111,7 @@ class ZProgressBar extends StatelessWidget {
                         widthFactor: animatedValue,
                         child: Container(
                           decoration: BoxDecoration(
+                            color: colors.primary,
                             borderRadius: BorderRadius.circular(3),
                             image: DecorationImage(
                               image: AssetImage(patternImage),

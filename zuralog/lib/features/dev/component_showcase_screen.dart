@@ -11,6 +11,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
+import 'package:zuralog/features/coach/presentation/widgets/coach_artifact_card.dart';
+import 'package:zuralog/features/coach/presentation/widgets/coach_blob.dart';
+import 'package:zuralog/features/coach/presentation/widgets/coach_ghost_banner.dart';
+import 'package:zuralog/features/coach/presentation/widgets/coach_suggestion_card.dart';
+import 'package:zuralog/features/coach/presentation/widgets/coach_thinking_layer.dart';
+import 'package:zuralog/features/coach/presentation/widgets/coach_user_message.dart';
 import 'package:zuralog/features/data/presentation/widgets/tile_visualizations.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -130,6 +136,9 @@ class _ComponentShowcaseScreenState
 
             _sliverSection('Navigation & Layout', colors),
             _sliverChild(_buildNavigationLayout()),
+
+            _sliverSection('Coach Components', colors),
+            _sliverChild(_buildCoachComponents()),
 
             // ── Footer ────────────────────────────────────────────────────
             SliverToBoxAdapter(
@@ -1874,6 +1883,88 @@ class _ComponentShowcaseScreenState
     );
   }
 
+  // ── COACH COMPONENTS ─────────────────────────────────────────────────────
+
+  Widget _buildCoachComponents() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── CoachBlob — all 3 states × 2 sizes ─────────────────────────
+        _label('Blob — Idle / Thinking / Talking (80px)', _colors!),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: const [
+            CoachBlob(state: BlobState.idle, size: 80),
+            SizedBox(width: AppDimens.spaceLg),
+            CoachBlob(state: BlobState.thinking, size: 80),
+            SizedBox(width: AppDimens.spaceLg),
+            CoachBlob(state: BlobState.talking, size: 80),
+          ],
+        ),
+        _gap(),
+        _label('Blob — Idle / Thinking / Talking (28px)', _colors!),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: const [
+            CoachBlob(state: BlobState.idle, size: 28),
+            SizedBox(width: AppDimens.spaceLg),
+            CoachBlob(state: BlobState.thinking, size: 28),
+            SizedBox(width: AppDimens.spaceLg),
+            CoachBlob(state: BlobState.talking, size: 28),
+          ],
+        ),
+        _gap(),
+
+        // ── CoachSuggestionCard ─────────────────────────────────────────
+        _label('Suggestion Card', _colors!),
+        CoachSuggestionCard(
+          icon: Icons.bedtime_rounded,
+          title: 'How did I sleep last night?',
+          subtitle:
+              'Zura will check your recent sleep data and give you a plain summary.',
+          onTap: () {},
+        ),
+        _gap(),
+
+        // ── CoachArtifactCard — all 3 types + divider ───────────────────
+        _label('Artifact Cards', _colors!),
+        const CoachArtifactDivider(),
+        const CoachArtifactCard(
+          type: ArtifactType.memory,
+          description: 'User prefers morning workouts before breakfast.',
+        ),
+        const CoachArtifactCard(
+          type: ArtifactType.journal,
+          description: 'Logged: Felt energised after 7h sleep.',
+        ),
+        const CoachArtifactCard(
+          type: ArtifactType.dataCheck,
+          description:
+              'Read: Steps (8 432), Heart rate (62 bpm), Sleep (7h 12m).',
+        ),
+        _gap(),
+
+        // ── CoachUserMessage ────────────────────────────────────────────
+        _label('User Message Bubble', _colors!),
+        CoachUserMessage(
+          content: 'How did I sleep last night?',
+          onEdit: () {},
+        ),
+        _gap(),
+
+        // ── CoachThinkingLayer ───────────────────────────────────────────
+        _label('Thinking Layer', _colors!),
+        const CoachThinkingLayer(),
+        _gap(),
+
+        // ── CoachGhostBanner ────────────────────────────────────────────
+        _label('Ghost Banner', _colors!),
+        CoachGhostBanner(onExit: () {}),
+        _gap(),
+      ],
+    );
+  }
+
   // SYNC: mirrors _FrostedNavigationBar in app_shell.dart
   Widget _buildNavBarReplica() {
     final colors = _colors!;
@@ -1903,7 +1994,7 @@ class _ComponentShowcaseScreenState
           child: Container(
             height: 64,
             decoration: BoxDecoration(
-              color: colors.surface.withValues(alpha: 0.92),
+              color: colors.surface.withValues(alpha: AppDimens.navBarFrostOpacity),
               borderRadius: BorderRadius.circular(AppDimens.shapePill),
             ),
             child: Row(

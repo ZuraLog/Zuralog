@@ -4,6 +4,8 @@
 /// in the Today tab's adaptive metric grid.
 library;
 
+import 'package:flutter/widgets.dart';
+
 // ── MetricTileData ────────────────────────────────────────────────────────────
 
 /// Data for one pinned metric tile in the Today tab grid.
@@ -15,7 +17,7 @@ class MetricTileData {
   const MetricTileData({
     required this.metricType,
     required this.label,
-    required this.emoji,
+    required this.icon,
     required this.categoryColor,
     this.value,
     this.unit,
@@ -29,8 +31,8 @@ class MetricTileData {
   /// Display label shown below the value (e.g. 'Water', 'Steps').
   final String label;
 
-  /// Emoji representing this metric (e.g. '💧', '👣', '😴').
-  final String emoji;
+  /// Icon representing this metric.
+  final IconData icon;
 
   /// ARGB integer of the category colour (e.g. 0xFF64D2FF for body blue).
   /// Stored as int so this model is pure Dart with no Flutter dependency.
@@ -64,7 +66,7 @@ class MetricTileData {
   MetricTileData copyWith({
     String? metricType,
     String? label,
-    String? emoji,
+    IconData? icon,
     int? categoryColor,
     Object? value = _absent,
     Object? unit = _absent,
@@ -74,7 +76,7 @@ class MetricTileData {
     return MetricTileData(
       metricType: metricType ?? this.metricType,
       label: label ?? this.label,
-      emoji: emoji ?? this.emoji,
+      icon: icon ?? this.icon,
       categoryColor: categoryColor ?? this.categoryColor,
       value: value == _absent ? this.value : value as String?,
       unit: unit == _absent ? this.unit : unit as String?,

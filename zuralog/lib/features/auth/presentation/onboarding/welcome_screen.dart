@@ -41,7 +41,7 @@ class WelcomeSlide {
 
 const List<WelcomeSlide> welcomeSlides = [
   WelcomeSlide(
-    imagePath: 'assets/welcome/placeholder_01.jpg',
+    imagePath: 'assets/welcome/welcome_01.jpg',
     tagline: 'Your health,\none clear picture.',
   ),
   WelcomeSlide(
@@ -545,27 +545,15 @@ class _LegalFooterState extends State<_LegalFooter> {
   void initState() {
     super.initState();
     _tosRecognizer = TapGestureRecognizer()
-      ..onTap = () async {
-        try {
-          await launchUrl(
-            Uri.parse('https://www.zuralog.com/terms'),
+      ..onTap = () => launchUrl(
+            Uri.parse('https://www.zuralog.com/terms-of-service'),
             mode: LaunchMode.externalApplication,
           );
-        } catch (_) {
-          // Silently ignore — do not crash if the URL cannot be opened.
-        }
-      };
     _privacyRecognizer = TapGestureRecognizer()
-      ..onTap = () async {
-        try {
-          await launchUrl(
-            Uri.parse('https://www.zuralog.com/privacy'),
+      ..onTap = () => launchUrl(
+            Uri.parse('https://www.zuralog.com/privacy-policy'),
             mode: LaunchMode.externalApplication,
           );
-        } catch (_) {
-          // Silently ignore — do not crash if the URL cannot be opened.
-        }
-      };
   }
 
   @override

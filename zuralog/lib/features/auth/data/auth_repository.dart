@@ -199,6 +199,37 @@ class AuthRepository {
     }
   }
 
+  /// Sets a new password using a recovery access token from the reset link.
+  ///
+  /// Calls `POST /api/v1/auth/set-password` with the new password, passing
+  /// the recovery [accessToken] directly in the Authorization header instead
+  /// of the stored auth token — the user is not yet logged in.
+  ///
+  /// Args:
+  ///   [accessToken]: The short-lived recovery token from the deep link URL.
+  ///   [newPassword]: The new password to set for the account.
+  ///
+  /// Returns:
+  ///   [AuthSuccess] (with empty token fields) on success.
+  ///   [AuthFailure] with error message on failure.
+  Future<AuthResult> setNewPassword({
+    required String accessToken,
+    required String newPassword,
+  }) async {
+    try {
+      await _apiClient.post(
+        '/api/v1/auth/set-password',
+        data: {'new_password': newPassword},
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken'},
+        ),
+      );
+      return const AuthSuccess(userId: '', accessToken: '', refreshToken: '');
+    } on DioException catch (e) {
+      return AuthFailure(message: _extractErrorMessage(e));
+    }
+  }
+
   /// Permanently deletes the current user's account.
   ///
   /// Calls `DELETE /api/v1/users/me` which removes all user data from every

@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -28,79 +29,42 @@ class SubscriptionSettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isPro = ref.watch(_isProProvider);
-    final colors = AppColorsOf(context);
 
     return ZuralogScaffold(
-      body: CustomScrollView(
-        slivers: [
-          // ── Large-title app bar ─────────────────────────────────────────────
-          SliverAppBar(
-            expandedHeight: 100,
-            pinned: true,
-            elevation: 0,
-            scrolledUnderElevation: 0,
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(
-                left: AppDimens.spaceMd,
-                bottom: 14,
-              ),
-              collapseMode: CollapseMode.parallax,
-              title: Text(
-                'Subscription',
-                style:
-                    AppTextStyles.displaySmall.copyWith(color: colors.textPrimary),
-              ),
+      appBar: const ZuralogAppBar(title: 'Subscription', showProfileAvatar: false),
+      body: ListView(
+        children: [
+          const SettingsSectionLabel('Current Plan'),
+          _CurrentPlanCard(isPro: isPro),
+
+          if (!isPro) ...[
+            const SettingsSectionLabel('Upgrade'),
+            _UpgradeCard(
+              onUpgradeTap: () => _showSnackBar(context, 'Redirecting to payment\u2026'),
             ),
-          ),
+          ],
 
-          SliverList(
-            delegate: SliverChildListDelegate([
-              // ── CURRENT PLAN section ────────────────────────────────────────
-              const _SectionHeader('CURRENT PLAN'),
-              _CurrentPlanCard(isPro: isPro),
-
-              // ── UPGRADE section ─────────────────────────────────────────────
-              if (!isPro) ...[
-                const _SectionHeader('UPGRADE'),
-                _UpgradeCard(
-                  onUpgradeTap: () => _showSnackBar(
-                    context,
-                    'Redirecting to payment\u2026',
-                  ),
-                ),
-              ],
-
-              // ── MANAGE section ──────────────────────────────────────────────
-              const _SectionHeader('MANAGE'),
-              _SettingsGroup(
-                children: [
-                  ZSettingsTile(
-                    icon: Icons.restore_rounded,
-                    iconColor: AppColors.categoryActivity,
-                    title: 'Restore Purchases',
-                    subtitle: 'Already purchased? Restore your subscription',
-                    onTap: () => _showSnackBar(
-                      context,
-                      'Checking your purchases\u2026',
-                    ),
-                  ),
-                  const _Divider(),
-                  ZSettingsTile(
-                    icon: Icons.receipt_rounded,
-                    iconColor: AppColors.categoryVitals,
-                    title: 'Billing History',
-                    subtitle: 'View past invoices and receipts',
-                    onTap: () => _showSnackBar(
-                      context,
-                      'Loading billing history\u2026',
-                    ),
-                  ),
-                ],
+          const SettingsSectionLabel('Manage'),
+          ZSettingsGroup(
+            tiles: [
+              ZSettingsTile(
+                icon: Icons.restore_rounded,
+                iconColor: AppColors.categoryActivity,
+                title: 'Restore Purchases',
+                subtitle: 'Already purchased? Restore your subscription',
+                onTap: () => _showSnackBar(context, 'Checking your purchases\u2026'),
               ),
-
-              const SizedBox(height: AppDimens.spaceXxl),
-            ]),
+              ZSettingsTile(
+                icon: Icons.receipt_rounded,
+                iconColor: AppColors.categoryVitals,
+                title: 'Billing History',
+                subtitle: 'View past invoices and receipts',
+                onTap: () => _showSnackBar(context, 'Loading billing history\u2026'),
+              ),
+            ],
           ),
+
+          const SizedBox(height: AppDimens.spaceXxl),
         ],
       ),
     );
@@ -121,7 +85,7 @@ class _CurrentPlanCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -134,7 +98,7 @@ class _CurrentPlanCard extends StatelessWidget {
                 _PlanBadge(isPro: isPro),
                 const SizedBox(width: AppDimens.spaceSm),
                 Text(
-                  isPro ? 'Zuralog Pro' : 'Zuralog Free',
+                  isPro ? 'ZuraLog Pro' : 'ZuraLog Free',
                   style: AppTextStyles.titleMedium
                       .copyWith(color: colors.textPrimary),
                 ),
@@ -167,7 +131,7 @@ class _CurrentPlanCard extends StatelessWidget {
             Text(
               'Free forever \u2014 no credit card required',
               style: AppTextStyles.bodySmall
-                  .copyWith(color: AppColors.textTertiary),
+                  .copyWith(color: colors.textTertiary),
             ),
           ],
         ),
@@ -189,7 +153,7 @@ class _PlanBadge extends StatelessWidget {
     final backgroundColor = isPro
         ? colors.primary.withValues(alpha: 0.2)
         : colors.border.withValues(alpha: 0.6);
-    final textColor = isPro ? colors.primary : AppColors.textTertiary;
+    final textColor = isPro ? colors.primary : colors.textTertiary;
     final label = isPro ? 'Pro' : 'Free';
 
     return Container(
@@ -239,7 +203,7 @@ class _FeatureItem extends StatelessWidget {
           label,
           style: AppTextStyles.bodyMedium.copyWith(
             color: dimmed
-                ? AppColors.textTertiary
+                ? colors.textTertiary
                 : colors.textPrimary,
           ),
         ),
@@ -269,7 +233,7 @@ class _UpgradeCard extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -287,7 +251,7 @@ class _UpgradeCard extends ConsumerWidget {
                 ),
                 const SizedBox(width: AppDimens.spaceSm),
                 Text(
-                  'Zuralog Pro',
+                  'ZuraLog Pro',
                   style: AppTextStyles.titleMedium
                       .copyWith(color: colors.textPrimary),
                 ),
@@ -337,27 +301,9 @@ class _UpgradeCard extends ConsumerWidget {
             const SizedBox(height: AppDimens.spaceLg),
 
             // CTA button
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: onUpgradeTap,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.primaryButtonText,
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppDimens.radiusButtonMd),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppDimens.spaceMd,
-                  ),
-                ),
-                child: Text(
-                  'Upgrade to Pro',
-                  style: AppTextStyles.titleMedium
-                      .copyWith(color: AppColors.primaryButtonText),
-                ),
-              ),
+            ZButton(
+              label: 'Upgrade to Pro',
+              onPressed: onUpgradeTap,
             ),
             const SizedBox(height: AppDimens.spaceSm),
 
@@ -366,79 +312,10 @@ class _UpgradeCard extends ConsumerWidget {
               child: Text(
                 'Cancel anytime',
                 style: AppTextStyles.bodySmall
-                    .copyWith(color: AppColors.textTertiary),
+                    .copyWith(color: colors.textTertiary),
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── _SettingsGroup ─────────────────────────────────────────────────────────────
-
-class _SettingsGroup extends StatelessWidget {
-  const _SettingsGroup({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-      child: Container(
-        decoration: BoxDecoration(
-          color: colors.cardBackground,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        ),
-        child: Column(children: children),
-      ),
-    );
-  }
-}
-
-// ── _Divider ───────────────────────────────────────────────────────────────────
-
-class _Divider extends StatelessWidget {
-  const _Divider();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.only(left: 68),
-      child: Container(
-        height: 1,
-        color: colors.border.withValues(alpha: 0.5),
-      ),
-    );
-  }
-}
-
-// ── _SectionHeader ─────────────────────────────────────────────────────────────
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceLg,
-        AppDimens.spaceMd,
-        AppDimens.spaceXs,
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.labelSmall.copyWith(
-          color: AppColors.textTertiary,
-          letterSpacing: 0.8,
-          fontWeight: FontWeight.w600,
         ),
       ),
     );

@@ -10,7 +10,6 @@ import 'package:zuralog/shared/widgets/widgets.dart';
 
 const _kBodyAreas = ['Head', 'Stomach', 'Back', 'Chest', 'Throat', 'Joints', 'Muscles', 'Skin', 'General'];
 const _kSymptomTypes = ['Pain', 'Ache', 'Nausea', 'Fatigue', 'Bloating', 'Soreness', 'Dizziness', 'Other'];
-const _kSeverityEmojis = ['😌', '😣', '😩', '🤕'];
 const _kSeverityLabels = ['Mild', 'Moderate', 'Bad', 'Severe'];
 const _kSeverityValues = ['mild', 'moderate', 'bad', 'severe'];
 const _kTimingChips = ['Just now', 'This morning', 'Yesterday', 'A few days ago'];
@@ -82,10 +81,10 @@ class _SymptomLogScreenState extends ConsumerState<SymptomLogScreen> {
                 Wrap(
                   spacing: AppDimens.spaceSm,
                   runSpacing: AppDimens.spaceSm,
-                  children: _kBodyAreas.map((a) => FilterChip(
-                    label: Text(a),
-                    selected: _bodyAreas.contains(a),
-                    onSelected: (_) => setState(() {
+                  children: _kBodyAreas.map((a) => ZChip(
+                    label: a,
+                    isActive: _bodyAreas.contains(a),
+                    onTap: () => setState(() {
                       if (_bodyAreas.contains(a)) { _bodyAreas.remove(a); } else { _bodyAreas.add(a); }
                     }),
                   )).toList(),
@@ -96,29 +95,23 @@ class _SymptomLogScreenState extends ConsumerState<SymptomLogScreen> {
                 Wrap(
                   spacing: AppDimens.spaceSm,
                   runSpacing: AppDimens.spaceSm,
-                  children: _kSymptomTypes.map((t) => ChoiceChip(
-                    label: Text(t),
-                    selected: _symptomType == t,
-                    onSelected: (_) => setState(() => _symptomType = _symptomType == t ? null : t),
+                  children: _kSymptomTypes.map((t) => ZChip(
+                    label: t,
+                    isActive: _symptomType == t,
+                    onTap: () => setState(() => _symptomType = _symptomType == t ? null : t),
                   )).toList(),
                 ),
                 const SizedBox(height: AppDimens.spaceLg),
                 const ZSectionLabel(label: 'Severity'),
                 const SizedBox(height: AppDimens.spaceSm),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: List.generate(4, (i) {
-                    final selected = _severityIndex == i;
-                    return GestureDetector(
-                      onTap: () => setState(() => _severityIndex = i),
-                      child: Column(
-                        children: [
-                          Text(_kSeverityEmojis[i], style: TextStyle(fontSize: selected ? 36 : 28)),
-                          Text(_kSeverityLabels[i], style: const TextStyle(fontSize: 11)),
-                        ],
-                      ),
-                    );
-                  }),
+                Wrap(
+                  spacing: AppDimens.spaceSm,
+                  runSpacing: AppDimens.spaceSm,
+                  children: List.generate(_kSeverityLabels.length, (i) => ZChip(
+                    label: _kSeverityLabels[i],
+                    isActive: _severityIndex == i,
+                    onTap: () => setState(() => _severityIndex = _severityIndex == i ? null : i),
+                  )),
                 ),
                 const SizedBox(height: AppDimens.spaceLg),
                 ZSectionLabel(label: 'When did it start?', isOptional: true),
@@ -126,25 +119,29 @@ class _SymptomLogScreenState extends ConsumerState<SymptomLogScreen> {
                 Wrap(
                   spacing: AppDimens.spaceSm,
                   runSpacing: AppDimens.spaceSm,
-                  children: _kTimingChips.map((t) => ChoiceChip(
-                    label: Text(t),
-                    selected: _timing == t,
-                    onSelected: (_) => setState(() => _timing = _timing == t ? null : t),
+                  children: _kTimingChips.map((t) => ZChip(
+                    label: t,
+                    isActive: _timing == t,
+                    onTap: () => setState(() => _timing = _timing == t ? null : t),
                   )).toList(),
                 ),
                 const SizedBox(height: AppDimens.spaceLg),
                 ZSectionLabel(label: 'Describe it', isOptional: true),
                 const SizedBox(height: AppDimens.spaceSm),
-                TextField(controller: _notesCtrl, maxLength: 500, decoration: const InputDecoration(hintText: 'Anything to note?')),
+                ZTextArea(
+                  controller: _notesCtrl,
+                  placeholder: 'Anything to note?',
+                  maxLength: 500,
+                ),
               ],
             ),
           ),
           Container(
             padding: EdgeInsets.fromLTRB(AppDimens.spaceMd, AppDimens.spaceSm, AppDimens.spaceMd, AppDimens.spaceSm + bottomPad),
-            child: FilledButton(
+            child: ZButton(
+              label: 'Save Symptom',
               onPressed: _canSave ? _save : null,
-              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-              child: _isSaving ? const CircularProgressIndicator.adaptive() : const Text('Save Symptom'),
+              isLoading: _isSaving,
             ),
           ),
         ],

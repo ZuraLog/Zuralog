@@ -29,6 +29,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
+import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 
 // ── Local provider ─────────────────────────────────────────────────────────────
@@ -234,12 +235,12 @@ class _NotificationSettingsScreenState
         );
 
     return ZuralogScaffold(
-      appBar: ZuralogAppBar(title: 'Notifications'),
+      appBar: ZuralogAppBar(title: 'Notifications', showProfileAvatar: false),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
         children: [
           // ── Morning Briefing ───────────────────────────────────────────
-          _SectionLabel('Morning Briefing'),
+          SettingsSectionLabel('Morning Briefing'),
           _SettingsCard(
             children: [
               _ToggleRow(
@@ -256,7 +257,7 @@ class _NotificationSettingsScreenState
                 },
               ),
               if (state.morningBriefingEnabled) ...[
-                _Divider(),
+                const ZDivider(indent: 68),
                 _TimePickerRow(
                   icon: Icons.access_time_rounded,
                   iconColor: AppColors.categoryNutrition,
@@ -273,7 +274,7 @@ class _NotificationSettingsScreenState
           ),
 
           // ── Smart Reminders ────────────────────────────────────────────
-          _SectionLabel('Smart Reminders'),
+          SettingsSectionLabel('Smart Reminders'),
           _SettingsCard(
             children: [
               _ToggleRow(
@@ -290,7 +291,7 @@ class _NotificationSettingsScreenState
                 },
               ),
               if (state.smartRemindersEnabled) ...[
-                _Divider(),
+                const ZDivider(indent: 68),
                 _SubToggleRow(
                   title: 'Pattern-based',
                   subtitle: 'Reminders based on your behavior history',
@@ -302,7 +303,7 @@ class _NotificationSettingsScreenState
                       trackToggle('pattern_reminders', v);
                     },
                 ),
-                _Divider(),
+                const ZDivider(indent: 68),
                 _SubToggleRow(
                   title: 'Data gaps',
                   subtitle: 'Remind when expected data is missing',
@@ -314,7 +315,7 @@ class _NotificationSettingsScreenState
                       trackToggle('gap_reminders', v);
                     },
                 ),
-                _Divider(),
+                const ZDivider(indent: 68),
                 _SubToggleRow(
                   title: 'Goal progress',
                   subtitle: 'Nudges when you\'re close to your goals',
@@ -326,7 +327,7 @@ class _NotificationSettingsScreenState
                       trackToggle('goal_reminders', v);
                     },
                 ),
-                _Divider(),
+                const ZDivider(indent: 68),
                 _SubToggleRow(
                   title: 'Celebrations',
                   subtitle: 'Positive milestones and personal bests',
@@ -339,7 +340,7 @@ class _NotificationSettingsScreenState
                       trackToggle('celebration_reminders', v);
                     },
                 ),
-                _Divider(),
+                const ZDivider(indent: 68),
                 _FrequencyRow(
                   value: state.reminderFrequency,
                   onChanged: (v) {
@@ -359,7 +360,7 @@ class _NotificationSettingsScreenState
           ),
 
           // ── Activity Notifications ────────────────────────────────────
-          _SectionLabel('Activity Notifications'),
+          SettingsSectionLabel('Activity Notifications'),
           _SettingsCard(
             children: [
               _ToggleRow(
@@ -375,7 +376,7 @@ class _NotificationSettingsScreenState
                   trackToggle('streak_reminders', v);
                 },
               ),
-              _Divider(),
+              const ZDivider(indent: 68),
               _ToggleRow(
                 icon: Icons.emoji_events_rounded,
                 iconColor: AppColors.categoryNutrition,
@@ -390,7 +391,7 @@ class _NotificationSettingsScreenState
                   trackToggle('achievement_notifications', v);
                 },
               ),
-              _Divider(),
+              const ZDivider(indent: 68),
               _ToggleRow(
                 icon: Icons.warning_amber_rounded,
                 iconColor: AppColors.statusConnecting,
@@ -404,7 +405,7 @@ class _NotificationSettingsScreenState
                   trackToggle('anomaly_alerts', v);
                 },
               ),
-              _Divider(),
+              const ZDivider(indent: 68),
               _ToggleRow(
                 icon: Icons.sync_problem_rounded,
                 iconColor: AppColors.categoryBody,
@@ -422,7 +423,7 @@ class _NotificationSettingsScreenState
           ),
 
           // ── Wellness Check-in ─────────────────────────────────────────
-          _SectionLabel('Wellness Check-in'),
+          SettingsSectionLabel('Wellness Check-in'),
           _SettingsCard(
             children: [
               _ToggleRow(
@@ -439,7 +440,7 @@ class _NotificationSettingsScreenState
                 },
               ),
               if (state.wellnessCheckinEnabled) ...[
-                _Divider(),
+                const ZDivider(indent: 68),
                 _TimePickerRow(
                   icon: Icons.access_time_rounded,
                   iconColor: AppColors.categoryWellness,
@@ -456,7 +457,7 @@ class _NotificationSettingsScreenState
           ),
 
           // ── Quiet Hours ───────────────────────────────────────────────
-          _SectionLabel('Quiet Hours'),
+          SettingsSectionLabel('Quiet Hours'),
           _SettingsCard(
             children: [
               _ToggleRow(
@@ -473,7 +474,7 @@ class _NotificationSettingsScreenState
                 },
               ),
               if (state.quietHoursEnabled) ...[
-                _Divider(),
+                const ZDivider(indent: 68),
                 _TimePickerRow(
                   icon: Icons.bedtime_rounded,
                   iconColor: AppColors.categorySleep,
@@ -485,7 +486,7 @@ class _NotificationSettingsScreenState
                     _persist(updated);
                   },
                 ),
-                _Divider(),
+                const ZDivider(indent: 68),
                 _TimePickerRow(
                   icon: Icons.wb_twilight_rounded,
                   iconColor: AppColors.categorySleep,
@@ -510,32 +511,6 @@ class _NotificationSettingsScreenState
 
 // ── Shared sub-widgets ────────────────────────────────────────────────────────
 
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceLg,
-        AppDimens.spaceMd,
-        AppDimens.spaceXs,
-      ),
-      child: Text(
-        label.toUpperCase(),
-        style: AppTextStyles.labelSmall.copyWith(
-          color: AppColors.textTertiary,
-          letterSpacing: 0.8,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
-
 class _SettingsCard extends StatelessWidget {
   const _SettingsCard({required this.children});
 
@@ -548,26 +523,10 @@ class _SettingsCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(children: children),
-      ),
-    );
-  }
-}
-
-class _Divider extends StatelessWidget {
-  const _Divider();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.only(left: 68),
-      child: Container(
-        height: 1,
-        color: colors.border.withValues(alpha: 0.5),
       ),
     );
   }
@@ -622,12 +581,9 @@ class _ToggleRow extends StatelessWidget {
               ],
             ),
           ),
-          Switch(
+          ZToggle(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: colors.primary,
-            inactiveThumbColor: AppColors.textTertiary,
-            inactiveTrackColor: colors.border,
           ),
         ],
       ),
@@ -680,12 +636,9 @@ class _SubToggleRow extends StatelessWidget {
               ],
             ),
           ),
-          Switch(
+          ZToggle(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: colors.primary,
-            inactiveThumbColor: AppColors.textTertiary,
-            inactiveTrackColor: colors.border,
           ),
         ],
       ),
@@ -715,76 +668,12 @@ class _FrequencyRow extends StatelessWidget {
             style: AppTextStyles.bodyLarge.copyWith(color: colors.textPrimary),
           ),
           const SizedBox(height: AppDimens.spaceSm),
-          Row(
-            children: [
-              _FrequencyChip(
-                label: 'Low\n1/day',
-                selected: value == 1,
-                onTap: () => onChanged(1),
-              ),
-              const SizedBox(width: AppDimens.spaceSm),
-              _FrequencyChip(
-                label: 'Medium\n2/day',
-                selected: value == 2,
-                onTap: () => onChanged(2),
-              ),
-              const SizedBox(width: AppDimens.spaceSm),
-              _FrequencyChip(
-                label: 'High\n3/day',
-                selected: value == 3,
-                onTap: () => onChanged(3),
-              ),
-            ],
+          ZSegmentedControl(
+            selectedIndex: value - 1,
+            segments: const ['Low (1/day)', 'Medium (2/day)', 'High (3/day)'],
+            onChanged: (i) => onChanged(i + 1),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _FrequencyChip extends StatelessWidget {
-  const _FrequencyChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(
-            vertical: AppDimens.spaceSm,
-            horizontal: AppDimens.spaceSm,
-          ),
-          decoration: BoxDecoration(
-            color: selected
-                ? colors.primary.withValues(alpha: 0.15)
-                : colors.surface,
-            borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-            border: Border.all(
-              color: selected
-                  ? colors.primary.withValues(alpha: 0.6)
-                  : Colors.transparent,
-            ),
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: selected ? colors.primary : colors.textSecondary,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -815,9 +704,9 @@ class _TimePickerRow extends StatelessWidget {
           context: context,
           initialTime: time,
           builder: (context, child) => Theme(
-            data: ThemeData.dark().copyWith(
-              colorScheme: const ColorScheme.dark(
-                primary: AppColors.primary,
+            data: Theme.of(context).copyWith(
+              colorScheme: Theme.of(context).colorScheme.copyWith(
+                primary: AppColorsOf(context).primary,
                 onPrimary: AppColors.primaryButtonText,
               ),
             ),

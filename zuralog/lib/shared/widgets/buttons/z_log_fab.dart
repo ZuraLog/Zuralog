@@ -8,6 +8,7 @@ library;
 import 'package:flutter/material.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/shared/widgets/buttons/spring_button.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 
 /// Floating action button for opening the log grid sheet.
@@ -26,8 +27,9 @@ class ZLogFab extends StatelessWidget {
     return Semantics(
       button: true,
       label: 'Log new entry',
-      child: GestureDetector(
+      child: ZuralogSpringButton(
         onTap: onPressed,
+        scaleTarget: 0.90,
         child: Container(
           width: 56,
           height: 56,
@@ -48,8 +50,14 @@ class ZLogFab extends StatelessWidget {
               children: [
                 // Sage fill (already the container background)
                 const SizedBox.expand(),
-                // Pattern overlay
-                const Positioned.fill(
+                // Pattern overlay — extended horizontally so BoxFit.cover
+                // creates vertical overflow, giving the alignment drift room
+                // to produce visible movement. ClipOval handles the clipping.
+                Positioned(
+                  left: -32,
+                  right: -32,
+                  top: 0,
+                  bottom: 0,
                   child: ZPatternOverlay(
                     variant: ZPatternVariant.sage,
                     opacity: 0.5,

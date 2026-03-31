@@ -11,7 +11,7 @@ import 'package:zuralog/features/data/presentation/widgets/metric_tile.dart'
 const _litTile = MetricTileData(
   metricType: 'water',
   label: 'Water',
-  emoji: '💧',
+  icon: Icons.water_drop_rounded,
   categoryColor: 0xFF64D2FF,
   value: '2.1L',
 );
@@ -19,17 +19,17 @@ const _litTile = MetricTileData(
 const _greyTile = MetricTileData(
   metricType: 'steps',
   label: 'Steps',
-  emoji: '👣',
+  icon: Icons.directions_walk_rounded,
   categoryColor: 0xFF30D158,
 );
 
 void main() {
   group('MetricTile — lit state', () {
-    testWidgets('shows the emoji', (tester) async {
+    testWidgets('shows the icon', (tester) async {
       await tester.pumpWidget(
         MaterialApp(home: Scaffold(body: MetricTile(data: _litTile))),
       );
-      expect(find.text('💧'), findsOneWidget);
+      expect(find.byIcon(Icons.water_drop_rounded), findsOneWidget);
     });
 
     testWidgets('shows the value when lit', (tester) async {

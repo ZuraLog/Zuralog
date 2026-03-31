@@ -27,7 +27,7 @@ import 'package:zuralog/core/speech/speech_state.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
-import 'package:zuralog/features/coach/presentation/widgets/attachment_picker_sheet.dart';
+import 'package:zuralog/features/coach/presentation/widgets/coach_attachment_panel.dart';
 import 'package:zuralog/features/coach/presentation/widgets/attachment_preview_bar.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
@@ -43,6 +43,9 @@ class CoachInputBar extends ConsumerStatefulWidget {
     this.conversationId,
     this.isSending = false,
     this.attachmentCountNotifier,
+    this.placeholder = 'Message Zura…',
+    this.isFloating = false,
+    this.isGhost = false,
   });
 
   final TextEditingController controller;
@@ -72,6 +75,26 @@ class CoachInputBar extends ConsumerStatefulWidget {
   /// When provided, updated with the current number of staged attachments
   /// after every add/remove so the parent can warn before quick actions.
   final ValueNotifier<int>? attachmentCountNotifier;
+
+  /// The hint text shown inside the text field when it is empty.
+  ///
+  /// Defaults to `'Message Zura…'`. Pass a different string to match the
+  /// current conversation context (idle, active, ghost mode, etc.).
+  final String placeholder;
+
+  /// When true, the input bar renders without a top border or background color
+  /// so it can be wrapped inside a [_FrostedInputPill] that provides its own
+  /// frosted-glass decoration.
+  ///
+  /// Bottom padding is reduced to [AppDimens.spaceSm] (the pill handles
+  /// its own vertical positioning). Defaults to false.
+  final bool isFloating;
+
+  /// When true, the attachment panel shows a ghost-mode info banner instead of
+  /// the file/camera/gallery pickers, since ghost sessions cannot upload files.
+  ///
+  /// Defaults to false.
+  final bool isGhost;
 
   /// Maximum allowed message length.
   static const int maxLength = 4000;
@@ -228,12 +251,14 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
     final colors = AppColorsOf(context);
 
     return Container(
-      decoration: BoxDecoration(
-        color: colors.background,
-        border: Border(
-          top: BorderSide(color: colors.border, width: 0.5),
-        ),
-      ),
+      decoration: widget.isFloating
+          ? const BoxDecoration()
+          : BoxDecoration(
+              color: colors.background,
+              border: Border(
+                top: BorderSide(color: colors.border, width: 0.5),
+              ),
+            ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -251,10 +276,14 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
               AppDimens.spaceMd,
               AppDimens.spaceSm,
               AppDimens.spaceMd,
-              MediaQuery.of(context).padding.bottom,
+              widget.isFloating
+                  ? AppDimens.spaceSm
+                  : MediaQuery.of(context).padding.bottom,
             ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: widget.isFloating
+                  ? CrossAxisAlignment.center
+                  : CrossAxisAlignment.end,
               children: [
                 // Attachment
                 _InputIcon(
@@ -274,11 +303,12 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
                       backgroundColor: Colors.transparent,
                       isScrollControlled: true,
                       useSafeArea: true,
-                      builder: (_) => AttachmentPickerSheet(
+                      builder: (_) => CoachAttachmentPanel(
                         onAttachment: (a) => setState(() {
                           _attachments.add(a);
                           _updateAttachmentCount();
                         }),
+                        isGhost: widget.isGhost,
                       ),
                     );
                   },
@@ -302,7 +332,7 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
                       maxLengthEnforcement: MaxLengthEnforcement.enforced,
                       style: AppTextStyles.bodyLarge,
                       decoration: InputDecoration(
-                        hintText: 'Message your coach…',
+                        hintText: widget.placeholder,
                         hintStyle: AppTextStyles.bodyLarge
                             .copyWith(color: colors.textTertiary),
                         border: InputBorder.none,

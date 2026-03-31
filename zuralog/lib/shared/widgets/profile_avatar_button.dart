@@ -1,8 +1,7 @@
 /// Zuralog — Profile Avatar Button.
 ///
 /// A reusable [ConsumerWidget] that renders the current user's profile initial
-/// inside a circular avatar matching the side panel header avatar.  Tapping
-/// opens the [ProfileSidePanelWidget] via [sidePanelOpenProvider].
+/// inside a circular avatar. Tapping navigates to the Settings hub.
 ///
 /// Use this widget in every screen's app bar to give the user a consistent,
 /// identifiable shortcut to their profile and the side panel — regardless of
@@ -15,18 +14,17 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import 'package:zuralog/core/state/side_panel_provider.dart';
+import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 
 // ── ProfileAvatarButton ───────────────────────────────────────────────────────
 
-/// A circular avatar button that opens the profile side panel on tap.
+/// A circular avatar button that navigates to the Settings hub on tap.
 ///
-/// The avatar displays the first letter of the signed-in user's display name,
-/// using the same colour and size as the avatar inside [ProfileSidePanelWidget],
-/// so the two always look identical to the user.
+/// The avatar displays the first letter of the signed-in user's display name.
 ///
 /// Typically used via [ZuralogAppBar], which appends this widget
 /// automatically as the last action on every screen:
@@ -48,10 +46,7 @@ class ProfileAvatarButton extends ConsumerWidget {
     final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : '';
 
     return GestureDetector(
-      onTap: () {
-        ref.read(sidePanelVisibleProvider.notifier).state = true;
-        ref.read(sidePanelOpenProvider.notifier).state = true;
-      },
+      onTap: () => context.pushNamed(RouteNames.settings),
       // opaque so the full avatar hit-box registers taps even when the
       // CircleAvatar child has transparent pixels around its edges.
       behavior: HitTestBehavior.opaque,

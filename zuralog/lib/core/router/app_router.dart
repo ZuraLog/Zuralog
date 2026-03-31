@@ -13,8 +13,7 @@
  ///   /data/category/:id              → CategoryDetailScreen
  ///   /data/metric/:id                → MetricDetailScreen
  ///   /data/score-breakdown           → ScoreBreakdownScreen
-/// /coach                            → NewChatScreen (tab 2)
-///   /coach/thread/:id               → ChatThreadScreen
+/// /coach                            → CoachScreen (tab 2)
 /// /progress                         → ProgressHomeScreen (tab 3)
 ///   /progress/goals                 → GoalsScreen
 ///   /progress/goals/:id             → GoalDetailScreen
@@ -23,7 +22,7 @@
 ///   /progress/journal               → JournalScreen
 ///   /progress/journal/diary         → JournalDiaryScreen
 /// /trends                           → TrendsHomeScreen (tab 4)
-/// /settings                         → SettingsHubScreen (pushed over shell)
+/// /settings                         → SettingsHubScreen (pushed over shell — full-screen)
 ///   /settings/journal               → JournalSettingsScreen
 ///   /settings/account … /settings/about  → sub-screens
 /// /profile                          → ProfileScreen (pushed over shell)
@@ -50,10 +49,10 @@ import 'package:zuralog/features/auth/presentation/auth/login_screen.dart';
 import 'package:zuralog/features/auth/presentation/auth/register_screen.dart';
 import 'package:zuralog/features/auth/presentation/auth/forgot_password_screen.dart';
 import 'package:zuralog/features/auth/presentation/auth/check_inbox_screen.dart';
+import 'package:zuralog/features/auth/presentation/auth/reset_password_screen.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/onboarding_page_view.dart';
 import 'package:zuralog/features/onboarding/presentation/onboarding_flow_screen.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/welcome_screen.dart';
-import 'package:zuralog/features/catalog/catalog_screen.dart';
 import 'package:zuralog/features/dev/component_showcase_screen.dart';
 import 'package:zuralog/core/router/auth_guard.dart';
 import 'package:zuralog/core/router/route_names.dart';
@@ -76,8 +75,7 @@ import 'package:zuralog/features/data/presentation/metric_detail_screen.dart' as
 import 'package:zuralog/features/data/presentation/score_breakdown_screen.dart' as data_score;
 
 // ── Tab 2: Coach ──────────────────────────────────────────────────────────────
-import 'package:zuralog/features/coach/presentation/new_chat_screen.dart';
-import 'package:zuralog/features/coach/presentation/chat_thread_screen.dart';
+import 'package:zuralog/features/coach/presentation/coach_screen.dart';
 
 // ── Tab 3: Progress ───────────────────────────────────────────────────────────
 import 'package:zuralog/features/progress/presentation/progress_home_screen.dart';
@@ -91,7 +89,7 @@ import 'package:zuralog/features/progress/presentation/journal_diary_screen.dart
 // ── Tab 4: Trends ─────────────────────────────────────────────────────────────
 import 'package:zuralog/features/trends/presentation/trends_home_screen.dart';
 
-// ── Settings (pushed over shell) ──────────────────────────────────────────────
+// ── Tab 5: Settings ───────────────────────────────────────────────────────────
 import 'package:zuralog/features/settings/presentation/settings_hub_screen.dart';
 import 'package:zuralog/features/settings/presentation/account_settings_screen.dart';
 import 'package:zuralog/features/settings/presentation/notification_settings_screen.dart';
@@ -103,8 +101,6 @@ import 'package:zuralog/features/settings/presentation/privacy_data_screen.dart'
 import 'package:zuralog/features/settings/presentation/subscription_settings_screen.dart';
 import 'package:zuralog/features/settings/presentation/about_screen.dart';
 import 'package:zuralog/features/settings/presentation/edit_profile_screen.dart';
-import 'package:zuralog/features/settings/presentation/privacy_policy_screen.dart';
-import 'package:zuralog/features/settings/presentation/terms_of_service_screen.dart';
 
 // ── Profile (pushed over shell) ───────────────────────────────────────────────
 import 'package:zuralog/features/profile/presentation/profile_screen.dart';
@@ -250,122 +246,20 @@ List<RouteBase> _buildRoutes() {
       ),
     ),
     GoRoute(
+      path: RouteNames.resetPasswordPath,
+      name: RouteNames.resetPassword,
+      builder: (context, state) => const SentryErrorBoundary(
+        module: 'resetPassword',
+        child: ResetPasswordScreen(),
+      ),
+    ),
+    GoRoute(
       path: RouteNames.profileQuestionnairePath,
       name: RouteNames.profileQuestionnaire,
       builder: (context, state) => const SentryErrorBoundary(
         module: 'auth.profile_questionnaire',
         child: OnboardingFlowScreen(),
       ),
-    ),
-
-    // ── Settings (pushed over shell — nested sub-routes) ──────────────────
-    GoRoute(
-      path: RouteNames.settingsPath,
-      name: RouteNames.settings,
-      builder: (context, state) => const SentryErrorBoundary(
-        module: 'settings',
-        child: SettingsHubScreen(),
-      ),
-      routes: [
-        GoRoute(
-          path: 'account',
-          name: RouteNames.settingsAccount,
-          builder: (context, state) => const SentryErrorBoundary(
-            module: 'settings.account',
-            child: AccountSettingsScreen(),
-          ),
-          routes: [
-            GoRoute(
-              path: 'edit-profile',
-              name: RouteNames.editProfile,
-              builder: (context, state) => const SentryErrorBoundary(
-                module: 'settings.account.editProfile',
-                child: EditProfileScreen(),
-              ),
-            ),
-          ],
-        ),
-        GoRoute(
-          path: 'notifications',
-          name: RouteNames.settingsNotifications,
-          builder: (context, state) => const SentryErrorBoundary(
-            module: 'settings.notifications',
-            child: NotificationSettingsScreen(),
-          ),
-        ),
-        GoRoute(
-          path: 'appearance',
-          name: RouteNames.settingsAppearance,
-          builder: (context, state) => const SentryErrorBoundary(
-            module: 'settings.appearance',
-            child: AppearanceSettingsScreen(),
-          ),
-        ),
-        GoRoute(
-          path: 'coach',
-          name: RouteNames.settingsCoach,
-          builder: (context, state) => const SentryErrorBoundary(
-            module: 'settings.coach',
-            child: CoachSettingsScreen(),
-          ),
-        ),
-        GoRoute(
-          path: 'journal',
-          name: RouteNames.settingsJournal,
-          builder: (context, state) => const SentryErrorBoundary(
-            module: 'settings.journal',
-            child: JournalSettingsScreen(),
-          ),
-        ),
-        GoRoute(
-          path: 'integrations',
-          name: RouteNames.settingsIntegrations,
-          builder: (context, state) => const SentryErrorBoundary(
-            module: 'settings.integrations',
-            child: IntegrationsScreen(),
-          ),
-        ),
-        GoRoute(
-          path: 'privacy',
-          name: RouteNames.settingsPrivacy,
-          builder: (context, state) => const SentryErrorBoundary(
-            module: 'settings.privacy',
-            child: PrivacyDataScreen(),
-          ),
-        ),
-        GoRoute(
-          path: 'subscription',
-          name: RouteNames.settingsSubscription,
-          builder: (context, state) => const SentryErrorBoundary(
-            module: 'settings.subscription',
-            child: SubscriptionSettingsScreen(),
-          ),
-        ),
-        GoRoute(
-          path: 'about',
-          name: RouteNames.settingsAbout,
-          builder: (context, state) => const SentryErrorBoundary(
-            module: 'settings.about',
-            child: AboutScreen(),
-          ),
-        ),
-        GoRoute(
-          path: 'privacy-policy',
-          name: RouteNames.settingsPrivacyPolicy,
-          builder: (context, state) => const SentryErrorBoundary(
-            module: 'settings.privacy_policy',
-            child: PrivacyPolicyScreen(),
-          ),
-        ),
-        GoRoute(
-          path: 'terms',
-          name: RouteNames.settingsTerms,
-          builder: (context, state) => const SentryErrorBoundary(
-            module: 'settings.terms',
-            child: TermsOfServiceScreen(),
-          ),
-        ),
-      ],
     ),
 
     // ── Profile (pushed over shell) ───────────────────────────────────────
@@ -400,14 +294,6 @@ List<RouteBase> _buildRoutes() {
 
     // ── Developer Tools ───────────────────────────────────────────────────
     if (kDebugMode) ...[
-      GoRoute(
-        path: RouteNames.debugCatalogPath,
-        name: RouteNames.debugCatalog,
-        builder: (context, state) => const SentryErrorBoundary(
-          module: 'dev.catalog',
-          child: CatalogScreen(),
-        ),
-      ),
       GoRoute(
         path: RouteNames.componentShowcasePath,
         name: RouteNames.componentShowcase,
@@ -472,7 +358,7 @@ List<RouteBase> _buildRoutes() {
       },
     ),
 
-    // ── Main App Shell — 5-tab StatefulShellRoute ─────────────────────────
+    // ── Main App Shell — 6-tab StatefulShellRoute ─────────────────────────
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>
           AppShell(navigationShell: navigationShell),
@@ -563,20 +449,8 @@ List<RouteBase> _buildRoutes() {
               name: RouteNames.coach,
               builder: (context, state) => const SentryErrorBoundary(
                 module: 'coach',
-                child: NewChatScreen(),
+                child: CoachScreen(),
               ),
-              routes: [
-                GoRoute(
-                  path: 'thread/:id',
-                  name: RouteNames.coachThread,
-                  builder: (context, state) => SentryErrorBoundary(
-                    module: 'coach.thread',
-                    child: ChatThreadScreen(
-                      conversationId: state.pathParameters['id']!,
-                    ),
-                  ),
-                ),
-              ],
             ),
           ],
         ),
@@ -663,6 +537,101 @@ List<RouteBase> _buildRoutes() {
               ),
             ),
           ],
+        ),
+
+      ],
+    ),
+
+    // ── Settings (pushed over shell — full-screen) ────────────────────────
+    GoRoute(
+      path: RouteNames.settingsPath,
+      name: RouteNames.settings,
+      builder: (context, state) => const SentryErrorBoundary(
+        module: 'settings',
+        child: SettingsHubScreen(),
+      ),
+      routes: [
+        GoRoute(
+          path: 'account',
+          name: RouteNames.settingsAccount,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.account',
+            child: AccountSettingsScreen(),
+          ),
+          routes: [
+            GoRoute(
+              path: 'edit-profile',
+              name: RouteNames.editProfile,
+              builder: (context, state) => const SentryErrorBoundary(
+                module: 'settings.account.editProfile',
+                child: EditProfileScreen(),
+              ),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: 'notifications',
+          name: RouteNames.settingsNotifications,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.notifications',
+            child: NotificationSettingsScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'appearance',
+          name: RouteNames.settingsAppearance,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.appearance',
+            child: AppearanceSettingsScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'coach',
+          name: RouteNames.settingsCoach,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.coach',
+            child: CoachSettingsScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'journal',
+          name: RouteNames.settingsJournal,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.journal',
+            child: JournalSettingsScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'integrations',
+          name: RouteNames.settingsIntegrations,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.integrations',
+            child: IntegrationsScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'privacy',
+          name: RouteNames.settingsPrivacy,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.privacy',
+            child: PrivacyDataScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'subscription',
+          name: RouteNames.settingsSubscription,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.subscription',
+            child: SubscriptionSettingsScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'about',
+          name: RouteNames.settingsAbout,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.about',
+            child: AboutScreen(),
+          ),
         ),
       ],
     ),

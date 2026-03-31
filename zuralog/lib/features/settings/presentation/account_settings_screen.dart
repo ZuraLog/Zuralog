@@ -38,7 +38,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     return ZuralogScaffold(
-      appBar: ZuralogAppBar(title: 'Account'),
+      appBar: const ZuralogAppBar(title: 'Account', showProfileAvatar: false),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceMd),
         children: [
@@ -78,7 +78,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
             child: Container(
               decoration: BoxDecoration(
-                color: colors.cardBackground,
+                color: colors.surface,
                 borderRadius: BorderRadius.circular(AppDimens.radiusCard),
               ),
               child: const _UnitsTile(),
@@ -104,7 +104,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
             tiles: [
               ZSettingsTile(
                 icon: Icons.logout_rounded,
-                iconColor: AppColors.primary,
+                iconColor: colors.primary,
                 title: 'Sign Out',
                 subtitle: 'Sign out of your account',
                 showChevron: false,
@@ -169,7 +169,7 @@ class _ProfileSummaryCard extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Row(
@@ -203,7 +203,7 @@ class _ProfileSummaryCard extends ConsumerWidget {
             Icon(
               Icons.chevron_right_rounded,
               size: AppDimens.iconMd,
-              color: AppColors.textTertiary,
+              color: colors.textTertiary,
             ),
           ],
         ),
@@ -261,109 +261,24 @@ class _UnitsTile extends ConsumerWidget {
           ),
           const SizedBox(width: AppDimens.spaceSm),
           // Segmented control.
-          _UnitsSegmentedButton(current: current),
-        ],
-      ),
-    );
-  }
-}
-
-/// Compact two-option segmented button for metric / imperial.
-class _UnitsSegmentedButton extends ConsumerWidget {
-  const _UnitsSegmentedButton({required this.current});
-
-  final UnitsSystem current;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColorsOf(context);
-    return Container(
-      height: 32,
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _Segment(
-            label: 'Metric',
-            selected: current == UnitsSystem.metric,
-            isLeft: true,
-            onTap: () {
-              if (current != UnitsSystem.metric) {
-                ref.read(hapticServiceProvider).selectionTick();
-                ref
-                    .read(userPreferencesProvider.notifier)
-                    .mutate((p) => p.copyWith(unitsSystem: UnitsSystem.metric));
-              }
-            },
-          ),
-          _Segment(
-            label: 'Imperial',
-            selected: current == UnitsSystem.imperial,
-            isLeft: false,
-            onTap: () {
-              if (current != UnitsSystem.imperial) {
-                ref.read(hapticServiceProvider).selectionTick();
-                ref
-                    .read(userPreferencesProvider.notifier)
-                    .mutate(
-                      (p) => p.copyWith(unitsSystem: UnitsSystem.imperial),
-                    );
-              }
-            },
+          SizedBox(
+            width: 160,
+            child: ZSegmentedControl(
+              selectedIndex: current == UnitsSystem.metric ? 0 : 1,
+              segments: const ['Metric', 'Imperial'],
+              onChanged: (i) {
+                final unit =
+                    i == 0 ? UnitsSystem.metric : UnitsSystem.imperial;
+                if (unit != current) {
+                  ref.read(hapticServiceProvider).selectionTick();
+                  ref.read(userPreferencesProvider.notifier).mutate(
+                    (p) => p.copyWith(unitsSystem: unit),
+                  );
+                }
+              },
+            ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// A single tab within [_UnitsSegmentedButton].
-class _Segment extends StatelessWidget {
-  const _Segment({
-    required this.label,
-    required this.selected,
-    required this.isLeft,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final bool isLeft;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    final radius = BorderRadius.horizontal(
-      left: isLeft ? const Radius.circular(AppDimens.radiusSm) : Radius.zero,
-      right: isLeft ? Radius.zero : const Radius.circular(AppDimens.radiusSm),
-    );
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: selected
-              ? colors.primary.withValues(alpha: 0.18)
-              : Colors.transparent,
-          borderRadius: radius,
-          border: selected
-              ? Border.all(
-                  color: colors.primary.withValues(alpha: 0.55),
-                )
-              : null,
-        ),
-        child: Text(
-          label,
-          style: AppTextStyles.labelSmall.copyWith(
-            color: selected ? colors.primary : colors.textSecondary,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-          ),
-        ),
       ),
     );
   }
@@ -453,7 +368,7 @@ class _ChangeEmailSheetState extends ConsumerState<_ChangeEmailSheet> {
       child: Container(
         margin: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.shapeLg),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceLg),
@@ -488,7 +403,7 @@ class _ChangeEmailSheetState extends ConsumerState<_ChangeEmailSheet> {
             const SizedBox(height: AppDimens.spaceMd),
             SizedBox(
               width: double.infinity,
-              child: PrimaryButton(
+              child: ZButton(
                 label: 'Update Email',
                 isLoading: _loading,
                 onPressed: _submit,
@@ -604,7 +519,7 @@ class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
       child: Container(
         margin: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.shapeLg),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceLg),
@@ -692,7 +607,7 @@ class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
             const SizedBox(height: AppDimens.spaceMd),
             SizedBox(
               width: double.infinity,
-              child: PrimaryButton(
+              child: ZButton(
                 label: 'Update Password',
                 isLoading: _loading,
                 onPressed: canSubmit ? _submit : null,
@@ -714,17 +629,21 @@ void _showSignOutDialog(BuildContext context, WidgetRef ref) {
       title: const Text('Sign Out?'),
       content: const Text('You can sign back in any time.'),
       actions: [
-        TextButton(
+        ZButton(
+          label: 'Cancel',
           onPressed: () => Navigator.pop(dialogCtx),
-          child: const Text('Cancel'),
+          variant: ZButtonVariant.text,
+          isFullWidth: false,
         ),
-        TextButton(
+        ZButton(
+          label: 'Sign Out',
           onPressed: () {
             Navigator.pop(dialogCtx);
             ref.read(hapticServiceProvider).warning();
             ref.read(authStateProvider.notifier).logout();
           },
-          child: const Text('Sign Out'),
+          variant: ZButtonVariant.text,
+          isFullWidth: false,
         ),
       ],
     ),
@@ -739,7 +658,7 @@ void _showDeleteAccountStep1Dialog(BuildContext context, WidgetRef ref) {
   showDialog<void>(
     context: context,
     builder: (dialogCtx) => AlertDialog(
-      backgroundColor: colors.cardBackground,
+      backgroundColor: colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
@@ -753,27 +672,20 @@ void _showDeleteAccountStep1Dialog(BuildContext context, WidgetRef ref) {
         style: AppTextStyles.bodyMedium.copyWith(color: colors.textSecondary),
       ),
       actions: [
-        TextButton(
+        ZButton(
+          label: 'Cancel',
           onPressed: () => Navigator.pop(dialogCtx),
-          child: Text(
-            'Cancel',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
+          variant: ZButtonVariant.text,
+          isFullWidth: false,
         ),
-        TextButton(
+        ZButton(
+          label: 'Continue',
           onPressed: () {
             Navigator.pop(dialogCtx);
             _showDeleteAccountStep2Dialog(context, ref);
           },
-          child: Text(
-            'Continue',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.statusError,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          variant: ZButtonVariant.destructive,
+          isFullWidth: false,
         ),
       ],
     ),
@@ -845,7 +757,7 @@ class _DeleteConfirmDialogState extends ConsumerState<_DeleteConfirmDialog> {
     final confirmed = _controller.text == 'DELETE';
 
     return AlertDialog(
-      backgroundColor: colors.cardBackground,
+      backgroundColor: colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
@@ -873,36 +785,19 @@ class _DeleteConfirmDialogState extends ConsumerState<_DeleteConfirmDialog> {
         ],
       ),
       actions: [
-        TextButton(
+        ZButton(
+          label: 'Cancel',
           onPressed: _loading ? null : () => Navigator.pop(context),
-          child: Text(
-            'Cancel',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
+          variant: ZButtonVariant.text,
+          isFullWidth: false,
         ),
-        _loading
-            ? const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2.5),
-                ),
-              )
-            : TextButton(
-                onPressed: confirmed ? _confirm : null,
-                child: Text(
-                  'Delete Account',
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    color: confirmed
-                        ? AppColors.statusError
-                        : AppColors.textTertiary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
+        ZButton(
+          label: 'Delete Account',
+          onPressed: (_loading || !confirmed) ? null : _confirm,
+          variant: ZButtonVariant.destructive,
+          isFullWidth: false,
+          isLoading: _loading,
+        ),
       ],
     );
   }

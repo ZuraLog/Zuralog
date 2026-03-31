@@ -38,6 +38,18 @@ final class StreamToken extends ChatStreamEvent {
   final String accumulated;
 }
 
+/// A reasoning/thinking token from the AI (display-only, not part of the
+/// final response). Mirrors [StreamToken] but for the thinking channel.
+final class ThinkingToken extends ChatStreamEvent {
+  const ThinkingToken({required this.delta, required this.accumulated});
+
+  /// The new chunk of reasoning text.
+  final String delta;
+
+  /// All reasoning text received so far (accumulated client-side).
+  final String accumulated;
+}
+
 /// The AI is running a MCP tool (e.g. fetching Apple Health data).
 final class ToolProgress extends ChatStreamEvent {
   const ToolProgress({required this.toolName, required this.isStart});
@@ -101,6 +113,7 @@ abstract interface class CoachRepository {
   /// Emits [ChatStreamEvent] subtypes in this order:
   /// 1. [ConversationCreated] — only if this is a new conversation.
   /// 2. [ToolProgress] — zero or more pairs (isStart=true then false).
+  /// 2b. [ThinkingToken] — zero or more, during the AI reasoning phase, before real tokens.
   /// 3. [StreamToken] — one per partial token from the LLM.
   /// 4. [StreamComplete] — final assembled message with server-assigned ID.
   ///

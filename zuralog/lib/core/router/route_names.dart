@@ -94,6 +94,12 @@ abstract final class RouteNames {
   /// Path for the check-inbox screen.
   static const String checkInboxPath = '/auth/check-inbox';
 
+  /// Name for the reset-password screen (deep link target).
+  static const String resetPassword = 'resetPassword';
+
+  /// Path for the reset-password screen.
+  static const String resetPasswordPath = '/auth/reset-password';
+
   // ── Tab 0: Today ─────────────────────────────────────────────────────────
 
   /// Name for the Today Feed tab root.
@@ -183,12 +189,6 @@ abstract final class RouteNames {
 
   /// Path for the New Chat screen.
   static const String coachPath = '/coach';
-
-  /// Name for the Chat Thread screen.
-  static const String coachThread = 'coachThread';
-
-  /// Path for the Chat Thread screen. Parameter: `:id`
-  static const String coachThreadPath = '/coach/thread/:id';
 
   // ── Tab 3: Progress ───────────────────────────────────────────────────────
 
@@ -304,18 +304,6 @@ abstract final class RouteNames {
   /// Path for the About screen.
   static const String settingsAboutPath = '/settings/about';
 
-  /// Name for the Privacy Policy screen.
-  static const String settingsPrivacyPolicy = 'settingsPrivacyPolicy';
-
-  /// Path for the Privacy Policy screen.
-  static const String settingsPrivacyPolicyPath = '/settings/privacy-policy';
-
-  /// Name for the Terms of Service screen.
-  static const String settingsTerms = 'settingsTerms';
-
-  /// Path for the Terms of Service screen.
-  static const String settingsTermsPath = '/settings/terms';
-
   // ── Profile (pushed over shell) ───────────────────────────────────────────
 
   /// Name for the Profile screen (pushed over the shell, not a tab).
@@ -346,12 +334,6 @@ abstract final class RouteNames {
 
   // ── Developer Tools ───────────────────────────────────────────────────────
 
-  /// Name for the design system visual catalog (dev only).
-  static const String debugCatalog = 'debugCatalog';
-
-  /// Path for the design system catalog screen.
-  static const String debugCatalogPath = '/debug/catalog';
-
   /// Name for the component showcase screen (dev only).
   static const String componentShowcase = 'componentShowcase';
 
@@ -364,8 +346,8 @@ abstract final class RouteNames {
   ///
   /// Used by the auth guard to determine whether to redirect to [welcomePath].
   ///
-  /// Note: [settingsPath] and [debugCatalogPath] are intentionally excluded —
-  /// both require the user to be authenticated before they can be accessed.
+  /// Note: [settingsPath] is intentionally excluded —
+  /// it requires the user to be authenticated before it can be accessed.
   static const Set<String> publicPaths = {
     welcomePath,
     onboardingPath,
@@ -374,5 +356,6 @@ abstract final class RouteNames {
     profileQuestionnairePath,
     forgotPasswordPath,
     checkInboxPath,
+    resetPasswordPath,
   };
 }

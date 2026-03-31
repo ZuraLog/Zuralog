@@ -42,7 +42,7 @@ const Map<String, Color> _integrationColors = {
   'oura': AppColors.categorySleep,
   'withings': AppColors.categoryVitals,
   'polar': AppColors.categoryHeart,
-  'google_health_connect': AppColors.primary,
+  'google_health_connect': AppColors.categoryActivity,
   'garmin': AppColors.categoryVitals,
   'whoop': AppColors.categoryHeart,
 };
@@ -90,33 +90,15 @@ class IntegrationsScreen extends ConsumerWidget {
         .toList();
 
     return ZuralogScaffold(
+      appBar: const ZuralogAppBar(title: 'Integrations', showProfileAvatar: false),
       body: CustomScrollView(
         slivers: [
-          // ── Large-title app bar ────────────────────────────────────────────
-          SliverAppBar(
-            expandedHeight: 100,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              collapseMode: CollapseMode.parallax,
-              titlePadding: const EdgeInsets.only(
-                left: AppDimens.spaceMd,
-                bottom: AppDimens.spaceMd,
-              ),
-              title: Text(
-                'Integrations',
-                style: AppTextStyles.displaySmall.copyWith(
-                  color: AppColorsOf(context).textPrimary,
-                ),
-              ),
-            ),
-          ),
-
           // ── Loading indicator ──────────────────────────────────────────────
           if (intState.isLoading)
             const SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.all(AppDimens.spaceLg),
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: ZCircularProgress()),
               ),
             ),
 
@@ -208,6 +190,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.only(
@@ -219,7 +202,7 @@ class _SectionHeader extends StatelessWidget {
         child: Text(
           label,
           style: AppTextStyles.labelSmall.copyWith(
-            color: AppColors.textTertiary,
+            color: colors.textTertiary,
             letterSpacing: 0.8,
             fontWeight: FontWeight.w600,
           ),
@@ -242,7 +225,7 @@ class _ConnectedCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
     final icon = _integrationIcons[integration.id] ?? Icons.extension_rounded;
-    final iconColor = _integrationColors[integration.id] ?? AppColors.primary;
+    final iconColor = _integrationColors[integration.id] ?? colors.primary;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -250,7 +233,7 @@ class _ConnectedCard extends ConsumerWidget {
         vertical: AppDimens.spaceXs,
       ),
       child: Material(
-        color: colors.cardBackground,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
@@ -341,7 +324,7 @@ class _AvailableCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
     final icon = _integrationIcons[integration.id] ?? Icons.extension_rounded;
-    final iconColor = _integrationColors[integration.id] ?? AppColors.primary;
+    final iconColor = _integrationColors[integration.id] ?? colors.primary;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -350,7 +333,7 @@ class _AvailableCard extends ConsumerWidget {
       ),
       child: Container(
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         padding: const EdgeInsets.symmetric(
@@ -418,7 +401,7 @@ class _ComingSoonRow extends StatelessWidget {
         opacity: 0.5,
         child: Container(
           decoration: BoxDecoration(
-            color: colors.cardBackground,
+            color: colors.surface,
             borderRadius: BorderRadius.circular(AppDimens.radiusCard),
           ),
           padding: const EdgeInsets.symmetric(
@@ -430,7 +413,7 @@ class _ComingSoonRow extends StatelessWidget {
               // Greyed-out icon badge
               _IntegrationIconBadge(
                 icon: icon,
-                iconColor: AppColors.textTertiary,
+                iconColor: colors.textTertiary,
               ),
               const SizedBox(width: AppDimens.spaceMd),
 
@@ -503,12 +486,12 @@ class _PlatformBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 10, color: AppColors.textTertiary),
+          Icon(icon, size: 10, color: colors.textTertiary),
           const SizedBox(width: 2),
           Text(
             label,
             style: AppTextStyles.labelSmall.copyWith(
-              color: AppColors.textTertiary,
+              color: colors.textTertiary,
             ),
           ),
         ],
@@ -525,12 +508,13 @@ class _StatusIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final (dotColor, label) = switch (status) {
       IntegrationStatus.connected => (AppColors.statusConnected, 'Connected'),
       IntegrationStatus.syncing => (AppColors.statusConnecting, 'Syncing'),
       IntegrationStatus.error => (AppColors.statusError, 'Error'),
-      IntegrationStatus.available => (AppColors.textTertiary, 'Available'),
-      IntegrationStatus.comingSoon => (AppColors.textTertiary, 'Coming soon'),
+      IntegrationStatus.available => (colors.textTertiary, 'Available'),
+      IntegrationStatus.comingSoon => (colors.textTertiary, 'Coming soon'),
     };
 
     return Row(
@@ -555,7 +539,7 @@ class _StatusIndicator extends StatelessWidget {
   }
 }
 
-/// Small "Connect" FilledButton for available integrations.
+/// Small "Connect" button for available integrations.
 ///
 /// Calls [IntegrationsNotifier.connect] with the real integration ID,
 /// triggering the actual OAuth flow or device permission request.
@@ -569,31 +553,18 @@ class _ConnectButton extends ConsumerWidget {
     // Disable the button if the integration isn't compatible with this device.
     final isCompatible = integration.isCompatibleWithCurrentPlatform;
 
-    return FilledButton(
-      style: FilledButton.styleFrom(
-        backgroundColor:
-            isCompatible ? AppColors.primary : AppColors.textTertiary,
-        foregroundColor: AppColors.primaryButtonText,
-        minimumSize: const Size(72, 32),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: AppDimens.spaceXs,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
-        ),
-        textStyle: AppTextStyles.bodySmall.copyWith(
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+    return ZButton(
+      label: isCompatible
+          ? 'Connect'
+          : (integration.incompatibilityNote ?? 'Unavailable'),
       onPressed: isCompatible
           ? () => ref
               .read(integrationsProvider.notifier)
               .connect(integration.id, context)
           : null,
-      child: Text(isCompatible
-          ? 'Connect'
-          : (integration.incompatibilityNote ?? 'Unavailable')),
+      variant: ZButtonVariant.primary,
+      size: ZButtonSize.small,
+      isFullWidth: false,
     );
   }
 }
@@ -614,7 +585,7 @@ class _ComingSoonChip extends StatelessWidget {
       child: Text(
         'Coming soon',
         style: AppTextStyles.labelSmall.copyWith(
-          color: AppColors.textTertiary,
+          color: colors.textTertiary,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -635,7 +606,7 @@ class _ConnectedBottomSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
     final icon = _integrationIcons[integration.id] ?? Icons.extension_rounded;
-    final iconColor = _integrationColors[integration.id] ?? AppColors.primary;
+    final iconColor = _integrationColors[integration.id] ?? colors.primary;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -690,7 +661,7 @@ class _ConnectedBottomSheet extends ConsumerWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(AppDimens.spaceMd),
             decoration: BoxDecoration(
-              color: colors.cardBackground,
+              color: colors.surface,
               borderRadius: BorderRadius.circular(AppDimens.radiusCard),
             ),
             child: Column(
@@ -699,7 +670,7 @@ class _ConnectedBottomSheet extends ConsumerWidget {
                 Text(
                   'SYNC DETAILS',
                   style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.textTertiary,
+                    color: colors.textTertiary,
                     letterSpacing: 0.8,
                     fontWeight: FontWeight.w600,
                   ),
@@ -726,25 +697,12 @@ class _ConnectedBottomSheet extends ConsumerWidget {
           const SizedBox(height: AppDimens.spaceLg),
 
           // Disconnect action — calls the real disconnect method
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  vertical: AppDimens.spaceMd,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-                ),
-              ),
-              onPressed: () => _confirmDisconnect(context, ref),
-              child: Text(
-                'Disconnect',
-                style: AppTextStyles.titleMedium.copyWith(
-                  color: colors.accent,
-                ),
-              ),
-            ),
+          ZButton(
+            label: 'Disconnect',
+            onPressed: () => _confirmDisconnect(context, ref),
+            variant: ZButtonVariant.destructive,
+            size: ZButtonSize.medium,
+            isFullWidth: true,
           ),
         ],
       ),
@@ -771,16 +729,15 @@ class _ConnectedBottomSheet extends ConsumerWidget {
           ),
         ),
         actions: [
-          TextButton(
+          ZButton(
+            label: 'Cancel',
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              'Cancel',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
+            variant: ZButtonVariant.text,
+            size: ZButtonSize.small,
+            isFullWidth: false,
           ),
-          TextButton(
+          ZButton(
+            label: 'Disconnect',
             onPressed: () {
               // Actually disconnect via the real provider.
               ref
@@ -789,13 +746,9 @@ class _ConnectedBottomSheet extends ConsumerWidget {
               Navigator.of(ctx).pop();
               if (context.mounted) Navigator.of(context).pop();
             },
-            child: Text(
-              'Disconnect',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: colors.accent,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            variant: ZButtonVariant.destructive,
+            size: ZButtonSize.small,
+            isFullWidth: false,
           ),
         ],
       ),

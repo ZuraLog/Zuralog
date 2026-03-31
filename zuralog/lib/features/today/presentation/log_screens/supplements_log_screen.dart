@@ -137,28 +137,30 @@ class _SupplementsLogScreenState extends ConsumerState<SupplementsLogScreen> {
                               onCancel: () => setState(() => _showAddForm = false),
                             )
                           else
-                            TextButton.icon(
-                              icon: const Icon(Icons.add),
-                              label: const Text('Add supplement or medication'),
+                            ZButton(
+                              label: 'Add supplement or medication',
+                              variant: ZButtonVariant.text,
+                              icon: Icons.add,
                               onPressed: () => setState(() => _showAddForm = true),
+                              isFullWidth: false,
                             ),
                           const SizedBox(height: AppDimens.spaceLg),
                           ZSectionLabel(label: 'Notes', isOptional: true),
                           const SizedBox(height: AppDimens.spaceSm),
-                          TextField(
+                          ZTextArea(
                             controller: _notesCtrl,
+                            placeholder: 'Anything to note about today?',
                             maxLength: 500,
-                            decoration: const InputDecoration(hintText: 'Anything to note about today?'),
                           ),
                         ],
                       ),
           ),
           Container(
             padding: EdgeInsets.fromLTRB(AppDimens.spaceMd, AppDimens.spaceSm, AppDimens.spaceMd, AppDimens.spaceSm + bottomPad),
-            child: FilledButton(
+            child: ZButton(
+              label: 'Save',
               onPressed: _canSave ? () => _save(list) : null,
-              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-              child: _isSaving ? const CircularProgressIndicator.adaptive() : const Text('Save'),
+              isLoading: _isSaving,
             ),
           ),
         ],
@@ -181,7 +183,11 @@ class _EmptyState extends StatelessWidget {
           children: [
             const Text('Add your supplements and medications to get started.', textAlign: TextAlign.center),
             const SizedBox(height: AppDimens.spaceLg),
-            FilledButton.icon(icon: const Icon(Icons.add), label: const Text('Add supplement or medication'), onPressed: onAdd),
+            ZButton(
+              label: 'Add supplement or medication',
+              icon: Icons.add,
+              onPressed: onAdd,
+            ),
           ],
         ),
       ),
@@ -218,8 +224,8 @@ class _SupplementRow extends StatelessWidget {
           width: 28, height: 28,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isTaken ? AppColors.primary : Colors.transparent,
-            border: Border.all(color: isTaken ? AppColors.primary : colors.border, width: 2),
+            color: isTaken ? colors.primary : Colors.transparent,
+            border: Border.all(color: isTaken ? colors.primary : colors.border, width: 2),
           ),
           child: isTaken ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
         ),
@@ -252,24 +258,35 @@ class _AddSupplementForm extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name *', hintText: 'e.g. Vitamin D')),
+            AppTextField(controller: nameCtrl, labelText: 'Name *', hintText: 'e.g. Vitamin D'),
             const SizedBox(height: AppDimens.spaceSm),
-            TextField(controller: doseCtrl, decoration: const InputDecoration(labelText: 'Dose (optional)', hintText: 'e.g. 1000 IU')),
+            AppTextField(controller: doseCtrl, labelText: 'Dose (optional)', hintText: 'e.g. 1000 IU'),
             const SizedBox(height: AppDimens.spaceSm),
             Wrap(
               spacing: AppDimens.spaceSm,
               children: [
                 for (final (value, label) in [('morning', 'Morning'), ('evening', 'Evening'), ('anytime', 'Any time')])
-                  ChoiceChip(label: Text(label), selected: timing == value, onSelected: (_) => onTimingChanged(value)),
+                  ZChip(label: label, isActive: timing == value, onTap: () => onTimingChanged(value)),
               ],
             ),
             const SizedBox(height: AppDimens.spaceSm),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(onPressed: onCancel, child: const Text('Cancel')),
+                ZButton(
+                  label: 'Cancel',
+                  variant: ZButtonVariant.text,
+                  onPressed: onCancel,
+                  isFullWidth: false,
+                  size: ZButtonSize.small,
+                ),
                 const SizedBox(width: AppDimens.spaceSm),
-                FilledButton(onPressed: onSave, child: const Text('Add')),
+                ZButton(
+                  label: 'Add',
+                  onPressed: onSave,
+                  isFullWidth: false,
+                  size: ZButtonSize.small,
+                ),
               ],
             ),
           ],

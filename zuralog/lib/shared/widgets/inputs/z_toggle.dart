@@ -107,14 +107,25 @@ class _ZToggleState extends State<ZToggle> with SingleTickerProviderStateMixin {
             borderRadius: BorderRadius.circular(_trackHeight / 2),
             child: Stack(
               children: [
-                // Base track — surfaceRaised color always present underneath.
+                // Layer 1: base track — always present underneath.
                 Container(
                   decoration: BoxDecoration(
                     color: colors.surfaceRaised,
                     borderRadius: BorderRadius.circular(_trackHeight / 2),
                   ),
                 ),
-                // Pattern layer fades in on top when ON.
+                // Layer 2: sage fill fades in when ON.
+                if (_controller.value > 0.0)
+                  Opacity(
+                    opacity: _controller.value,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: colors.primary,
+                        borderRadius: BorderRadius.circular(_trackHeight / 2),
+                      ),
+                    ),
+                  ),
+                // Layer 3: pattern fades in on top of sage fill when ON.
                 if (_controller.value > 0.0)
                   Opacity(
                     opacity: _controller.value * patternOpacity,
@@ -128,7 +139,7 @@ class _ZToggleState extends State<ZToggle> with SingleTickerProviderStateMixin {
                       ),
                     ),
                   ),
-                // Thumb.
+                // Layer 4: thumb.
                 Positioned(
                   left: _position.value,
                   top: _thumbPadding,

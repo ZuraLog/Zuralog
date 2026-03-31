@@ -151,7 +151,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // Health Score hero — left half.
-                      Flexible(
+                      Expanded(
                         child: OnboardingTooltip(
                           screenKey: 'today_feed',
                           tooltipKey: 'health_score',
@@ -162,7 +162,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                       ),
                       const SizedBox(width: AppDimens.spaceSm),
                       // Streak Hero Card — right half.
-                      Flexible(
+                      Expanded(
                         child: feedAsync.when(
                           loading: () => const StreakHeroCard(streakDays: 0),
                           error: (e, _) => const StreakHeroCard(streakDays: 0),
@@ -173,6 +173,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                                 feed.streak!.currentStreak >=
                                     (feed.streak!.longestStreak ?? 0),
                             isFrozen: feed.streak?.isFrozen ?? false,
+                            onTap: () => context.go(RouteNames.progressPath),
                           ),
                         ),
                       ),
@@ -391,6 +392,7 @@ class _HealthScoreHero extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     return ZuralogCard(
       variant: ZCardVariant.hero,
       padding: const EdgeInsets.symmetric(
@@ -398,8 +400,10 @@ class _HealthScoreHero extends ConsumerWidget {
         horizontal: AppDimens.spaceMd,
       ),
       child: Stack(
+        alignment: Alignment.center,
         children: [
-          // Ambient sage-green radial glow — top-right corner.
+          // Ambient sage-green radial glow — top-right corner (decorative,
+          // Positioned.fill so it doesn't affect the Stack's intrinsic height).
           Positioned.fill(
             child: IgnorePointer(
               child: Container(
@@ -408,7 +412,7 @@ class _HealthScoreHero extends ConsumerWidget {
                     center: const Alignment(0.85, -0.85),
                     radius: 0.9,
                     colors: [
-                      AppColors.primary.withValues(alpha: 0.07),
+                      colors.primary.withValues(alpha: 0.07),
                       Colors.transparent,
                     ],
                   ),
@@ -416,53 +420,57 @@ class _HealthScoreHero extends ConsumerWidget {
               ),
             ),
           ),
-          // Card content.
-          scoreAsync.when(
-              // Provider never errors — this branch is a safety net only.
-              error: (err, stack) => const HealthScoreZeroState(),
-              loading: () => const ZLoadingSkeleton(
-                width: double.infinity,
-                height: 120,
-                borderRadius: AppDimens.shapeLg,
-              ),
-              data: (data) {
-                // Three states based on data maturity:
-                // 1. No data at all → sad-face zero state.
-                if (data.dataDays == 0) {
-                  return const HealthScoreZeroState();
-                }
-                // 2. Building up (Days 1–6) → partial sage-green ring
-                //    showing progress towards the 7-day threshold.
-                if (data.dataDays < kMinDataDaysForMaturity) {
-                  return HealthScoreBuildingState(
-                    dataDays: data.dataDays,
-                    targetDays: kMinDataDaysForMaturity,
-                  );
-                }
-                // 3. Full (Day 7+) → real score ring with sparkline.
-                return Column(
-                  children: [
-                    HealthScoreWidget.hero(
-                      score: data.score,
-                      trend: data.trend.isNotEmpty ? data.trend : null,
-                      commentary: data.commentary,
-                      onTap: () {
-                        ref.read(hapticServiceProvider).light();
-                        ref.read(analyticsServiceProvider).capture(
-                          event: AnalyticsEvents.healthScoreTapped,
-                        );
-                        context.go(RouteNames.dataPath);
-                      },
-                    ),
-                    // AI delta chip — week-over-week score change.
-                    if (data.weekChange != null &&
-                        data.weekChange != 0 &&
-                        data.dataDays > kMinDataDaysForMaturity)
-                      _HealthScoreDeltaChip(weekChange: data.weekChange!),
-                  ],
-                );
-              },
+          // Center fills the Stack and vertically centers the content.
+          // Non-positioned so IntrinsicHeight can measure it correctly.
+          Center(
+            child: scoreAsync.when(
+            // Provider never errors — this branch is a safety net only.
+            error: (err, stack) => const HealthScoreZeroState(),
+            loading: () => const ZLoadingSkeleton(
+              width: double.infinity,
+              height: 120,
+              borderRadius: AppDimens.shapeLg,
             ),
+            data: (data) {
+              // Three states based on data maturity:
+              // 1. No data at all → sad-face zero state.
+              if (data.dataDays == 0) {
+                return const HealthScoreZeroState();
+              }
+              // 2. Building up (Days 1–6) → partial sage-green ring
+              //    showing progress towards the 7-day threshold.
+              if (data.dataDays < kMinDataDaysForMaturity) {
+                return HealthScoreBuildingState(
+                  dataDays: data.dataDays,
+                  targetDays: kMinDataDaysForMaturity,
+                );
+              }
+              // 3. Full (Day 7+) → real score ring with sparkline.
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  HealthScoreWidget.hero(
+                    score: data.score,
+                    trend: data.trend.isNotEmpty ? data.trend : null,
+                    commentary: data.commentary,
+                    onTap: () {
+                      ref.read(hapticServiceProvider).light();
+                      ref.read(analyticsServiceProvider).capture(
+                        event: AnalyticsEvents.healthScoreTapped,
+                      );
+                      context.go(RouteNames.dataPath);
+                    },
+                  ),
+                  // AI delta chip — week-over-week score change.
+                  if (data.weekChange != null &&
+                      data.weekChange != 0 &&
+                      data.dataDays > kMinDataDaysForMaturity)
+                    _HealthScoreDeltaChip(weekChange: data.weekChange!),
+                ],
+              );
+            },
+          ),
+          ),
         ],
       ),
     );
@@ -592,7 +600,7 @@ MetricTileData _buildTile(
     'mood' => MetricTileData(
         metricType: type,
         label: 'Mood',
-        emoji: '😊',
+        icon: Icons.mood_rounded,
         categoryColor: AppColors.categoryWellness.toARGB32(),
         value:
             isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}/10' : null,
@@ -602,7 +610,7 @@ MetricTileData _buildTile(
     'energy' => MetricTileData(
         metricType: type,
         label: 'Energy',
-        emoji: '⚡',
+        icon: Icons.bolt_rounded,
         categoryColor: AppColors.categoryWellness.toARGB32(),
         value:
             isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}/10' : null,
@@ -612,7 +620,7 @@ MetricTileData _buildTile(
     'stress' => MetricTileData(
         metricType: type,
         label: 'Stress',
-        emoji: '😤',
+        icon: Icons.whatshot_rounded,
         categoryColor: AppColors.categoryWellness.toARGB32(),
         value:
             isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}/10' : null,
@@ -622,7 +630,7 @@ MetricTileData _buildTile(
     'water' => MetricTileData(
         metricType: type,
         label: 'Water',
-        emoji: '💧',
+        icon: Icons.water_drop_rounded,
         categoryColor: AppColors.categoryBody.toARGB32(),
         value:
             isLit ? '${(raw as num?)?.toStringAsFixed(0) ?? '—'}ml' : null,
@@ -632,7 +640,7 @@ MetricTileData _buildTile(
     'sleep' => MetricTileData(
         metricType: type,
         label: 'Sleep',
-        emoji: '😴',
+        icon: Icons.bedtime_rounded,
         categoryColor: AppColors.categorySleep.toARGB32(),
         value: isLit && raw != null
             ? formatSleepMinutes((raw as num).toDouble())
@@ -643,7 +651,7 @@ MetricTileData _buildTile(
     'weight' => MetricTileData(
         metricType: type,
         label: 'Weight',
-        emoji: '⚖️',
+        icon: Icons.monitor_weight_rounded,
         categoryColor: AppColors.categoryBody.toARGB32(),
         value:
             isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}kg' : null,
@@ -653,7 +661,7 @@ MetricTileData _buildTile(
     'steps' => MetricTileData(
         metricType: type,
         label: 'Steps',
-        emoji: '👣',
+        icon: Icons.directions_walk_rounded,
         categoryColor: AppColors.categoryActivity.toARGB32(),
         value: isLit && raw != null
             ? formatSteps((raw as num).toInt())
@@ -664,7 +672,7 @@ MetricTileData _buildTile(
     'run' => MetricTileData(
         metricType: type,
         label: 'Run',
-        emoji: '🏃',
+        icon: Icons.directions_run_rounded,
         categoryColor: AppColors.categoryActivity.toARGB32(),
         value:
             isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}km' : null,
@@ -674,7 +682,7 @@ MetricTileData _buildTile(
     'meal' => MetricTileData(
         metricType: type,
         label: 'Calories',
-        emoji: '🍽️',
+        icon: Icons.restaurant_rounded,
         categoryColor: AppColors.categoryNutrition.toARGB32(),
         value: isLit
             ? '${(raw as num?)?.toStringAsFixed(0) ?? '—'} kcal'
@@ -685,7 +693,7 @@ MetricTileData _buildTile(
     'supplement' => MetricTileData(
         metricType: type,
         label: 'Supplements',
-        emoji: '💊',
+        icon: Icons.medication_rounded,
         categoryColor: AppColors.categoryVitals.toARGB32(),
         value: isLit && raw != null
             ? '${(raw as num).toInt()} taken'
@@ -696,7 +704,7 @@ MetricTileData _buildTile(
     'symptom' => MetricTileData(
         metricType: type,
         label: 'Symptom',
-        emoji: '🩹',
+        icon: Icons.healing_rounded,
         categoryColor: AppColors.categoryVitals.toARGB32(),
         // 'symptom_severity' holds the formatted severity string; 'symptom' is the log type key.
         value: isLit ? (summary.latestValues['symptom_severity'] as String?) : null,
@@ -706,7 +714,7 @@ MetricTileData _buildTile(
     'heart_rate' => MetricTileData(
         metricType: type,
         label: 'Heart Rate',
-        emoji: '❤️',
+        icon: Icons.favorite_rounded,
         categoryColor: AppColors.categoryHeart.toARGB32(),
         value:
             isLit ? '${(raw as num?)?.toInt() ?? '—'} bpm' : null,
@@ -716,7 +724,7 @@ MetricTileData _buildTile(
     _ => MetricTileData(
         metricType: type,
         label: type,
-        emoji: '📊',
+        icon: Icons.bar_chart_rounded,
         categoryColor: AppColors.categoryVitals.toARGB32(),
         lastValue: lastValue,
         lastLoggedAt: lastLoggedAt,

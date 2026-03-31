@@ -1,8 +1,7 @@
 /// Zuralog — ZuralogAppBar shared widget.
 ///
 /// Zuralog shared AppBar — base properties hardcoded (elevation,
-/// scrolledUnderElevation, surfaceTintColor), ProfileAvatarButton
-/// always appended as last action. Used by every root tab screen.
+/// scrolledUnderElevation, surfaceTintColor). Used by every root tab screen.
 /// Background color is inherited from AppBarTheme in AppTheme.
 library;
 
@@ -35,13 +34,8 @@ class ZuralogAppBarTooltipConfig {
 // ── ZuralogAppBar ─────────────────────────────────────────────────────────────
 
 /// Zuralog shared AppBar — base properties hardcoded (elevation,
-/// scrolledUnderElevation, surfaceTintColor), ProfileAvatarButton
-/// always appended as last action. Background inherited from AppBarTheme.
-/// Used by every root tab screen.
-///
-/// Note: this widget embeds [ProfileAvatarButton], which is a Riverpod
-/// [ConsumerWidget] and requires a [ProviderScope] ancestor. Wrap with
-/// [ProviderScope] in widget tests.
+/// scrolledUnderElevation, surfaceTintColor). Background inherited from
+/// AppBarTheme. Used by every root tab screen.
 class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
   const ZuralogAppBar({
     super.key,
@@ -50,6 +44,7 @@ class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.leading,
     this.actions,
     this.tooltipConfig,
+    this.showProfileAvatar = true,
   });
 
   /// The title text displayed in the app bar.
@@ -66,6 +61,9 @@ class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   /// When provided, wraps the title in an [OnboardingTooltip].
   final ZuralogAppBarTooltipConfig? tooltipConfig;
+
+  /// Whether to show the profile avatar button in the top-right corner.
+  final bool showProfileAvatar;
 
   /// Extra height added when a subtitle is present, based on bodySmall line
   /// height (12pt × 1.4) plus 4px spacing.
@@ -107,10 +105,11 @@ class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
 
     final fullActions = [
       ...?actions,
-      const Padding(
-        padding: EdgeInsets.only(right: AppDimens.spaceMd),
-        child: ProfileAvatarButton(),
-      ),
+      if (showProfileAvatar)
+        const Padding(
+          padding: EdgeInsets.only(right: AppDimens.spaceMd),
+          child: ProfileAvatarButton(),
+        ),
     ];
 
     return AppBar(

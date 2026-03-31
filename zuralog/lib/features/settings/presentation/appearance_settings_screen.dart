@@ -51,98 +51,73 @@ class AppearanceSettingsScreen extends ConsumerWidget {
     final tooltipsEnabled =
         ref.watch(tooltipsEnabledProvider).valueOrNull ?? true;
 
-    final cs = Theme.of(context).colorScheme;
-
     return ZuralogScaffold(
-      body: CustomScrollView(
-        slivers: [
-          // ── Large-title app bar ───────────────────────────────────────────
-          SliverAppBar(
-            expandedHeight: 100,
-            pinned: true,
-            elevation: 0,
-            scrolledUnderElevation: 0,
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(
-                left: AppDimens.spaceMd,
-                bottom: 14,
-              ),
-              collapseMode: CollapseMode.parallax,
-              title: Text(
-                'Appearance',
-                style: AppTextStyles.displaySmall.copyWith(color: cs.onSurface),
-              ),
-            ),
+      appBar: ZuralogAppBar(title: 'Appearance', showProfileAvatar: false),
+      body: ListView(
+        padding: const EdgeInsets.only(bottom: AppDimens.spaceXxl),
+        children: [
+          // ── THEME section ─────────────────────────────────────────────
+          const SettingsSectionLabel('THEME'),
+          _ThemeSelector(
+            selected: themeMode,
+            onSelected: (v) {
+              ref.read(themeModeProvider.notifier).setTheme(v);
+              ref.read(analyticsServiceProvider).capture(
+                event: AnalyticsEvents.themeChanged,
+                properties: {'theme': v.name},
+              );
+            },
           ),
 
-          SliverList(
-            delegate: SliverChildListDelegate([
-              // ── THEME section ─────────────────────────────────────────────
-              const SettingsSectionLabel('THEME'),
-              _ThemeSelector(
-                selected: themeMode,
-                onSelected: (v) {
-                  ref.read(themeModeProvider.notifier).setTheme(v);
+          // ── EXPERIENCE section ────────────────────────────────────────
+          const SettingsSectionLabel('EXPERIENCE'),
+          _SettingsCard(
+            children: [
+              _ToggleRow(
+                icon: Icons.vibration_rounded,
+                iconColor: AppColors.categoryActivity,
+                title: 'Haptic Feedback',
+                subtitle: 'Vibration on interactions',
+                value: hapticEnabled,
+                onChanged: (v) {
+                  ref.read(hapticEnabledProvider.notifier).setEnabled(v);
                   ref.read(analyticsServiceProvider).capture(
-                    event: AnalyticsEvents.themeChanged,
-                    properties: {'theme': v.name},
+                    event: AnalyticsEvents.hapticToggled,
+                    properties: {'enabled': v},
                   );
                 },
               ),
+            ],
+          ),
 
-              // ── EXPERIENCE section ────────────────────────────────────────
-              const SettingsSectionLabel('EXPERIENCE'),
-              _SettingsGroup(
-                children: [
-                  _ToggleRow(
-                    icon: Icons.vibration_rounded,
-                    iconColor: AppColors.categoryActivity,
-                    title: 'Haptic Feedback',
-                    subtitle: 'Vibration on interactions',
-                    value: hapticEnabled,
-                    onChanged: (v) {
-                      ref.read(hapticEnabledProvider.notifier).setEnabled(v);
-                      ref.read(analyticsServiceProvider).capture(
-                        event: AnalyticsEvents.hapticToggled,
-                        properties: {'enabled': v},
-                      );
-                    },
-                  ),
-                ],
+          // ── TOOLTIPS section ──────────────────────────────────────────
+          const SettingsSectionLabel('TOOLTIPS'),
+          _SettingsCard(
+            children: [
+              _ToggleRow(
+                icon: Icons.help_outline_rounded,
+                iconColor: AppColors.categoryVitals,
+                title: 'Disable Tooltips',
+                subtitle: 'Hide contextual help overlays',
+                // The toggle shows "Disable Tooltips", so its value is
+                // the inverse of tooltipsEnabled.
+                value: !tooltipsEnabled,
+                onChanged: (v) => ref
+                    .read(tooltipsEnabledProvider.notifier)
+                    .setEnabled(!v),
               ),
-
-              // ── TOOLTIPS section ──────────────────────────────────────────
-              const SettingsSectionLabel('TOOLTIPS'),
-              _SettingsGroup(
-                children: [
-                  _ToggleRow(
-                    icon: Icons.help_outline_rounded,
-                    iconColor: AppColors.categoryVitals,
-                    title: 'Disable Tooltips',
-                    subtitle: 'Hide contextual help overlays',
-                    // The toggle shows "Disable Tooltips", so its value is
-                    // the inverse of tooltipsEnabled.
-                    value: !tooltipsEnabled,
-                    onChanged: (v) => ref
-                        .read(tooltipsEnabledProvider.notifier)
-                        .setEnabled(!v),
-                  ),
-                  const _Divider(),
-                  ZSettingsTile(
-                    icon: Icons.refresh_rounded,
-                    iconColor: AppColors.categoryWellness,
-                    title: 'Reset Onboarding Tooltips',
-                    subtitle: 'Show all tooltips again from scratch',
-                    onTap: () {
-                      ref.read(tooltipSeenProvider.notifier).reset();
-                      _showResetTooltipsSnackBar(context);
-                    },
-                  ),
-                ],
+              const ZDivider(indent: 68),
+              ZSettingsTile(
+                icon: Icons.refresh_rounded,
+                iconColor: AppColors.categoryWellness,
+                title: 'Reset Onboarding Tooltips',
+                subtitle: 'Show all tooltips again from scratch',
+                onTap: () {
+                  ref.read(tooltipSeenProvider.notifier).reset();
+                  _showResetTooltipsSnackBar(context);
+                },
               ),
-
-              const SizedBox(height: AppDimens.spaceXxl),
-            ]),
+            ],
           ),
         ],
       ),
@@ -150,40 +125,26 @@ class AppearanceSettingsScreen extends ConsumerWidget {
   }
 }
 
-// ── _SettingsGroup ─────────────────────────────────────────────────────────────
+// ── _SettingsCard ──────────────────────────────────────────────────────────────
 
-class _SettingsGroup extends StatelessWidget {
-  const _SettingsGroup({required this.children});
+/// A card container for mixed groups (toggles + tiles) that cannot use
+/// [ZSettingsGroup] (which only accepts [ZSettingsTile] instances).
+class _SettingsCard extends StatelessWidget {
+  const _SettingsCard({required this.children});
 
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(children: children),
-      ),
-    );
-  }
-}
-
-// ── _Divider ───────────────────────────────────────────────────────────────────
-
-class _Divider extends StatelessWidget {
-  const _Divider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 68),
-      child: Container(
-        height: 1,
-        color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
       ),
     );
   }
@@ -210,7 +171,6 @@ class _ToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -227,7 +187,7 @@ class _ToggleRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: AppTextStyles.bodyLarge.copyWith(color: cs.onSurface),
+                  style: AppTextStyles.bodyLarge.copyWith(color: colors.textPrimary),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -238,10 +198,7 @@ class _ToggleRow extends StatelessWidget {
               ],
             ),
           ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-          ),
+          ZToggle(value: value, onChanged: onChanged),
         ],
       ),
     );
@@ -311,7 +268,6 @@ class _ThemeOptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final colors = AppColorsOf(context);
     return Expanded(
       child: GestureDetector(
@@ -324,12 +280,12 @@ class _ThemeOptionCard extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: selected
-                ? cs.primary.withValues(alpha: 0.12)
-                : cs.surface,
+                ? colors.primary.withValues(alpha: 0.12)
+                : colors.surface,
             borderRadius: BorderRadius.circular(AppDimens.radiusCard),
             border: Border.all(
               color: selected
-                  ? cs.primary.withValues(alpha: 0.55)
+                  ? colors.primary.withValues(alpha: 0.55)
                   : Colors.transparent,
               width: 1.5,
             ),
@@ -343,14 +299,14 @@ class _ThemeOptionCard extends StatelessWidget {
                   icon,
                   key: ValueKey<bool>(selected),
                   size: 26,
-                  color: selected ? cs.primary : AppColors.textTertiary,
+                  color: selected ? colors.primary : colors.textTertiary,
                 ),
               ),
               const SizedBox(height: AppDimens.spaceXs),
               Text(
                 label,
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: selected ? cs.primary : colors.textSecondary,
+                  color: selected ? colors.primary : colors.textSecondary,
                   fontWeight:
                       selected ? FontWeight.w600 : FontWeight.w400,
                 ),
@@ -366,14 +322,14 @@ class _ThemeOptionCard extends StatelessWidget {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 void _showResetTooltipsSnackBar(BuildContext context) {
-  final cs = Theme.of(context).colorScheme;
+  final colors = AppColorsOf(context);
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(
         'All onboarding tooltips have been reset.',
-        style: AppTextStyles.bodyMedium.copyWith(color: cs.onSurface),
+        style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
       ),
-      backgroundColor: cs.surface,
+      backgroundColor: colors.surface,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusSm),

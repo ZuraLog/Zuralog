@@ -5,7 +5,7 @@ import 'package:zuralog/features/today/domain/metric_grid_models.dart';
 import 'package:zuralog/shared/widgets/metric_grid/metric_grid.dart';
 
 MetricTileData _tile(String type) => MetricTileData(
-  metricType: type, label: type, emoji: '📊',
+  metricType: type, label: type, icon: Icons.bar_chart_rounded,
   categoryColor: 0xFF30D158, value: '1',
 );
 

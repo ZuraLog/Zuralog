@@ -17,8 +17,11 @@ from app.api.v1.schemas import (
     AuthResponse,
     LoginRequest,
     MessageResponse,
+    PasswordResetRequest,
     RefreshRequest,
     RegisterRequest,
+    ResendVerificationRequest,
+    SetPasswordRequest,
     SocialAuthRequest,
 )
 from app.api.deps import _get_auth_service
@@ -302,3 +305,45 @@ async def refresh(
         refresh_token=result["refresh_token"],
         expires_in=result["expires_in"],
     )
+
+
+@router.post("/reset-password", response_model=MessageResponse)
+@limiter.limit("3/minute")
+async def reset_password(
+    request: Request,
+    body: PasswordResetRequest,
+    auth_service: AuthService = Depends(_get_auth_service),
+) -> MessageResponse:
+    """Request a password reset email. Always returns 200."""
+    await auth_service.request_password_reset(
+        email=body.email,
+        redirect_to="https://zuralog.com/auth/reset-password",
+    )
+    return MessageResponse(message="If an account exists, a reset link has been sent.")
+
+
+@router.post("/resend-verification", response_model=MessageResponse)
+@limiter.limit("3/minute")
+async def resend_verification(
+    request: Request,
+    body: ResendVerificationRequest,
+    auth_service: AuthService = Depends(_get_auth_service),
+) -> MessageResponse:
+    """Resend the email verification link. Always returns 200."""
+    await auth_service.resend_confirmation(email=body.email)
+    return MessageResponse(message="If an account exists, a verification email has been sent.")
+
+
+@router.post("/set-password", response_model=MessageResponse)
+@limiter.limit("5/minute")
+async def set_password(
+    request: Request,
+    body: SetPasswordRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    auth_service: AuthService = Depends(_get_auth_service),
+) -> MessageResponse:
+    """Set a new password using a recovery access token."""
+    await auth_service.update_user_password(
+        credentials.credentials, body.new_password,
+    )
+    return MessageResponse(message="Password updated successfully.")

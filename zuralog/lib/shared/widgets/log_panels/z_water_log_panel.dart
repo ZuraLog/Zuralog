@@ -12,6 +12,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/buttons/z_button.dart';
+import 'package:zuralog/shared/widgets/inputs/app_text_field.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
@@ -194,21 +196,20 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
           // ── Custom amount input ─────────────────────────────────────────────
           if (_isCustomSelected) ...[
             const SizedBox(height: AppDimens.spaceMd),
-            TextField(
+            AppTextField(
               controller: _customController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-              ],
-              decoration: InputDecoration(
-                hintText: isImperial ? 'Enter amount (oz)' : 'Enter amount (ml)',
-                hintStyle: AppTextStyles.bodyMedium
-                    .copyWith(color: colors.textTertiary),
-                suffixText: isImperial ? 'oz' : 'ml',
+              hintText: isImperial ? 'Enter amount (oz)' : 'Enter amount (ml)',
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+              suffixIcon: Align(
+                widthFactor: 1.0,
+                heightFactor: 1.0,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: AppDimens.spaceMd),
+                  child: Text(isImperial ? 'oz' : 'ml', style: AppTextStyles.labelMedium.copyWith(color: colors.textSecondary)),
+                ),
               ),
               onChanged: _onCustomChanged,
-              cursorColor: colors.primary,
             ),
           ],
 
@@ -248,21 +249,9 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
           const SizedBox(height: AppDimens.spaceLg),
 
           // ── Save button ─────────────────────────────────────────────────────
-          FilledButton(
+          ZButton(
+            label: 'Add Water',
             onPressed: _canSave ? _handleSave : null,
-            style: FilledButton.styleFrom(
-              backgroundColor: colors.primary,
-              foregroundColor: colors.textOnSage,
-              shape: RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(AppDimens.radiusButton),
-              ),
-              minimumSize: const Size.fromHeight(AppDimens.touchTargetMin),
-            ),
-            child: Text(
-              'Add Water',
-              style: AppTextStyles.labelLarge,
-            ),
           ),
           ],
         ),

@@ -103,8 +103,8 @@ class ZPatternOverlay extends StatefulWidget {
   final ZPatternVariant variant;
 
   /// Pattern opacity (0.0 – 1.0). Recommended values in dark mode:
-  /// - Hero cards: 0.18
-  /// - Feature cards: 0.15
+  /// - Hero cards: 0.10
+  /// - Feature cards: 0.07
   /// - Buttons (primary/destructive): 0.60
   /// - FAB: 0.50
   /// - Empty states: 0.06

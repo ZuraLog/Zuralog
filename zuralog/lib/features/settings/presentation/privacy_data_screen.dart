@@ -18,14 +18,14 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/di/providers.dart';
-import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -50,6 +50,9 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
 
   Future<void> _exportData() async {
     setState(() => _isExporting = true);
+    // Capture colors and messenger before any await to avoid async BuildContext issues.
+    final colors = AppColorsOf(context);
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final apiClient = ref.read(apiClientProvider);
       final response = await apiClient.get(
@@ -61,7 +64,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
       final date = DateTime.now().toIso8601String().substring(0, 10);
       final file = File('${dir.path}/zuralog-export-$date.json');
       await file.writeAsBytes(bytes);
-      await Share.shareXFiles([XFile(file.path)], text: 'Zuralog Data Export');
+      await Share.shareXFiles([XFile(file.path)], text: 'ZuraLog Data Export');
     } catch (e) {
       if (mounted) {
         String errorMessage;
@@ -79,10 +82,17 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
         } else {
           errorMessage = 'Export failed. Please try again.';
         }
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
-            content: Text(errorMessage),
+            content: Text(
+              errorMessage,
+              style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
+            ),
+            backgroundColor: colors.surface,
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+            ),
           ),
         );
       }
@@ -103,31 +113,9 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
     final memoriesAsync = ref.watch(memoryItemsProvider);
 
     return ZuralogScaffold(
-      body: CustomScrollView(
-        slivers: [
-          // ── Large-title header ───────────────────────────────────────────
-          SliverAppBar(
-            expandedHeight: 100,
-            pinned: true,
-            scrolledUnderElevation: 0,
-            elevation: 0,
-            flexibleSpace: FlexibleSpaceBar(
-              collapseMode: CollapseMode.parallax,
-              titlePadding: const EdgeInsets.only(
-                left: AppDimens.spaceMd,
-                bottom: AppDimens.spaceMd,
-              ),
-              title: Text(
-                'Privacy & Data',
-                style: AppTextStyles.displaySmall.copyWith(
-                  color: colors.textPrimary,
-                ),
-              ),
-            ),
-          ),
-
-          SliverList(
-            delegate: SliverChildListDelegate([
+      appBar: ZuralogAppBar(title: 'Privacy & Data', showProfileAvatar: false),
+      body: ListView(
+        children: [
               // ── AI MEMORY section ──────────────────────────────────────
               const SettingsSectionLabel('AI Memory'),
               Padding(
@@ -147,7 +135,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
               memoriesAsync.when(
                 loading: () => const Padding(
                   padding: EdgeInsets.all(AppDimens.spaceMd),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: Center(child: ZCircularProgress()),
                 ),
                 error: (e, _) => Padding(
                   padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
@@ -159,9 +147,11 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                           style: AppTextStyles.bodyMedium.copyWith(color: AppColors.statusError),
                         ),
                       ),
-                      TextButton(
+                      ZButton(
+                        label: 'Retry',
                         onPressed: () => ref.invalidate(memoryItemsProvider),
-                        child: const Text('Retry'),
+                        variant: ZButtonVariant.text,
+                        isFullWidth: false,
                       ),
                     ],
                   ),
@@ -170,7 +160,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: colors.cardBackground,
+                      color: colors.surface,
                       borderRadius: BorderRadius.circular(AppDimens.radiusCard),
                     ),
                     child: Column(
@@ -184,7 +174,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                             child: Text(
                               'No memory stored',
                               style: AppTextStyles.bodyMedium.copyWith(
-                                color: AppColors.textTertiary,
+                                color: colors.textTertiary,
                               ),
                             ),
                           )
@@ -197,6 +187,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                                 _MemoryItemRow(
                                   item: item,
                                   onDelete: () async {
+                                    final messenger = ScaffoldMessenger.of(context);
                                     try {
                                       await ref.read(memoryItemsProvider.notifier).delete(item.id);
                                       ref.read(analyticsServiceProvider).capture(
@@ -204,10 +195,17 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                                       );
                                     } catch (e) {
                                       if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        messenger.showSnackBar(
                                           SnackBar(
-                                            content: Text('Failed to delete memory: $e'),
+                                            content: Text(
+                                              'Failed to delete memory: $e',
+                                              style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
+                                            ),
+                                            backgroundColor: colors.surface,
                                             behavior: SnackBarBehavior.floating,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                                            ),
                                           ),
                                         );
                                       }
@@ -236,7 +234,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                   ),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: colors.cardBackground,
+                      color: colors.surface,
                       borderRadius: BorderRadius.circular(AppDimens.radiusCard),
                     ),
                     child: ZSettingsTile(
@@ -253,6 +251,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                           ? () => _showClearMemoryDialog(
                               context,
                               onConfirmed: () async {
+                                final messenger = ScaffoldMessenger.of(context);
                                 try {
                                   await ref.read(memoryItemsProvider.notifier).clearAll();
                                   ref.read(analyticsServiceProvider).capture(
@@ -260,10 +259,17 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                                   );
                                 } catch (e) {
                                   if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    messenger.showSnackBar(
                                       SnackBar(
-                                        content: Text('Failed to clear memories: $e'),
+                                        content: Text(
+                                          'Failed to clear memories: $e',
+                                          style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
+                                        ),
+                                        backgroundColor: colors.surface,
                                         behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                                        ),
                                       ),
                                     );
                                   }
@@ -318,11 +324,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                     subtitle: _isExporting ? 'Exporting…' : 'Download your data as JSON',
                     showChevron: false,
                     trailing: _isExporting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
+                        ? const ZCircularProgress(size: 20, strokeWidth: 2)
                         : null,
                     onTap: _isExporting
                         ? null
@@ -343,6 +345,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                     onTap: () => _showDeleteDataDialog(
                       context,
                       onConfirmed: () async {
+                        final messenger = ScaffoldMessenger.of(context);
                         ref.read(analyticsServiceProvider).capture(
                           event: AnalyticsEvents.accountDeleteRequested,
                         );
@@ -352,13 +355,18 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                           // Ignore errors — show success message regardless.
                         }
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                          messenger.showSnackBar(
+                            SnackBar(
                               content: Text(
                                 'AI memories deleted. To delete your account and all health data, go to Account Settings → Delete Account.',
+                                style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
                               ),
+                              backgroundColor: colors.surface,
                               behavior: SnackBarBehavior.floating,
-                              duration: Duration(seconds: 6),
+                              duration: const Duration(seconds: 6),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                              ),
                             ),
                           );
                         }
@@ -376,21 +384,19 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                     icon: Icons.shield_outlined,
                     iconColor: colors.primary,
                     title: 'Privacy Policy',
-                    onTap: () => context.pushNamed(RouteNames.settingsPrivacyPolicy),
+                    onTap: () => launchUrl(Uri.parse('https://www.zuralog.com/privacy-policy'), mode: LaunchMode.externalApplication),
                   ),
                   const _Divider(),
                   ZSettingsTile(
                     icon: Icons.description_outlined,
                     iconColor: colors.primary,
                     title: 'Terms of Service',
-                    onTap: () => context.pushNamed(RouteNames.settingsTerms),
+                    onTap: () => launchUrl(Uri.parse('https://www.zuralog.com/terms-of-service'), mode: LaunchMode.externalApplication),
                   ),
                 ],
               ),
 
               const SizedBox(height: AppDimens.spaceXxl),
-            ]),
-          ),
         ],
       ),
     );
@@ -411,7 +417,7 @@ class _SettingsCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(children: children),
@@ -425,14 +431,7 @@ class _Divider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.only(left: 68),
-      child: Container(
-        height: 1,
-        color: colors.border.withValues(alpha: 0.5),
-      ),
-    );
+    return const ZDivider(indent: 68);
   }
 }
 
@@ -466,10 +465,10 @@ class _MemoryItemRow extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.close_rounded,
               size: 18,
-              color: AppColors.textTertiary,
+              color: colors.textTertiary,
             ),
             onPressed: onDelete,
             padding: EdgeInsets.zero,
@@ -538,18 +537,15 @@ class _ToggleRow extends StatelessWidget {
                 Text(
                   subtitle,
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textTertiary,
+                    color: colors.textTertiary,
                   ),
                 ),
               ],
             ),
           ),
-          Switch(
+          ZToggle(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: colors.primary,
-            inactiveThumbColor: AppColors.textTertiary,
-            inactiveTrackColor: colors.border,
           ),
         ],
       ),
@@ -581,24 +577,19 @@ Future<void> _showClearMemoryDialog(
         ),
       ),
       actions: [
-        TextButton(
+        ZButton(
+          label: 'Cancel',
           onPressed: () => Navigator.of(ctx).pop(false),
-          child: Text(
-            'Cancel',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
+          variant: ZButtonVariant.text,
+          size: ZButtonSize.small,
+          isFullWidth: false,
         ),
-        TextButton(
+        ZButton(
+          label: 'Clear All',
           onPressed: () => Navigator.of(ctx).pop(true),
-          child: Text(
-            'Clear All',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: colors.accent,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          variant: ZButtonVariant.destructive,
+          size: ZButtonSize.small,
+          isFullWidth: false,
         ),
       ],
     ),
@@ -631,24 +622,19 @@ Future<void> _showDeleteDataDialog(
         ),
       ),
       actions: [
-        TextButton(
+        ZButton(
+          label: 'Cancel',
           onPressed: () => Navigator.of(ctx).pop(false),
-          child: Text(
-            'Cancel',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
+          variant: ZButtonVariant.text,
+          size: ZButtonSize.small,
+          isFullWidth: false,
         ),
-        TextButton(
+        ZButton(
+          label: 'Delete',
           onPressed: () => Navigator.of(ctx).pop(true),
-          child: Text(
-            'Delete',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: colors.accent,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+          variant: ZButtonVariant.destructive,
+          size: ZButtonSize.small,
+          isFullWidth: false,
         ),
       ],
     ),

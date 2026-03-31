@@ -219,16 +219,21 @@ class ApiClient {
   /// [queryParameters].
   ///
   /// [queryParameters] are appended to the URL as query string key-value pairs.
+  /// [options] can be used to override request-level Dio settings such as
+  /// custom headers (e.g. to pass a recovery access token instead of the
+  /// stored auth token).
   /// Returns the Dio [Response] containing the server's response.
   Future<Response<dynamic>> post(
     String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
+    Options? options,
     void Function(int, int)? onSendProgress,
   }) => _dio.post(
     path,
     data: data,
     queryParameters: queryParameters,
+    options: options,
     onSendProgress: onSendProgress,
   );
 

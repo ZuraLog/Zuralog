@@ -77,11 +77,22 @@ abstract final class AppColors {
 
   // ── Canvas & Elevation (Brand Bible v4.0) ────────────────────────────────
   // Dark mode uses a four-level brightness hierarchy — no borders, no shadows.
-  // Each step is +8 brighter across all RGB channels.
+  // Each step is ~8 brighter per channel with a subtle warm tint.
 
   /// Canvas — screen/page background. Darkest level.
-  /// Pure neutral grey (no blue tint) to prevent Impeller color shift.
-  static const Color canvas = Color(0xFF161616);
+  /// Subtle warm tint (+2 blue channel) per brand bible.
+  static const Color canvas = Color(0xFF161618);
+
+  /// Ghost mode canvas background — intentional dark tint for privacy context.
+  /// NOTE: superseded by _GhostVignette overlay in coach_screen.dart (2026-03-31).
+  /// Kept for potential future use on other screens.
+  static const Color canvasGhost = Color(0xFF111113);
+
+  /// Ghost mode canvas background — light mode. A muted cool-grey tint to
+  /// visually separate the privacy context from the normal canvas.
+  /// NOTE: superseded by _GhostVignette overlay in coach_screen.dart (2026-03-31).
+  /// Kept for potential future use on other screens.
+  static const Color canvasGhostLight = Color(0xFFE8E8E4);
 
   // ── Light-mode Brand Bible surface tokens ────────────────────────────────
 
@@ -98,13 +109,13 @@ abstract final class AppColors {
   static const Color surfaceOverlayLight = Color(0xFFD4D0CA);
 
   /// Surface — cards, content containers. One step above canvas.
-  static const Color surface = Color(0xFF1E1E1E);
+  static const Color surface = Color(0xFF1E1E20);
 
   /// Surface Raised — popovers, dropdowns, tooltips, hover states.
-  static const Color surfaceRaised = Color(0xFF272727);
+  static const Color surfaceRaised = Color(0xFF272729);
 
   /// Surface Overlay — modals, bottom sheets, dialogs. Highest level.
-  static const Color surfaceOverlay = Color(0xFF313131);
+  static const Color surfaceOverlay = Color(0xFF313133);
 
   // ── Legacy surface aliases (light/dark) ─────────────────────────────────
 
@@ -378,6 +389,7 @@ class AppColorsOf {
 
   // ── Canvas & Elevation (Brand Bible) ───────────────────────────────────
   Color get canvas => _isDark ? AppColors.canvas : AppColors.canvasLight;
+  Color get canvasGhost => _isDark ? AppColors.canvasGhost : AppColors.canvasGhostLight;
   Color get surfaceRaised => _isDark ? AppColors.surfaceRaised : AppColors.surfaceRaisedLight;
   Color get surfaceOverlay => _isDark ? AppColors.surfaceOverlay : AppColors.surfaceOverlayLight;
 
@@ -399,8 +411,8 @@ class AppColorsOf {
   Color get warmWhite => AppColors.warmWhite;
 
   // ── Borders ────────────────────────────────────────────────────────────
-  Color get border => _isDark ? AppColors.borderDark : AppColors.borderLight;
-  Color get divider => _isDark ? AppColors.dividerDefault : AppColors.borderLight;
+  Color get border => _isDark ? AppColors.dividerDefault : const Color(0x14161618);
+  Color get divider => _isDark ? AppColors.dividerDefault : const Color(0x14161618);
 
   // ── Semantic Status ────────────────────────────────────────────────────
   Color get success => AppColors.success;

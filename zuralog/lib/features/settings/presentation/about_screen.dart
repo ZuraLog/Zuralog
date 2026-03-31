@@ -5,150 +5,125 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:zuralog/core/router/route_names.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── AboutScreen ───────────────────────────────────────────────────────────────
 
 /// About screen — app identity, support links, legal pages, open-source licenses.
-class AboutScreen extends StatelessWidget {
+class AboutScreen extends StatefulWidget {
   /// Creates the [AboutScreen].
   const AboutScreen({super.key});
+
+  @override
+  State<AboutScreen> createState() => _AboutScreenState();
+}
+
+class _AboutScreenState extends State<AboutScreen> {
+  String _version = '...';
+
+  @override
+  void initState() {
+    super.initState();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) {
+        setState(() {
+          _version = 'Version ${info.version} (Build ${info.buildNumber})';
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     return ZuralogScaffold(
-      body: CustomScrollView(
-        slivers: [
-          // ── Large-title app bar ─────────────────────────────────────────────
-          SliverAppBar(
-            expandedHeight: 100,
-            pinned: true,
-            elevation: 0,
-            scrolledUnderElevation: 0,
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(
-                left: AppDimens.spaceMd,
-                bottom: 14,
+      appBar: const ZuralogAppBar(title: 'About ZuraLog', showProfileAvatar: false),
+      body: ListView(
+        children: [
+          const SizedBox(height: AppDimens.spaceLg),
+          _AppIdentityHero(version: _version),
+          const SizedBox(height: AppDimens.spaceXl),
+
+          const SettingsSectionLabel('SUPPORT'),
+          ZSettingsGroup(
+            tiles: [
+              ZSettingsTile(
+                icon: Icons.help_rounded,
+                iconColor: AppColors.categoryBody,
+                title: 'Help Center',
+                subtitle: 'FAQs, guides, and tutorials',
+                onTap: () => _showSnackBar(context, 'Opening Help Center'),
               ),
-              collapseMode: CollapseMode.parallax,
-              title: Text(
-                'About',
-                style:
-                    AppTextStyles.displaySmall.copyWith(color: colors.textPrimary),
+              ZSettingsTile(
+                icon: Icons.mail_rounded,
+                iconColor: colors.primary,
+                title: 'Contact Support',
+                subtitle: 'support@zuralog.com',
+                onTap: () => _showSnackBar(context, 'Opening email\u2026'),
               ),
-            ),
+              ZSettingsTile(
+                icon: Icons.people_rounded,
+                iconColor: AppColors.categorySleep,
+                title: 'Community',
+                subtitle: 'Join the ZuraLog community',
+                onTap: () => _showSnackBar(context, 'Opening community\u2026'),
+              ),
+            ],
           ),
 
-          // ── App identity hero ───────────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.only(top: AppDimens.spaceLg),
-              child: const _AppIdentityHero(),
-            ),
+          const SettingsSectionLabel('LEGAL'),
+          ZSettingsGroup(
+            tiles: [
+              ZSettingsTile(
+                icon: Icons.policy_rounded,
+                iconColor: AppColors.categoryVitals,
+                title: 'Privacy Policy',
+                onTap: () => launchUrl(Uri.parse('https://www.zuralog.com/privacy-policy'), mode: LaunchMode.externalApplication),
+              ),
+              ZSettingsTile(
+                icon: Icons.description_rounded,
+                iconColor: AppColors.categoryWellness,
+                title: 'Terms of Service',
+                onTap: () => launchUrl(Uri.parse('https://www.zuralog.com/terms-of-service'), mode: LaunchMode.externalApplication),
+              ),
+              ZSettingsTile(
+                icon: Icons.gavel_rounded,
+                iconColor: colors.textTertiary,
+                title: 'Open-Source Licenses',
+                onTap: () => showLicensePage(
+                  context: context,
+                  applicationName: 'ZuraLog',
+                  applicationVersion: _version,
+                ),
+              ),
+            ],
           ),
 
-          // ── Blank spacer ────────────────────────────────────────────────────
-          const SliverToBoxAdapter(child: SizedBox(height: AppDimens.spaceXl)),
-
-          // ── SUPPORT section ─────────────────────────────────────────────────
-          const SliverToBoxAdapter(child: _SectionHeader('SUPPORT')),
-          SliverToBoxAdapter(
-            child: _SettingsGroup(
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimens.spaceMd,
+              vertical: AppDimens.spaceXl,
+            ),
+            child: Column(
               children: [
-                ZSettingsTile(
-                  icon: Icons.help_rounded,
-                  iconColor: AppColors.categoryBody,
-                  title: 'Help Center',
-                  subtitle: 'FAQs, guides, and tutorials',
-                  onTap: () => _showSnackBar(context, 'Opening Help Center'),
+                Text(
+                  'Made with \u2764\ufe0f for your health journey',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodySmall.copyWith(color: colors.textTertiary),
                 ),
-                const _Divider(),
-                ZSettingsTile(
-                  icon: Icons.mail_rounded,
-                  iconColor: colors.primary,
-                  title: 'Contact Support',
-                  subtitle: 'support@zuralog.com',
-                  onTap: () => _showSnackBar(context, 'Opening email…'),
-                ),
-                const _Divider(),
-                ZSettingsTile(
-                  icon: Icons.people_rounded,
-                  iconColor: AppColors.categorySleep,
-                  title: 'Community',
-                  subtitle: 'Join the Zuralog community',
-                  onTap: () => _showSnackBar(context, 'Opening community…'),
+                const SizedBox(height: AppDimens.spaceXs),
+                Text(
+                  '\u00a9 2026 ZuraLog. All rights reserved.',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodySmall.copyWith(color: colors.textTertiary),
                 ),
               ],
-            ),
-          ),
-
-          // ── LEGAL section ───────────────────────────────────────────────────
-          const SliverToBoxAdapter(child: _SectionHeader('LEGAL')),
-          SliverToBoxAdapter(
-            child: _SettingsGroup(
-              children: [
-                ZSettingsTile(
-                  icon: Icons.policy_rounded,
-                  iconColor: AppColors.categoryVitals,
-                  title: 'Privacy Policy',
-                  onTap: () => context.pushNamed(RouteNames.settingsPrivacyPolicy),
-                ),
-                const _Divider(),
-                ZSettingsTile(
-                  icon: Icons.description_rounded,
-                  iconColor: AppColors.categoryWellness,
-                  title: 'Terms of Service',
-                  onTap: () => context.pushNamed(RouteNames.settingsTerms),
-                ),
-                const _Divider(),
-                ZSettingsTile(
-                  icon: Icons.gavel_rounded,
-                  iconColor: AppColors.textTertiary,
-                  title: 'Open-Source Licenses',
-                  onTap: () => showLicensePage(
-                    context: context,
-                    applicationName: 'Zuralog',
-                    applicationVersion: '1.0.0',
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ── Footer ──────────────────────────────────────────────────────────
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDimens.spaceMd,
-                vertical: AppDimens.spaceXl,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text(
-                    'Made with ❤️ for your health journey',
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textTertiary,
-                    ),
-                  ),
-                  const SizedBox(height: AppDimens.spaceXs),
-                  Text(
-                    '© 2026 Zuralog. All rights reserved.',
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textTertiary,
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
         ],
@@ -160,7 +135,9 @@ class AboutScreen extends StatelessWidget {
 // ── _AppIdentityHero ───────────────────────────────────────────────────────────
 
 class _AppIdentityHero extends StatelessWidget {
-  const _AppIdentityHero();
+  const _AppIdentityHero({required this.version});
+
+  final String version;
 
   @override
   Widget build(BuildContext context) {
@@ -187,14 +164,14 @@ class _AppIdentityHero extends StatelessWidget {
 
           // App name
           Text(
-            'Zuralog',
+            'ZuraLog',
             style: AppTextStyles.displayLarge.copyWith(color: colors.textPrimary),
           ),
           const SizedBox(height: AppDimens.spaceXs),
 
-          // Version string
+          // Version string — loaded from PackageInfo.fromPlatform(); shows '...' until ready
           Text(
-            'Version 1.0.0 (Build 42)',
+            version,
             style: AppTextStyles.bodySmall.copyWith(
               color: colors.textSecondary,
             ),
@@ -220,6 +197,7 @@ class _WhatsNewChip extends StatelessWidget {
     return ZuralogSpringButton(
       onTap: () => _showSnackBar(context, "What's New in 1.0.0"),
       child: Container(
+        // 14×6 — intentional tight chip padding; no AppDimens token matches these values
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
           color: colors.primary.withValues(alpha: 0.12),
@@ -248,77 +226,9 @@ class _WhatsNewChip extends StatelessWidget {
   }
 }
 
-// ── _SectionHeader ─────────────────────────────────────────────────────────────
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceLg,
-        AppDimens.spaceMd,
-        AppDimens.spaceXs,
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.labelSmall.copyWith(
-          color: AppColors.textTertiary,
-          letterSpacing: 0.8,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
-
-// ── _SettingsGroup ─────────────────────────────────────────────────────────────
-
-class _SettingsGroup extends StatelessWidget {
-  const _SettingsGroup({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-      child: Container(
-        decoration: BoxDecoration(
-          color: colors.cardBackground,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        ),
-        child: Column(children: children),
-      ),
-    );
-  }
-}
-
-// ── _Divider ───────────────────────────────────────────────────────────────────
-
-class _Divider extends StatelessWidget {
-  const _Divider();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.only(left: 68),
-      child: Container(
-        height: 1,
-        color: colors.border.withValues(alpha: 0.5),
-      ),
-    );
-  }
-}
-
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
+// Called synchronously from onTap — context is always valid here.
 void _showSnackBar(BuildContext context, String message) {
   final colors = AppColorsOf(context);
   ScaffoldMessenger.of(context).showSnackBar(

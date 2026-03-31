@@ -32,8 +32,9 @@ Color categoryColor(HealthCategory cat) {
 }
 
 /// Returns the [AppColors.category*] token for a category name string.
-/// Case-insensitive. Returns [AppColors.primary] as fallback for unknown strings.
-Color categoryColorFromString(String category) {
+/// Case-insensitive. Returns [fallback] (defaults to [AppColors.primary])
+/// for unknown strings. Pass a theme-aware color when you have a BuildContext.
+Color categoryColorFromString(String category, {Color? fallback}) {
   switch (category.toLowerCase()) {
     case 'activity':
       return AppColors.categoryActivity;
@@ -56,6 +57,6 @@ Color categoryColorFromString(String category) {
     case 'environment':
       return AppColors.categoryEnvironment;
     default:
-      return AppColors.primary;
+      return fallback ?? AppColors.primary;
   }
 }

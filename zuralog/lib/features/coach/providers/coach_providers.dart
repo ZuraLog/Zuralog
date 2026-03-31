@@ -138,6 +138,7 @@ class CoachChatState {
   const CoachChatState({
     this.messages = const [],
     this.streamingContent,
+    this.thinkingContent,
     this.activeToolName,
     this.isLoadingHistory = false,
     this.isSending = false,
@@ -157,6 +158,11 @@ class CoachChatState {
   /// Partial tokens from the current streaming response.
   /// Non-null while a streaming response is in progress.
   final String? streamingContent;
+
+  /// Accumulated reasoning/thinking text from the AI (display-only).
+  /// Non-null while the AI is in its reasoning phase, before real content
+  /// tokens start arriving.
+  final String? thinkingContent;
 
   /// Tool being executed right now (e.g. "apple_health_read_metrics").
   final String? activeToolName;
@@ -195,6 +201,8 @@ class CoachChatState {
     List<ChatMessage>? messages,
     String? streamingContent,
     bool clearStreaming = false,
+    String? thinkingContent,
+    bool clearThinking = false,
     String? activeToolName,
     bool clearTool = false,
     bool? isLoadingHistory,
@@ -213,6 +221,7 @@ class CoachChatState {
     return CoachChatState(
       messages: messages ?? this.messages,
       streamingContent: clearStreaming ? null : (streamingContent ?? this.streamingContent),
+      thinkingContent: clearThinking ? null : (thinkingContent ?? this.thinkingContent),
       activeToolName: clearTool ? null : (activeToolName ?? this.activeToolName),
       isLoadingHistory: isLoadingHistory ?? this.isLoadingHistory,
       isSending: isSending ?? this.isSending,
@@ -374,10 +383,20 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
             state = state.copyWith(
               activeToolName: isStart ? toolName : null,
               clearTool: !isStart,
+              // Clear thinking text when a tool starts so stale reasoning
+              // text can't flash back if activeToolName briefly becomes null
+              // between consecutive tool events on thinking models.
+              clearThinking: isStart,
             );
 
+          case ThinkingToken(:final accumulated):
+            state = state.copyWith(thinkingContent: accumulated);
+
           case StreamToken(:final accumulated):
-            state = state.copyWith(streamingContent: accumulated);
+            state = state.copyWith(
+              streamingContent: accumulated,
+              clearThinking: true,
+            );
 
           case StreamComplete(:final message, :final conversationId):
             _cancelInactivityTimer();
@@ -387,6 +406,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
               isSending: false,
               clearStreaming: true,
               clearTool: true,
+              clearThinking: true,
               resolvedConversationId: conversationId,
             );
             _pendingTempMsgId = null;
@@ -405,6 +425,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
               isSending: false,
               clearStreaming: true,
               clearTool: true,
+              clearThinking: true,
               errorMessage: error,
             );
             _pendingTempMsgId = null;
@@ -419,6 +440,8 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
               : null,
           isSending: false,
           clearStreaming: true,
+          clearTool: true,
+          clearThinking: true,
           errorMessage: 'Connection lost. Please try again.',
         );
         _pendingTempMsgId = null;
@@ -485,6 +508,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
       isSending: false,
       clearStreaming: true,
       clearTool: true,
+      clearThinking: true,
       errorMessage: 'The connection went silent. Please try again.',
     );
     _pendingTempMsgId = null;
@@ -635,6 +659,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
       isSending: false,
       clearStreaming: true,
       clearTool: true,
+      clearThinking: true,
       isCancelled: true,
     );
     _pendingTempMsgId = null;
@@ -740,3 +765,12 @@ class PendingMessage {
 
 final pendingFirstMessageProvider =
     StateProvider.family<PendingMessage?, String>((ref, tempId) => null);
+
+// ── Ghost Mode ────────────────────────────────────────────────────────────────
+
+/// When true, the Coach tab is in ghost mode — no messages are persisted.
+///
+/// Ghost conversations are keyed with a "ghost_" prefix in [CoachScreen] so
+/// they are never added to the conversation drawer or synced to the backend.
+/// Resetting to false clears the ghost session and returns to [IdleState].
+final ghostModeProvider = StateProvider<bool>((ref) => false);

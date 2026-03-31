@@ -95,8 +95,9 @@ class _CheckInboxScreenState extends ConsumerState<CheckInboxScreen> {
     try {
       if (_inboxContext == 'verification') {
         await ref.read(authRepositoryProvider).resendVerification(_email);
+      } else if (_inboxContext == 'reset') {
+        await ref.read(authRepositoryProvider).resetPassword(_email);
       }
-      // For 'reset' context: UI only — no backend call.
       if (!mounted) return;
 
       // Restart the countdown.

@@ -13,8 +13,9 @@ import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/core/router/app_router.dart';
+import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/features/integrations/domain/integrations_provider.dart';
 
 /// Handles incoming deep links for OAuth callback interception.
@@ -68,9 +69,41 @@ class DeeplinkHandler {
     switch (uri.host) {
       case 'oauth':
         await _handleOAuth(uri, ref, onLog: onLog);
+      case 'reset-password':
+        _handlePasswordReset(uri, ref, onLog: onLog);
       default:
         onLog('Unrecognised deep link: $uri');
     }
+  }
+
+  /// Handle `zuralog://reset-password?access_token=...&refresh_token=...`
+  ///
+  /// Called when the user taps the password-reset link in their email.
+  /// Navigates to [ResetPasswordScreen] with the recovery token in the URL
+  /// so the screen can use it to authenticate the set-password request.
+  static void _handlePasswordReset(
+    Uri uri,
+    WidgetRef ref, {
+    required void Function(String) onLog,
+  }) {
+    final params = uri.queryParameters.isNotEmpty
+        ? uri.queryParameters
+        : Uri.splitQueryString(uri.fragment);
+
+    final accessToken = params['access_token'] ?? '';
+
+    if (accessToken.isEmpty) {
+      onLog('Password reset deep link missing access_token: $uri');
+      return;
+    }
+
+    onLog('Password reset deep link received, navigating to reset screen...');
+
+    final router = ref.read(routerProvider);
+    router.go(
+      '${RouteNames.resetPasswordPath}'
+      '?access_token=${Uri.encodeComponent(accessToken)}',
+    );
   }
 
   /// Handle `zuralog://oauth/<provider>?...` callbacks.

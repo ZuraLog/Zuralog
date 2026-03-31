@@ -18,7 +18,6 @@ import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
-const _kQualityEmojis = ['😩', '😕', '😐', '😌', '😄'];
 const _kQualityLabels = ['Awful', 'Poor', 'Okay', 'Good', 'Great'];
 
 const _kFactors = [
@@ -172,13 +171,13 @@ class _SleepLogScreenState extends ConsumerState<SleepLogScreen> {
                         vertical: AppDimens.spaceXs,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
+                        color: colors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(AppDimens.shapePill),
                       ),
                       child: Text(
                         _formatDuration(),
                         style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.primary,
+                          color: colors.primary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -188,55 +187,37 @@ class _SleepLogScreenState extends ConsumerState<SleepLogScreen> {
                 const SizedBox(height: AppDimens.spaceLg),
                 ZSectionLabel(label: 'Sleep quality', isOptional: true),
                 const SizedBox(height: AppDimens.spaceSm),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: List.generate(5, (i) {
-                    final rating = i + 1;
-                    final selected = _qualityRating == rating;
-                    return GestureDetector(
-                      onTap: () => setState(() =>
-                          _qualityRating = selected ? null : rating),
-                      child: Column(
-                        children: [
-                          Text(
-                            _kQualityEmojis[i],
-                            style: TextStyle(fontSize: selected ? 36 : 28),
-                          ),
-                          Text(
-                            _kQualityLabels[i],
-                            style: AppTextStyles.caption.copyWith(
-                              color: selected ? AppColors.primary : colors.textTertiary,
-                              fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
+                Column(
+                  children: [
+                    ZRatingBar(
+                      rating: _qualityRating ?? 0,
+                      onChanged: (v) => setState(() =>
+                          _qualityRating = _qualityRating == v ? null : v),
+                    ),
+                    const SizedBox(height: AppDimens.spaceSm),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: _kQualityLabels.map((l) => Text(
+                        l,
+                        style: AppTextStyles.caption.copyWith(
+                          color: _qualityRating == _kQualityLabels.indexOf(l) + 1
+                              ? colors.primary
+                              : colors.textTertiary,
+                        ),
+                      )).toList(),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: AppDimens.spaceLg),
                 ZSectionLabel(label: 'Night interruptions', isOptional: true),
                 const SizedBox(height: AppDimens.spaceSm),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.remove_circle_outline),
-                      onPressed: _interruptions > 0
-                          ? () => setState(() => _interruptions--)
-                          : null,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-                      child: Text('$_interruptions', style: AppTextStyles.h2),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add_circle_outline),
-                      onPressed: _interruptions < 20
-                          ? () => setState(() => _interruptions++)
-                          : null,
-                    ),
-                  ],
+                Center(
+                  child: ZNumberStepper(
+                    value: _interruptions,
+                    min: 0,
+                    max: 20,
+                    onChanged: (v) => setState(() => _interruptions = v),
+                  ),
                 ),
                 const SizedBox(height: AppDimens.spaceLg),
                 ZSectionLabel(label: 'What affected your sleep?', isOptional: true),
@@ -244,30 +225,25 @@ class _SleepLogScreenState extends ConsumerState<SleepLogScreen> {
                 Wrap(
                   spacing: AppDimens.spaceSm,
                   runSpacing: AppDimens.spaceSm,
-                  children: _kFactors.map((factor) {
-                    final selected = _factors.contains(factor);
-                    return FilterChip(
-                      label: Text(factor),
-                      selected: selected,
-                      onSelected: (_) => setState(() {
-                        if (selected) {
-                          _factors.remove(factor);
-                        } else {
-                          _factors.add(factor);
-                        }
-                      }),
-                    );
-                  }).toList(),
+                  children: _kFactors.map((factor) => ZChip(
+                    label: factor,
+                    isActive: _factors.contains(factor),
+                    onTap: () => setState(() {
+                      if (_factors.contains(factor)) {
+                        _factors.remove(factor);
+                      } else {
+                        _factors.add(factor);
+                      }
+                    }),
+                  )).toList(),
                 ),
                 const SizedBox(height: AppDimens.spaceLg),
                 ZSectionLabel(label: 'Notes', isOptional: true),
                 const SizedBox(height: AppDimens.spaceSm),
-                TextField(
+                ZTextArea(
                   controller: _notesCtrl,
+                  placeholder: 'Anything else to note?',
                   maxLength: 500,
-                  decoration: const InputDecoration(
-                    hintText: 'Anything else to note?',
-                  ),
                 ),
               ],
             ),
@@ -279,14 +255,10 @@ class _SleepLogScreenState extends ConsumerState<SleepLogScreen> {
               AppDimens.spaceMd,
               AppDimens.spaceSm + bottomPad,
             ),
-            child: FilledButton(
+            child: ZButton(
+              label: 'Save Sleep',
               onPressed: _canSave ? _save : null,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-              ),
-              child: _isSaving
-                  ? const CircularProgressIndicator.adaptive()
-                  : const Text('Save Sleep'),
+              isLoading: _isSaving,
             ),
           ),
         ],

@@ -101,6 +101,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   // ── Avatar upload ──────────────────────────────────────────────────────────
 
   Future<void> _pickAndUploadAvatar() async {
+    final colors = AppColorsOf(context);
     final picker = ImagePicker();
     final file = await picker.pickImage(
       source: ImageSource.gallery,
@@ -121,11 +122,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e is DioException
-                ? (e.response?.data?['detail'] as String? ??
-                    'Photo upload failed. Try again.')
-                : 'Photo upload failed. Try again.'),
+            content: Text(
+              e is DioException
+                  ? (e.response?.data?['detail'] as String? ??
+                      'Photo upload failed. Try again.')
+                  : 'Photo upload failed. Try again.',
+              style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
+            ),
+            backgroundColor: colors.surface,
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+            ),
           ),
         );
       }
@@ -199,7 +207,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         return Container(
           margin: const EdgeInsets.all(AppDimens.spaceMd),
           decoration: BoxDecoration(
-            color: colors.cardBackground,
+            color: colors.surface,
             borderRadius: BorderRadius.circular(AppDimens.shapeLg),
           ),
           child: Column(
@@ -220,18 +228,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       style: AppTextStyles.titleMedium
                           .copyWith(color: colors.textPrimary),
                     ),
-                    TextButton(
+                    ZButton(
+                      label: 'Done',
                       onPressed: () {
                         Navigator.pop(sheetCtx);
                         setState(() => _birthday = picked);
                       },
-                      child: Text(
-                        'Done',
-                        style: AppTextStyles.bodyLarge.copyWith(
-                          color: colors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      variant: ZButtonVariant.text,
+                      isFullWidth: false,
                     ),
                   ],
                 ),
@@ -264,7 +268,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         return Container(
           margin: const EdgeInsets.all(AppDimens.spaceMd),
           decoration: BoxDecoration(
-            color: colors.cardBackground,
+            color: colors.surface,
             borderRadius: BorderRadius.circular(AppDimens.shapeLg),
           ),
           padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -364,25 +368,20 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     return ZuralogScaffold(
       appBar: ZuralogAppBar(
         title: 'Edit Profile',
+        showProfileAvatar: false,
         actions: [
-          TextButton(
-            onPressed: _hasChanges && !_saving ? _save : null,
-            child: _saving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2.5),
-                  )
-                : Text(
-                    'Save',
-                    style: AppTextStyles.bodyLarge.copyWith(
-                      color: _hasChanges && !_saving
-                          ? colors.primary
-                          : colors.textSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-          ),
+          if (_saving)
+            const Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: ZCircularProgress(size: 18, strokeWidth: 2.5),
+            )
+          else
+            ZButton(
+              label: 'Save',
+              onPressed: _hasChanges && !_saving ? _save : null,
+              variant: ZButtonVariant.text,
+              isFullWidth: false,
+            ),
         ],
       ),
       body: ListView(
@@ -403,7 +402,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             tiles: [
               ZSettingsTile(
                 icon: Icons.person_outline_rounded,
-                iconColor: AppColors.primary,
+                iconColor: colors.primary,
                 title: 'Name',
                 subtitle: _nameController.text.isEmpty
                     ? 'Not set'
@@ -524,17 +523,14 @@ class _AvatarSection extends StatelessWidget {
                       color: colors.primary,
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: colors.cardBackground,
+                        color: colors.surface,
                         width: 2,
                       ),
                     ),
                     child: uploading
                         ? const Padding(
                             padding: EdgeInsets.all(5),
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
+                            child: ZCircularProgress(size: 18, strokeWidth: 2, color: Colors.white),
                           )
                         : const Icon(
                             Icons.camera_alt_rounded,
@@ -605,7 +601,7 @@ class _FieldEditSheetState extends State<_FieldEditSheet> {
       child: Container(
         margin: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.shapeLg),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceLg),
@@ -630,15 +626,12 @@ class _FieldEditSheetState extends State<_FieldEditSheet> {
               },
             ),
             const SizedBox(height: AppDimens.spaceMd),
-            SizedBox(
-              width: double.infinity,
-              child: PrimaryButton(
-                label: 'Save',
-                onPressed: () {
-                  widget.onSave(_controller.text);
-                  Navigator.pop(context);
-                },
-              ),
+            ZButton(
+              label: 'Save',
+              onPressed: () {
+                widget.onSave(_controller.text);
+                Navigator.pop(context);
+              },
             ),
           ],
         ),
@@ -749,7 +742,7 @@ class _HeightPickerSheetState extends State<_HeightPickerSheet> {
       child: Container(
         margin: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.shapeLg),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceLg),
@@ -806,12 +799,9 @@ class _HeightPickerSheetState extends State<_HeightPickerSheet> {
               ),
             ],
             const SizedBox(height: AppDimens.spaceMd),
-            SizedBox(
-              width: double.infinity,
-              child: PrimaryButton(
-                label: 'Save',
-                onPressed: _save,
-              ),
+            ZButton(
+              label: 'Save',
+              onPressed: _save,
             ),
           ],
         ),
