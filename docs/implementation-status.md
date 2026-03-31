@@ -4,6 +4,26 @@ A running record of completed work — what was built, when, and at what scope.
 
 ---
 
+## 2026-03-31 — Coach Ghost Mode Redesign + Attachment Panel
+
+### Ghost Mode
+- **Soft-brick bug fixed:** `_showActivateGhostSheet` and `_showExitGhostSheet` in `coach_screen.dart` now wrap state changes in `WidgetsBinding.addPostFrameCallback` so the modal barrier clears before the screen rebuilds. Root cause was the branch navigator's `ModalBarrier` staying mounted due to synchronous rebuilds during the pop animation.
+- **Icon:** Ghost mode button changed to `Icons.sentiment_very_dissatisfied_rounded`
+- **App bar title:** Switches to 'Ghost Mode' when active, 'Coach' otherwise
+- **Vignette overlay:** Background color swap removed. `_GhostVignette` widget added as last Stack child — `IgnorePointer`-wrapped `DecoratedBox` with `RadialGradient` (transparent center → `0x55000000` at edges, radius 1.2). Self-wraps `IgnorePointer` internally.
+- **`canvasGhost` token:** Annotated as superseded by vignette in `app_colors.dart`
+
+### Attachment Panel (`CoachAttachmentPanel`)
+- New file: `zuralog/lib/features/coach/presentation/widgets/coach_attachment_panel.dart`
+- Full-screen scrollable bottom sheet replacing `AttachmentPickerSheet`
+- Sections: **Attach From** (Camera / Photos / Files — 10 MB guard, double-tap guard, `InkWell` ripple) + **Session Settings** (AI Persona cards, Proactivity `ZSegmentedControl`, Response Length `ZSegmentedControl`, Suggested Prompts + Voice Input `ZSettingsTile`/`ZToggle`)
+- All settings read/write `userPreferencesProvider` — changes sync with Settings tab automatically
+- Ghost mode: attachment section disabled with explanatory banner when `isGhost: true`
+- `isGhost` parameter propagated through `CoachInputBar` → `CoachAttachmentPanel`
+- Call site: `coach_input_bar.dart` — import and widget name updated; all other logic unchanged
+
+---
+
 ## 2026-03-31 — Coach Tab Redesign
 
 **Branch:** `feat/coach-tab-redesign`
