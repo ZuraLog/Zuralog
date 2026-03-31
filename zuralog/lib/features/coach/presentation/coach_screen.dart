@@ -8,6 +8,8 @@
 /// No route navigation occurs between states — everything is inline.
 library;
 
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,6 +28,15 @@ import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/coach_input_bar.dart';
 import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+/// Estimated height of the floating input pill.
+///
+/// Used to pre-calculate bottom padding for the message list so the last
+/// message is never hidden behind the pill. The value accounts for the
+/// default single-line input row height.
+const double _kInputPillHeight = 68.0;
 
 // ── CoachScreen ───────────────────────────────────────────────────────────────
 
@@ -337,57 +348,123 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
       ),
       body: ColoredBox(
         color: isGhost ? colors.canvasGhost : colors.canvas,
-        child: Column(
+        child: Stack(
           children: [
-            if (isGhost) CoachGhostBanner(onExit: _showExitGhostSheet),
-            Expanded(
-              child: isIdle
-                  ? CoachIdleState(
-                      onSuggestionTap: (prompt) {
-                        _inputCtrl.text = prompt;
-                        _sendMessage();
-                      },
-                    )
-                  : CoachMessageList(
-                      messages: messages,
-                      isStreaming: chatState.isSending,
-                      isThinking: chatState.activeToolName != null,
-                      onEditMessage: (index) {
-                        if (index < messages.length) {
-                          _inputCtrl.text = messages[index].content;
-                          _inputFocus.requestFocus();
-                        }
-                      },
-                      onCopyMessage: (content) {
-                        Clipboard.setData(ClipboardData(text: content));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Copied to clipboard'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      },
-                    ),
+            // Layer 1: Content (full height)
+            Column(
+              children: [
+                if (isGhost) CoachGhostBanner(onExit: _showExitGhostSheet),
+                Expanded(
+                  child: isIdle
+                      ? CoachIdleState(
+                          onSuggestionTap: (prompt) {
+                            _inputCtrl.text = prompt;
+                            _sendMessage();
+                          },
+                        )
+                      : CoachMessageList(
+                          messages: messages,
+                          isStreaming: chatState.isSending,
+                          isThinking: chatState.activeToolName != null,
+                          bottomPadding: _kInputPillHeight +
+                              AppDimens.bottomClearance(context) +
+                              16,
+                          onEditMessage: (index) {
+                            if (index < messages.length) {
+                              _inputCtrl.text = messages[index].content;
+                              _inputFocus.requestFocus();
+                            }
+                          },
+                          onCopyMessage: (content) {
+                            Clipboard.setData(ClipboardData(text: content));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Copied to clipboard'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
+
+            // Layer 2: Error banner (positioned just above the pill)
             if (chatState.errorMessage != null)
-              _ErrorBanner(
-                message: chatState.errorMessage!,
-                onDismiss: () => ref
-                    .read(coachChatNotifierProvider(_activeConversationId)
-                        .notifier)
-                    .clearError(),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: _kInputPillHeight +
+                    AppDimens.bottomClearance(context) +
+                    8,
+                child: _ErrorBanner(
+                  message: chatState.errorMessage!,
+                  onDismiss: () => ref
+                      .read(coachChatNotifierProvider(_activeConversationId)
+                          .notifier)
+                      .clearError(),
+                ),
               ),
-            CoachInputBar(
-              key: _inputBarKey,
-              controller: _inputCtrl,
-              focusNode: _inputFocus,
-              placeholder: placeholder,
-              onSend: ({attachments = const [], rawAttachments = const []}) =>
-                  _sendMessage(attachments: attachments),
-              conversationId: effectiveConversationId,
-              isSending: chatState.isSending,
+
+            // Layer 3: Floating input pill
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: AppDimens.bottomClearance(context) + 8,
+              child: _FrostedInputPill(
+                child: CoachInputBar(
+                  key: _inputBarKey,
+                  controller: _inputCtrl,
+                  focusNode: _inputFocus,
+                  placeholder: placeholder,
+                  onSend: ({
+                    attachments = const [],
+                    rawAttachments = const [],
+                  }) =>
+                      _sendMessage(attachments: attachments),
+                  conversationId: effectiveConversationId,
+                  isSending: chatState.isSending,
+                  isFloating: true,
+                ),
+              ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── _FrostedInputPill ─────────────────────────────────────────────────────────
+
+/// Frosted-glass pill container for the floating input bar.
+///
+/// Uses the same blur + surface overlay recipe as [_FrostedNavigationBar] in
+/// [AppShell] so the two floating elements look visually consistent.
+class _FrostedInputPill extends StatelessWidget {
+  const _FrostedInputPill({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMdPlus),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppDimens.shapePill),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: AppDimens.navBarBlurSigma,
+            sigmaY: AppDimens.navBarBlurSigma,
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: colors.surface.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(AppDimens.shapePill),
+            ),
+            child: child,
+          ),
         ),
       ),
     );

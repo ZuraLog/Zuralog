@@ -31,11 +31,16 @@ class CoachMessageList extends StatefulWidget {
     this.onThumbUp,
     this.onThumbDown,
     this.onRedo,
+    this.bottomPadding = 0.0,
   });
 
   final List<ChatMessage> messages;
   final bool isStreaming;
   final bool isThinking;
+
+  /// Extra bottom padding added to the scroll list so the last message is
+  /// never hidden behind the floating input pill.
+  final double bottomPadding;
 
   /// Called when the user taps "Edit" on a user bubble.
   /// Receives the message index so the caller can pre-fill the input.
@@ -118,9 +123,11 @@ class _CoachMessageListState extends State<CoachMessageList> {
       children: [
         ListView.builder(
           controller: _scrollController,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppDimens.spaceMd,
-            vertical: AppDimens.spaceMd,
+          padding: EdgeInsets.fromLTRB(
+            AppDimens.spaceMd,
+            AppDimens.spaceMd,
+            AppDimens.spaceMd,
+            AppDimens.spaceMd + widget.bottomPadding,
           ),
           itemCount: widget.messages.length,
           itemBuilder: (context, index) {

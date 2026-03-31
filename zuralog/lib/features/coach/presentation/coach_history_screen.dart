@@ -35,13 +35,11 @@ class CoachHistoryScreen extends ConsumerStatefulWidget {
 
 class _CoachHistoryScreenState extends ConsumerState<CoachHistoryScreen> {
   final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocus = FocusNode();
   bool _isSearching = false;
 
   @override
   void dispose() {
     _searchController.dispose();
-    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -81,7 +79,10 @@ class _CoachHistoryScreenState extends ConsumerState<CoachHistoryScreen> {
             icon: const Icon(Icons.search_rounded),
             onPressed: () {
               ref.read(hapticServiceProvider).light();
-              setState(() => _isSearching = !_isSearching);
+              setState(() {
+                _isSearching = !_isSearching;
+                if (!_isSearching) _searchController.clear();
+              });
             },
             tooltip: 'Search conversations',
           ),
@@ -113,13 +114,7 @@ class _CoachHistoryScreenState extends ConsumerState<CoachHistoryScreen> {
                       controller: _searchController,
                       placeholder: 'Search conversations...',
                       onChanged: (_) => setState(() {}),
-                      onClear: () {
-                        setState(() {
-                          _isSearching = false;
-                          _searchController.clear();
-                        });
-                        _searchFocus.unfocus();
-                      },
+                      onClear: () => setState(() {}),
                     ),
                   )
                 : const SizedBox.shrink(),

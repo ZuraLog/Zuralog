@@ -44,6 +44,7 @@ class CoachInputBar extends ConsumerStatefulWidget {
     this.isSending = false,
     this.attachmentCountNotifier,
     this.placeholder = 'Message Zura…',
+    this.isFloating = false,
   });
 
   final TextEditingController controller;
@@ -79,6 +80,14 @@ class CoachInputBar extends ConsumerStatefulWidget {
   /// Defaults to `'Message Zura…'`. Pass a different string to match the
   /// current conversation context (idle, active, ghost mode, etc.).
   final String placeholder;
+
+  /// When true, the input bar renders without a top border or background color
+  /// so it can be wrapped inside a [_FrostedInputPill] that provides its own
+  /// frosted-glass decoration.
+  ///
+  /// Bottom padding is reduced to [AppDimens.spaceSm] (the pill handles
+  /// its own vertical positioning). Defaults to false.
+  final bool isFloating;
 
   /// Maximum allowed message length.
   static const int maxLength = 4000;
@@ -235,12 +244,14 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
     final colors = AppColorsOf(context);
 
     return Container(
-      decoration: BoxDecoration(
-        color: colors.background,
-        border: Border(
-          top: BorderSide(color: colors.border, width: 0.5),
-        ),
-      ),
+      decoration: widget.isFloating
+          ? const BoxDecoration()
+          : BoxDecoration(
+              color: colors.background,
+              border: Border(
+                top: BorderSide(color: colors.border, width: 0.5),
+              ),
+            ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -258,7 +269,9 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
               AppDimens.spaceMd,
               AppDimens.spaceSm,
               AppDimens.spaceMd,
-              MediaQuery.of(context).padding.bottom,
+              widget.isFloating
+                  ? AppDimens.spaceSm
+                  : MediaQuery.of(context).padding.bottom,
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
