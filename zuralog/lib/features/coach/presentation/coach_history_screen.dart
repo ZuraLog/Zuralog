@@ -69,13 +69,19 @@ class _CoachHistoryScreenState extends ConsumerState<CoachHistoryScreen> {
         showProfileAvatar: false,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            ref.read(hapticServiceProvider).light();
+            Navigator.of(context).pop();
+          },
           tooltip: 'Back',
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.search_rounded),
-            onPressed: () => setState(() => _isSearching = !_isSearching),
+            onPressed: () => setState(() {
+              _isSearching = !_isSearching;
+              if (!_isSearching) _searchController.clear();
+            }),
             tooltip: 'Search conversations',
           ),
           IconButton(
@@ -300,7 +306,7 @@ class _CoachConversationTile extends StatelessWidget {
             )
           : null,
       trailing: Text(
-        _formatDate(conversation.createdAt),
+        _formatDate(conversation.updatedAt),
         style: AppTextStyles.bodySmall.copyWith(color: colors.textTertiary),
       ),
     );
