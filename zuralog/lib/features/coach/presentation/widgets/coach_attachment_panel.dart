@@ -12,7 +12,6 @@ import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 import 'package:zuralog/features/chat/domain/attachment_types.dart';
@@ -209,7 +208,12 @@ class _CoachAttachmentPanelState extends ConsumerState<CoachAttachmentPanel> {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+        padding: EdgeInsets.fromLTRB(
+          AppDimens.spaceMd,
+          0,
+          AppDimens.spaceMd,
+          MediaQuery.of(context).padding.bottom + AppDimens.spaceMd,
+        ),
         children: [
           const _OverlineLabel('ATTACH FROM'),
           const SizedBox(height: AppDimens.spaceMd),
@@ -221,14 +225,14 @@ class _CoachAttachmentPanelState extends ConsumerState<CoachAttachmentPanel> {
                   Icon(
                     Icons.sentiment_very_dissatisfied_rounded,
                     size: AppDimens.iconSm,
-                    color: AppColorsOf(context).textSecondary,
+                    color: colors.textSecondary,
                   ),
                   const SizedBox(width: AppDimens.spaceSm),
                   Expanded(
                     child: Text(
                       'Attachments are not available in Ghost Mode — nothing is saved.',
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColorsOf(context).textSecondary,
+                        color: colors.textSecondary,
                       ),
                     ),
                   ),
@@ -464,7 +468,7 @@ class _PickerOption extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppDimens.spaceSm),
           Text(
             label,
             style: AppTextStyles.caption.copyWith(
