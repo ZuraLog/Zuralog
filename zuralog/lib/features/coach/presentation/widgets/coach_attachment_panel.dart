@@ -12,6 +12,8 @@ import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 import 'package:zuralog/features/chat/domain/attachment_types.dart';
 
@@ -185,7 +187,6 @@ class _CoachAttachmentPanelState extends ConsumerState<CoachAttachmentPanel> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final bottomInset = MediaQuery.of(context).padding.bottom;
     final prefs = ref.watch(userPreferencesProvider).valueOrNull;
 
     final selectedPersona =
@@ -197,226 +198,209 @@ class _CoachAttachmentPanelState extends ConsumerState<CoachAttachmentPanel> {
     final suggestedPromptsEnabled = prefs?.suggestedPromptsEnabled ?? true;
     final voiceInputEnabled = prefs?.voiceInputEnabled ?? true;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surfaceOverlay,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+    return ZuralogScaffold(
+      appBar: ZuralogAppBar(
+        title: 'Add Attachment',
+        showProfileAvatar: false,
+        leading: IconButton(
+          icon: const Icon(Icons.close_rounded),
+          onPressed: () => Navigator.of(context).pop(),
+          tooltip: 'Close',
+        ),
       ),
-      padding: EdgeInsets.fromLTRB(0, 12, 0, 16 + bottomInset),
-      child: Column(
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
         children: [
-          // Drag handle
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: colors.textSecondary.withValues(alpha: 0.40),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-
-          // Scrollable content
-          Expanded(
-            child: ListView(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-              children: [
-                const _OverlineLabel('ATTACH FROM'),
-                const SizedBox(height: AppDimens.spaceMd),
-                if (widget.isGhost)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.sentiment_very_dissatisfied_rounded,
-                          size: AppDimens.iconSm,
-                          color: AppColorsOf(context).textSecondary,
-                        ),
-                        const SizedBox(width: AppDimens.spaceSm),
-                        Expanded(
-                          child: Text(
-                            'Attachments are not available in Ghost Mode — nothing is saved.',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColorsOf(context).textSecondary,
-                            ),
-                          ),
-                        ),
-                      ],
+          const _OverlineLabel('ATTACH FROM'),
+          const SizedBox(height: AppDimens.spaceMd),
+          if (widget.isGhost)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.sentiment_very_dissatisfied_rounded,
+                    size: AppDimens.iconSm,
+                    color: AppColorsOf(context).textSecondary,
+                  ),
+                  const SizedBox(width: AppDimens.spaceSm),
+                  Expanded(
+                    child: Text(
+                      'Attachments are not available in Ghost Mode — nothing is saved.',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColorsOf(context).textSecondary,
+                      ),
                     ),
-                  )
-                else
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _PickerOption(
-                        icon: Icons.camera_alt_rounded,
-                        label: 'Camera',
-                        onTap: _picking ? null : _pickCamera,
-                      ),
-                      _PickerOption(
-                        icon: Icons.photo_library_rounded,
-                        label: 'Photos',
-                        onTap: _picking ? null : _pickGallery,
-                      ),
-                      _PickerOption(
-                        icon: Icons.attach_file_rounded,
-                        label: 'Files',
-                        onTap: _picking ? null : _pickFile,
-                      ),
-                    ],
                   ),
-                const SizedBox(height: AppDimens.spaceXl),
-
-                const _OverlineLabel('SESSION SETTINGS'),
-                const SizedBox(height: AppDimens.spaceMd),
-
-                // AI Persona
-                Text(
-                  'AI Persona',
-                  style: AppTextStyles.labelLarge
-                      .copyWith(color: colors.textPrimary),
+                ],
+              ),
+            )
+          else
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _PickerOption(
+                  icon: Icons.camera_alt_rounded,
+                  label: 'Camera',
+                  onTap: _picking ? null : _pickCamera,
                 ),
-                const SizedBox(height: AppDimens.spaceSm),
-                for (int i = 0; i < _personas.length; i++) ...[
-                  _PersonaCard(
-                    persona: _personas[i],
-                    isActive: _personas[i].key == selectedPersona,
-                    onTap: () =>
-                        ref.read(userPreferencesProvider.notifier).mutate(
-                          (p) => p.copyWith(
-                            coachPersona: CoachPersona.fromValue(
-                              _personas[i].key,
+                _PickerOption(
+                  icon: Icons.photo_library_rounded,
+                  label: 'Photos',
+                  onTap: _picking ? null : _pickGallery,
+                ),
+                _PickerOption(
+                  icon: Icons.attach_file_rounded,
+                  label: 'Files',
+                  onTap: _picking ? null : _pickFile,
+                ),
+              ],
+            ),
+          const SizedBox(height: AppDimens.spaceXl),
+
+          const _OverlineLabel('SESSION SETTINGS'),
+          const SizedBox(height: AppDimens.spaceMd),
+
+          // AI Persona
+          Text(
+            'AI Persona',
+            style: AppTextStyles.labelLarge
+                .copyWith(color: colors.textPrimary),
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          for (int i = 0; i < _personas.length; i++) ...[
+            _PersonaCard(
+              persona: _personas[i],
+              isActive: _personas[i].key == selectedPersona,
+              onTap: () =>
+                  ref.read(userPreferencesProvider.notifier).mutate(
+                    (p) => p.copyWith(
+                      coachPersona: CoachPersona.fromValue(
+                        _personas[i].key,
+                      ),
+                    ),
+                  ),
+            ),
+            if (i < _personas.length - 1)
+              const SizedBox(height: AppDimens.spaceSm),
+          ],
+          const SizedBox(height: AppDimens.spaceMd),
+
+          // Proactivity
+          Text(
+            'Proactivity',
+            style: AppTextStyles.labelLarge
+                .copyWith(color: colors.textPrimary),
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          ZSegmentedControl(
+            selectedIndex: ['low', 'medium', 'high']
+                .indexOf(selectedProactivity)
+                .clamp(0, 2),
+            segments: const ['Low', 'Medium', 'High'],
+            onChanged: (i) =>
+                ref.read(userPreferencesProvider.notifier).mutate(
+                  (p) => p.copyWith(
+                    proactivityLevel: ProactivityLevel.fromValue(
+                      ['low', 'medium', 'high'][i],
+                    ),
+                  ),
+                ),
+          ),
+          const SizedBox(height: AppDimens.spaceMd),
+
+          // Response Length
+          Text(
+            'Response Length',
+            style: AppTextStyles.labelLarge
+                .copyWith(color: colors.textPrimary),
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          ZSegmentedControl(
+            selectedIndex: ['concise', 'detailed']
+                .indexOf(selectedResponseLength)
+                .clamp(0, 1),
+            segments: const ['Concise', 'Detailed'],
+            onChanged: (i) =>
+                ref.read(userPreferencesProvider.notifier).mutate(
+                  (p) => p.copyWith(
+                    responseLength: ResponseLength.fromValue(
+                      ['concise', 'detailed'][i],
+                    ),
+                  ),
+                ),
+          ),
+          const SizedBox(height: AppDimens.spaceMd),
+
+          const ZDivider(),
+          const SizedBox(height: AppDimens.spaceSm),
+
+          // Toggle settings card
+          Container(
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius:
+                  BorderRadius.circular(AppDimens.radiusCard),
+            ),
+            child: Column(
+              children: [
+                ZSettingsTile(
+                  icon: Icons.lightbulb_outline_rounded,
+                  iconColor: AppColors.categoryWellness,
+                  title: 'Suggested Prompts',
+                  subtitle: 'Show prompt chips in new conversations',
+                  showChevron: false,
+                  trailing: ZToggle(
+                    value: suggestedPromptsEnabled,
+                    onChanged: (v) =>
+                        ref
+                            .read(userPreferencesProvider.notifier)
+                            .mutate(
+                              (p) => p.copyWith(
+                                suggestedPromptsEnabled: v,
+                              ),
+                            ),
+                  ),
+                  onTap: () =>
+                      ref
+                          .read(userPreferencesProvider.notifier)
+                          .mutate(
+                            (p) => p.copyWith(
+                              suggestedPromptsEnabled:
+                                  !suggestedPromptsEnabled,
                             ),
                           ),
-                        ),
-                  ),
-                  if (i < _personas.length - 1)
-                    const SizedBox(height: AppDimens.spaceSm),
-                ],
-                const SizedBox(height: AppDimens.spaceMd),
-
-                // Proactivity
-                Text(
-                  'Proactivity',
-                  style: AppTextStyles.labelLarge
-                      .copyWith(color: colors.textPrimary),
                 ),
-                const SizedBox(height: AppDimens.spaceSm),
-                ZSegmentedControl(
-                  selectedIndex: ['low', 'medium', 'high']
-                      .indexOf(selectedProactivity)
-                      .clamp(0, 2),
-                  segments: const ['Low', 'Medium', 'High'],
-                  onChanged: (i) =>
-                      ref.read(userPreferencesProvider.notifier).mutate(
-                        (p) => p.copyWith(
-                          proactivityLevel: ProactivityLevel.fromValue(
-                            ['low', 'medium', 'high'][i],
+                const ZDivider(indent: 68),
+                ZSettingsTile(
+                  icon: Icons.mic_rounded,
+                  iconColor: AppColors.categoryActivity,
+                  title: 'Voice Input',
+                  subtitle:
+                      'Enable hold-to-talk microphone button',
+                  showChevron: false,
+                  trailing: ZToggle(
+                    value: voiceInputEnabled,
+                    onChanged: (v) =>
+                        ref
+                            .read(userPreferencesProvider.notifier)
+                            .mutate(
+                              (p) => p.copyWith(voiceInputEnabled: v),
+                            ),
+                  ),
+                  onTap: () =>
+                      ref
+                          .read(userPreferencesProvider.notifier)
+                          .mutate(
+                            (p) => p.copyWith(
+                              voiceInputEnabled: !voiceInputEnabled,
+                            ),
                           ),
-                        ),
-                      ),
                 ),
-                const SizedBox(height: AppDimens.spaceMd),
-
-                // Response Length
-                Text(
-                  'Response Length',
-                  style: AppTextStyles.labelLarge
-                      .copyWith(color: colors.textPrimary),
-                ),
-                const SizedBox(height: AppDimens.spaceSm),
-                ZSegmentedControl(
-                  selectedIndex: ['concise', 'detailed']
-                      .indexOf(selectedResponseLength)
-                      .clamp(0, 1),
-                  segments: const ['Concise', 'Detailed'],
-                  onChanged: (i) =>
-                      ref.read(userPreferencesProvider.notifier).mutate(
-                        (p) => p.copyWith(
-                          responseLength: ResponseLength.fromValue(
-                            ['concise', 'detailed'][i],
-                          ),
-                        ),
-                      ),
-                ),
-                const SizedBox(height: AppDimens.spaceMd),
-
-                const ZDivider(),
-                const SizedBox(height: AppDimens.spaceSm),
-
-                // Toggle settings card
-                Container(
-                  decoration: BoxDecoration(
-                    color: colors.surface,
-                    borderRadius:
-                        BorderRadius.circular(AppDimens.radiusCard),
-                  ),
-                  child: Column(
-                    children: [
-                      ZSettingsTile(
-                        icon: Icons.lightbulb_outline_rounded,
-                        iconColor: AppColors.categoryWellness,
-                        title: 'Suggested Prompts',
-                        subtitle: 'Show prompt chips in new conversations',
-                        showChevron: false,
-                        trailing: ZToggle(
-                          value: suggestedPromptsEnabled,
-                          onChanged: (v) =>
-                              ref
-                                  .read(userPreferencesProvider.notifier)
-                                  .mutate(
-                                    (p) => p.copyWith(
-                                      suggestedPromptsEnabled: v,
-                                    ),
-                                  ),
-                        ),
-                        onTap: () =>
-                            ref
-                                .read(userPreferencesProvider.notifier)
-                                .mutate(
-                                  (p) => p.copyWith(
-                                    suggestedPromptsEnabled:
-                                        !suggestedPromptsEnabled,
-                                  ),
-                                ),
-                      ),
-                      const ZDivider(indent: 68),
-                      ZSettingsTile(
-                        icon: Icons.mic_rounded,
-                        iconColor: AppColors.categoryActivity,
-                        title: 'Voice Input',
-                        subtitle:
-                            'Enable hold-to-talk microphone button',
-                        showChevron: false,
-                        trailing: ZToggle(
-                          value: voiceInputEnabled,
-                          onChanged: (v) =>
-                              ref
-                                  .read(userPreferencesProvider.notifier)
-                                  .mutate(
-                                    (p) => p.copyWith(voiceInputEnabled: v),
-                                  ),
-                        ),
-                        onTap: () =>
-                            ref
-                                .read(userPreferencesProvider.notifier)
-                                .mutate(
-                                  (p) => p.copyWith(
-                                    voiceInputEnabled: !voiceInputEnabled,
-                                  ),
-                                ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppDimens.spaceMd),
               ],
             ),
           ),
+          const SizedBox(height: AppDimens.spaceMd),
         ],
       ),
     );
@@ -473,10 +457,10 @@ class _PickerOption extends StatelessWidget {
                 width: 64,
                 height: 64,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.15),
+                  color: colors.primary.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 28),
+                child: Icon(icon, color: colors.primary, size: 28),
               ),
             ),
           ),
