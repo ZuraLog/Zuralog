@@ -327,6 +327,7 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
                             const Duration(milliseconds: 300),
                       ),
                     );
+                    if (!mounted) return;
                   },
                   tooltip: 'Attach',
                 ),
