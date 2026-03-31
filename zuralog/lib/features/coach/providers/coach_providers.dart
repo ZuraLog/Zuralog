@@ -740,3 +740,12 @@ class PendingMessage {
 
 final pendingFirstMessageProvider =
     StateProvider.family<PendingMessage?, String>((ref, tempId) => null);
+
+// ── Ghost Mode ────────────────────────────────────────────────────────────────
+
+/// When true, the Coach tab is in ghost mode — no messages are persisted.
+///
+/// Ghost conversations are keyed with a "ghost_" prefix in [CoachScreen] so
+/// they are never added to the conversation drawer or synced to the backend.
+/// Resetting to false clears the ghost session and returns to [IdleState].
+final ghostModeProvider = StateProvider<bool>((ref) => false);

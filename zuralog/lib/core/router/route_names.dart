@@ -190,12 +190,6 @@ abstract final class RouteNames {
   /// Path for the New Chat screen.
   static const String coachPath = '/coach';
 
-  /// Name for the Chat Thread screen.
-  static const String coachThread = 'coachThread';
-
-  /// Path for the Chat Thread screen. Parameter: `:id`
-  static const String coachThreadPath = '/coach/thread/:id';
-
   // ── Tab 3: Progress ───────────────────────────────────────────────────────
 
   /// Name for the Progress Home tab root.

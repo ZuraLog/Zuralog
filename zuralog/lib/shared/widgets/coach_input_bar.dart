@@ -43,6 +43,7 @@ class CoachInputBar extends ConsumerStatefulWidget {
     this.conversationId,
     this.isSending = false,
     this.attachmentCountNotifier,
+    this.placeholder = 'Message Zura…',
   });
 
   final TextEditingController controller;
@@ -72,6 +73,12 @@ class CoachInputBar extends ConsumerStatefulWidget {
   /// When provided, updated with the current number of staged attachments
   /// after every add/remove so the parent can warn before quick actions.
   final ValueNotifier<int>? attachmentCountNotifier;
+
+  /// The hint text shown inside the text field when it is empty.
+  ///
+  /// Defaults to `'Message Zura…'`. Pass a different string to match the
+  /// current conversation context (idle, active, ghost mode, etc.).
+  final String placeholder;
 
   /// Maximum allowed message length.
   static const int maxLength = 4000;
@@ -302,7 +309,7 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
                       maxLengthEnforcement: MaxLengthEnforcement.enforced,
                       style: AppTextStyles.bodyLarge,
                       decoration: InputDecoration(
-                        hintText: 'Message your coach…',
+                        hintText: widget.placeholder,
                         hintStyle: AppTextStyles.bodyLarge
                             .copyWith(color: colors.textTertiary),
                         border: InputBorder.none,
