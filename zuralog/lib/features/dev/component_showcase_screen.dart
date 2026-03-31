@@ -1952,9 +1952,9 @@ class _ComponentShowcaseScreenState
         ),
         _gap(),
 
-        // ── CoachThinkingLayer — collapsed ──────────────────────────────
-        _label('Thinking Layer (collapsed)', _colors!),
-        const CoachThinkingLayer(steps: []),
+        // ── CoachThinkingLayer ───────────────────────────────────────────
+        _label('Thinking Layer', _colors!),
+        const CoachThinkingLayer(),
         _gap(),
 
         // ── CoachGhostBanner ────────────────────────────────────────────
