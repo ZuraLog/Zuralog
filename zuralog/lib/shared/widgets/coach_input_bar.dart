@@ -298,17 +298,33 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
                       return;
                     }
                     ref.read(hapticServiceProvider).light();
-                    await showModalBottomSheet<void>(
-                      context: context,
-                      backgroundColor: Colors.transparent,
-                      isScrollControlled: true,
-                      useSafeArea: true,
-                      builder: (_) => CoachAttachmentPanel(
-                        onAttachment: (a) => setState(() {
-                          _attachments.add(a);
-                          _updateAttachmentCount();
-                        }),
-                        isGhost: widget.isGhost,
+                    await Navigator.of(context, rootNavigator: true).push<void>(
+                      PageRouteBuilder<void>(
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            CoachAttachmentPanel(
+                          onAttachment: (a) => setState(() {
+                            _attachments.add(a);
+                            _updateAttachmentCount();
+                          }),
+                          isGhost: widget.isGhost,
+                        ),
+                        transitionsBuilder:
+                            (context, animation, secondaryAnimation, child) {
+                          final offsetAnimation = Tween<Offset>(
+                            begin: const Offset(0.0, 1.0),
+                            end: Offset.zero,
+                          ).animate(CurvedAnimation(
+                            parent: animation,
+                            curve: Curves.easeInOut,
+                          ));
+                          return SlideTransition(
+                            position: offsetAnimation,
+                            child: child,
+                          );
+                        },
+                        transitionDuration: const Duration(milliseconds: 300),
+                        reverseTransitionDuration:
+                            const Duration(milliseconds: 300),
                       ),
                     );
                   },
