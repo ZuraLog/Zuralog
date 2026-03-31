@@ -407,6 +407,7 @@ class Orchestrator:
         Yields:
             - ``{"type": "tool_start", "tool_name": str}`` — tool execution begins.
             - ``{"type": "tool_end", "tool_name": str}`` — tool execution completes.
+            - ``{"type": "thinking_token", "content": str}`` — reasoning token (display-only).
             - ``{"type": "stream_token", "content": str}`` — partial response token.
             - ``{"type": "stream_end", "content": str, "client_action": ...}`` — done.
             - ``{"type": "error", "content": str}`` — unrecoverable error.
@@ -466,6 +467,15 @@ class Orchestrator:
                             continue
                         delta = chunk.choices[0].delta
                         finish_reason = chunk.choices[0].finish_reason or finish_reason
+
+                        # Thinking / reasoning tokens (OpenRouter)
+                        reasoning = getattr(delta, "reasoning", None) or (
+                            delta.model_extra.get("reasoning")
+                            if hasattr(delta, "model_extra") and delta.model_extra
+                            else None
+                        )
+                        if reasoning:
+                            yield {"type": "thinking_token", "content": reasoning}
 
                         if delta.content:
                             full_content += delta.content

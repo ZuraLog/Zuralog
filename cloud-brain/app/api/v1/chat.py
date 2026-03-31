@@ -11,6 +11,7 @@ WebSocket Protocol (server → client):
   - {"type": "typing_start"}                               — AI is processing
   - {"type": "tool_start", "tool_name": str}               — tool executing
   - {"type": "tool_end",   "tool_name": str}               — tool done
+  - {"type": "thinking_token", "content": str}             — reasoning token
   - {"type": "stream_token", "content": str}               — partial token
   - {"type": "stream_end",   "content": str,
      "message_id": str, "conversation_id": str,
@@ -717,6 +718,9 @@ async def websocket_chat(
                         etype = event.get("type")
 
                         if etype in ("tool_start", "tool_end"):
+                            await websocket.send_json(event)
+
+                        elif etype == "thinking_token":
                             await websocket.send_json(event)
 
                         elif etype == "stream_token":
