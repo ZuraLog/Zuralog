@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/features/chat/domain/attachment_types.dart';
 
 // ── AttachmentPreviewBar ──────────────────────────────────────────────────────
@@ -32,9 +33,9 @@ class AttachmentPreviewBar extends StatelessWidget {
       height: 80,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd, vertical: AppDimens.spaceSm),
         itemCount: attachments.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: AppDimens.spaceSm),
         itemBuilder: (_, i) => _PreviewTile(
           attachment: attachments[i],
           onRemove: () => onRemove(i),
@@ -62,11 +63,11 @@ class _PreviewTile extends StatelessWidget {
           height: 64,
           decoration: BoxDecoration(
             color: colors.surface,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppDimens.radiusSm),
           ),
           child: attachment.type == AttachmentType.image
               ? ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppDimens.radiusSm),
                   // Fix M17: image error builder.
                   child: Image.file(
                     attachment.file,
@@ -79,7 +80,7 @@ class _PreviewTile extends StatelessWidget {
                   attachment.type == AttachmentType.pdf
                       ? Icons.picture_as_pdf_rounded
                       : Icons.description_rounded,
-                  color: AppColors.primary,
+                  color: colors.primary,
                   size: 28,
                 ),
         ),
@@ -97,9 +98,8 @@ class _PreviewTile extends StatelessWidget {
                 child: Container(
                   width: 18,
                   height: 18,
-                  decoration: const BoxDecoration(
-                    // 0xFF636366 == AppColors.textSecondaryLight (exact match).
-                    color: AppColors.textSecondaryLight,
+                  decoration: BoxDecoration(
+                    color: colors.textSecondary,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
