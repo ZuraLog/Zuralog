@@ -13,6 +13,8 @@ import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
+import 'package:zuralog/features/chat/domain/attachment_types.dart';
+
 export 'package:zuralog/features/chat/domain/attachment_types.dart'
     show AttachmentType, PendingAttachment;
 
@@ -275,7 +277,7 @@ class _CoachAttachmentPanelState extends ConsumerState<CoachAttachmentPanel> {
                 // AI Persona
                 Text(
                   'AI Persona',
-                  style: AppTextStyles.titleSmall
+                  style: AppTextStyles.labelLarge
                       .copyWith(color: colors.textPrimary),
                 ),
                 const SizedBox(height: AppDimens.spaceSm),
@@ -300,7 +302,7 @@ class _CoachAttachmentPanelState extends ConsumerState<CoachAttachmentPanel> {
                 // Proactivity
                 Text(
                   'Proactivity',
-                  style: AppTextStyles.titleSmall
+                  style: AppTextStyles.labelLarge
                       .copyWith(color: colors.textPrimary),
                 ),
                 const SizedBox(height: AppDimens.spaceSm),
@@ -323,7 +325,7 @@ class _CoachAttachmentPanelState extends ConsumerState<CoachAttachmentPanel> {
                 // Response Length
                 Text(
                   'Response Length',
-                  style: AppTextStyles.titleSmall
+                  style: AppTextStyles.labelLarge
                       .copyWith(color: colors.textPrimary),
                 ),
                 const SizedBox(height: AppDimens.spaceSm),
