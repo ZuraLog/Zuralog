@@ -717,10 +717,7 @@ async def websocket_chat(
                     ):
                         etype = event.get("type")
 
-                        if etype in ("tool_start", "tool_end"):
-                            await websocket.send_json(event)
-
-                        elif etype == "thinking_token":
+                        if etype in ("tool_start", "tool_end", "thinking_token"):
                             await websocket.send_json(event)
 
                         elif etype == "stream_token":
