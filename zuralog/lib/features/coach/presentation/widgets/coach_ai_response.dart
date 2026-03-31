@@ -70,21 +70,92 @@ class CoachAiResponse extends StatelessWidget {
               child: MarkdownBody(
                 data: content,
                 styleSheet: MarkdownStyleSheet(
+                  // ── Typography ───────────────────────────────────────────
+                  h1: AppTextStyles.displaySmall.copyWith(
+                    color: colors.primary,
+                  ),
+                  h2: AppTextStyles.titleLarge.copyWith(
+                    color: colors.primary,
+                  ),
+                  h3: AppTextStyles.titleMedium.copyWith(
+                    color: colors.textPrimary,
+                  ),
                   p: AppTextStyles.bodyMedium.copyWith(
                     color: colors.textPrimary,
                   ),
+                  strong: const TextStyle(fontWeight: FontWeight.w600),
+                  em: TextStyle(
+                    fontStyle: FontStyle.italic,
+                    color: colors.textSecondary,
+                  ),
+                  a: TextStyle(
+                    color: colors.primary,
+                    fontWeight: FontWeight.w500,
+                    decoration: TextDecoration.none,
+                  ),
+
+                  // ── Inline code ──────────────────────────────────────────
                   code: AppTextStyles.bodySmall.copyWith(
-                    color: colors.textPrimary,
+                    color: colors.primary,
                     backgroundColor: colors.surfaceRaised,
                     fontFamily: 'monospace',
                   ),
+
+                  // ── Code blocks ──────────────────────────────────────────
                   codeblockDecoration: BoxDecoration(
                     color: colors.surfaceRaised,
                     borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                    border: Border(
+                      left: BorderSide(
+                        color: colors.primary.withValues(alpha: 0.5),
+                        width: 3,
+                      ),
+                    ),
                   ),
+                  codeblockPadding: const EdgeInsets.all(AppDimens.spaceMd),
+
+                  // ── Blockquotes ──────────────────────────────────────────
                   blockquote: AppTextStyles.bodyMedium.copyWith(
                     color: colors.textSecondary,
                     fontStyle: FontStyle.italic,
+                  ),
+                  blockquoteDecoration: BoxDecoration(
+                    border: Border(
+                      left: BorderSide(
+                        color: colors.primary.withValues(alpha: 0.4),
+                        width: 3,
+                      ),
+                    ),
+                  ),
+
+                  // ── Lists ────────────────────────────────────────────────
+                  listBullet: AppTextStyles.bodyMedium.copyWith(
+                    color: colors.primary,
+                  ),
+                  listIndent: 24.0,
+
+                  // ── Spacing ──────────────────────────────────────────────
+                  blockSpacing: 8.0,
+                  h1Padding: const EdgeInsets.only(top: 12, bottom: 4),
+                  h2Padding: const EdgeInsets.only(top: 12, bottom: 4),
+                  h3Padding: const EdgeInsets.only(top: 8, bottom: 4),
+                  pPadding: const EdgeInsets.only(bottom: 4),
+
+                  // ── Tables ───────────────────────────────────────────────
+                  tableBorder: TableBorder.all(
+                    color: colors.border,
+                    width: 1,
+                  ),
+                  tableHead: AppTextStyles.labelMedium.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  tableBody: AppTextStyles.bodySmall.copyWith(
+                    color: colors.textPrimary,
+                  ),
+                  tableCellsPadding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
                   ),
                 ),
                 selectable: true,
