@@ -107,7 +107,7 @@ class _NavTab {
 ///
 /// Brand bible spec:
 /// - Floating pill shape with 100px radius, 20px horizontal margin.
-/// - Surface background at 0.92 opacity with backdrop blur showing through.
+/// - Surface background at [AppDimens.navBarFrostOpacity] with backdrop blur showing through.
 /// - Dark mode active tab: Sage tint (rgba(207,225,185,0.12)) pill, Sage text (#CFE1B9).
 /// - Light mode active tab: Deep Forest (#344E41) solid pill, Warm Cream (#E8EDE0) text.
 /// - Inactive tabs: Text Secondary (#9B9894 dark / #6B6864 light).

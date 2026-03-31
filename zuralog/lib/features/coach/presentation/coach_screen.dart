@@ -36,6 +36,10 @@ import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 /// Used to pre-calculate bottom padding for the message list so the last
 /// message is never hidden behind the pill. The value accounts for the
 /// default single-line input row height.
+///
+/// Note: when attachments are staged, [AttachmentPreviewBar] adds ~80px,
+/// making the actual pill taller than this estimate. A future improvement
+/// could track the real height via a [GlobalKey] measurement.
 const double _kInputPillHeight = 68.0;
 
 /// Gap between the bottom of the floating input pill and the screen edge.
