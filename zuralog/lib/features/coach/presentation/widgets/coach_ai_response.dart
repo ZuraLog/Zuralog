@@ -83,11 +83,11 @@ class CoachAiResponse extends StatelessWidget {
                   p: AppTextStyles.bodyMedium.copyWith(
                     color: colors.textPrimary,
                   ),
-                  strong: TextStyle(
+                  strong: AppTextStyles.bodyMedium.copyWith(
                     fontWeight: FontWeight.w600,
                     color: colors.textPrimary,
                   ),
-                  em: TextStyle(
+                  em: AppTextStyles.bodyMedium.copyWith(
                     fontStyle: FontStyle.italic,
                     color: colors.textSecondary,
                   ),
@@ -130,6 +130,7 @@ class CoachAiResponse extends StatelessWidget {
                       ),
                     ),
                   ),
+                  blockquotePadding: const EdgeInsets.only(left: AppDimens.spaceMd),
 
                   // ── Lists ────────────────────────────────────────────────
                   listBullet: AppTextStyles.bodyMedium.copyWith(
@@ -138,11 +139,11 @@ class CoachAiResponse extends StatelessWidget {
                   listIndent: 24.0,
 
                   // ── Spacing ──────────────────────────────────────────────
-                  blockSpacing: 8.0,
-                  h1Padding: const EdgeInsets.only(top: 12, bottom: 4),
-                  h2Padding: const EdgeInsets.only(top: 12, bottom: 4),
-                  h3Padding: const EdgeInsets.only(top: 8, bottom: 4),
-                  pPadding: const EdgeInsets.only(bottom: 4),
+                  blockSpacing: AppDimens.spaceSm,
+                  h1Padding: const EdgeInsets.only(top: 12, bottom: AppDimens.spaceXs), // 12px — no AppDimens token; markdown-specific spacing
+                  h2Padding: const EdgeInsets.only(top: 12, bottom: AppDimens.spaceXs), // 12px — no AppDimens token; markdown-specific spacing
+                  h3Padding: const EdgeInsets.only(top: AppDimens.spaceSm, bottom: AppDimens.spaceXs),
+                  pPadding: const EdgeInsets.only(bottom: AppDimens.spaceXs),
 
                   // ── Tables ───────────────────────────────────────────────
                   tableBorder: TableBorder.all(
@@ -157,8 +158,8 @@ class CoachAiResponse extends StatelessWidget {
                     color: colors.textPrimary,
                   ),
                   tableCellsPadding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 6,
+                    horizontal: AppDimens.spaceSm,
+                    vertical: 6, // no AppDimens.space token for 6px
                   ),
                 ),
                 selectable: true,
