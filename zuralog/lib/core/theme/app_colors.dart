@@ -84,11 +84,14 @@ abstract final class AppColors {
   static const Color canvas = Color(0xFF161618);
 
   /// Ghost mode canvas background — intentional dark tint for privacy context.
-  /// Darker than canvas to signal a different mode.
+  /// NOTE: superseded by _GhostVignette overlay in coach_screen.dart (2026-03-31).
+  /// Kept for potential future use on other screens.
   static const Color canvasGhost = Color(0xFF111113);
 
   /// Ghost mode canvas background — light mode. A muted cool-grey tint to
   /// visually separate the privacy context from the normal canvas.
+  /// NOTE: superseded by _GhostVignette overlay in coach_screen.dart (2026-03-31).
+  /// Kept for potential future use on other screens.
   static const Color canvasGhostLight = Color(0xFFE8E8E4);
 
   // ── Light-mode Brand Bible surface tokens ────────────────────────────────

@@ -176,10 +176,13 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                 FilledButton(
                   onPressed: () {
                     Navigator.of(ctx).pop();
-                    ref.read(ghostModeProvider.notifier).state = true;
-                    setState(() {
-                      _activeConversationId =
-                          'ghost_${DateTime.now().millisecondsSinceEpoch}';
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted) return;
+                      ref.read(ghostModeProvider.notifier).state = true;
+                      setState(() {
+                        _activeConversationId =
+                            'ghost_${DateTime.now().millisecondsSinceEpoch}';
+                      });
                     });
                   },
                   child: const Text('Start Ghost Session'),
@@ -229,8 +232,11 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                 FilledButton(
                   onPressed: () {
                     Navigator.of(ctx).pop();
-                    ref.read(ghostModeProvider.notifier).state = false;
-                    _startNewConversation();
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted) return;
+                      ref.read(ghostModeProvider.notifier).state = false;
+                      _startNewConversation();
+                    });
                   },
                   child: const Text('End Session'),
                 ),
@@ -356,7 +362,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
 
     return ZuralogScaffold(
       appBar: ZuralogAppBar(
-        title: 'Coach',
+        title: isGhost ? 'Ghost Mode' : 'Coach',
         leading: IconButton(
           icon: const Icon(Icons.menu_rounded),
           onPressed: _openDrawer,
@@ -364,7 +370,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.visibility_off_rounded),
+            icon: const Icon(Icons.sentiment_very_dissatisfied_rounded),
             color: isGhost ? colors.primary : colors.textSecondary,
             onPressed: _onGhostModeButtonTap,
             tooltip: isGhost ? 'Exit Ghost Mode' : 'Ghost Mode',
@@ -372,7 +378,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
         ],
       ),
       body: ColoredBox(
-        color: isGhost ? colors.canvasGhost : colors.canvas,
+        color: colors.canvas,
         child: Stack(
           children: [
             // Layer 1: Content (full height)
@@ -464,6 +470,10 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                 ),
               ),
             ),
+
+            // Layer 4: Ghost vignette (never blocks taps)
+            if (isGhost)
+              const _GhostVignette(),
           ],
         ),
       ),
@@ -548,3 +558,34 @@ class _ErrorBanner extends StatelessWidget {
   }
 }
 
+// ── _GhostVignette ────────────────────────────────────────────────────────────
+
+/// Edge vignette overlay that signals ghost mode is active.
+///
+/// Radial gradient — transparent at center, semi-opaque black at edges —
+/// creates a darkroom effect without changing the canvas background color.
+/// Self-wraps in [IgnorePointer] so it never blocks touches at any call site.
+class _GhostVignette extends StatelessWidget {
+  const _GhostVignette();
+
+  @override
+  Widget build(BuildContext context) {
+    return const IgnorePointer(
+      child: SizedBox.expand(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment.center,
+              radius: 1.2,
+              colors: [
+                Colors.transparent,
+                Color(0x55000000),
+              ],
+              stops: [0.5, 1.0],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
