@@ -748,7 +748,7 @@ class _CoachConversationTile extends StatelessWidget {
       trailing: Text(
         _formatDate(conversation.createdAt),
         style:
-            AppTextStyles.bodySmall.copyWith(color: AppColors.textTertiary),
+            AppTextStyles.bodySmall.copyWith(color: colors.textTertiary),
       ),
     );
   }
