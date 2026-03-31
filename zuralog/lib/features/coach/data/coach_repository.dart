@@ -113,6 +113,7 @@ abstract interface class CoachRepository {
   /// Emits [ChatStreamEvent] subtypes in this order:
   /// 1. [ConversationCreated] — only if this is a new conversation.
   /// 2. [ToolProgress] — zero or more pairs (isStart=true then false).
+  /// 2b. [ThinkingToken] — zero or more, during the AI reasoning phase, before real tokens.
   /// 3. [StreamToken] — one per partial token from the LLM.
   /// 4. [StreamComplete] — final assembled message with server-assigned ID.
   ///
