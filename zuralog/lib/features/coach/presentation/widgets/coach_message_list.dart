@@ -167,6 +167,10 @@ class _CoachMessageListState extends State<CoachMessageList> {
         );
 
       case MessageRole.assistant:
+        // isLast scopes thinking/streaming props to the final persisted message.
+        // During active thinking/streaming, a synthetic placeholder row sits
+        // after this index (built in coach_screen._buildMessages), so these
+        // props evaluate to null for every row while Layer 0 is visible.
         final isLast = index == widget.messages.length - 1;
         return Padding(
           padding: const EdgeInsets.only(bottom: AppDimens.spaceSm),

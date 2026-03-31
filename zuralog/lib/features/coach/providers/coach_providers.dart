@@ -383,6 +383,10 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
             state = state.copyWith(
               activeToolName: isStart ? toolName : null,
               clearTool: !isStart,
+              // Clear thinking text when a tool starts so stale reasoning
+              // text can't flash back if activeToolName briefly becomes null
+              // between consecutive tool events on thinking models.
+              clearThinking: isStart,
             );
 
           case ThinkingToken(:final accumulated):
