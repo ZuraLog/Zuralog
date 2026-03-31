@@ -130,15 +130,33 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   /// requires an Apple Developer Program membership. Preserved exactly.
   Future<void> _handleAppleSignIn() async {
     if (_isLoading) return;
-    await ZAlertDialog.show(
-      context,
-      title: 'Apple Sign In',
-      body: 'Apple Sign In requires an Apple Developer Program membership '
-          '(\$99/year). Configuration is in progress — use Google or Email '
-          'sign-in in the meantime.',
-      confirmLabel: 'OK',
-      cancelLabel: 'Close',
-    );
+    setState(() => _isLoading = true);
+
+    try {
+      final socialService = ref.read(socialAuthServiceProvider);
+      final credentials = await socialService.signInWithApple();
+      if (!mounted) return;
+
+      final result = await ref
+          .read(authStateProvider.notifier)
+          .socialLogin(credentials);
+
+      if (!mounted) return;
+      switch (result) {
+        case AuthSuccess():
+          break;
+        case AuthFailure(:final message):
+          _showError(message);
+      }
+    } on SocialAuthCancelledException {
+      // User cancelled — no error shown.
+    } on SocialAuthException catch (e) {
+      if (mounted) _showError(e.message);
+    } catch (e) {
+      if (mounted) _showError('Apple Sign In failed. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
