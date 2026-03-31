@@ -91,7 +91,7 @@ class CoachAiResponse extends StatelessWidget {
                     fontStyle: FontStyle.italic,
                     color: colors.textSecondary,
                   ),
-                  a: TextStyle(
+                  a: AppTextStyles.bodyMedium.copyWith(
                     color: colors.primary,
                     fontWeight: FontWeight.w500,
                     decoration: TextDecoration.none,
@@ -136,7 +136,7 @@ class CoachAiResponse extends StatelessWidget {
                   listBullet: AppTextStyles.bodyMedium.copyWith(
                     color: colors.primary,
                   ),
-                  listIndent: 24.0,
+                  listIndent: AppDimens.spaceLg,
 
                   // ── Spacing ──────────────────────────────────────────────
                   blockSpacing: AppDimens.spaceSm,
