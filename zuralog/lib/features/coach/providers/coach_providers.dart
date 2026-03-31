@@ -436,6 +436,8 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
               : null,
           isSending: false,
           clearStreaming: true,
+          clearTool: true,
+          clearThinking: true,
           errorMessage: 'Connection lost. Please try again.',
         );
         _pendingTempMsgId = null;
