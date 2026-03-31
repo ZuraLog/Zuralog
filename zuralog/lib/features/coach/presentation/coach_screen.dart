@@ -289,20 +289,35 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   }
 
   List<ChatMessage> _buildMessages(CoachChatState chatState) {
-    if (chatState.streamingContent == null ||
-        chatState.streamingContent!.isEmpty) {
-      return chatState.messages;
+    // Streaming phase: live assistant bubble with accumulated tokens.
+    if (chatState.streamingContent != null &&
+        chatState.streamingContent!.isNotEmpty) {
+      return [
+        ...chatState.messages,
+        ChatMessage(
+          id: 'streaming',
+          conversationId: _activeConversationId,
+          role: MessageRole.assistant,
+          content: chatState.streamingContent!,
+          createdAt: DateTime.now(),
+        ),
+      ];
     }
-    return [
-      ...chatState.messages,
-      ChatMessage(
-        id: 'streaming',
-        conversationId: _activeConversationId,
-        role: MessageRole.assistant,
-        content: chatState.streamingContent!,
-        createdAt: DateTime.now(),
-      ),
-    ];
+    // Thinking phase: blank placeholder so CoachThinkingLayer (Layer 0) has
+    // an assistant row to render into before any tokens arrive.
+    if (chatState.isSending) {
+      return [
+        ...chatState.messages,
+        ChatMessage(
+          id: 'thinking',
+          conversationId: _activeConversationId,
+          role: MessageRole.assistant,
+          content: '',
+          createdAt: DateTime.now(),
+        ),
+      ];
+    }
+    return chatState.messages;
   }
 
   @override
