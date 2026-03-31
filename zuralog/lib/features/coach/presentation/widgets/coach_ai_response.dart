@@ -205,7 +205,9 @@ class CoachAiResponse extends StatelessWidget {
             ),
 
           // ── Layer 3: Footer ───────────────────────────────────────────
-          if (showFooter)
+          // Hidden while thinking — Layer 0 already occupies the same visual
+          // slot, so showing both would produce two mascot rows at once.
+          if (showFooter && !isThinking)
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [

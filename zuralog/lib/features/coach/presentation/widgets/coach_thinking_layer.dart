@@ -13,6 +13,8 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_blob.dart';
+import 'package:zuralog/shared/widgets/widgets.dart'
+    show ZPatternText, ZPatternVariant;
 
 // 187-word list sourced from the Claude Code binary (hardcoded, random pick
 // every second — same mechanism as Claude Code's own spinner).
@@ -90,18 +92,9 @@ class _CoachThinkingLayerState extends State<CoachThinkingLayer> {
   @override
   void initState() {
     super.initState();
+    // Pick one word for the lifetime of this thinking session — no cycling.
+    // This matches Claude Code's behaviour: one word per response, not per second.
     _word = _kThinkingWords[_random.nextInt(_kThinkingWords.length)];
-    _scheduleNextWord();
-  }
-
-  void _scheduleNextWord() {
-    Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      setState(() {
-        _word = _kThinkingWords[_random.nextInt(_kThinkingWords.length)];
-      });
-      _scheduleNextWord();
-    });
   }
 
   @override
@@ -166,16 +159,15 @@ class _CoachThinkingLayerState extends State<CoachThinkingLayer> {
               CoachBlob(state: BlobState.thinking, size: 28),
               const SizedBox(width: AppDimens.spaceSm),
               Expanded(
-                child: Text(
-                  label,
+                child: ZPatternText(
+                  text: label,
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: colors.textSecondary,
                     fontStyle: hasContent
                         ? FontStyle.italic
                         : FontStyle.normal,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  variant: ZPatternVariant.sage,
+                  animate: true,
                 ),
               ),
               if (hasContent) ...[
