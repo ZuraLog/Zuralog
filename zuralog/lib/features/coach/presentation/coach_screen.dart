@@ -105,7 +105,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
 
   void _openDrawer() {
     ref.read(hapticServiceProvider).light();
-    Navigator.of(context).push(
+    Navigator.of(context, rootNavigator: true).push(
       PageRouteBuilder<void>(
         pageBuilder: (context, animation, secondaryAnimation) =>
             CoachHistoryScreen(

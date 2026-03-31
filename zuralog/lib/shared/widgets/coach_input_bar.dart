@@ -274,7 +274,9 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
                   : MediaQuery.of(context).padding.bottom,
             ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: widget.isFloating
+                  ? CrossAxisAlignment.center
+                  : CrossAxisAlignment.end,
               children: [
                 // Attachment
                 _InputIcon(
