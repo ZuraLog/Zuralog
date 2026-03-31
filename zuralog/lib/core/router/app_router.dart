@@ -13,8 +13,7 @@
  ///   /data/category/:id              → CategoryDetailScreen
  ///   /data/metric/:id                → MetricDetailScreen
  ///   /data/score-breakdown           → ScoreBreakdownScreen
-/// /coach                            → NewChatScreen (tab 2)
-///   /coach/thread/:id               → ChatThreadScreen
+/// /coach                            → CoachScreen (tab 2)
 /// /progress                         → ProgressHomeScreen (tab 3)
 ///   /progress/goals                 → GoalsScreen
 ///   /progress/goals/:id             → GoalDetailScreen
