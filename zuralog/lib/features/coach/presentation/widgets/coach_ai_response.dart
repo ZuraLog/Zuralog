@@ -31,6 +31,7 @@ class CoachAiResponse extends StatelessWidget {
     required this.onThumbDown,
     required this.onRedo,
     this.thinkingSteps = const [],
+    this.showFooter = false,
   });
 
   final String content;
@@ -41,6 +42,7 @@ class CoachAiResponse extends StatelessWidget {
   final VoidCallback onThumbDown;
   final VoidCallback onRedo;
   final List<String> thinkingSteps;
+  final bool showFooter;
 
   @override
   Widget build(BuildContext context) {
@@ -121,21 +123,22 @@ class CoachAiResponse extends StatelessWidget {
             ),
 
           // ── Layer 3: Footer ───────────────────────────────────────────
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              CoachBlob(state: blobState, size: 28),
-              const SizedBox(width: AppDimens.spaceSm),
-              Expanded(
-                child: Text(
-                  'AI can make mistakes. Please double-check responses.',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: colors.textSecondary,
+          if (showFooter)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                CoachBlob(state: blobState, size: 28),
+                const SizedBox(width: AppDimens.spaceSm),
+                Expanded(
+                  child: Text(
+                    'AI can make mistakes. Please double-check responses.',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: colors.textSecondary,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     );

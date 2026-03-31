@@ -109,6 +109,11 @@ class _CoachMessageListState extends State<CoachMessageList> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
+    final lastAssistantIndex = List.generate(widget.messages.length, (i) => i)
+        .lastWhere(
+          (i) => widget.messages[i].role == MessageRole.assistant,
+          orElse: () => -1,
+        );
     return Stack(
       children: [
         ListView.builder(
@@ -120,7 +125,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
           itemCount: widget.messages.length,
           itemBuilder: (context, index) {
             final message = widget.messages[index];
-            return _buildItem(index, message);
+            return _buildItem(index, message, lastAssistantIndex: lastAssistantIndex);
           },
         ),
         if (_showScrollToBottom)
@@ -139,7 +144,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
     );
   }
 
-  Widget _buildItem(int index, ChatMessage message) {
+  Widget _buildItem(int index, ChatMessage message, {required int lastAssistantIndex}) {
     switch (message.role) {
       case MessageRole.user:
         return Padding(
@@ -158,6 +163,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
             content: message.content,
             isStreaming: isLast && widget.isStreaming,
             isThinking: isLast && widget.isThinking,
+            showFooter: index == lastAssistantIndex,
             onCopy: () => widget.onCopyMessage?.call(message.content),
             onThumbUp: () => widget.onThumbUp?.call(index),
             onThumbDown: () => widget.onThumbDown?.call(index),
