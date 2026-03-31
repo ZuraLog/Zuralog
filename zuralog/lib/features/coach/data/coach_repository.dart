@@ -38,6 +38,18 @@ final class StreamToken extends ChatStreamEvent {
   final String accumulated;
 }
 
+/// A reasoning/thinking token from the AI (display-only, not part of the
+/// final response). Mirrors [StreamToken] but for the thinking channel.
+final class ThinkingToken extends ChatStreamEvent {
+  const ThinkingToken({required this.delta, required this.accumulated});
+
+  /// The new chunk of reasoning text.
+  final String delta;
+
+  /// All reasoning text received so far (accumulated client-side).
+  final String accumulated;
+}
+
 /// The AI is running a MCP tool (e.g. fetching Apple Health data).
 final class ToolProgress extends ChatStreamEvent {
   const ToolProgress({required this.toolName, required this.isStart});

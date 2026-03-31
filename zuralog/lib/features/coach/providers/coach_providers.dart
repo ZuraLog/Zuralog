@@ -376,6 +376,10 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
               clearTool: !isStart,
             );
 
+          case ThinkingToken():
+            // Thinking content handling is wired in a later task.
+            break;
+
           case StreamToken(:final accumulated):
             state = state.copyWith(streamingContent: accumulated);
 

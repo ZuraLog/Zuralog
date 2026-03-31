@@ -365,6 +365,7 @@ final class ApiCoachRepository implements CoachRepository {
       String? resolvedConversationId = conversationId;
       bool messageSent = false;
       String accumulated = '';
+      var thinkingAccumulated = '';
 
       // Fix H5: track when conversation_init is received.
       final initCompleter = Completer<void>();
@@ -423,6 +424,14 @@ final class ApiCoachRepository implements CoachRepository {
                 controller.add(ToolProgress(
                   toolName: msg['tool_name'] as String? ?? 'tool',
                   isStart: false,
+                ));
+
+              case 'thinking_token':
+                final delta = msg['content'] as String? ?? '';
+                thinkingAccumulated += delta;
+                controller.add(ThinkingToken(
+                  delta: delta,
+                  accumulated: thinkingAccumulated,
                 ));
 
               case 'stream_token':
