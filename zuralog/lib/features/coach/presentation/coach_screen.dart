@@ -16,6 +16,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/features/chat/domain/attachment_types.dart';
+import 'package:zuralog/features/coach/presentation/widgets/attachment_preview_bar.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/coach/domain/coach_models.dart';
@@ -37,9 +39,8 @@ import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 /// message is never hidden behind the pill. The value accounts for the
 /// default single-line input row height.
 ///
-/// Note: when attachments are staged, [AttachmentPreviewBar] adds ~80px,
-/// making the actual pill taller than this estimate. A future improvement
-/// could track the real height via a [GlobalKey] measurement.
+/// [AttachmentPreviewBar] now renders in a separate floating layer above the
+/// pill, so the pill height is always constant at this estimate.
 const double _kInputPillHeight = 68.0;
 
 /// Gap between the bottom of the floating input pill and the screen edge.
@@ -62,6 +63,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   final TextEditingController _inputCtrl = TextEditingController();
   final FocusNode _inputFocus = FocusNode();
   final _inputBarKey = GlobalKey<CoachInputBarState>();
+  final _stagedAttachments = ValueNotifier<List<PendingAttachment>>(const []);
   bool _prefillApplied = false;
 
   @override
@@ -86,6 +88,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   void dispose() {
     _inputCtrl.dispose();
     _inputFocus.dispose();
+    _stagedAttachments.dispose();
     super.dispose();
   }
 
@@ -448,6 +451,26 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                 ),
               ),
 
+            // Layer 2.5: Floating attachment previews (above the pill)
+            ValueListenableBuilder<List<PendingAttachment>>(
+              valueListenable: _stagedAttachments,
+              builder: (context, attachments, _) {
+                if (attachments.isEmpty) return const SizedBox.shrink();
+                return Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: _kInputPillHeight +
+                      AppDimens.bottomClearance(context) +
+                      _kPillBottomGap,
+                  child: AttachmentPreviewBar(
+                    attachments: attachments,
+                    onRemove: (i) =>
+                        _inputBarKey.currentState?.removeAttachment(i),
+                  ),
+                );
+              },
+            ),
+
             // Layer 3: Floating input pill
             Positioned(
               left: 0,
@@ -468,6 +491,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                   isSending: chatState.isSending,
                   isFloating: true,
                   isGhost: isGhost,
+                  stagedAttachmentsNotifier: _stagedAttachments,
                 ),
               ),
             ),

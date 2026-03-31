@@ -43,6 +43,7 @@ class CoachInputBar extends ConsumerStatefulWidget {
     this.conversationId,
     this.isSending = false,
     this.attachmentCountNotifier,
+    this.stagedAttachmentsNotifier,
     this.placeholder = 'Message Zura…',
     this.isFloating = false,
     this.isGhost = false,
@@ -75,6 +76,10 @@ class CoachInputBar extends ConsumerStatefulWidget {
   /// When provided, updated with the current number of staged attachments
   /// after every add/remove so the parent can warn before quick actions.
   final ValueNotifier<int>? attachmentCountNotifier;
+
+  /// When provided, updated with the current staged attachments list
+  /// after every add/remove so a parent can render previews externally.
+  final ValueNotifier<List<PendingAttachment>>? stagedAttachmentsNotifier;
 
   /// The hint text shown inside the text field when it is empty.
   ///
@@ -118,6 +123,17 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
     setState(() {
       _attachments.clear();
       _updateAttachmentCount();
+      widget.stagedAttachmentsNotifier?.value = List.unmodifiable(_attachments);
+    });
+  }
+
+  /// Removes the staged attachment at [index] and syncs notifiers.
+  void removeAttachment(int index) {
+    setState(() {
+      _attachments.removeAt(index);
+      _updateAttachmentCount();
+      widget.stagedAttachmentsNotifier?.value =
+          List.unmodifiable(_attachments);
     });
   }
 
@@ -138,6 +154,7 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
         setState(() {
           _attachments.clear();
           _updateAttachmentCount();
+          widget.stagedAttachmentsNotifier?.value = List.unmodifiable(_attachments);
         });
         widget.onSend(rawAttachments: rawAttachments, attachments: const []);
         return;
@@ -205,7 +222,10 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
         }
       }
 
-      setState(() => _attachments.clear());
+      setState(() {
+        _attachments.clear();
+        widget.stagedAttachmentsNotifier?.value = List.unmodifiable(_attachments);
+      });
       widget.onSend(attachments: attachmentPayloads, rawAttachments: const []);
     } catch (e, st) {
       Sentry.captureException(e, stackTrace: st);
@@ -262,14 +282,6 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── Attachment previews ──────────────────────────────────────────
-          AttachmentPreviewBar(
-            attachments: _attachments,
-            onRemove: (i) => setState(() {
-              _attachments.removeAt(i);
-              _updateAttachmentCount();
-            }),
-          ),
           // ── Input row ────────────────────────────────────────────────────
           Padding(
             padding: EdgeInsets.fromLTRB(
@@ -305,6 +317,8 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
                           onAttachment: (a) => setState(() {
                             _attachments.add(a);
                             _updateAttachmentCount();
+                            widget.stagedAttachmentsNotifier?.value =
+                                List.unmodifiable(_attachments);
                           }),
                           isGhost: widget.isGhost,
                         ),
