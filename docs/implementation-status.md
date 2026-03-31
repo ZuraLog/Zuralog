@@ -38,6 +38,26 @@ Completed full redesign of the Coach Tab with a single adaptive screen replacing
 
 ---
 
+## 2026-03-31 — Coach Thinking Display
+
+**Branch:** `feat/coach-thinking-display` (not yet merged)
+
+Added live "thinking" feedback to the Coach screen — while Zura reasons through a question, the UI shows what it is doing in real time rather than a blank loading state.
+
+**What was built:**
+
+- **Backend reasoning token extraction** (`cloud-brain/orchestrator.py`) — when the AI model returns reasoning tokens (the internal "thinking" text before its final answer), the server captures them from `delta.reasoning` (with a `model_extra` fallback for models that expose it differently) and forwards them to the client as `thinking_token` WebSocket events. These tokens are display-only and never written to the database.
+
+- **Flutter data layer** (`coach_repository.dart`, `api_coach_repository.dart`) — a new `ThinkingToken` sealed subclass was added to the repository's event model. The API repository parses incoming `thinking_token` events into this type using its own `thinkingAccumulated` variable, separate from the regular streaming content accumulator.
+
+- **Flutter state** (`coach_providers.dart`) — a `thinkingContent: String?` field was added to `CoachChatState`. It is populated as thinking tokens arrive and cleared on the first real content token so it disappears the moment Zura starts responding. It is also cleared on all exit paths: stream complete, error, cancel, timeout, `onError`, and tool start.
+
+- **Flutter UI** (`coach_thinking_layer.dart`) — rewritten as a `StatelessWidget`. Displays a centered `CoachBlob(size: 48, BlobState.thinking)` with italic status text beneath it. The status text follows a priority order: "Checking [friendly tool name]…" during tool calls, the last 160 characters of the accumulated reasoning text when thinking tokens are arriving, or "Thinking…" as a fallback. The `isThinking` condition in `coach_screen.dart` was corrected to `chatState.isSending && chatState.streamingContent == null` so the thinking layer only appears before real content begins streaming.
+
+**Files changed:** `orchestrator.py`, `chat.py`, `coach_repository.dart`, `api_coach_repository.dart`, `coach_providers.dart`, `coach_thinking_layer.dart`, `coach_ai_response.dart`, `coach_message_list.dart`, `coach_screen.dart`, `component_showcase_screen.dart`, `coach_thinking_layer_test.dart`
+
+---
+
 ## 2026-03-30 — Settings Brand Bible Pass
 
 **Branch:** `fix/settings-brand-bible`
