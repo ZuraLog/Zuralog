@@ -64,10 +64,20 @@ String _greeting() {
 ///
 /// [onSuggestionTap] is called with the prompt text when a card is tapped.
 /// The parent [CoachScreen] populates the input field and sends immediately.
+///
+/// [bottomPadding] adds extra space at the bottom of the scroll content so the
+/// last suggestion card is never hidden behind the floating input pill.
 class CoachIdleState extends StatelessWidget {
-  const CoachIdleState({super.key, required this.onSuggestionTap});
+  const CoachIdleState({
+    super.key,
+    required this.onSuggestionTap,
+    this.bottomPadding = 0.0,
+  });
 
   final void Function(String prompt) onSuggestionTap;
+
+  /// Extra bottom clearance so cards don't scroll under the floating pill.
+  final double bottomPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -105,7 +115,7 @@ class CoachIdleState extends StatelessWidget {
               ),
             );
           }),
-          const SizedBox(height: AppDimens.spaceXl),
+          SizedBox(height: AppDimens.spaceXl + bottomPadding),
         ],
       ),
     );

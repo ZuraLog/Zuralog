@@ -215,7 +215,7 @@ class _FrostedNavigationBarState extends State<_FrostedNavigationBar>
           child: Container(
             height: 64,
             decoration: BoxDecoration(
-              color: colors.surface.withValues(alpha: 0.92),
+              color: colors.surface.withValues(alpha: AppDimens.navBarFrostOpacity),
               borderRadius: BorderRadius.circular(AppDimens.shapePill),
             ),
             child: LayoutBuilder(

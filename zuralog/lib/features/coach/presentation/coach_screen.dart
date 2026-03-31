@@ -38,6 +38,12 @@ import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 /// default single-line input row height.
 const double _kInputPillHeight = 68.0;
 
+/// Gap between the bottom of the floating input pill and the screen edge.
+///
+/// Applied as extra breathing room below the pill and as padding on content
+/// so the last item is never hidden. 16px = [_kPillBottomGap] * 2.
+const double _kPillBottomGap = 8.0;
+
 // ── CoachScreen ───────────────────────────────────────────────────────────────
 
 class CoachScreen extends ConsumerStatefulWidget {
@@ -357,6 +363,9 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                 Expanded(
                   child: isIdle
                       ? CoachIdleState(
+                          bottomPadding: _kInputPillHeight +
+                              AppDimens.bottomClearance(context) +
+                              _kPillBottomGap * 2,
                           onSuggestionTap: (prompt) {
                             _inputCtrl.text = prompt;
                             _sendMessage();
@@ -368,7 +377,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                           isThinking: chatState.activeToolName != null,
                           bottomPadding: _kInputPillHeight +
                               AppDimens.bottomClearance(context) +
-                              16,
+                              _kPillBottomGap * 2,
                           onEditMessage: (index) {
                             if (index < messages.length) {
                               _inputCtrl.text = messages[index].content;
@@ -396,7 +405,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                 right: 0,
                 bottom: _kInputPillHeight +
                     AppDimens.bottomClearance(context) +
-                    8,
+                    _kPillBottomGap,
                 child: _ErrorBanner(
                   message: chatState.errorMessage!,
                   onDismiss: () => ref
@@ -410,7 +419,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
             Positioned(
               left: 0,
               right: 0,
-              bottom: AppDimens.bottomClearance(context) + 8,
+              bottom: AppDimens.bottomClearance(context) + _kPillBottomGap,
               child: _FrostedInputPill(
                 child: CoachInputBar(
                   key: _inputBarKey,
@@ -460,7 +469,7 @@ class _FrostedInputPill extends StatelessWidget {
           ),
           child: Container(
             decoration: BoxDecoration(
-              color: colors.surface.withValues(alpha: 0.92),
+              color: colors.surface.withValues(alpha: AppDimens.navBarFrostOpacity),
               borderRadius: BorderRadius.circular(AppDimens.shapePill),
             ),
             child: child,
