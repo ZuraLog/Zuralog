@@ -28,7 +28,6 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_attachment_panel.dart';
-import 'package:zuralog/features/coach/presentation/widgets/attachment_preview_bar.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 
@@ -224,6 +223,7 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
 
       setState(() {
         _attachments.clear();
+        _updateAttachmentCount();
         widget.stagedAttachmentsNotifier?.value = List.unmodifiable(_attachments);
       });
       widget.onSend(attachments: attachmentPayloads, rawAttachments: const []);
