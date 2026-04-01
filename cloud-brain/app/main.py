@@ -302,6 +302,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Use PgVector for long-term memory when configured, fall back to in-memory
     _pgvector_store = PgVectorMemoryStore()
     app.state.memory_store = _pgvector_store if _pgvector_store.is_available else InMemoryStore()
+    # Memory MCP tools: only wired when the real vector store is running.
+    # Uses _pgvector_store directly (not app.state.memory_store) to guarantee
+    # the concrete PgVectorMemoryStore type is never the in-memory fallback.
+    if _pgvector_store.is_available:
+        from app.mcp_servers.memory_server import MemoryMCPServer
+        memory_server = MemoryMCPServer(memory_store=_pgvector_store)
+        registry.register(memory_server)
     # LLM client: only initialize when API key is configured
     if settings.openrouter_api_key.get_secret_value():
         app.state.llm_client = LLMClient()
