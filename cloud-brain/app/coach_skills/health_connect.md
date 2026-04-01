@@ -108,7 +108,7 @@ Use `daily_summary` first, but expect more null fields than on Apple Health. Bef
 | Resting HR | 60–80 bpm | Normal |
 | Resting HR | 80–99 bpm | High-normal |
 | Resting HR | 100+ bpm | Clinically elevated |
-| HRV (Android — if available) | Any value | Measurement method varies by source (RMSSD, SDNN, or custom) — compare only to the user's own history on the same device; do NOT compare to Apple Watch numbers |
+| HRV (Android — if available) | Any value | Measurement method varies by source (RMSSD, SDNN, or custom) — compare only to the user's own history on the same device; never cite absolute target numbers; do NOT compare to Apple Watch numbers |
 | VO2 Max | Under 30 | Low |
 | VO2 Max | 30–38 | Fair |
 | VO2 Max | 38–46 | Good |
