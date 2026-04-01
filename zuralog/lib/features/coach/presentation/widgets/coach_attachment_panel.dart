@@ -70,11 +70,9 @@ class CoachAttachmentPanel extends ConsumerStatefulWidget {
   const CoachAttachmentPanel({
     super.key,
     required this.onAttachment,
-    this.isGhost = false,
   });
 
   final ValueChanged<PendingAttachment> onAttachment;
-  final bool isGhost;
 
   @override
   ConsumerState<CoachAttachmentPanel> createState() =>
@@ -217,49 +215,26 @@ class _CoachAttachmentPanelState extends ConsumerState<CoachAttachmentPanel> {
         children: [
           const _OverlineLabel('ATTACH FROM'),
           const SizedBox(height: AppDimens.spaceMd),
-          if (widget.isGhost)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.sentiment_very_dissatisfied_rounded,
-                    size: AppDimens.iconSm,
-                    color: colors.textSecondary,
-                  ),
-                  const SizedBox(width: AppDimens.spaceSm),
-                  Expanded(
-                    child: Text(
-                      'Attachments are not available in Ghost Mode — nothing is saved.',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                  ),
-                ],
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _PickerOption(
+                icon: Icons.camera_alt_rounded,
+                label: 'Camera',
+                onTap: _picking ? null : _pickCamera,
               ),
-            )
-          else
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _PickerOption(
-                  icon: Icons.camera_alt_rounded,
-                  label: 'Camera',
-                  onTap: _picking ? null : _pickCamera,
-                ),
-                _PickerOption(
-                  icon: Icons.photo_library_rounded,
-                  label: 'Photos',
-                  onTap: _picking ? null : _pickGallery,
-                ),
-                _PickerOption(
-                  icon: Icons.attach_file_rounded,
-                  label: 'Files',
-                  onTap: _picking ? null : _pickFile,
-                ),
-              ],
-            ),
+              _PickerOption(
+                icon: Icons.photo_library_rounded,
+                label: 'Photos',
+                onTap: _picking ? null : _pickGallery,
+              ),
+              _PickerOption(
+                icon: Icons.attach_file_rounded,
+                label: 'Files',
+                onTap: _picking ? null : _pickFile,
+              ),
+            ],
+          ),
           const SizedBox(height: AppDimens.spaceXl),
 
           const _OverlineLabel('SESSION SETTINGS'),

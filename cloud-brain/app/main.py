@@ -77,6 +77,7 @@ from app.mcp_servers.deep_link_server import DeepLinkServer
 from app.mcp_servers.health_connect_server import HealthConnectServer
 from app.mcp_servers.fitbit_server import FitbitServer
 from app.mcp_servers.notification_server import NotificationServer
+from app.mcp_servers.memory_server import MemoryMCPServer
 from app.mcp_servers.oura_server import OuraServer
 from app.mcp_servers.polar_server import PolarServer
 from app.mcp_servers.user_progress_server import UserProgressServer
@@ -310,6 +311,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Use PgVector for long-term memory when configured, fall back to in-memory
     _pgvector_store = PgVectorMemoryStore()
     app.state.memory_store = _pgvector_store if _pgvector_store.is_available else InMemoryStore()
+    # Memory MCP tools: only wired when the real vector store is running.
+    # Uses _pgvector_store directly (not app.state.memory_store) to guarantee
+    # the concrete PgVectorMemoryStore type is never the in-memory fallback.
+    if _pgvector_store.is_available:
+        memory_server = MemoryMCPServer(memory_store=_pgvector_store)
+        registry.register(memory_server)
     # LLM client: only initialize when API key is configured
     if settings.openrouter_api_key.get_secret_value():
         app.state.llm_client = LLMClient()

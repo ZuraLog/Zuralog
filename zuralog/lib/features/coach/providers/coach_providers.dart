@@ -25,17 +25,6 @@ import 'package:zuralog/features/coach/data/coach_repository.dart';
 import 'package:zuralog/features/coach/domain/coach_models.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-/// Tool name keywords that indicate a write/mutation operation.
-///
-/// Used to suppress tool call indicators in ghost mode so write operations
-/// don't appear in the UI when nothing should be persisted.
-const _kGhostWriteToolKeywords = [
-  'save', 'store', 'write', 'memory', 'log',
-  'create', 'update', 'delete', 'archive',
-];
-
 // ── Repository ────────────────────────────────────────────────────────────────
 
 /// Provides the live [ApiCoachRepository].
@@ -316,7 +305,6 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
     List<Map<String, dynamic>> attachments = const [],
     bool isRegenerate = false,
     String? systemPromptExtra,
-    bool isGhost = false,
   }) async {
     if (state.isSending) return;
 
@@ -377,7 +365,6 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
       attachments: attachments,
       isRegenerate: isRegenerate,
       systemPromptExtra: systemPromptExtra,
-      isGhost: isGhost,
     );
 
     final completer = Completer<void>();
@@ -393,10 +380,6 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
             state = state.copyWith(resolvedConversationId: conversationId);
 
           case ToolProgress(:final toolName, :final isStart):
-            final isWriteTool = _kGhostWriteToolKeywords.any(
-              (kw) => toolName.toLowerCase().contains(kw),
-            );
-            if (isGhost && isWriteTool) break;
             state = state.copyWith(
               activeToolName: isStart ? toolName : null,
               clearTool: !isStart,
@@ -429,8 +412,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
             _pendingTempMsgId = null;
 
             // Refresh the conversation list so the drawer shows the new entry.
-            // Skip in ghost mode — ghost conversations are never persisted.
-            if (!isGhost) ref.read(coachConversationsProvider.notifier).refresh();
+            ref.read(coachConversationsProvider.notifier).refresh();
 
             if (!completer.isCompleted) completer.complete();
 
@@ -576,7 +558,6 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
       proactivity: proactivity,
       responseLength: responseLength,
       isRegenerate: true,
-      isGhost: ref.read(ghostModeProvider),
     );
   }
 
@@ -785,11 +766,3 @@ class PendingMessage {
 final pendingFirstMessageProvider =
     StateProvider.family<PendingMessage?, String>((ref, tempId) => null);
 
-// ── Ghost Mode ────────────────────────────────────────────────────────────────
-
-/// When true, the Coach tab is in ghost mode — no messages are persisted.
-///
-/// Ghost conversations are keyed with a "ghost_" prefix in [CoachScreen] so
-/// they are never added to the conversation drawer or synced to the backend.
-/// Resetting to false clears the ghost session and returns to [IdleState].
-final ghostModeProvider = StateProvider<bool>((ref) => false);

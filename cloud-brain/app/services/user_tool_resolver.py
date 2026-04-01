@@ -5,7 +5,7 @@ Determines which MCP tools to present to the LLM for a given user,
 based on their connected integrations. This is the core of the dynamic
 tool injection system.
 
-Always-on servers (Apple Health, Health Connect, DeepLink) are injected
+Always-on servers (Apple Health, Health Connect, DeepLink, Memory) are injected
 unconditionally. OAuth-dependent servers (Strava, Fitbit, Oura,
 Withings, Polar) are only included if the user has an active integration
 row in the database.
@@ -27,11 +27,12 @@ logger = logging.getLogger(__name__)
 # Health, Health Connect) or return static payloads (DeepLink).
 ALWAYS_ON_SERVERS: frozenset[str] = frozenset({
     "apple_health",
-    "health_connect",
     "deep_link",
+    "health_connect",
+    "memory",
+    "notification",
     "user_progress",
     "user_wellbeing",
-    "notification",
 })
 
 # Maps Integration.provider column values to MCP server names.
