@@ -23,7 +23,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.agent.context_manager.memory_store import InMemoryStore
-from app.services.pinecone_memory_store import PineconeMemoryStore
+from app.agent.context_manager.pgvector_memory_store import PgVectorMemoryStore
 from app.middleware.posthog_analytics import PostHogAnalyticsMiddleware
 from app.middleware.sentry_context import SentryUserContextMiddleware
 from app.agent.llm_client import LLMClient
@@ -299,12 +299,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Dynamic tool injection: resolve tools per user at chat time
     tool_resolver = UserToolResolver(registry=registry)
     app.state.mcp_client = MCPClient(registry=registry, tool_resolver=tool_resolver)
-    # Use Pinecone for long-term memory when configured, fall back to in-memory
-    if settings.pinecone_api_key.get_secret_value():
-        _pinecone_store = PineconeMemoryStore()
-        app.state.memory_store = _pinecone_store if _pinecone_store.is_available else InMemoryStore()
-    else:
-        app.state.memory_store = InMemoryStore()
+    # Use PgVector for long-term memory when configured, fall back to in-memory
+    _pgvector_store = PgVectorMemoryStore()
+    app.state.memory_store = _pgvector_store if _pgvector_store.is_available else InMemoryStore()
     # LLM client: only initialize when API key is configured
     if settings.openrouter_api_key.get_secret_value():
         app.state.llm_client = LLMClient()
