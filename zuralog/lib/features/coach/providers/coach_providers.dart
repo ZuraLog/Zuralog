@@ -305,6 +305,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
     List<Map<String, dynamic>> attachments = const [],
     bool isRegenerate = false,
     String? systemPromptExtra,
+    bool isGhost = false,
   }) async {
     if (state.isSending) return;
 
@@ -365,6 +366,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
       attachments: attachments,
       isRegenerate: isRegenerate,
       systemPromptExtra: systemPromptExtra,
+      isGhost: isGhost,
     );
 
     final completer = Completer<void>();
@@ -380,6 +382,9 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
             state = state.copyWith(resolvedConversationId: conversationId);
 
           case ToolProgress(:final toolName, :final isStart):
+            const writeToolKeywords = ['save', 'store', 'write', 'memory', 'log', 'create', 'update', 'delete', 'archive'];
+            final isWriteTool = writeToolKeywords.any((kw) => toolName.toLowerCase().contains(kw));
+            if (isGhost && isWriteTool) break; // Silently skip write tool indicators in ghost mode
             state = state.copyWith(
               activeToolName: isStart ? toolName : null,
               clearTool: !isStart,
@@ -412,7 +417,8 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
             _pendingTempMsgId = null;
 
             // Refresh the conversation list so the drawer shows the new entry.
-            ref.read(coachConversationsProvider.notifier).refresh();
+            // Skip in ghost mode — ghost conversations are never persisted.
+            if (!isGhost) ref.read(coachConversationsProvider.notifier).refresh();
 
             if (!completer.isCompleted) completer.complete();
 

@@ -274,11 +274,8 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
             proactivity: proactivity,
             responseLength: responseLength,
             attachments: attachments,
+            isGhost: isGhost,
           );
-
-      if (!isGhost && mounted) {
-        ref.read(coachConversationsProvider.notifier).refresh();
-      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

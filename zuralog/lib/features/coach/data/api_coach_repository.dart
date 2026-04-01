@@ -281,6 +281,7 @@ final class ApiCoachRepository implements CoachRepository {
     List<Map<String, dynamic>> attachments = const [],
     bool isRegenerate = false,
     String? systemPromptExtra,
+    bool isGhost = false,
   }) {
     // Reset reconnect counter for each new message stream.
     _wsReconnectAttempts = 0;
@@ -298,6 +299,7 @@ final class ApiCoachRepository implements CoachRepository {
       attachments: attachments,
       isRegenerate: isRegenerate,
       systemPromptExtra: systemPromptExtra,
+      isGhost: isGhost,
     );
     return controller.stream;
   }
@@ -313,6 +315,7 @@ final class ApiCoachRepository implements CoachRepository {
     required List<Map<String, dynamic>> attachments,
     bool isRegenerate = false,
     String? systemPromptExtra,
+    bool isGhost = false,
   }) async {
     // Fix 3: re-wire onCancel to this invocation's completer so cancellation
     // during a reconnect completes the active (not the original) completer.
@@ -405,6 +408,7 @@ final class ApiCoachRepository implements CoachRepository {
                     if (attachments.isNotEmpty) 'attachments': attachments,
                     if (isRegenerate) 'regenerate': true,
                     'system_prompt_extra': ?systemPromptExtra,
+                    if (isGhost) 'ghost_mode': true,
                   };
                   channel?.sink.add(jsonEncode(payload));
                 }
@@ -619,6 +623,7 @@ final class ApiCoachRepository implements CoachRepository {
         responseLength: responseLength,
         attachments: attachments,
         isRegenerate: isRegenerate,
+        isGhost: isGhost,
       );
     }
   }
