@@ -150,19 +150,6 @@ class SocialAuthService {
   ///   [SocialAuthCancelledException] if the user cancels.
   ///   [SocialAuthException] for unexpected SDK failures.
   Future<SocialAuthCredentials> signInWithApple() async {
-    // ── STUB ──────────────────────────────────────────────────────────────
-    // Apple Sign In requires an Apple Developer Program membership.
-    // Replace this stub by following the setup guide in:
-    //   docs/plans/2026-02-23-social-oauth-design.md
-    // and then uncommenting the real implementation below.
-    throw UnsupportedError(
-      'Apple Sign In is not yet configured. '
-      'An Apple Developer Program membership (\$99/year) is required. '
-      'See docs/plans/2026-02-23-social-oauth-design.md for setup steps.',
-    );
-
-    // ── REAL IMPLEMENTATION (uncomment once credentials are ready) ────────
-    // ignore: dead_code
     final rawNonce = _generateRawNonce();
     final hashedNonce = _sha256OfString(rawNonce);
 
@@ -174,15 +161,6 @@ class SocialAuthService {
           AppleIDAuthorizationScopes.fullName,
         ],
         nonce: hashedNonce,
-        // For Android web-based flow, configure a redirect URI that
-        // points to your Supabase auth callback:
-        //   https://<your-project-ref>.supabase.co/auth/v1/callback
-        // webAuthenticationOptions: WebAuthenticationOptions(
-        //   clientId: 'com.zuralog.auth',
-        //   redirectUri: Uri.parse(
-        //     'https://<your-project-ref>.supabase.co/auth/v1/callback',
-        //   ),
-        // ),
       );
     } on SignInWithAppleAuthorizationException catch (e, stackTrace) {
       if (e.code == AuthorizationErrorCode.canceled) {
