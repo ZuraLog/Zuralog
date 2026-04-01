@@ -75,6 +75,10 @@ The AI layer is not a single model — it is an orchestration system:
 
 The AI never invents data. Every observation is traceable to specific numbers in the database.
 
+## Coach Skill System
+
+The Coach has a runtime skill system that gives it access to domain-specific knowledge on demand. Skill documents live in `cloud-brain/app/coach_skills/` — one plain text file per domain (strength training, nutrition, cardio endurance, and any future domains). At startup, `CoachSkillMCPServer` loads all skill files and exposes a `get_coach_skill` tool. A compact index of available skills is injected into every system prompt so the Coach knows what expertise it can draw on. When a question calls for domain depth, the Coach fetches the relevant skill document — at most two per request, and none at all for simple conversational questions. The system is stateless: no database, no migrations, no per-user configuration.
+
 ## Coach Memory Architecture
 
 The Coach builds its context for every request from three memory layers that stack on top of each other:
