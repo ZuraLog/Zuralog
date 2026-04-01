@@ -228,9 +228,11 @@ class Orchestrator:
         user_context_suffix: str | None = None,
         persona: str = "balanced",
         proactivity: str = "medium",
+        response_length: str | None = None,
         db: AsyncSession | None = None,
         conversation_history: list[dict[str, Any]] | None = None,
         user_profile: UserProfile | None = None,
+        memory_enabled: bool = True,
     ) -> AgentResponse:
         """Process a user message through the AI Brain.
 
@@ -263,8 +265,11 @@ class Orchestrator:
             txn.set_tag("tool_injection_mode", "dynamic" if db is not None else "static")
 
             # 1. Retrieve relevant memories first (needed for prompt injection)
-            memory_items: list[MemoryItem] = await self.memory_store.query(user_id, query_text=message, limit=5)
-            memory_texts = [item.content for item in memory_items if item.score >= 0.70]
+            if memory_enabled:
+                memory_items: list[MemoryItem] = await self.memory_store.query(user_id, query_text=message, limit=5)
+                memory_texts = [item.content for item in memory_items if item.score >= 0.70]
+            else:
+                memory_texts = []
 
             # Build system prompt with persona, proactivity, and memory context
             system_prompt = build_system_prompt(
@@ -434,6 +439,7 @@ class Orchestrator:
         db: AsyncSession | None = None,
         conversation_history: list[dict[str, Any]] | None = None,
         user_profile: UserProfile | None = None,
+        memory_enabled: bool = True,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """Process a user message and stream the final response token-by-token.
 
@@ -465,8 +471,11 @@ class Orchestrator:
 
             try:
                 # Build context (same as process_message)
-                memory_items: list[MemoryItem] = await self.memory_store.query(user_id, query_text=message, limit=5)
-                memory_texts = [item.content for item in memory_items if item.score >= 0.70]
+                if memory_enabled:
+                    memory_items: list[MemoryItem] = await self.memory_store.query(user_id, query_text=message, limit=5)
+                    memory_texts = [item.content for item in memory_items if item.score >= 0.70]
+                else:
+                    memory_texts = []
 
                 system_prompt = build_system_prompt(
                     persona=persona,

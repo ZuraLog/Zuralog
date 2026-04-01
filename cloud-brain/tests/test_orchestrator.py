@@ -387,3 +387,26 @@ async def test_no_db_session_falls_back_to_all_tools(
     # get_all_tools() should have been called (existing behaviour, no db= arg)
     mock_mcp_client.get_all_tools.assert_called()
     assert result.message == "Hello!"
+
+
+@pytest.mark.asyncio
+async def test_process_message_skips_memory_when_disabled(
+    orchestrator, mock_memory_store, mock_llm_client
+):
+    """When memory_enabled=False, the orchestrator must not query the memory store."""
+    mock_llm_client.chat = AsyncMock(return_value=MagicMock(
+        choices=[MagicMock(
+            message=MagicMock(content="Hello!", tool_calls=None),
+            finish_reason="stop",
+        )],
+        usage=MagicMock(prompt_tokens=10, completion_tokens=5),
+    ))
+
+    response = await orchestrator.process_message(
+        user_id="user-123",
+        message="How am I doing?",
+        memory_enabled=False,
+    )
+
+    mock_memory_store.query.assert_not_called()
+    assert response is not None
