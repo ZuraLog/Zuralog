@@ -9,10 +9,13 @@ PgVectorMemoryStore for persistent, vector-indexed recall.
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
-from app.agent.context_manager.pgvector_memory_store import PgVectorMemoryStore
 from app.mcp_servers.base_server import BaseMCPServer
 from app.mcp_servers.models import Resource, ToolDefinition, ToolResult
+
+if TYPE_CHECKING:
+    from app.agent.context_manager.pgvector_memory_store import PgVectorMemoryStore
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +41,8 @@ class MemoryMCPServer(BaseMCPServer):
         memory_store: A ``PgVectorMemoryStore`` instance that provides
             the async ``add()`` and ``query()`` interface.
     """
+
+    _store: PgVectorMemoryStore
 
     def __init__(self, memory_store: PgVectorMemoryStore) -> None:
         """Initialise the server with an injected memory store.
