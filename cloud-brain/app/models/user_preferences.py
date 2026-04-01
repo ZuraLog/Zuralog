@@ -80,6 +80,7 @@ class UserPreferences(Base):
         wellness_checkin_card_visible: Controls visibility of wellness check-in card on Today tab.
         data_maturity_banner_dismissed: True when user has permanently dismissed the data maturity banner.
         analytics_opt_out: True when user has opted out of anonymous product analytics.
+        memory_enabled: True when the coach should build and use long-term memories.
         goals: JSON array of goal-type strings.
         units_system: 'metric' or 'imperial'.
         fitness_level: Self-assessed fitness level from onboarding.
@@ -251,6 +252,12 @@ class UserPreferences(Base):
         server_default="false",
         nullable=False,
         comment="True when user has opted out of anonymous product analytics",
+    )
+    memory_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        server_default="true",
+        nullable=False,
     )
 
     # High-level goal types
