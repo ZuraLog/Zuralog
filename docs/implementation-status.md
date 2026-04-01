@@ -4,6 +4,19 @@ A running record of completed work — what was built, when, and at what scope.
 
 ---
 
+## 2026-04-01 — Coach Ghost Mode Rework
+
+**Files changed:** `coach_screen.dart`, `coach_ghost_banner.dart`, `coach_repository.dart`, `api_coach_repository.dart`, `coach_providers.dart`
+
+- **Soft-brick bug fixed:** `_showActivateGhostSheet` and `_showExitGhostSheet` now `await` the modal sheet so state updates only fire after the dismiss animation fully completes. Previously, synchronous rebuilds during the pop animation left the Coach tab's modal barrier mounted and the whole tab unresponsive.
+- **Vignette replaced:** `_GhostVignette` swapped from a full-screen radial gradient dim to a 2.5dp colored border using `AppColorsOf(context).primary` at 60% opacity. The center of the screen is now fully unobstructed.
+- **Banner copy updated:** `CoachGhostBanner` text changed from "Ghost Mode — nothing is being saved" to "Ghost Mode — your conversation won't be saved or logged."
+- **`ghost_mode` flag propagated through the full send chain:** `bool isGhost = false` added to `CoachRepository`, `ApiCoachRepository`, providers, and screen. When active, `ghost_mode: true` is included in the WebSocket payload.
+- **Write-type tool indicators suppressed in ghost mode:** Tool call UI items whose names contain save, store, write, memory, log, create, update, delete, or archive are hidden from the chat while ghost mode is on.
+- **Conversation refresh skipped in ghost mode:** `coachConversationsProvider.notifier.refresh()` is not called after ghost mode sends. `regenerate()` also forwards `isGhost`.
+
+---
+
 ## 2026-03-31 — Coach Ghost Mode Redesign + Attachment Panel
 
 ### Ghost Mode
