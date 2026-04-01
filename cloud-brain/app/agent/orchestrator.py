@@ -275,6 +275,7 @@ class Orchestrator:
             system_prompt = build_system_prompt(
                 persona=persona,
                 proactivity=proactivity,
+                skill_index=self.mcp_client.get_skill_index(),
                 memories=memory_texts if memory_texts else None,
                 user_context_suffix=user_context_suffix,
                 user_profile=user_profile,
@@ -481,6 +482,7 @@ class Orchestrator:
                     persona=persona,
                     proactivity=proactivity,
                     response_length=response_length,
+                    skill_index=self.mcp_client.get_skill_index(),
                     memories=memory_texts if memory_texts else None,
                     user_context_suffix=user_context_suffix,
                     user_profile=user_profile,
