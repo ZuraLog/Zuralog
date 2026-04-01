@@ -4,6 +4,33 @@ A running record of completed work — what was built, when, and at what scope.
 
 ---
 
+## 2026-04-01 — App MCP Servers (Progress, Wellbeing, Notifications)
+
+**Branch:** `feat/app-mcp-servers`
+
+Added three new MCP servers to the Coach AI so it can read and manage the user's goals, streaks, achievements, journal, supplements, wellbeing insights, and push notifications — all without requiring any third-party OAuth connection.
+
+**What was built:**
+
+- **UserProgressServer** (`user_progress_server.py`, server name `user_progress`): Gives the Coach full read/write access to the user's goals and read-only access to streaks and achievements. Goals support create, read, update, complete, and delete. Streaks and achievements are intentionally read-only — the AI observes them, it does not manufacture them. Achievements are sourced through `AchievementTracker.get_all()`. Queries the `user_goals`, `user_streaks`, and `achievements` tables.
+
+- **UserWellbeingServer** (`user_wellbeing_server.py`, server name `user_wellbeing`): Gives the Coach access to the user's journal entries, supplement log, and AI-generated insights. Journal entries and insights are read-only by design — the Coach reads what the user wrote, it does not write journal entries on their behalf. Supplements support add and remove (soft delete). Queries the `journal_entries`, `user_supplements`, and `insights` tables.
+
+- **NotificationServer** (`notification_server.py`, server name `notification`): Gives the Coach the ability to send a push notification to all of the user's registered devices. Uses `PushService.send_and_persist`, which delivers the message and writes a record to `notification_logs` in one step. The `notification_type` is hardcoded to `"coach"` so these messages are always identifiable as AI-initiated. The tool takes a `title` and `body` — nothing else.
+
+- **Registration**: All three servers are started in the `main.py` lifespan block and listed in `ALWAYS_ON_SERVERS` in `user_tool_resolver.py`. No user action or OAuth flow is needed — they are available in every Coach session automatically.
+
+- **System prompt updated**: The `_CAPABILITIES_BLOCK` in `agent/prompts/system.py` was extended with tool documentation for items 6–9 covering goals, streaks/achievements, wellbeing, and notifications.
+
+**Files created:**
+- `cloud-brain/app/mcp_servers/user_progress_server.py`
+- `cloud-brain/app/mcp_servers/user_wellbeing_server.py`
+- `cloud-brain/app/mcp_servers/notification_server.py`
+
+**Files modified:** `main.py`, `user_tool_resolver.py`, `agent/prompts/system.py`
+
+---
+
 ## 2026-04-01 — Coach Context Management (Three-Layer Memory)
 
 **Branch:** `feat/context-management`
