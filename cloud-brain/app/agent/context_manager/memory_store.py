@@ -105,7 +105,16 @@ class InMemoryStore:
         limit: int = 5,
     ) -> list[MemoryItem]:
         entries = self._store.get(user_id, [])
-        return entries[-limit:]
+        results = entries[-limit:]
+        # InMemoryStore has no semantic search capability. When a query_text is
+        # provided, return score=0.0 so callers relying on score thresholds (e.g.
+        # deduplication at 0.92) do not produce false positives.
+        if query_text:
+            return [
+                MemoryItem(id=item.id, content=item.content, category=item.category, score=0.0)
+                for item in results
+            ]
+        return results
 
     async def delete(self, memory_id: str) -> None:
         for uid in list(self._store.keys()):
