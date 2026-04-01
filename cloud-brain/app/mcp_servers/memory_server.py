@@ -180,6 +180,9 @@ class MemoryMCPServer(BaseMCPServer):
         content: str = params.get("content", "")
         category: str = params.get("category", "")
 
+        if not content.strip():
+            return ToolResult(success=False, error="content must not be empty.")
+
         if category not in VALID_CATEGORIES:
             return ToolResult(
                 success=False,
