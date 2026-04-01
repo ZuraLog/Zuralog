@@ -48,6 +48,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.agent.context_manager.memory_store import MemoryStore
 from app.agent.context_manager.token_counter import count_messages, count_tokens, truncate_to_tokens
 from app.agent.context_manager.summarization_service import summarize_oldest_messages
+from app.agent.context_manager.memory_extraction_service import extract_and_store_memories
 from app.agent.prompts.system import UserProfile
 from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
@@ -865,6 +866,16 @@ async def websocket_chat(
                     asyncio.create_task(
                         summarize_oldest_messages(str(resolved_conv_id), llm_client)
                     )
+
+                # Background memory extraction: fire-and-forget after each response.
+                asyncio.create_task(
+                    extract_and_store_memories(
+                        conversation_id=str(resolved_conv_id),
+                        user_id=user_id,
+                        llm_client=llm_client,
+                        memory_store=memory_store,
+                    )
+                )
 
             # ── Analytics ─────────────────────────────────────────────────────
             if analytics:
