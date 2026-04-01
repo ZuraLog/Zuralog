@@ -19,7 +19,6 @@ from app.mcp_servers.registry import MCPServerRegistry
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from app.mcp_servers.coach_skill_server import CoachSkillMCPServer
     from app.services.user_tool_resolver import UserToolResolver
 
 logger = logging.getLogger(__name__)
