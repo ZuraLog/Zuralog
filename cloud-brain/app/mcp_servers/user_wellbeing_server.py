@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Callable
+from datetime import date
 from typing import Any
 
 from sqlalchemy import select
@@ -251,6 +252,15 @@ class UserWellbeingServer(BaseMCPServer):
             return ToolResult(success=False, error="start_date is required (YYYY-MM-DD).")
         if not end_date:
             return ToolResult(success=False, error="end_date is required (YYYY-MM-DD).")
+
+        try:
+            start_date = date.fromisoformat(str(start_date)).isoformat()
+            end_date = date.fromisoformat(str(end_date)).isoformat()
+        except ValueError:
+            return ToolResult(
+                success=False,
+                error="start_date and end_date must be in YYYY-MM-DD format.",
+            )
 
         limit = int(params.get("limit", 10))
         limit = max(1, min(limit, 30))

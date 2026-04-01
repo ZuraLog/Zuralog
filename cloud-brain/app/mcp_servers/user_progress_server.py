@@ -367,11 +367,21 @@ class UserProgressServer(BaseMCPServer):
                     error=f"deadline must be in YYYY-MM-DD format, got '{deadline_str}'.",
                 )
 
+        # Map Flutter type slug → analytics metric name, matching the REST route.
+        _type_to_metric: dict[str, str] = {
+            "step_count": "steps",
+            "weight_target": "weight_kg",
+            "daily_calorie_limit": "calories_consumed",
+            "sleep_duration": "sleep_hours",
+            "weekly_run_count": "workouts",
+            "water_intake": "water_intake",
+            "custom": "custom",
+        }
         goal = UserGoal(
             id=str(uuid.uuid4()),
             user_id=user_id,
             type=goal_type,
-            metric=goal_type,
+            metric=_type_to_metric.get(goal_type, "custom"),
             period=GoalPeriod(period),
             title=title,
             target_value=float(target_value),
@@ -462,8 +472,10 @@ class UserProgressServer(BaseMCPServer):
 
             await db.commit()
             await db.refresh(goal)
+            # Serialize inside the session block to avoid DetachedInstanceError.
+            serialized = _serialize_goal(goal)
 
-        return ToolResult(success=True, data=_serialize_goal(goal))
+        return ToolResult(success=True, data=serialized)
 
     async def _complete_goal(self, user_id: str, params: dict) -> ToolResult:
         """Mark an active goal as completed.
@@ -491,7 +503,9 @@ class UserProgressServer(BaseMCPServer):
             if goal is None:
                 return ToolResult(success=False, error="Goal not found.")
 
+            # Retire the goal so a new one of the same type can be created.
             goal.is_completed = True
+            goal.is_active = False
             await db.commit()
 
         return ToolResult(success=True, data={"goal_id": goal_id})
