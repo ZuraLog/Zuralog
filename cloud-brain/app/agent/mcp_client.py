@@ -148,7 +148,4 @@ class MCPClient:
         server = self._registry.get("coach_skills")
         if server is None:
             return None
-        from app.mcp_servers.coach_skill_server import CoachSkillMCPServer
-        if isinstance(server, CoachSkillMCPServer):
-            return server.get_index_text() or None
-        return None
+        return server.get_index_text() or None

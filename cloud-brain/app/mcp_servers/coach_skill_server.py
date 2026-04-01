@@ -85,6 +85,12 @@ class CoachSkillMCPServer(BaseMCPServer):
                     description = stripped
                     break
 
+            if description == "(no description)":
+                logger.warning(
+                    "Coach skill '%s' has no '## When to use this skill' section — index entry will be generic",
+                    file.stem,
+                )
+
             descriptions[file.stem] = description
 
         self._index_text = "\n".join(
@@ -135,7 +141,7 @@ class CoachSkillMCPServer(BaseMCPServer):
         """
         return [
             ToolDefinition(
-                name="get_skill",
+                name="get_coach_skill",
                 description=(
                     "Load a domain expertise document before answering a specialist health or fitness question. "
                     "Only call this when the question genuinely requires expert knowledge beyond general coaching."
@@ -174,10 +180,14 @@ class CoachSkillMCPServer(BaseMCPServer):
         Returns:
             A ``ToolResult`` with the skill content or an error message.
         """
-        if tool_name == "get_skill":
+        if tool_name == "get_coach_skill":
             name: str = params.get("name", "")
             content = self._skills.get(name)
             if content is not None:
+                MAX_SKILL_BYTES = 6144
+                if len(content.encode("utf-8")) > MAX_SKILL_BYTES:
+                    content = content.encode("utf-8")[:MAX_SKILL_BYTES].decode("utf-8", errors="ignore")
+                    content += "\n\n[Skill document truncated to fit context window.]"
                 return ToolResult(success=True, data={"skill": content, "name": name})
             return ToolResult(
                 success=False,
