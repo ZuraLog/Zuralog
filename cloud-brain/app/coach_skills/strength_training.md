@@ -23,7 +23,7 @@ Use for questions about resistance training, hypertrophy, rep schemes, strength 
 
 **Training around a minor injury:** First distinguish between sharp, joint-located pain (stop immediately, seek evaluation) and dull muscular soreness or minor strains (manageable with modification). For the latter, replace the aggravating movement with a pain-free variant — front squat for knee pain on back squat, dumbbell press for shoulder impingement on barbell bench — and maintain volume on unaffected patterns. Maintain cardiovascular work throughout.
 
-**Programming for fat loss while preserving muscle:** Maintain training intensity and movement quality; reduce total volume by 10–20% to account for reduced recovery capacity from a caloric deficit. Protein must remain at or above 0.8g per lb of bodyweight. Prioritise compound lifts. Cardio is additive, not a replacement for the training stimulus that signals the body to retain muscle.
+**Programming for fat loss while preserving muscle:** Maintain training intensity and movement quality; reduce total volume by 10–20% to account for reduced recovery capacity from a caloric deficit. Protein must remain at or above 0.7–1g per lb of bodyweight. Prioritise compound lifts. Cardio is additive, not a replacement for the training stimulus that signals the body to retain muscle.
 
 ## Numbers and thresholds that matter
 

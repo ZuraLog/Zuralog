@@ -16,6 +16,7 @@ Use for questions about macronutrients, calorie targets, meal timing, protein in
 ## Common scenarios and how to handle them
 
 **Calculating maintenance calories:** Use bodyweight in lbs multiplied by an activity multiplier — sedentary (×14), lightly active (×15–16), moderately active (×17–18), very active (×19–20). Treat the first two weeks as calibration. If weight drifts, adjust by 100–150 calories and re-evaluate.
+Treat this as a starting estimate — calibrate by tracking actual weight change over 2 weeks and adjusting by 100–150 cal/day as needed; users carrying excess body weight should start at the lower end of their activity multiplier.
 
 **Setting up a caloric deficit or surplus:** A deficit of 300–500 calories per day produces 0.5–1 lb of weekly loss — the range that preserves muscle and hormone function. For lean muscle gain, 200–300 calories above maintenance limits fat accumulation. Beginners can recomp at maintenance and do not need a surplus immediately.
 
