@@ -1,44 +1,66 @@
-# [Tool or Domain Name] — Coaching Guide
+# [Tool Name] — Coaching Guide
 
 ## When to use this skill
-Use this skill when the user asks about [specific topic/tool]. One sentence that clearly
-describes what kind of question triggers this skill.
+One sentence. Starts with "Use this skill when..." — this line is extracted as the index entry the AI sees in every conversation.
 
-## What this tool gives you
-Describe what data or capability this tool actually provides. Be concrete:
-- What fields/values come back (e.g. step count, heart rate, workout duration)
-- What time ranges are supported
-- Any known gaps or caveats in the data (e.g. "only populated after Apple Health sync")
+## Quick Reference
 
-## How to use it to coach well
+| User asks about | Call this | Time range |
+|---|---|---|
+| General health / "how am I doing?" | `tool_name(data_type="daily_summary", ...)` | 7 days |
+| [Specific topic] | `tool_name(data_type="X", ...)` | 1–7 days |
+| [Another topic] | `tool_name(data_type="Y", ...)` | 14–30 days |
 
-### Read the data first, then speak
-Always fetch data before commenting on it. If no data comes back, say so honestly —
-do not guess or invent numbers.
+Always call the tool before speaking. If records come back empty, say so — do not guess.
 
-### Scenario: [Specific situation the user might describe]
-**What they say:** "How am I doing with my steps this week?"
-**What to do:** Call [tool_name] with data_type=steps, last 7 days. Look for:
-- Days above goal vs days below
-- Trend (improving, declining, flat)
-- Single best day and single worst day
-**How to frame the response:** Lead with the trend, not a list of numbers. One sentence
-summary, then the supporting data.
+## What this tool returns
 
-### Scenario: [Another specific situation]
-**What they say:** "..."
-**What to do:** ...
-**How to frame the response:** ...
+**Tool name:** `tool_name_here`
+**Required parameters:** `param1`, `param2`, `param3`
 
-(Add 2-4 scenarios that are realistic for this tool or domain.)
+Brief note on where the data comes from and any freshness caveat (e.g. "as current as the user's last sync").
 
-## Numbers and thresholds that matter
-List the benchmarks or targets you should compare against. Keep these specific:
-- Daily step goal default: 10,000 steps (cite if user has set a custom goal)
-- Resting heart rate healthy range: 60-100 bpm; athlete range: 40-60 bpm
-- [Add 3-6 relevant thresholds for this domain]
+| data_type | Key fields |
+|---|---|
+| `daily_summary` | field1, field2, field3 (any can be null) |
+| `specific_type` | field_a, field_b |
 
-## What NOT to say
-- Never say "[example of generic/unhelpful response]" — instead, [say this]
-- Never make a recommendation about [topic] without first checking [related data]
-- Never assume the data is current — mention when it was last synced if that matters
+Note any fields that are nullable, platform-specific, or require a wearable.
+
+## Core Pattern
+
+**The one rule that governs everything else in this skill.**
+
+For example: "Use `daily_summary` for general questions — it returns all scalar metrics in one call. Only use specific data_types when you need deeper detail (e.g. per-workout breakdown)."
+
+## Scenarios
+
+### "[Most common user question]"
+**Call:** `tool_name(data_type="...", start_date=today-7, end_date=today)`
+**Look for:** what to check in the response, what pattern means what
+**Frame it as:** lead with [X], not [Y] — one insight + supporting numbers + a next step
+
+### "[Second common question]"
+**Call:** ...
+**Look for:** ...
+**Frame it as:** ...
+
+### "[Third common question]"
+**Call:** ...
+**Look for:** ...
+**Frame it as:** ...
+
+(3–5 scenarios. Pick questions real users actually ask, not hypotheticals.)
+
+## Thresholds to cite consistently
+
+| Metric | Range | What it means |
+|---|---|---|
+| [Metric name] | [value range] | [plain-language interpretation] |
+| [Metric name] | [value range] | [plain-language interpretation] |
+
+## Common Mistakes
+
+1. **[Mistake]** — [what to do instead]
+2. **[Mistake]** — [what to do instead]
+3. **Never diagnose.** If a metric is persistently outside normal range, suggest the user see a doctor. Never speculate on what condition it might indicate.
