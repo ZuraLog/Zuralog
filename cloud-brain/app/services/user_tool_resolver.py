@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 # Health, Health Connect) or return static payloads (DeepLink).
 ALWAYS_ON_SERVERS: frozenset[str] = frozenset({
     "apple_health",
+    "coach_skills",
     "deep_link",
     "health_connect",
     "memory",

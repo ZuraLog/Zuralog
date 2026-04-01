@@ -133,3 +133,19 @@ class MCPClient:
         if self._tool_resolver is not None:
             return await self._tool_resolver.resolve_tools(db, user_id)
         return self._registry.get_all_tools()
+
+    def get_skill_index(self) -> str | None:
+        """Return the formatted skill index for injection into the system prompt.
+
+        Looks up the coach_skills server in the registry and returns its
+        pre-built index text — a newline-joined list of available skills
+        and their one-line descriptions. Returns None if the server is not
+        registered or if the index is empty.
+
+        Returns:
+            The skill index string, or None if unavailable.
+        """
+        server = self._registry.get("coach_skills")
+        if server is None:
+            return None
+        return server.get_index_text() or None

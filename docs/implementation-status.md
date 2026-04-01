@@ -4,6 +4,34 @@ A running record of completed work — what was built, when, and at what scope.
 
 ---
 
+## 2026-04-01 — Coach Skill System
+
+**Branch:** `feat/coach-skill-system`
+
+Added a runtime skill system to the Coach AI so it can pull in domain-specific knowledge on demand — without any database changes, migrations, or per-user configuration.
+
+**What was built:**
+
+- **Skill documents** (`cloud-brain/app/coach_skills/`): Plain text files, one per domain, that describe how the Coach should reason and respond within that area. Three starter skills ship with this release: `strength_training.md`, `nutrition.md`, and `cardio_endurance.md`. Adding a new domain means dropping in a new file — no code changes required.
+
+- **CoachSkillMCPServer** (`cloud-brain/app/mcp_servers/coach_skill_server.py`, server name `coach_skills`): An MCP server that loads all skill documents at startup and exposes a single `get_coach_skill` tool. The tool takes a skill name and returns the full document. A `get_skill_index()` method also generates a compact index listing all available skills and their one-line descriptions.
+
+- **Skill index injection**: The skill index is injected into every system prompt under a `## Available Expertise` section. This tells the Coach what domains it can pull knowledge from before it decides whether to use any.
+
+- **3-tier loading rule**: The Coach follows a simple rule when deciding whether to load a skill: simple conversational questions — no skill needed; questions requiring domain expertise — load 1 skill; complex questions spanning multiple domains — load up to 2 skills. This keeps context lean while still giving the Coach depth when it matters.
+
+- **Registration**: `CoachSkillMCPServer` is started in the `main.py` lifespan block and listed in `ALWAYS_ON_SERVERS` in `user_tool_resolver.py`. It is available in every Coach session for all users — no integration or opt-in required.
+
+**Files created:**
+- `cloud-brain/app/mcp_servers/coach_skill_server.py`
+- `cloud-brain/app/coach_skills/strength_training.md`
+- `cloud-brain/app/coach_skills/nutrition.md`
+- `cloud-brain/app/coach_skills/cardio_endurance.md`
+
+**Files modified:** `main.py`, `user_tool_resolver.py`, `agent/prompts/system.py`, `orchestrator.py`
+
+---
+
 ## 2026-04-01 — App MCP Servers (Progress, Wellbeing, Notifications)
 
 **Branch:** `feat/app-mcp-servers`

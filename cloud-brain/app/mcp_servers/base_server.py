@@ -115,3 +115,14 @@ class BaseMCPServer(ABC):
             ``True`` if the service is healthy, ``False`` otherwise.
         """
         return True
+
+    def get_index_text(self) -> str | None:
+        """Return a formatted index string for injection into the system prompt.
+
+        Override in subclasses that expose a skill or knowledge index.
+        The default implementation returns ``None``.
+
+        Returns:
+            An index string, or ``None`` if this server has no index.
+        """
+        return None

@@ -78,6 +78,7 @@ from app.mcp_servers.health_connect_server import HealthConnectServer
 from app.mcp_servers.fitbit_server import FitbitServer
 from app.mcp_servers.notification_server import NotificationServer
 from app.mcp_servers.memory_server import MemoryMCPServer
+from app.mcp_servers.coach_skill_server import CoachSkillMCPServer
 from app.mcp_servers.oura_server import OuraServer
 from app.mcp_servers.polar_server import PolarServer
 from app.mcp_servers.user_progress_server import UserProgressServer
@@ -233,6 +234,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     registry.register(
         NotificationServer(db_factory=async_session, push_service=push_svc)
     )
+    registry.register(CoachSkillMCPServer())
     app.state.mcp_registry = registry
 
     # Fitbit wiring (Phase 5.1 / Task-3)
