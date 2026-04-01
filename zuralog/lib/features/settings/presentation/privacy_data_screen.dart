@@ -21,15 +21,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
+import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
-import 'package:zuralog/features/settings/data/memory_repository.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
@@ -110,7 +111,6 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
     final analyticsEnabled = !ref.watch(analyticsOptOutProvider);
 
     final prefsNotifier = ref.read(userPreferencesProvider.notifier);
-    final memoriesAsync = ref.watch(memoryItemsProvider);
 
     return ZuralogScaffold(
       appBar: ZuralogAppBar(title: 'Privacy & Data', showProfileAvatar: false),
@@ -122,165 +122,23 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.spaceMd,
                 ),
-                child: Text(
-                  'Stored context your AI coach uses to personalize insights',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: colors.textSecondary,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: colors.surface,
+                    borderRadius:
+                        BorderRadius.circular(AppDimens.radiusCard),
+                  ),
+                  child: ZSettingsTile(
+                    icon: Icons.psychology_rounded,
+                    iconColor: AppColors.categorySleep,
+                    title: 'Manage AI Memory',
+                    subtitle: 'View, delete, or turn off long-term memory',
+                    onTap: () =>
+                        context.pushNamed(RouteNames.settingsCoachMemory),
                   ),
                 ),
               ),
               const SizedBox(height: AppDimens.spaceSm),
-
-              // Memory items list
-              memoriesAsync.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.all(AppDimens.spaceMd),
-                  child: Center(child: ZCircularProgress()),
-                ),
-                error: (e, _) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Failed to load memories',
-                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.statusError),
-                        ),
-                      ),
-                      ZButton(
-                        label: 'Retry',
-                        onPressed: () => ref.invalidate(memoryItemsProvider),
-                        variant: ZButtonVariant.text,
-                        isFullWidth: false,
-                      ),
-                    ],
-                  ),
-                ),
-                data: (memoryItems) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: colors.surface,
-                      borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-                    ),
-                    child: Column(
-                      children: [
-                        if (memoryItems.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppDimens.spaceMd,
-                              vertical: AppDimens.spaceLg,
-                            ),
-                            child: Text(
-                              'No memory stored',
-                              style: AppTextStyles.bodyMedium.copyWith(
-                                color: colors.textTertiary,
-                              ),
-                            ),
-                          )
-                        else
-                          ...List.generate(memoryItems.length, (index) {
-                            final item = memoryItems[index];
-                            final isLast = index == memoryItems.length - 1;
-                            return Column(
-                              children: [
-                                _MemoryItemRow(
-                                  item: item,
-                                  onDelete: () async {
-                                    final messenger = ScaffoldMessenger.of(context);
-                                    try {
-                                      await ref.read(memoryItemsProvider.notifier).delete(item.id);
-                                      ref.read(analyticsServiceProvider).capture(
-                                        event: AnalyticsEvents.memoryDeleted,
-                                      );
-                                    } catch (e) {
-                                      if (mounted) {
-                                        messenger.showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Failed to delete memory: $e',
-                                              style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
-                                            ),
-                                            backgroundColor: colors.surface,
-                                            behavior: SnackBarBehavior.floating,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  },
-                                ),
-                                if (!isLast) const _Divider(),
-                              ],
-                            );
-                          }),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: AppDimens.spaceSm),
-
-              // Clear All Memory row
-              memoriesAsync.when(
-                loading: () => const SizedBox.shrink(),
-                error: (e, st) => const SizedBox.shrink(),
-                data: (memoryItems) => Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimens.spaceMd,
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: colors.surface,
-                      borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-                    ),
-                    child: ZSettingsTile(
-                      icon: Icons.delete_sweep_rounded,
-                      iconColor: memoryItems.isNotEmpty
-                          ? colors.accent
-                          : AppColors.textTertiary,
-                      title: 'Clear All Memory',
-                      showChevron: false,
-                      titleColor: memoryItems.isNotEmpty
-                          ? colors.accent
-                          : AppColors.textTertiary,
-                      onTap: memoryItems.isNotEmpty
-                          ? () => _showClearMemoryDialog(
-                              context,
-                              onConfirmed: () async {
-                                final messenger = ScaffoldMessenger.of(context);
-                                try {
-                                  await ref.read(memoryItemsProvider.notifier).clearAll();
-                                  ref.read(analyticsServiceProvider).capture(
-                                    event: AnalyticsEvents.allMemoriesCleared,
-                                  );
-                                } catch (e) {
-                                  if (mounted) {
-                                    messenger.showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Failed to clear memories: $e',
-                                          style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
-                                        ),
-                                        backgroundColor: colors.surface,
-                                        behavior: SnackBarBehavior.floating,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                }
-                              },
-                            )
-                          : null,
-                    ),
-                  ),
-                ),
-              ),
 
               // ── PRIVACY section ────────────────────────────────────────
               const SettingsSectionLabel('Privacy'),
@@ -435,54 +293,6 @@ class _Divider extends StatelessWidget {
   }
 }
 
-class _MemoryItemRow extends StatelessWidget {
-  const _MemoryItemRow({required this.item, required this.onDelete});
-
-  final MemoryItem item;
-  final Future<void> Function() onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimens.spaceMd,
-        vertical: 12,
-      ),
-      child: Row(
-        children: [
-          const ZIconBadge(
-            icon: Icons.memory_rounded,
-            color: AppColors.categorySleep,
-          ),
-          const SizedBox(width: AppDimens.spaceMd),
-          Expanded(
-            child: Text(
-              item.text,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: colors.textPrimary,
-              ),
-            ),
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.close_rounded,
-              size: 18,
-              color: colors.textTertiary,
-            ),
-            onPressed: onDelete,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-            splashRadius: 16,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-
-
 class _ToggleRow extends StatelessWidget {
   const _ToggleRow({
     required this.icon,
@@ -550,52 +360,6 @@ class _ToggleRow extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-Future<void> _showClearMemoryDialog(
-  BuildContext context, {
-  required Future<void> Function() onConfirmed,
-}) async {
-  final colors = AppColorsOf(context);
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      backgroundColor: colors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-      ),
-      title: Text(
-        'Clear All Memory?',
-        style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
-      ),
-      content: Text(
-        'Your AI coach will lose all personalization context. '
-        'It will start fresh with generic recommendations.',
-        style: AppTextStyles.bodyMedium.copyWith(
-          color: colors.textSecondary,
-        ),
-      ),
-      actions: [
-        ZButton(
-          label: 'Cancel',
-          onPressed: () => Navigator.of(ctx).pop(false),
-          variant: ZButtonVariant.text,
-          size: ZButtonSize.small,
-          isFullWidth: false,
-        ),
-        ZButton(
-          label: 'Clear All',
-          onPressed: () => Navigator.of(ctx).pop(true),
-          variant: ZButtonVariant.destructive,
-          size: ZButtonSize.small,
-          isFullWidth: false,
-        ),
-      ],
-    ),
-  );
-  if (confirmed == true) {
-    await onConfirmed();
   }
 }
 

@@ -94,6 +94,7 @@ import 'package:zuralog/features/settings/presentation/settings_hub_screen.dart'
 import 'package:zuralog/features/settings/presentation/account_settings_screen.dart';
 import 'package:zuralog/features/settings/presentation/notification_settings_screen.dart';
 import 'package:zuralog/features/settings/presentation/appearance_settings_screen.dart';
+import 'package:zuralog/features/settings/presentation/coach_memory_screen.dart';
 import 'package:zuralog/features/settings/presentation/coach_settings_screen.dart';
 import 'package:zuralog/features/settings/presentation/journal_settings_screen.dart';
 import 'package:zuralog/features/settings/presentation/integrations_screen.dart';
@@ -592,6 +593,16 @@ List<RouteBase> _buildRoutes() {
             module: 'settings.coach',
             child: CoachSettingsScreen(),
           ),
+          routes: [
+            GoRoute(
+              path: 'memory',
+              name: RouteNames.settingsCoachMemory,
+              builder: (context, state) => const SentryErrorBoundary(
+                module: 'settings.coach.memory',
+                child: CoachMemoryScreen(),
+              ),
+            ),
+          ],
         ),
         GoRoute(
           path: 'journal',

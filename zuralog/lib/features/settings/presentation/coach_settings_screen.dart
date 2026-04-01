@@ -13,6 +13,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/analytics/feature_flag_service.dart';
@@ -20,6 +21,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
+import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
@@ -354,6 +356,27 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                             ),
                   ),
                 ],
+              ),
+            ),
+          ),
+
+          // ── MEMORY section ───────────────────────────────────────────────
+          const SettingsSectionLabel('Memory'),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+            child: Container(
+              decoration: BoxDecoration(
+                color: colors.surface,
+                borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+              ),
+              child: ZSettingsTile(
+                icon: Icons.psychology_rounded,
+                iconColor: AppColors.categorySleep,
+                title: 'Memory',
+                subtitle: 'What your coach remembers about you',
+                onTap: () =>
+                    context.pushNamed(RouteNames.settingsCoachMemory),
               ),
             ),
           ),

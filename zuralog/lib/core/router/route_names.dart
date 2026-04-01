@@ -274,6 +274,12 @@ abstract final class RouteNames {
   /// Path for the Coach Settings screen.
   static const String settingsCoachPath = '/settings/coach';
 
+  /// Name for the Coach Memory screen.
+  static const String settingsCoachMemory = 'settingsCoachMemory';
+
+  /// Path for the Coach Memory screen.
+  static const String settingsCoachMemoryPath = '/settings/coach/memory';
+
   /// Name for the Journal Settings screen.
   static const String settingsJournal = 'settingsJournal';
 
