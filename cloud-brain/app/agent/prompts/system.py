@@ -13,7 +13,77 @@ Backward compatible: calling ``build_system_prompt()`` with no arguments returns
 the balanced persona with medium proactivity.
 """
 
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date
+
 from app.utils.sanitize import sanitize_for_llm
+
+
+@dataclass
+class UserProfile:
+    """User profile data injected as context into the system prompt.
+
+    All fields except units_system and timezone are optional. Birthday
+    is used only to compute current age — it is never stored in the prompt.
+
+    Attributes:
+        display_name: User's display name (e.g. "Alex").
+        goals: Goal type strings from user_preferences.goals
+            (e.g. ["weight_loss", "sleep"]).
+        fitness_level: Self-assessed level — beginner | active | athletic.
+        units_system: metric | imperial.
+        timezone: IANA timezone name (e.g. "America/New_York").
+        birthday: Date of birth for age calculation only.
+        height_cm: Height in centimetres.
+    """
+
+    display_name: str | None
+    goals: list[str]
+    fitness_level: str | None
+    units_system: str
+    timezone: str
+    birthday: date | None
+    height_cm: float | None
+
+
+def _build_profile_block(profile: UserProfile) -> str:
+    """Build the '## About This User' section from a UserProfile.
+
+    Only includes fields that have values. Birthday is converted to age.
+    Stays under 300 tokens using concise bullet-point format.
+
+    Args:
+        profile: The user's profile data.
+
+    Returns:
+        A formatted markdown section string.
+    """
+    lines = ["## About This User"]
+    if profile.display_name is not None:
+        lines.append(f"- Name: {sanitize_for_llm(profile.display_name)}")
+    if profile.birthday:
+        today = date.today()
+        age = (
+            today.year
+            - profile.birthday.year
+            - (
+                (today.month, today.day)
+                < (profile.birthday.month, profile.birthday.day)
+            )
+        )
+        lines.append(f"- Age: {age}")
+    if profile.height_cm is not None:
+        lines.append(f"- Height: {profile.height_cm:.0f} cm")
+    if profile.fitness_level is not None:
+        lines.append(f"- Fitness level: {sanitize_for_llm(profile.fitness_level)}")
+    if profile.goals:
+        lines.append(f"- Goals: {', '.join(sanitize_for_llm(g) for g in profile.goals)}")
+    lines.append(f"- Units: {sanitize_for_llm(profile.units_system)}")
+    lines.append(f"- Timezone: {sanitize_for_llm(profile.timezone)}")
+    return "\n".join(lines)
+
 
 # ---------------------------------------------------------------------------
 # Shared capabilities block (injected into all persona prompts)
@@ -184,6 +254,7 @@ def build_system_prompt(
     connected_integrations: list[str] | None = None,
     # Legacy kwarg — kept for backward compat with existing orchestrator call
     user_context_suffix: str | None = None,
+    user_profile: UserProfile | None = None,
 ) -> str:
     """Assemble the complete system prompt for an AI agent session.
 
@@ -206,6 +277,9 @@ def build_system_prompt(
             end of the prompt. Supported for backward compatibility with
             existing Orchestrator code. Use ``memories`` / ``connected_integrations``
             for new code.
+        user_profile: Optional user profile context injected between the
+            persona and memories. When provided, adds an "About This User"
+            section with goals, fitness level, units, and timezone.
 
     Returns:
         The complete system prompt string ready for injection as the first
@@ -226,6 +300,10 @@ def build_system_prompt(
     # Append proactivity modifier (fall back to medium)
     modifier = PROACTIVITY_MODIFIERS.get(proactivity, PROACTIVITY_MODIFIERS["medium"])
     prompt = base + modifier
+
+    # Inject user profile (between persona and memories)
+    if user_profile is not None:
+        prompt += "\n\n" + _build_profile_block(user_profile)
 
     # Inject memories (up to 5)
     if memories:
