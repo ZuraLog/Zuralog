@@ -582,7 +582,8 @@ class _ErrorBanner extends StatelessWidget {
 /// The center of the screen remains fully clear.
 /// Self-wraps in [IgnorePointer] so it never blocks touches at any call site.
 class _GhostVignette extends StatelessWidget {
-  const _GhostVignette();
+  // ignore: prefer_const_constructors_in_immutables
+  _GhostVignette();
 
   @override
   Widget build(BuildContext context) {
