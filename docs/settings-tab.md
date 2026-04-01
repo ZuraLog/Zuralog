@@ -12,7 +12,7 @@ Settings is not a tab in the bottom navigation — it is accessed from the profi
 
 **Notifications.** Users have fine-grained control over every notification the app sends — morning health briefings, smart reminders, activity alerts, wellness check-ins, and quiet hours. The goal is to be helpful without being annoying, and users decide where that line is.
 
-**Coach preferences.** Users configure the AI coach's personality (tough, balanced, or gentle), how proactive it is, and whether it gives short or detailed answers. This lets the coaching experience feel personal rather than one-size-fits-all.
+**Coach preferences.** Users configure the AI coach's personality (tough, balanced, or gentle), how proactive it is, and whether it gives short or detailed answers. This lets the coaching experience feel personal rather than one-size-fits-all. Users can also manage the coach's long-term memory from Settings → Coach → Memory: toggle it on or off, view every fact the coach has stored, delete individual memories, or clear everything at once.
 
 **Appearance.** Theme (dark, light, or system), haptic feedback, and tooltip preferences.
 

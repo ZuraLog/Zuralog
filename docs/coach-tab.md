@@ -12,7 +12,7 @@ The coach's personality is configurable. Users can choose how it talks to them �
 
 The Coach tab is the intelligence layer of Zuralog. The other tabs show you what happened. The Coach tab helps you understand why it happened and what to do next.
 
-Conversations are stored so users can pick up where they left off. The coach also builds up a memory of the user's goals, preferences, and context over time, so it gets more useful the longer someone uses it.
+Conversations are stored so users can pick up where they left off. The coach builds up a memory of the user's goals, preferences, and context over time, getting more useful the longer someone uses it. Users can control this memory from Settings → Coach → Memory: toggle it on or off, view stored facts, and delete anything they want.
 
 ---
 

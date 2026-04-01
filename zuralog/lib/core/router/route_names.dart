@@ -34,6 +34,7 @@
 ///   /settings/notifications       → NotificationSettingsScreen
 ///   /settings/appearance          → AppearanceSettingsScreen
 ///   /settings/coach               → CoachSettingsScreen
+///   /settings/coach/memory        → CoachMemoryScreen
 ///   /settings/integrations        → IntegrationsScreen
 ///   /settings/journal             → JournalSettingsScreen
 ///   /settings/privacy             → PrivacyDataScreen
