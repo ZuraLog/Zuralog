@@ -269,6 +269,7 @@ def build_system_prompt(
     persona: str = "balanced",
     proactivity: str = "medium",
     response_length: str | None = None,
+    skill_index: str | None = None,
     memories: list[str] | None = None,
     connected_integrations: list[str] | None = None,
     # Legacy kwarg — kept for backward compat with existing orchestrator call
@@ -286,6 +287,10 @@ def build_system_prompt(
             (default), or ``"gentle"``.
         proactivity: Response eagerness — ``"low"``, ``"medium"``
             (default), or ``"high"``.
+        skill_index: Optional pre-rendered skill index string. When provided,
+            injects an "Available Expertise" section and skill loading rules
+            into the prompt so the model knows which skills exist and when to
+            load them.
         memories: Optional list of memory text strings (up to 5 are
             injected). Typically fetched from the memory store by the
             Orchestrator before calling this function.
@@ -319,6 +324,20 @@ def build_system_prompt(
     # Append proactivity modifier (fall back to medium)
     modifier = PROACTIVITY_MODIFIERS.get(proactivity, PROACTIVITY_MODIFIERS["medium"])
     prompt = base + modifier
+
+    if skill_index:
+        prompt += (
+            "\n\n## Available Expertise\n"
+            f"{skill_index}\n\n"
+            "## Skill Loading Rules\n"
+            "Load skills selectively based on the question type:\n"
+            "- Simple question or data lookup: answer directly, no skill needed\n"
+            "- Specific expert question in one domain: call get_skill once\n"
+            "- Complex multi-domain question: call get_skill up to twice (never more than 2)\n"
+            "If a question genuinely needs more than 2 skills, "
+            "ask the user to narrow their focus first.\n"
+            "Do not load skills by default \u2014 only when real domain expertise is needed."
+        )
 
     # Inject user profile (between persona and memories)
     if user_profile is not None:
