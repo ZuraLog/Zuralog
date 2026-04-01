@@ -4,6 +4,40 @@ A running record of completed work — what was built, when, and at what scope.
 
 ---
 
+## 2026-04-01 — Coach Context Management (Three-Layer Memory)
+
+**Branch:** `feat/context-management`
+
+Added a full three-layer memory system to the Coach AI so it knows who the user is, remembers past conversations, and retains long-term facts across sessions.
+
+**What was built:**
+
+- **Layer 1 — Working memory** (`token_counter.py`): History is now trimmed by real token counts using `tiktoken` (`cl100k_base`). Budget is 8,192 tokens per request, with a 2,048-token cap per message. Replaced the old `MAX_HISTORY_CHARS = 40_000` character estimate.
+
+- **Layer 2 — Episodic memory** (`summarization_service.py`): When a conversation exceeds 30 messages, the oldest messages are summarized by the LLM and stored in `conversations.summary`. The summary is prepended on future requests. Summarized messages are flagged `is_summarized = TRUE` and excluded from history loads. Runs fire-and-forget — no added latency.
+
+- **Layer 3 — Semantic memory** (`pgvector_memory_store.py`, `memory_extraction_service.py`): User facts are stored as vector embeddings in the `user_memories` table in Supabase. After each session, up to five facts are extracted by the LLM, deduplicated at 0.92 cosine similarity, and stored. The top-5 most relevant facts (score ≥ 0.70) are injected into every system prompt. Uses OpenAI `text-embedding-3-small` (1536 dims) with an HNSW index.
+
+- **User profile injection**: Every system prompt now includes a `## About This User` block — display name, goals, fitness level, units, timezone, computed age, and height. Sourced from a JOIN of `users` and `user_preferences` at request time.
+
+- **Tool result truncation**: If accumulated tool messages in a single turn exceed 4,096 tokens, the oldest is truncated to a 150-token summary. Prevents a large health data dump from consuming the full context window.
+
+- **Pinecone retired**: `PineconeMemoryStore` and its tests deleted. `PgVectorMemoryStore` now implements the `MemoryStore` protocol. `pinecone_api_key` removed from config. Long-term memory now runs entirely inside the existing Supabase instance.
+
+**Files created:**
+- `cloud-brain/app/agent/context_manager/token_counter.py`
+- `cloud-brain/app/agent/context_manager/summarization_service.py`
+- `cloud-brain/app/agent/context_manager/pgvector_memory_store.py`
+- `cloud-brain/app/agent/context_manager/memory_extraction_service.py`
+- `supabase/migrations/20260401000001_add_context_management.sql`
+- `supabase/migrations/20260401000002_add_pgvector_memories.sql`
+
+**Files modified:** `chat.py`, `orchestrator.py`, `system.py`, `memory_store.py`, `conversation.py`, `main.py`, `config.py`, `memory_routes.py`, `pyproject.toml`
+
+**Files deleted:** `pinecone_memory_store.py`, `test_pinecone_memory_store.py`
+
+---
+
 ## 2026-04-01 — Coach Ghost Mode Rework
 
 **Files changed:** `coach_screen.dart`, `coach_ghost_banner.dart`, `coach_repository.dart`, `api_coach_repository.dart`, `coach_providers.dart`
