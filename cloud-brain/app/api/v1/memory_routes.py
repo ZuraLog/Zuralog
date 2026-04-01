@@ -4,7 +4,7 @@ Zuralog Cloud Brain — Memory Management API.
 Endpoints for inspecting and managing the AI agent's long-term user memory.
 These routes operate on whichever memory store is mounted at
 ``app.state.memory_store`` — either ``InMemoryStore`` (dev) or
-``PineconeMemoryStore`` (production).
+``PgVectorMemoryStore`` (production).
 
 Routes:
   GET    /api/v1/memories               — List all memories for the user.
@@ -102,16 +102,17 @@ def _store_type_name(memory_store: Any) -> str:
         memory_store: The memory store object from app state.
 
     Returns:
-        Class name string (e.g. ``"InMemoryStore"`` or ``"PineconeMemoryStore"``).
+        Class name string (e.g. ``"InMemoryStore"`` or ``"PgVectorMemoryStore"``).
     """
     return type(memory_store).__name__
 
 
-def _is_pinecone_store(memory_store: Any) -> bool:
-    """Check if the store has the extended Pinecone interface.
+def _is_managed_store(memory_store: Any) -> bool:
+    """Check if the store supports the extended memory management interface.
 
-    We duck-type rather than importing PineconeMemoryStore to avoid a hard
-    dependency on optional packages.
+    PgVectorMemoryStore (and formerly PineconeMemoryStore) implement
+    list_memories, delete_memory, and clear_memories beyond the core
+    MemoryStore protocol.
 
     Args:
         memory_store: The memory store object from app state.
@@ -158,7 +159,7 @@ async def list_memories(
     memory_store = request.app.state.memory_store
     store_name = _store_type_name(memory_store)
 
-    if not _is_pinecone_store(memory_store):
+    if not _is_managed_store(memory_store):
         logger.debug(
             "list_memories: store is %s — returning empty list.", store_name
         )
@@ -166,11 +167,7 @@ async def list_memories(
 
     raw_memories = await memory_store.list_memories(user_id)
     memories = [
-        MemoryItem(
-            id=m.get("id", ""),
-            text=m.get("text", ""),
-            metadata=m.get("metadata", {}),
-        )
+        MemoryItem(id=str(m.id), text=m.content, metadata={"category": m.category})
         for m in raw_memories
     ]
     logger.info(
@@ -209,7 +206,7 @@ async def delete_memory(
     """
     memory_store = request.app.state.memory_store
 
-    if not _is_pinecone_store(memory_store):
+    if not _is_managed_store(memory_store):
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
             detail=(
@@ -218,7 +215,7 @@ async def delete_memory(
             ),
         )
 
-    deleted = await memory_store.delete_memory(user_id, memory_id)
+    deleted = await memory_store.delete_memory(memory_id)
     logger.info(
         "delete_memory: user='%s', id='%s', success=%s.", user_id, memory_id, deleted
     )
@@ -265,10 +262,10 @@ async def clear_memories(
     memory_store = request.app.state.memory_store
     store_name = _store_type_name(memory_store)
 
-    if not _is_pinecone_store(memory_store):
+    if not _is_managed_store(memory_store):
         # InMemoryStore: treat as a silent no-op
         logger.debug(
-            "clear_memories: store is %s — no-op for non-Pinecone store.", store_name
+            "clear_memories: store is %s — no-op for non-managed store.", store_name
         )
         return ClearMemoriesResponse(
             cleared=True,

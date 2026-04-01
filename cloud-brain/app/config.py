@@ -22,7 +22,6 @@ class Settings(BaseSettings):
         supabase_url: Supabase project URL for Auth/RLS.
         supabase_anon_key: Supabase anonymous (public) key.
         supabase_service_key: Supabase service role key.
-        pinecone_api_key: Pinecone vector DB key (Phase 1.8).
         openai_api_key: OpenAI API key for embeddings/LLM (Phase 1.8).
         google_web_client_id: Google OAuth 2.0 Web Application client ID.
         google_web_client_secret: Google OAuth 2.0 Web Application client secret.
@@ -52,7 +51,6 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_anon_key: SecretStr = SecretStr("")
     supabase_service_key: SecretStr = SecretStr("")
-    pinecone_api_key: SecretStr = SecretStr("")
     openai_api_key: SecretStr = SecretStr("")
     openrouter_api_key: SecretStr = SecretStr("")
     openrouter_referer: str = "https://zuralog.app"

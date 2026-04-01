@@ -74,3 +74,72 @@ The AI layer is not a single model — it is an orchestration system:
 - **Trend Discovery** is pure statistics (Pearson correlation) with no language model involved — the math finds the patterns, and template text describes them
 
 The AI never invents data. Every observation is traceable to specific numbers in the database.
+
+## Coach Memory Architecture
+
+The Coach builds its context for every request from three memory layers that stack on top of each other:
+
+```
+Every Coach request
+──────────────────────────────────────────────────────
+LAYER 3  Semantic Memory      Top-5 relevant long-term facts
+         (pgvector)           retrieved by cosine similarity
+                              and injected into the system prompt
+
+LAYER 2  Episodic Memory      Rolling summary of old turns
+         (conversations.summary) prepended to history as a
+                              system message
+
+LAYER 1  Working Memory       Last 15–20 messages trimmed
+         (token-aware window) to an 8,192-token budget
+                              (2,048-token per-message cap)
+
+                   ↓ all three feed into ↓
+
+               build_system_prompt()
+               LLM request (via OpenRouter)
+──────────────────────────────────────────────────────
+```
+
+### Layer 1 — Working Memory (Token-Aware Window)
+
+History is trimmed by real token counts, not character estimates. The budget is 8,192 tokens for the full history window, with a 2,048-token cap applied to any single message before it enters the window. Token counting uses `tiktoken` with the `cl100k_base` encoding — this slightly overcounts relative to the model's native tokenizer, which is intentional (conservative budget).
+
+Implemented in `cloud-brain/app/agent/context_manager/token_counter.py`.
+
+### Layer 2 — Episodic Memory (Rolling Summarization)
+
+When a conversation exceeds 30 messages, the oldest messages are summarized by the LLM and stored in `conversations.summary`. On the next request, that summary is prepended to the history as a system message. Messages that have been summarized are flagged `is_summarized = TRUE` in the database and excluded from future history loads.
+
+Summarization runs as a fire-and-forget background task — no latency is added to the user's response. The summary is written in third person and captures: goals stated, fitness data mentioned, key advice given, and any injuries or preferences shared.
+
+Implemented in `cloud-brain/app/agent/context_manager/summarization_service.py`.
+
+### Layer 3 — Semantic Memory (Long-Term User Facts)
+
+User facts are stored as vector embeddings in the `user_memories` table in Supabase (pgvector). After each conversation completes, a background task extracts up to five facts from the last 20 messages using the LLM, then stores them. Before storing, it checks for near-duplicates using a 0.92 cosine similarity threshold — if a very similar fact already exists, it updates rather than duplicates.
+
+On each request, the top-5 most relevant memories are retrieved by cosine similarity and injected into the system prompt under a "What I Know About You" section. Only memories scoring 0.70 or higher are injected.
+
+Embeddings use OpenAI `text-embedding-3-small` (1536 dimensions). The table uses an HNSW index (m=16, ef_construction=64) for fast approximate nearest-neighbor search. Row-level security ensures users can only access their own memories.
+
+Implemented in `cloud-brain/app/agent/context_manager/pgvector_memory_store.py` and `cloud-brain/app/agent/context_manager/memory_extraction_service.py`.
+
+### User Profile Injection
+
+Every system prompt includes a `## About This User` block with the user's display name, goals, fitness level, units system, timezone, age (computed from birthday at request time), and height. This is sourced from a JOIN of the `users` and `user_preferences` tables at the start of each request. The block stays under 300 tokens.
+
+### Tool Result Truncation
+
+When the AI uses tools (e.g. fetching health data), tool results accumulate in the message thread. If the total size of tool messages in a single turn exceeds 4,096 tokens, the oldest tool result is truncated to a 150-token summary. This prevents a single large health data dump from consuming the entire context window.
+
+### Database Schema
+
+Two migrations support this system:
+
+- `20260401000001_add_context_management.sql` — adds `summary`, `summary_updated_at`, and `summary_token_count` columns to `conversations`; adds `token_count` and `is_summarized` columns to `messages`; adds an index on `(conversation_id, is_summarized, created_at)` for efficient history loading
+- `20260401000002_add_pgvector_memories.sql` — enables the `vector` extension and creates the `user_memories` table with HNSW index and RLS policy
+
+### Long-Term Memory Storage
+
+Long-term user memories are stored in Supabase (pgvector) — the same Postgres instance used for all other data. This replaced Pinecone, which was a separate managed vector database service. Moving to pgvector eliminates the external dependency, unifies backups, and allows RLS to work natively on memory records.

@@ -26,10 +26,11 @@ from typing import TYPE_CHECKING, Any, AsyncGenerator
 
 import sentry_sdk
 
-from app.agent.context_manager.memory_store import MemoryStore
+from app.agent.context_manager.memory_store import MemoryItem, MemoryStore
+from app.agent.context_manager.token_counter import count_messages, truncate_to_tokens
 from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
-from app.agent.prompts.system import build_system_prompt
+from app.agent.prompts.system import UserProfile, build_system_prompt
 from app.agent.response import AgentResponse
 from app.config import settings
 from app.services.usage_tracker import UsageTracker
@@ -148,6 +149,39 @@ class Orchestrator:
         messages.append({"role": "user", "content": message})
         return messages
 
+    def _truncate_tool_results_if_needed(
+        self,
+        messages: list[dict[str, Any]],
+        token_limit: int = 4096,
+        summary_tokens: int = 150,
+    ) -> None:
+        """Truncate the oldest tool result if cumulative tool tokens exceed the limit.
+
+        Modifies messages in-place. Called after each tool-call turn to prevent
+        a single large tool result (e.g. a health data dump) from consuming the
+        context window.
+
+        Args:
+            messages: The current messages list (modified in-place).
+            token_limit: Token budget for all tool messages combined.
+            summary_tokens: How many tokens to keep from a truncated result.
+        """
+        tool_msgs = [m for m in messages if m.get("role") == "tool"]
+        if not tool_msgs or count_messages(tool_msgs) <= token_limit:
+            return
+
+        # Truncate only the oldest tool message per call.
+        # Subsequent calls (on further turns) handle any remaining excess.
+        for i, msg in enumerate(messages):
+            if msg.get("role") == "tool":
+                truncated = truncate_to_tokens(str(msg.get("content") or ""), summary_tokens)
+                messages[i] = {
+                    **msg,
+                    "content": f"[Tool result truncated. Summary: {truncated}...]",
+                }
+                logger.debug("Truncated tool result at messages[%d] — tool budget exceeded", i)
+                break
+
     async def generate_title(self, first_user_message: str) -> str:
         """Generate a short, descriptive conversation title.
 
@@ -196,6 +230,7 @@ class Orchestrator:
         proactivity: str = "medium",
         db: AsyncSession | None = None,
         conversation_history: list[dict[str, Any]] | None = None,
+        user_profile: UserProfile | None = None,
     ) -> AgentResponse:
         """Process a user message through the AI Brain.
 
@@ -228,8 +263,8 @@ class Orchestrator:
             txn.set_tag("tool_injection_mode", "dynamic" if db is not None else "static")
 
             # 1. Retrieve relevant memories first (needed for prompt injection)
-            context_entries_raw = await self.memory_store.query(user_id, query_text=message, limit=5)
-            memory_texts = [e.get("text", "") for e in context_entries_raw if e.get("text")]
+            memory_items: list[MemoryItem] = await self.memory_store.query(user_id, query_text=message, limit=5)
+            memory_texts = [item.content for item in memory_items if item.score >= 0.70]
 
             # Build system prompt with persona, proactivity, and memory context
             system_prompt = build_system_prompt(
@@ -237,6 +272,7 @@ class Orchestrator:
                 proactivity=proactivity,
                 memories=memory_texts if memory_texts else None,
                 user_context_suffix=user_context_suffix,
+                user_profile=user_profile,
             )
 
             # 2. Build initial messages (with optional history for multi-turn context)
@@ -361,6 +397,7 @@ class Orchestrator:
                             }
                         )
 
+                    self._truncate_tool_results_if_needed(messages)
                     continue
 
                 # No tool calls — return final text response
@@ -396,6 +433,7 @@ class Orchestrator:
         response_length: str | None = None,
         db: AsyncSession | None = None,
         conversation_history: list[dict[str, Any]] | None = None,
+        user_profile: UserProfile | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """Process a user message and stream the final response token-by-token.
 
@@ -427,8 +465,8 @@ class Orchestrator:
 
             try:
                 # Build context (same as process_message)
-                context_entries_raw = await self.memory_store.query(user_id, query_text=message, limit=5)
-                memory_texts = [e.get("text", "") for e in context_entries_raw if e.get("text")]
+                memory_items: list[MemoryItem] = await self.memory_store.query(user_id, query_text=message, limit=5)
+                memory_texts = [item.content for item in memory_items if item.score >= 0.70]
 
                 system_prompt = build_system_prompt(
                     persona=persona,
@@ -436,6 +474,7 @@ class Orchestrator:
                     response_length=response_length,
                     memories=memory_texts if memory_texts else None,
                     user_context_suffix=user_context_suffix,
+                    user_profile=user_profile,
                 )
 
                 messages = self._build_messages(system_prompt, message, conversation_history)
@@ -548,6 +587,7 @@ class Orchestrator:
                                 }
                             )
 
+                        self._truncate_tool_results_if_needed(messages)
                         continue  # Next ReAct turn
 
                     # No tool calls — full_content already streamed token-by-token above.

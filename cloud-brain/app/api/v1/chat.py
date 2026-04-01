@@ -46,6 +46,10 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent.context_manager.memory_store import MemoryStore
+from app.agent.context_manager.token_counter import count_messages, count_tokens, truncate_to_tokens
+from app.agent.context_manager.summarization_service import summarize_oldest_messages
+from app.agent.context_manager.memory_extraction_service import extract_and_store_memories
+from app.agent.prompts.system import UserProfile
 from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
 from app.agent.orchestrator import Orchestrator
@@ -69,8 +73,12 @@ _VALID_PERSONAS = {"tough_love", "balanced", "gentle"}
 _VALID_PROACTIVITY = {"low", "medium", "high"}
 _VALID_RESPONSE_LENGTHS = {"concise", "detailed"}
 
-# Fix 6.7 (H-3): History character budget
-MAX_HISTORY_CHARS = 40_000
+# Token budget for conversation history sent to the LLM.
+# 8,192 tokens leaves ample room for the system prompt and response
+# within Kimi K2.5's 262K context window.
+MAX_HISTORY_TOKENS = 8_192
+# Per-message content cap: truncate any single message exceeding this.
+_MSG_TOKEN_CAP = 2_048
 
 
 async def _set_sentry_module() -> None:
@@ -201,7 +209,7 @@ def _message_to_dict(msg: Message) -> dict[str, Any]:
 async def _load_conversation_history(
     db: AsyncSession,
     conversation_id: str,
-    limit: int = 50,
+    limit: int = 15,
     exclude_message_id: str | None = None,
     user_id: str | None = None,
 ) -> list[dict[str, Any]]:
@@ -233,39 +241,99 @@ async def _load_conversation_history(
         if conv_check.scalar_one_or_none() is None:
             return []
 
-    query = select(Message).where(Message.conversation_id == conversation_id)
+    # Load conversation summary (if any previous summarization has run).
+    conv_summary_result = await db.execute(
+        select(Conversation.summary).where(Conversation.id == conversation_id)
+    )
+    summary: str | None = conv_summary_result.scalar_one_or_none()
+
+    # Load the last 15 non-summarized messages (oldest first after reversing).
+    query = (
+        select(Message)
+        .where(
+            Message.conversation_id == conversation_id,
+            Message.is_summarized == False,  # noqa: E712
+        )
+    )
     if exclude_message_id is not None:
         query = query.where(Message.id != exclude_message_id)
     query = query.order_by(Message.created_at.desc()).limit(limit)
     result = await db.execute(query)
-    messages = result.scalars().all()
-    messages = list(reversed(messages))
-    # Only pass user/assistant roles to the LLM; skip tool/system rows.
-    return [{"role": m.role, "content": (m.content or "")[:8000]} for m in messages if m.role in ("user", "assistant")]
+    messages = list(reversed(result.scalars().all()))
+
+    result_messages = []
+    for m in messages:
+        if m.role not in ("user", "assistant"):
+            continue
+        content = m.content or ""
+        if count_tokens(content) > _MSG_TOKEN_CAP:
+            content = truncate_to_tokens(content, _MSG_TOKEN_CAP)
+        result_messages.append({"role": m.role, "content": content})
+
+    # Prepend the summary as a system message so the LLM has context
+    # about earlier parts of the conversation.
+    if summary:
+        return [
+            {"role": "system", "content": f"## Conversation Summary\n{summary}"}
+        ] + result_messages
+    return result_messages
 
 
-async def _load_user_preferences(db: AsyncSession, user_id: str) -> tuple[str, str, str]:
-    """Load the user's coach persona, proactivity, and response_length preferences.
+async def _load_user_profile(
+    db: AsyncSession,
+    user_id: str,
+) -> tuple[UserProfile, str, str, str]:
+    """Load the user's full profile and preferences in a single JOIN query.
+
+    JOINs users and user_preferences to avoid two round-trips.
+    A LEFT JOIN handles the case where user_preferences does not exist yet.
 
     Args:
         db: Async database session.
         user_id: The authenticated user's ID.
 
     Returns:
-        A (persona, proactivity, response_length) tuple; defaults to ("balanced", "medium", "concise").
+        A (UserProfile, persona, proactivity, response_length) tuple.
+        All values have sensible defaults if DB rows are missing.
     """
+    _default_profile = UserProfile(
+        display_name=None,
+        goals=[],
+        fitness_level=None,
+        units_system="metric",
+        timezone="UTC",
+        birthday=None,
+        height_cm=None,
+    )
     try:
-        result = await db.execute(select(UserPreferences).where(UserPreferences.user_id == user_id))
-        prefs = result.scalar_one_or_none()
-        if prefs:
-            return (
-                prefs.coach_persona or "balanced",
-                prefs.proactivity_level or "medium",
-                prefs.response_length or "concise",
-            )
+        result = await db.execute(
+            select(User, UserPreferences)
+            .outerjoin(UserPreferences, UserPreferences.user_id == User.id)
+            .where(User.id == user_id)
+        )
+        row = result.first()
+        if not row:
+            return (_default_profile, "balanced", "medium", "concise")
+
+        user = row[0]
+        prefs = row[1]  # May be None (LEFT JOIN)
+
+        profile = UserProfile(
+            display_name=user.display_name,
+            goals=(prefs.goals or []) if prefs else [],
+            fitness_level=prefs.fitness_level if prefs else None,
+            units_system=(prefs.units_system or "metric") if prefs else "metric",
+            timezone=(prefs.timezone or "UTC") if prefs else "UTC",
+            birthday=user.birthday,
+            height_cm=user.height_cm,
+        )
+        persona = (prefs.coach_persona or "balanced") if prefs else "balanced"
+        proactivity = (prefs.proactivity_level or "medium") if prefs else "medium"
+        response_length = (prefs.response_length or "concise") if prefs else "concise"
+        return (profile, persona, proactivity, response_length)
     except Exception as e:  # noqa: BLE001
-        logger.warning("Failed to load user preferences for user %s: %s", user_id[:8], e)
-    return ("balanced", "medium", "concise")
+        logger.warning("Failed to load user profile for user %s: %s", user_id[:8], e)
+        return (_default_profile, "balanced", "medium", "concise")
 
 
 async def _generate_and_save_title(
@@ -645,11 +713,13 @@ async def websocket_chat(
                         if isinstance(att, dict) and "context_message" in att:
                             att = {**att, "context_message": sanitize_for_llm(att["context_message"])}
                         sanitized_attachments.append(att)
+                    _user_content = message_text or "[attachment]"
                     user_msg = Message(
                         conversation_id=resolved_conv_id,
                         role="user",
-                        content=message_text or "[attachment]",
+                        content=_user_content,
                         attachments=sanitized_attachments or None,
+                        token_count=count_tokens(_user_content),
                     )
                     db.add(user_msg)
                     await db.commit()
@@ -666,21 +736,14 @@ async def websocket_chat(
                 # Load conversation history for LLM context, excluding the
                 # just-persisted user message (passed separately as `message`).
                 history = await _load_conversation_history(
-                    db, resolved_conv_id, limit=50, exclude_message_id=persisted_user_msg_id, user_id=user_id
+                    db, resolved_conv_id, limit=15, exclude_message_id=persisted_user_msg_id, user_id=user_id
                 )
 
-                # Fix 6.7 (H-3): Cap history to MAX_HISTORY_CHARS to bound token usage
-                total_chars = sum(len(m.get("content") or "") for m in history)
-                if total_chars > MAX_HISTORY_CHARS:
-                    excess = total_chars - MAX_HISTORY_CHARS
-                    removed = 0
-                    trim_count = 0
-                    while trim_count < len(history) - 1 and removed < excess:
-                        removed += len(str(history[trim_count].get("content") or ""))
-                        trim_count += 1
-                    history = history[trim_count:]
+                # Trim history to MAX_HISTORY_TOKENS by removing oldest messages first.
+                while len(history) > 1 and count_messages(history) > MAX_HISTORY_TOKENS:
+                    history.pop(0)
 
-                db_persona, db_proactivity, db_response_length = await _load_user_preferences(db, user_id)
+                user_profile, db_persona, db_proactivity, db_response_length = await _load_user_profile(db, user_id)
                 # Fix 6.6 (H-2): Validate client-supplied persona/proactivity against allowlist
                 client_persona = data.get("persona")
                 persona = client_persona if client_persona in _VALID_PERSONAS else db_persona
@@ -714,6 +777,7 @@ async def websocket_chat(
                         response_length=response_length,
                         db=db,
                         conversation_history=history,
+                        user_profile=user_profile,
                     ):
                         etype = event.get("type")
 
@@ -756,6 +820,7 @@ async def websocket_chat(
                     conversation_id=resolved_conv_id,
                     role="assistant",
                     content=full_content,
+                    token_count=count_tokens(full_content),
                 )
                 db.add(assistant_msg)
 
@@ -788,6 +853,29 @@ async def websocket_chat(
                 await db.commit()
                 await db.refresh(assistant_msg)
                 assistant_msg_id = assistant_msg.id
+
+                # Background summarization: fire-and-forget when conversation grows long.
+                count_result = await db.execute(
+                    select(func.count(Message.id)).where(
+                        Message.conversation_id == resolved_conv_id,
+                        Message.role.in_(["user", "assistant"]),
+                    )
+                )
+                msg_count = count_result.scalar_one()
+                if msg_count > 30:
+                    asyncio.create_task(
+                        summarize_oldest_messages(str(resolved_conv_id), llm_client)
+                    )
+
+                # Background memory extraction: fire-and-forget after each response.
+                asyncio.create_task(
+                    extract_and_store_memories(
+                        conversation_id=str(resolved_conv_id),
+                        user_id=user_id,
+                        llm_client=llm_client,
+                        memory_store=memory_store,
+                    )
+                )
 
             # ── Analytics ─────────────────────────────────────────────────────
             if analytics:

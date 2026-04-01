@@ -122,13 +122,13 @@ class TestMCPIntegration:
         """
         store = InMemoryStore()
 
-        await store.add("user-A", "Ran 5K this morning")
-        await store.add("user-A", "Ate 2000 kcal today")
+        await store.add("user-A", "Ran 5K this morning", "context")
+        await store.add("user-A", "Ate 2000 kcal today", "context")
 
         history = await store.query("user-A")
         assert len(history) == 2
-        assert history[0]["text"] == "Ran 5K this morning"
-        assert history[1]["text"] == "Ate 2000 kcal today"
+        assert history[0].content == "Ran 5K this morning"
+        assert history[1].content == "Ate 2000 kcal today"
 
     @pytest.mark.asyncio
     async def test_memory_store_isolates_users(self):
@@ -138,17 +138,17 @@ class TestMCPIntegration:
         """
         store = InMemoryStore()
 
-        await store.add("user-A", "User A entry")
-        await store.add("user-B", "User B entry")
+        await store.add("user-A", "User A entry", "context")
+        await store.add("user-B", "User B entry", "context")
 
         history_a = await store.query("user-A")
         history_b = await store.query("user-B")
 
         assert len(history_a) == 1
-        assert history_a[0]["text"] == "User A entry"
+        assert history_a[0].content == "User A entry"
 
         assert len(history_b) == 1
-        assert history_b[0]["text"] == "User B entry"
+        assert history_b[0].content == "User B entry"
 
     @pytest.mark.asyncio
     async def test_memory_store_respects_limit(self):
@@ -159,12 +159,12 @@ class TestMCPIntegration:
         store = InMemoryStore()
 
         for i in range(5):
-            await store.add("user-C", f"Entry {i}")
+            await store.add("user-C", f"Entry {i}", "context")
 
         history = await store.query("user-C", limit=2)
         assert len(history) == 2
-        assert history[0]["text"] == "Entry 3"
-        assert history[1]["text"] == "Entry 4"
+        assert history[0].content == "Entry 3"
+        assert history[1].content == "Entry 4"
 
     @pytest.mark.asyncio
     async def test_memory_store_empty_user_returns_empty(self):
