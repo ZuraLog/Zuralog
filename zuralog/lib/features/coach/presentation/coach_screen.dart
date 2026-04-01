@@ -489,7 +489,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
 
             // Layer 4: Ghost vignette (never blocks taps)
             if (isGhost)
-              _GhostVignette(),
+              const _GhostVignette(),
           ],
         ),
       ),
@@ -582,8 +582,7 @@ class _ErrorBanner extends StatelessWidget {
 /// The center of the screen remains fully clear.
 /// Self-wraps in [IgnorePointer] so it never blocks touches at any call site.
 class _GhostVignette extends StatelessWidget {
-  // ignore: prefer_const_constructors_in_immutables
-  _GhostVignette();
+  const _GhostVignette();
 
   @override
   Widget build(BuildContext context) {
@@ -591,7 +590,6 @@ class _GhostVignette extends StatelessWidget {
     return IgnorePointer(
       child: SizedBox.expand(
         child: DecoratedBox(
-          position: DecorationPosition.foreground,
           decoration: BoxDecoration(
             border: Border.all(
               color: color,
