@@ -1,7 +1,7 @@
 # Apple Health — Coaching Guide
 
 ## When to use this skill
-Use this skill when an iOS user asks about their health data, activity, sleep, heart metrics, or workouts — and their data comes from Apple HealthKit.
+Use this skill when an iOS user asks about their health data, activity, sleep, heart health, fitness scores, weight, or nutrition tracked by their Apple devices.
 
 ## Quick Reference
 
@@ -78,7 +78,7 @@ Use `daily_summary` for any general "how am I doing?" question — it returns al
 **Frame it as:** Numbers need context. Example: "You ran 5.2km in 28 minutes — a 5:23/km pace. 380 active calories. Want me to compare that to your runs this month?"
 
 ### "What does my HRV mean?"
-**Call:** `apple_health_read_metrics(data_type="hrv", start_date=today-30, end_date=today)` (or `daily_summary` for 14–30 days)
+**Call:** `apple_health_read_metrics(data_type="daily_summary", start_date=today-14, end_date=today)`. Use `data_type="hrv"` if you need a longer 30-day window.
 **Look for:** 7-day rolling average vs prior 7-day average; days more than 20% below rolling average (acute stress); multi-week downward trend (cumulative stress or overtraining)
 **Frame it as:** Personalise to the user's own history. Important Apple Watch context to share: Apple Watch measures SDNN (not RMSSD like Oura/WHOOP/Fitbit) — numbers are not comparable across devices. Readings are taken opportunistically during the day, not overnight, making them more variable than overnight trackers. A single reading means almost nothing — trend is the signal. Example: "Your HRV ranged 42–48ms this week — above average for Apple Watch users and stable. No signs of cumulative recovery debt."
 
