@@ -47,6 +47,11 @@ Prevents infinite loops if the model continuously requests tools
 without generating a final text response.
 """
 
+# OpenRouter server-side tools that are handled transparently by OpenRouter before
+# the response reaches us. We never route these through MCPClient — they have no
+# local handler. This is a defensive guard in case a model exposes them as tool_calls.
+_OPENROUTER_SERVER_TOOLS: frozenset[str] = frozenset({"web_search"})
+
 # Lightweight model used only for auto-generating conversation titles.
 # A small, cheap model is preferred since this is a one-shot, low-stakes call.
 _TITLE_MODEL = settings.openrouter_title_model
@@ -118,6 +123,12 @@ class Orchestrator:
                     },
                 }
             )
+
+        # OpenRouter server-side web search — handled transparently by OpenRouter.
+        # The model can call this; OpenRouter performs the search and injects results
+        # before returning the completion. No local handler required.
+        openai_tools.append({"type": "openrouter:web_search"})
+
         return openai_tools
 
     def _build_messages(
@@ -362,6 +373,13 @@ class Orchestrator:
 
                     for tool_call in assistant_message.tool_calls:
                         func_name = tool_call.function.name
+
+                        # OpenRouter server tools are handled server-side before the
+                        # response reaches us. If one appears here it's a no-op — skip.
+                        if func_name in _OPENROUTER_SERVER_TOOLS:
+                            logger.debug("Skipping server-native tool '%s'", func_name)
+                            continue
+
                         try:
                             arguments = json.loads(tool_call.function.arguments)
                         except json.JSONDecodeError:
@@ -562,6 +580,12 @@ class Orchestrator:
 
                         for tc in assembled_tool_calls:
                             func_name = tc["function"]["name"]
+
+                            # OpenRouter server tools are handled server-side — skip.
+                            if func_name in _OPENROUTER_SERVER_TOOLS:
+                                logger.debug("Skipping server-native tool '%s' (stream)", func_name)
+                                continue
+
                             try:
                                 arguments = json.loads(tc["function"]["arguments"])
                             except json.JSONDecodeError:
