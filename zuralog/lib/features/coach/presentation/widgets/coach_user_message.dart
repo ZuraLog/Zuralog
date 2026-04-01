@@ -28,6 +28,7 @@ class CoachUserMessage extends StatelessWidget {
   void _showContextMenu(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (sheetCtx) {
         final colors = AppColorsOf(sheetCtx);
@@ -67,7 +68,7 @@ class CoachUserMessage extends StatelessWidget {
                   onEdit();
                 },
               ),
-              SizedBox(height: MediaQuery.of(context).padding.bottom + AppDimens.spaceSm),
+              SizedBox(height: MediaQuery.of(sheetCtx).padding.bottom + AppDimens.spaceSm),
             ],
           ),
         );

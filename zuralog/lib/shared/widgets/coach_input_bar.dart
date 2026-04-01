@@ -45,7 +45,6 @@ class CoachInputBar extends ConsumerStatefulWidget {
     this.stagedAttachmentsNotifier,
     this.placeholder = 'Message Zura…',
     this.isFloating = false,
-    this.isGhost = false,
   });
 
   final TextEditingController controller;
@@ -82,8 +81,7 @@ class CoachInputBar extends ConsumerStatefulWidget {
 
   /// The hint text shown inside the text field when it is empty.
   ///
-  /// Defaults to `'Message Zura…'`. Pass a different string to match the
-  /// current conversation context (idle, active, ghost mode, etc.).
+  /// Defaults to `'Message Zura…'`.
   final String placeholder;
 
   /// When true, the input bar renders without a top border or background color
@@ -93,12 +91,6 @@ class CoachInputBar extends ConsumerStatefulWidget {
   /// Bottom padding is reduced to [AppDimens.spaceSm] (the pill handles
   /// its own vertical positioning). Defaults to false.
   final bool isFloating;
-
-  /// When true, the attachment panel shows a ghost-mode info banner instead of
-  /// the file/camera/gallery pickers, since ghost sessions cannot upload files.
-  ///
-  /// Defaults to false.
-  final bool isGhost;
 
   /// Maximum allowed message length.
   static const int maxLength = 4000;
@@ -320,7 +312,6 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
                             widget.stagedAttachmentsNotifier?.value =
                                 List.unmodifiable(_attachments);
                           }),
-                          isGhost: widget.isGhost,
                         ),
                         transitionsBuilder:
                             (context, animation, secondaryAnimation, child) {

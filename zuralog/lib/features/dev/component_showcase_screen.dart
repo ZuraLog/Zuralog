@@ -13,7 +13,6 @@ import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_artifact_card.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_blob.dart';
-import 'package:zuralog/features/coach/presentation/widgets/coach_ghost_banner.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_suggestion_card.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_thinking_layer.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_user_message.dart';
@@ -1957,10 +1956,6 @@ class _ComponentShowcaseScreenState
         const CoachThinkingLayer(),
         _gap(),
 
-        // ── CoachGhostBanner ────────────────────────────────────────────
-        _label('Ghost Banner', _colors!),
-        CoachGhostBanner(onExit: () {}),
-        _gap(),
       ],
     );
   }
