@@ -63,7 +63,7 @@ class CoachSkillMCPServer(BaseMCPServer):
             try:
                 content = file.read_text(encoding="utf-8")
             except Exception:
-                logger.warning("Failed to read coach skill file: %s", file.name)
+                logger.warning("Failed to read coach skill file: %s", file.name, exc_info=True)
                 continue
 
             self._skills[file.stem] = content
