@@ -29,6 +29,9 @@ ALWAYS_ON_SERVERS: frozenset[str] = frozenset({
     "apple_health",
     "health_connect",
     "deep_link",
+    "user_progress",
+    "user_wellbeing",
+    "notification",
 })
 
 # Maps Integration.provider column values to MCP server names.

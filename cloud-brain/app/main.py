@@ -76,8 +76,11 @@ from app.mcp_servers.apple_health_server import AppleHealthServer
 from app.mcp_servers.deep_link_server import DeepLinkServer
 from app.mcp_servers.health_connect_server import HealthConnectServer
 from app.mcp_servers.fitbit_server import FitbitServer
+from app.mcp_servers.notification_server import NotificationServer
 from app.mcp_servers.oura_server import OuraServer
 from app.mcp_servers.polar_server import PolarServer
+from app.mcp_servers.user_progress_server import UserProgressServer
+from app.mcp_servers.user_wellbeing_server import UserWellbeingServer
 from app.mcp_servers.withings_server import WithingsServer
 from app.mcp_servers.registry import MCPServerRegistry
 from app.mcp_servers.strava_server import StravaServer
@@ -224,6 +227,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         app.state.strava_token_service = None
 
     registry.register(DeepLinkServer())  # Phase 1.12
+    registry.register(UserProgressServer(db_factory=async_session))
+    registry.register(UserWellbeingServer(db_factory=async_session))
+    registry.register(
+        NotificationServer(db_factory=async_session, push_service=push_svc)
+    )
     app.state.mcp_registry = registry
 
     # Fitbit wiring (Phase 5.1 / Task-3)
