@@ -46,10 +46,17 @@ The chat input bar (reusable `CoachInputBar` widget) has a customizable placehol
 
 ---
 
-## Coach Skill System (as of 2026-04-01)
+## Coach Skill System (as of 2026-04-02)
 
-The Coach has access to a runtime skill system that gives it domain-specific knowledge on demand. A compact index of available domains is included in every system prompt. When a question requires real depth — strength training, nutrition, cardio endurance — the Coach fetches the relevant skill document via `get_coach_skill` before answering. Simple conversational questions skip this step entirely; complex cross-domain questions can load up to two skills.
+The Coach has access to a runtime skill system that gives it domain-specific knowledge on demand. A compact index of available domains is included in every system prompt. When a question requires real depth, the Coach fetches the relevant skill document via `get_coach_skill` before answering. Simple conversational questions skip this step entirely; complex cross-domain questions can load up to two skills.
 
 Skill documents live in `cloud-brain/app/coach_skills/`. Adding a new domain requires only dropping in a new file — no code changes, no migrations, no per-user setup. The skill system is always on for all users.
 
-**Status:** Complete — `feat/coach-skill-system`
+**Available skills:**
+- **strength_training.md** — Coaching on resistance training, exercise form, periodization, recovery
+- **nutrition.md** — Guidance on meal planning, macros, supplements, dietary questions
+- **cardio_endurance.md** — Running, cycling, aerobic fitness, pacing, recovery
+- **apple_health.md** — iOS-specific guidance for users tracking health on Apple devices
+- **health_connect.md** — Android-specific guidance for users tracking health on Android devices
+
+**Status:** Complete — `feat/coach-skill-system` (apple_health and health_connect skills added in `feat/memory-mcp-server`)

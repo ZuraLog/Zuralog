@@ -4,6 +4,28 @@ A running record of completed work — what was built, when, and at what scope.
 
 ---
 
+## 2026-04-02 — Coach Skills: Platform-Specific Health Guidance
+
+**Branch:** `feat/memory-mcp-server`
+
+Extended the Coach Skill System with platform-specific health coaching for iOS and Android users.
+
+**What was built:**
+
+- **Apple Health skill** (`cloud-brain/app/coach_skills/apple_health.md`): Specialized guidance for iOS users and devices that sync with Apple Health. Covers reading HealthKit data, health data permissions, device ecosystem specifics, and best practices for health tracking on iPhone, Apple Watch, and other Apple devices. Helps the Coach answer questions like "Why isn't my watch syncing?", "Can I see my resting heart rate?", and "How do I share health data with my family?"
+
+- **Health Connect skill** (`cloud-brain/app/coach_skills/health_connect.md`): Specialized guidance for Android users and devices that sync with Google Health Connect. Covers reading Health Connect data, app integration, permissions, and best practices for health tracking on Android devices. Helps the Coach answer questions about Android-specific health tracking, device compatibility, and data integration across health apps on Android.
+
+- **Byte limit increase** (`cloud-brain/app/mcp_servers/coach_skill_server.py`): `MAX_SKILL_BYTES` increased from 6144 (6KB) to 12288 (12KB) to accommodate the new comprehensive health platform guides without truncation.
+
+**Files created:**
+- `cloud-brain/app/coach_skills/apple_health.md`
+- `cloud-brain/app/coach_skills/health_connect.md`
+
+**Files modified:** `cloud-brain/app/mcp_servers/coach_skill_server.py`
+
+---
+
 ## 2026-04-01 — Coach Skill System
 
 **Branch:** `feat/coach-skill-system`
