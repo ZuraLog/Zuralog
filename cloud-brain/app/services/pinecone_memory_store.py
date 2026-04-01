@@ -25,6 +25,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
+from app.agent.context_manager.memory_store import MemoryItem
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -183,7 +185,7 @@ class PineconeMemoryStore:
         user_id: str,
         query_text: str = "",
         limit: int = 5,
-    ) -> list[dict[str, Any]]:
+    ) -> list[MemoryItem]:
         """Retrieve relevant memories (MemoryStore protocol alias).
 
         Delegates to ``query_memory``. Provided for compatibility with the
@@ -195,8 +197,7 @@ class PineconeMemoryStore:
             limit: Maximum number of results to return.
 
         Returns:
-            A list of memory entries as dicts with at least ``text``
-            and ``metadata`` keys.
+            A list of MemoryItem objects ordered by relevance score.
         """
         return await self.query_memory(user_id, query_text, limit)
 
@@ -260,7 +261,7 @@ class PineconeMemoryStore:
         user_id: str,
         query_text: str,
         limit: int = 5,
-    ) -> list[dict[str, Any]]:
+    ) -> list[MemoryItem]:
         """Semantic similarity search for a user's stored memories.
 
         Embeds the query text, queries the user's Pinecone namespace, and
@@ -273,9 +274,8 @@ class PineconeMemoryStore:
             limit: Maximum number of results to return.
 
         Returns:
-            A list of dicts with keys ``id``, ``text``, ``score``, and
-            ``metadata``. Returns an empty list if the store is unavailable
-            or an error occurs.
+            A list of MemoryItem objects ordered by relevance score.
+            Returns an empty list if the store is unavailable or an error occurs.
         """
         if not self.is_available:
             logger.warning("PineconeMemoryStore.query_memory: store unavailable, returning [].")
@@ -294,18 +294,18 @@ class PineconeMemoryStore:
 
             result = await asyncio.to_thread(_query)
 
-            memories = []
+            memories: list[MemoryItem] = []
             for match in result.matches:
                 if match.score < _SCORE_THRESHOLD:
                     continue
                 meta = match.metadata or {}
                 memories.append(
-                    {
-                        "id": match.id,
-                        "text": meta.get("text", ""),
-                        "score": match.score,
-                        "metadata": meta,
-                    }
+                    MemoryItem(
+                        id=str(match.id),
+                        content=meta.get("text", ""),
+                        category=meta.get("category", "context"),
+                        score=float(match.score),
+                    )
                 )
             logger.debug(
                 "query_memory for user '%s': %d/%d results above threshold",
