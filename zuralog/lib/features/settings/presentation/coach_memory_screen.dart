@@ -358,7 +358,7 @@ Future<void> _showClearDialog(BuildContext context, WidgetRef ref) async {
     ),
   );
 
-  if (confirmed == true) {
+  if (confirmed == true && context.mounted) {
     await ref.read(memoryItemsProvider.notifier).clearAll();
     ref.read(analyticsServiceProvider).capture(
       event: AnalyticsEvents.allMemoriesCleared,
