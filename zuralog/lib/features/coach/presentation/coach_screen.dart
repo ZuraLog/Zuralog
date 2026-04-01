@@ -489,7 +489,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
 
             // Layer 4: Ghost vignette (never blocks taps)
             if (isGhost)
-              const _GhostVignette(),
+              _GhostVignette(),
           ],
         ),
       ),
@@ -576,28 +576,25 @@ class _ErrorBanner extends StatelessWidget {
 
 // ── _GhostVignette ────────────────────────────────────────────────────────────
 
-/// Edge vignette overlay that signals ghost mode is active.
+/// Edge border overlay that signals ghost mode is active.
 ///
-/// Radial gradient — transparent at center, semi-opaque black at edges —
-/// creates a darkroom effect without changing the canvas background color.
+/// Renders a thin colored border around the full screen perimeter.
+/// The center of the screen remains fully clear.
 /// Self-wraps in [IgnorePointer] so it never blocks touches at any call site.
 class _GhostVignette extends StatelessWidget {
   const _GhostVignette();
 
   @override
   Widget build(BuildContext context) {
-    return const IgnorePointer(
+    final color = AppColorsOf(context).primary.withValues(alpha: 0.6);
+    return IgnorePointer(
       child: SizedBox.expand(
         child: DecoratedBox(
+          position: DecorationPosition.foreground,
           decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: Alignment.center,
-              radius: 1.2,
-              colors: [
-                Colors.transparent,
-                Color(0x55000000),
-              ],
-              stops: [0.5, 1.0],
+            border: Border.all(
+              color: color,
+              width: 2.5,
             ),
           ),
         ),

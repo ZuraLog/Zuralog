@@ -34,7 +34,7 @@ class CoachGhostBanner extends StatelessWidget {
             const SizedBox(width: AppDimens.spaceSm),
             Expanded(
               child: Text(
-                'Ghost Mode — nothing is being saved',
+                'Ghost Mode — your conversation won\'t be saved or logged.',
                 style: AppTextStyles.bodySmall.copyWith(
                   color: colors.primary,
                 ),
