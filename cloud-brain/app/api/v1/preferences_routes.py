@@ -77,6 +77,7 @@ class PreferencesResponse(BaseModel):
     wellness_checkin_card_visible: bool = True
     data_maturity_banner_dismissed: bool = False
     analytics_opt_out: bool = False
+    memory_enabled: bool = True
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -123,6 +124,7 @@ class PreferencesUpdate(BaseModel):
     wellness_checkin_card_visible: bool | None = None
     data_maturity_banner_dismissed: bool | None = None
     analytics_opt_out: bool | None = None
+    memory_enabled: bool | None = None
 
 
 class PreferencesCreate(BaseModel):
@@ -152,6 +154,7 @@ class PreferencesCreate(BaseModel):
     wellness_checkin_card_visible: bool | None = None
     data_maturity_banner_dismissed: bool | None = None
     analytics_opt_out: bool | None = None
+    memory_enabled: bool | None = None
 
 
 # ---------------------------------------------------------------------------

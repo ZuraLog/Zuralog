@@ -63,6 +63,7 @@ def _make_prefs_orm(overrides: dict | None = None):
     prefs.wellness_checkin_card_visible = True
     prefs.data_maturity_banner_dismissed = False
     prefs.analytics_opt_out = False
+    prefs.memory_enabled = True
     prefs.morning_briefing_enabled = True
     prefs.checkin_reminder_enabled = False
     prefs.quiet_hours_enabled = False
@@ -362,3 +363,34 @@ def test_patch_response_length_validation(integration_client):
 
     assert response.status_code == 400
     assert "response_length" in response.json()["detail"]
+
+
+def test_patch_memory_enabled(integration_client):
+    """PATCH /preferences can toggle memory_enabled."""
+    client, mock_auth, mock_db = integration_client
+
+    mock_auth.get_user.return_value = {"id": USER_ID}
+    mock_user = _make_user_orm()
+    mock_user_result = MagicMock()
+    mock_user_result.scalar_one_or_none.return_value = mock_user
+
+    prefs = _make_prefs_orm()
+    mock_db.commit = AsyncMock()
+    mock_db.refresh = AsyncMock()
+
+    from unittest.mock import patch
+
+    with patch(
+        "app.api.v1.preferences_routes._get_or_create_prefs",
+        new_callable=AsyncMock,
+        return_value=prefs,
+    ):
+        mock_db.execute = AsyncMock(return_value=mock_user_result)
+        response = client.patch(
+            "/api/v1/preferences",
+            json={"memory_enabled": False},
+            headers=AUTH_HEADERS,
+        )
+
+    assert response.status_code == 200
+    assert response.json()["memory_enabled"] is False
