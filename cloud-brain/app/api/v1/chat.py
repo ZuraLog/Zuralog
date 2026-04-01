@@ -47,6 +47,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent.context_manager.memory_store import MemoryStore
 from app.agent.context_manager.token_counter import count_messages, count_tokens, truncate_to_tokens
+from app.agent.context_manager.summarization_service import summarize_oldest_messages
 from app.agent.prompts.system import UserProfile
 from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
@@ -207,7 +208,7 @@ def _message_to_dict(msg: Message) -> dict[str, Any]:
 async def _load_conversation_history(
     db: AsyncSession,
     conversation_id: str,
-    limit: int = 50,
+    limit: int = 15,
     exclude_message_id: str | None = None,
     user_id: str | None = None,
 ) -> list[dict[str, Any]]:
@@ -239,14 +240,26 @@ async def _load_conversation_history(
         if conv_check.scalar_one_or_none() is None:
             return []
 
-    query = select(Message).where(Message.conversation_id == conversation_id)
+    # Load conversation summary (if any previous summarization has run).
+    conv_summary_result = await db.execute(
+        select(Conversation.summary).where(Conversation.id == conversation_id)
+    )
+    summary: str | None = conv_summary_result.scalar_one_or_none()
+
+    # Load the last 15 non-summarized messages (oldest first after reversing).
+    query = (
+        select(Message)
+        .where(
+            Message.conversation_id == conversation_id,
+            Message.is_summarized == False,  # noqa: E712
+        )
+    )
     if exclude_message_id is not None:
         query = query.where(Message.id != exclude_message_id)
     query = query.order_by(Message.created_at.desc()).limit(limit)
     result = await db.execute(query)
-    messages = result.scalars().all()
-    messages = list(reversed(messages))
-    # Only pass user/assistant roles to the LLM; skip tool/system rows.
+    messages = list(reversed(result.scalars().all()))
+
     result_messages = []
     for m in messages:
         if m.role not in ("user", "assistant"):
@@ -255,6 +268,13 @@ async def _load_conversation_history(
         if count_tokens(content) > _MSG_TOKEN_CAP:
             content = truncate_to_tokens(content, _MSG_TOKEN_CAP)
         result_messages.append({"role": m.role, "content": content})
+
+    # Prepend the summary as a system message so the LLM has context
+    # about earlier parts of the conversation.
+    if summary:
+        return [
+            {"role": "system", "content": f"## Conversation Summary\n{summary}"}
+        ] + result_messages
     return result_messages
 
 
@@ -692,11 +712,13 @@ async def websocket_chat(
                         if isinstance(att, dict) and "context_message" in att:
                             att = {**att, "context_message": sanitize_for_llm(att["context_message"])}
                         sanitized_attachments.append(att)
+                    _user_content = message_text or "[attachment]"
                     user_msg = Message(
                         conversation_id=resolved_conv_id,
                         role="user",
-                        content=message_text or "[attachment]",
+                        content=_user_content,
                         attachments=sanitized_attachments or None,
+                        token_count=count_tokens(_user_content),
                     )
                     db.add(user_msg)
                     await db.commit()
@@ -713,7 +735,7 @@ async def websocket_chat(
                 # Load conversation history for LLM context, excluding the
                 # just-persisted user message (passed separately as `message`).
                 history = await _load_conversation_history(
-                    db, resolved_conv_id, limit=50, exclude_message_id=persisted_user_msg_id, user_id=user_id
+                    db, resolved_conv_id, limit=15, exclude_message_id=persisted_user_msg_id, user_id=user_id
                 )
 
                 # Trim history to MAX_HISTORY_TOKENS by removing oldest messages first.
@@ -797,6 +819,7 @@ async def websocket_chat(
                     conversation_id=resolved_conv_id,
                     role="assistant",
                     content=full_content,
+                    token_count=count_tokens(full_content),
                 )
                 db.add(assistant_msg)
 
@@ -829,6 +852,19 @@ async def websocket_chat(
                 await db.commit()
                 await db.refresh(assistant_msg)
                 assistant_msg_id = assistant_msg.id
+
+                # Background summarization: fire-and-forget when conversation grows long.
+                count_result = await db.execute(
+                    select(func.count(Message.id)).where(
+                        Message.conversation_id == resolved_conv_id,
+                        Message.role.in_(["user", "assistant"]),
+                    )
+                )
+                msg_count = count_result.scalar_one()
+                if msg_count > 30:
+                    asyncio.create_task(
+                        summarize_oldest_messages(str(resolved_conv_id), llm_client)
+                    )
 
             # ── Analytics ─────────────────────────────────────────────────────
             if analytics:
