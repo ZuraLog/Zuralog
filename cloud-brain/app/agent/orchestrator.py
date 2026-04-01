@@ -26,10 +26,10 @@ from typing import TYPE_CHECKING, Any, AsyncGenerator
 
 import sentry_sdk
 
-from app.agent.context_manager.memory_store import MemoryStore
+from app.agent.context_manager.memory_store import MemoryItem, MemoryStore
 from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
-from app.agent.prompts.system import build_system_prompt
+from app.agent.prompts.system import UserProfile, build_system_prompt
 from app.agent.response import AgentResponse
 from app.config import settings
 from app.services.usage_tracker import UsageTracker
@@ -196,6 +196,7 @@ class Orchestrator:
         proactivity: str = "medium",
         db: AsyncSession | None = None,
         conversation_history: list[dict[str, Any]] | None = None,
+        user_profile: UserProfile | None = None,
     ) -> AgentResponse:
         """Process a user message through the AI Brain.
 
@@ -228,8 +229,8 @@ class Orchestrator:
             txn.set_tag("tool_injection_mode", "dynamic" if db is not None else "static")
 
             # 1. Retrieve relevant memories first (needed for prompt injection)
-            context_entries_raw = await self.memory_store.query(user_id, query_text=message, limit=5)
-            memory_texts = [e.get("text", "") for e in context_entries_raw if e.get("text")]
+            memory_items: list[MemoryItem] = await self.memory_store.query(user_id, query_text=message, limit=5)
+            memory_texts = [item.content for item in memory_items if item.score >= 0.70]
 
             # Build system prompt with persona, proactivity, and memory context
             system_prompt = build_system_prompt(
@@ -237,6 +238,7 @@ class Orchestrator:
                 proactivity=proactivity,
                 memories=memory_texts if memory_texts else None,
                 user_context_suffix=user_context_suffix,
+                user_profile=user_profile,
             )
 
             # 2. Build initial messages (with optional history for multi-turn context)
@@ -396,6 +398,7 @@ class Orchestrator:
         response_length: str | None = None,
         db: AsyncSession | None = None,
         conversation_history: list[dict[str, Any]] | None = None,
+        user_profile: UserProfile | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """Process a user message and stream the final response token-by-token.
 
@@ -427,8 +430,8 @@ class Orchestrator:
 
             try:
                 # Build context (same as process_message)
-                context_entries_raw = await self.memory_store.query(user_id, query_text=message, limit=5)
-                memory_texts = [e.get("text", "") for e in context_entries_raw if e.get("text")]
+                memory_items: list[MemoryItem] = await self.memory_store.query(user_id, query_text=message, limit=5)
+                memory_texts = [item.content for item in memory_items if item.score >= 0.70]
 
                 system_prompt = build_system_prompt(
                     persona=persona,
@@ -436,6 +439,7 @@ class Orchestrator:
                     response_length=response_length,
                     memories=memory_texts if memory_texts else None,
                     user_context_suffix=user_context_suffix,
+                    user_profile=user_profile,
                 )
 
                 messages = self._build_messages(system_prompt, message, conversation_history)
