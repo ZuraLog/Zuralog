@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import select, true
 
 from app.agent.context_manager.token_counter import count_tokens
 from app.agent.llm_client import LLMClient
@@ -76,7 +76,7 @@ async def summarize_oldest_messages(
                     Message.conversation_id == conversation_id,
                     Message.role.in_(["user", "assistant"]),
                     Message.is_summarized == False,  # noqa: E712
-                    Message.id.not_in(recent_ids) if recent_ids else True,
+                    Message.id.not_in(recent_ids) if recent_ids else true(),
                 )
                 .order_by(Message.created_at.asc())
             )
