@@ -433,17 +433,34 @@ class AuthRepository {
     try {
       final data = error.response?.data;
       if (data is Map<String, dynamic> && data.containsKey('detail')) {
-        return data['detail'] as String;
+        final detail = data['detail'];
+        if (detail is String) return detail;
+        return detail.toString();
       }
+      // Some error responses use 'message' or 'error' keys instead.
+      if (data is Map<String, dynamic>) {
+        if (data.containsKey('message')) return data['message'].toString();
+        if (data.containsKey('error')) return data['error'].toString();
+      }
+      if (data is String && data.isNotEmpty) return data;
     } catch (_) {
-      // Fall through to generic message
+      // Fall through to status-based message
     }
 
-    if (error.type == DioExceptionType.connectionTimeout ||
-        error.type == DioExceptionType.receiveTimeout) {
-      return 'Connection timed out. Please check your network.';
+    final statusCode = error.response?.statusCode;
+    if (statusCode != null) {
+      return 'Server returned error $statusCode. Please try again.';
     }
 
-    return 'An unexpected error occurred. Please try again.';
+    switch (error.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.receiveTimeout:
+      case DioExceptionType.sendTimeout:
+        return 'Connection timed out. Please check your network.';
+      case DioExceptionType.connectionError:
+        return 'Could not connect to the server. Check your internet connection.';
+      default:
+        return 'An unexpected error occurred. Please try again.';
+    }
   }
 }
