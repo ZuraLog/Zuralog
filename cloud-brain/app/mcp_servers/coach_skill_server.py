@@ -184,7 +184,7 @@ class CoachSkillMCPServer(BaseMCPServer):
             name: str = params.get("name", "")
             content = self._skills.get(name)
             if content is not None:
-                MAX_SKILL_BYTES = 6144
+                MAX_SKILL_BYTES = 12288
                 if len(content.encode("utf-8")) > MAX_SKILL_BYTES:
                     content = content.encode("utf-8")[:MAX_SKILL_BYTES].decode("utf-8", errors="ignore")
                     content += "\n\n[Skill document truncated to fit context window.]"
