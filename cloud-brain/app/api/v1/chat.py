@@ -282,7 +282,7 @@ async def _load_conversation_history(
 async def _load_user_profile(
     db: AsyncSession,
     user_id: str,
-) -> tuple[UserProfile, str, str, str]:
+) -> tuple[UserProfile, str, str, str, bool]:
     """Load the user's full profile and preferences in a single JOIN query.
 
     JOINs users and user_preferences to avoid two round-trips.
@@ -293,7 +293,7 @@ async def _load_user_profile(
         user_id: The authenticated user's ID.
 
     Returns:
-        A (UserProfile, persona, proactivity, response_length) tuple.
+        A (UserProfile, persona, proactivity, response_length, memory_enabled) tuple.
         All values have sensible defaults if DB rows are missing.
     """
     _default_profile = UserProfile(
@@ -313,7 +313,7 @@ async def _load_user_profile(
         )
         row = result.first()
         if not row:
-            return (_default_profile, "balanced", "medium", "concise")
+            return (_default_profile, "balanced", "medium", "concise", True)
 
         user = row[0]
         prefs = row[1]  # May be None (LEFT JOIN)
@@ -330,10 +330,11 @@ async def _load_user_profile(
         persona = (prefs.coach_persona or "balanced") if prefs else "balanced"
         proactivity = (prefs.proactivity_level or "medium") if prefs else "medium"
         response_length = (prefs.response_length or "concise") if prefs else "concise"
-        return (profile, persona, proactivity, response_length)
+        memory_enabled = (prefs.memory_enabled if prefs is not None else True)
+        return (profile, persona, proactivity, response_length, memory_enabled)
     except Exception as e:  # noqa: BLE001
         logger.warning("Failed to load user profile for user %s: %s", user_id[:8], e)
-        return (_default_profile, "balanced", "medium", "concise")
+        return (_default_profile, "balanced", "medium", "concise", True)
 
 
 async def _generate_and_save_title(
@@ -743,7 +744,7 @@ async def websocket_chat(
                 while len(history) > 1 and count_messages(history) > MAX_HISTORY_TOKENS:
                     history.pop(0)
 
-                user_profile, db_persona, db_proactivity, db_response_length = await _load_user_profile(db, user_id)
+                user_profile, db_persona, db_proactivity, db_response_length, memory_enabled = await _load_user_profile(db, user_id)
                 # Fix 6.6 (H-2): Validate client-supplied persona/proactivity against allowlist
                 client_persona = data.get("persona")
                 persona = client_persona if client_persona in _VALID_PERSONAS else db_persona
@@ -778,6 +779,7 @@ async def websocket_chat(
                         db=db,
                         conversation_history=history,
                         user_profile=user_profile,
+                        memory_enabled=memory_enabled,
                     ):
                         etype = event.get("type")
 
@@ -868,14 +870,15 @@ async def websocket_chat(
                     )
 
                 # Background memory extraction: fire-and-forget after each response.
-                asyncio.create_task(
-                    extract_and_store_memories(
-                        conversation_id=str(resolved_conv_id),
-                        user_id=user_id,
-                        llm_client=llm_client,
-                        memory_store=memory_store,
+                if memory_enabled:
+                    asyncio.create_task(
+                        extract_and_store_memories(
+                            conversation_id=str(resolved_conv_id),
+                            user_id=user_id,
+                            llm_client=llm_client,
+                            memory_store=memory_store,
+                        )
                     )
-                )
 
             # ── Analytics ─────────────────────────────────────────────────────
             if analytics:
