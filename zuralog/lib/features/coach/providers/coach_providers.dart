@@ -25,6 +25,17 @@ import 'package:zuralog/features/coach/data/coach_repository.dart';
 import 'package:zuralog/features/coach/domain/coach_models.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+/// Tool name keywords that indicate a write/mutation operation.
+///
+/// Used to suppress tool call indicators in ghost mode so write operations
+/// don't appear in the UI when nothing should be persisted.
+const _kGhostWriteToolKeywords = [
+  'save', 'store', 'write', 'memory', 'log',
+  'create', 'update', 'delete', 'archive',
+];
+
 // ── Repository ────────────────────────────────────────────────────────────────
 
 /// Provides the live [ApiCoachRepository].
@@ -382,9 +393,10 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
             state = state.copyWith(resolvedConversationId: conversationId);
 
           case ToolProgress(:final toolName, :final isStart):
-            const writeToolKeywords = ['save', 'store', 'write', 'memory', 'log', 'create', 'update', 'delete', 'archive'];
-            final isWriteTool = writeToolKeywords.any((kw) => toolName.toLowerCase().contains(kw));
-            if (isGhost && isWriteTool) break; // Silently skip write tool indicators in ghost mode
+            final isWriteTool = _kGhostWriteToolKeywords.any(
+              (kw) => toolName.toLowerCase().contains(kw),
+            );
+            if (isGhost && isWriteTool) break;
             state = state.copyWith(
               activeToolName: isStart ? toolName : null,
               clearTool: !isStart,
@@ -564,6 +576,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
       proactivity: proactivity,
       responseLength: responseLength,
       isRegenerate: true,
+      isGhost: ref.read(ghostModeProvider),
     );
   }
 
