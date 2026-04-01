@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 
+from app.agent.context_manager.pgvector_memory_store import PgVectorMemoryStore
 from app.mcp_servers.base_server import BaseMCPServer
 from app.mcp_servers.models import Resource, ToolDefinition, ToolResult
 
@@ -34,15 +35,15 @@ class MemoryMCPServer(BaseMCPServer):
     to an in-memory fallback.
 
     Args:
-        memory_store: A PgVectorMemoryStore instance. Accepted as Any
-            to keep tests simple, but must implement add() and query().
+        memory_store: A ``PgVectorMemoryStore`` instance that provides
+            the async ``add()`` and ``query()`` interface.
     """
 
-    def __init__(self, memory_store: object) -> None:
+    def __init__(self, memory_store: PgVectorMemoryStore) -> None:
         """Initialise the server with an injected memory store.
 
         Args:
-            memory_store: Store instance exposing async add() and query().
+            memory_store: ``PgVectorMemoryStore`` instance exposing async add() and query().
         """
         self._store = memory_store
 
