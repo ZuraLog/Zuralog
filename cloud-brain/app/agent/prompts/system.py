@@ -7,6 +7,7 @@ The ``build_system_prompt()`` function assembles the final system prompt from:
   - A proactivity modifier (low / medium / high)
   - Optional user memories (semantic context)
   - Optional connected integrations (tool availability context)
+  - An optional skill index (available domain expertise and loading rules)
 
 This prompt is injected as the first message in every conversation.
 Backward compatible: calling ``build_system_prompt()`` with no arguments returns
