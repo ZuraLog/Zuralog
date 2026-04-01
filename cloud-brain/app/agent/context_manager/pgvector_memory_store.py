@@ -30,7 +30,6 @@ from app.database import async_session
 logger = logging.getLogger(__name__)
 
 _EMBEDDING_MODEL = "text-embedding-3-small"
-_EMBEDDING_DIMENSIONS = 1536
 
 
 def _vec_str(embedding: list[float]) -> str:
