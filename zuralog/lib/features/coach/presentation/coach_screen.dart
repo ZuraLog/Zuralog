@@ -143,9 +143,9 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     }
   }
 
-  void _showActivateGhostSheet() {
+  Future<void> _showActivateGhostSheet() async {
     final colors = AppColorsOf(context);
-    showModalBottomSheet<void>(
+    final confirmed = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -172,22 +172,12 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
+                  onPressed: () => Navigator.of(ctx).pop(false),
                   child: const Text('Cancel'),
                 ),
                 const SizedBox(width: AppDimens.spaceSm),
                 FilledButton(
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (!mounted) return;
-                      ref.read(ghostModeProvider.notifier).state = true;
-                      setState(() {
-                        _activeConversationId =
-                            'ghost_${DateTime.now().millisecondsSinceEpoch}';
-                      });
-                    });
-                  },
+                  onPressed: () => Navigator.of(ctx).pop(true),
                   child: const Text('Start Ghost Session'),
                 ),
               ],
@@ -197,11 +187,16 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
         ),
       ),
     );
+    if (!mounted || confirmed != true) return;
+    ref.read(ghostModeProvider.notifier).state = true;
+    setState(() {
+      _activeConversationId = 'ghost_${DateTime.now().millisecondsSinceEpoch}';
+    });
   }
 
-  void _showExitGhostSheet() {
+  Future<void> _showExitGhostSheet() async {
     final colors = AppColorsOf(context);
-    showModalBottomSheet<void>(
+    final confirmed = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -228,19 +223,12 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
+                  onPressed: () => Navigator.of(ctx).pop(false),
                   child: const Text('Cancel'),
                 ),
                 const SizedBox(width: AppDimens.spaceSm),
                 FilledButton(
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (!mounted) return;
-                      ref.read(ghostModeProvider.notifier).state = false;
-                      _startNewConversation();
-                    });
-                  },
+                  onPressed: () => Navigator.of(ctx).pop(true),
                   child: const Text('End Session'),
                 ),
               ],
@@ -250,6 +238,9 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
         ),
       ),
     );
+    if (!mounted || confirmed != true) return;
+    ref.read(ghostModeProvider.notifier).state = false;
+    _startNewConversation();
   }
 
   Future<void> _sendMessage({
