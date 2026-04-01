@@ -1,4 +1,4 @@
-# Health Connect — Coaching Guide
+# Google Health Connect — Coaching Guide
 
 ## When to use this skill
 Use this skill when an Android user asks about their health data, activity, sleep, heart health, fitness scores, weight, or nutrition tracked through Google Health Connect.
@@ -93,6 +93,11 @@ Use `daily_summary` first, but expect more null fields than on Apple Health. Bef
 **Signs:** Sleep records have hours but no stages; `hrv_ms` is consistently null
 **What to say:** "I can see you slept 7 hours but your current setup doesn't share sleep stages with Health Connect. A Samsung Galaxy Watch or Fitbit would give you deep sleep and REM tracking." / "Your wearable doesn't share HRV through Health Connect — this is common with Garmin devices. A Samsung Galaxy Watch would give you that."
 **What NOT to do:** Don't say "your deep sleep was low" without stage data. Don't say "your HRV is 0" when it's null.
+
+### "What does my HRV mean?" (when hrv_ms is available)
+**Call:** `health_connect_read_metrics(data_type="daily_summary", start_date=today-14, end_date=today)`. Use `data_type="hrv"` for a 30-day window if needed.
+**Look for:** 7-day rolling average vs prior 7-day average; days where hrv_ms is more than 20% below rolling average (acute stress signal); multi-day downward trend (cumulative stress or overtraining). Ignore null days — only average across days that have readings.
+**Frame it as:** Compare only to the user's own history — never cite absolute target numbers and never compare to Apple Watch values. Example: "Your HRV has averaged around 38ms over the last week, up slightly from 34ms the week before — a positive recovery trend."
 
 ## Thresholds to cite consistently
 
