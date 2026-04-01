@@ -98,6 +98,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
 
   @override
   void dispose() {
+    _inputCtrl.removeListener(_onInputChanged);
     _draftDebounce?.cancel();
     ref.read(coachDraftServiceProvider).saveDraft(_draftKey, _inputCtrl.text);
     _inputCtrl.dispose();
