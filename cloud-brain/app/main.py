@@ -76,6 +76,7 @@ from app.mcp_servers.apple_health_server import AppleHealthServer
 from app.mcp_servers.deep_link_server import DeepLinkServer
 from app.mcp_servers.health_connect_server import HealthConnectServer
 from app.mcp_servers.fitbit_server import FitbitServer
+from app.mcp_servers.memory_server import MemoryMCPServer
 from app.mcp_servers.oura_server import OuraServer
 from app.mcp_servers.polar_server import PolarServer
 from app.mcp_servers.withings_server import WithingsServer
@@ -306,7 +307,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Uses _pgvector_store directly (not app.state.memory_store) to guarantee
     # the concrete PgVectorMemoryStore type is never the in-memory fallback.
     if _pgvector_store.is_available:
-        from app.mcp_servers.memory_server import MemoryMCPServer
         memory_server = MemoryMCPServer(memory_store=_pgvector_store)
         registry.register(memory_server)
     # LLM client: only initialize when API key is configured
