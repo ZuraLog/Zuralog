@@ -147,6 +147,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     final colors = AppColorsOf(context);
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
@@ -198,6 +199,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     final colors = AppColorsOf(context);
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
