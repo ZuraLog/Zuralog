@@ -1,13 +1,13 @@
 /// Coach Tab — Single adaptive screen replacing NewChatScreen + ChatThreadScreen.
 ///
-/// Renders three visual states based on conversation content and ghost mode:
-///   - IdleState: empty conversation, no ghost mode
+/// Renders two visual states based on conversation content:
+///   - IdleState: empty conversation
 ///   - ConversationState: messages present (history or active chat)
-///   - Ghost mode: ConversationState with tinted background + banner
 ///
 /// No route navigation occurs between states — everything is inline.
 library;
 
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -22,9 +22,9 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/coach/domain/coach_models.dart';
 import 'package:zuralog/features/coach/presentation/coach_history_screen.dart';
-import 'package:zuralog/features/coach/presentation/widgets/coach_ghost_banner.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_idle_state.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_message_list.dart';
+import 'package:zuralog/features/coach/data/coach_draft_service.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/coach_input_bar.dart';
@@ -65,6 +65,10 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   final _inputBarKey = GlobalKey<CoachInputBarState>();
   final _stagedAttachments = ValueNotifier<List<PendingAttachment>>(const []);
   bool _prefillApplied = false;
+  Timer? _draftDebounce;
+
+  String get _draftKey =>
+      _activeConversationId.startsWith('new_') ? '__pending' : _activeConversationId;
 
   @override
   void initState() {
@@ -82,24 +86,58 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
         ref.read(coachPrefillProvider.notifier).state = null;
       }
     });
+    _inputCtrl.addListener(_onInputChanged);
+    if (!_prefillApplied) {
+      final saved = ref.read(coachDraftServiceProvider).loadDraft(_draftKey);
+      if (saved != null && saved.isNotEmpty) {
+        _inputCtrl.text = saved;
+        _inputCtrl.selection = TextSelection.collapsed(offset: saved.length);
+      }
+    }
   }
 
   @override
   void dispose() {
+    _draftDebounce?.cancel();
+    ref.read(coachDraftServiceProvider).saveDraft(_draftKey, _inputCtrl.text);
     _inputCtrl.dispose();
     _inputFocus.dispose();
     _stagedAttachments.dispose();
     super.dispose();
   }
 
-  void _startNewConversation() {
-    setState(() {
-      _activeConversationId = 'new_${DateTime.now().millisecondsSinceEpoch}';
+  void _onInputChanged() {
+    _draftDebounce?.cancel();
+    _draftDebounce = Timer(const Duration(milliseconds: 500), () {
+      ref.read(coachDraftServiceProvider).saveDraft(_draftKey, _inputCtrl.text);
     });
   }
 
+  void _startNewConversation() {
+    _draftDebounce?.cancel();
+    ref.read(coachDraftServiceProvider).saveDraft(_draftKey, _inputCtrl.text);
+    setState(() {
+      _activeConversationId = 'new_${DateTime.now().millisecondsSinceEpoch}';
+    });
+    // New conversations always map to __pending via _draftKey.
+    final saved = ref.read(coachDraftServiceProvider).loadDraft(_draftKey);
+    _inputCtrl.text = saved ?? '';
+    if (_inputCtrl.text.isNotEmpty) {
+      _inputCtrl.selection =
+          TextSelection.collapsed(offset: _inputCtrl.text.length);
+    }
+  }
+
   void _loadConversation(String conversationId) {
+    _draftDebounce?.cancel();
+    ref.read(coachDraftServiceProvider).saveDraft(_draftKey, _inputCtrl.text);
     setState(() => _activeConversationId = conversationId);
+    final saved = ref.read(coachDraftServiceProvider).loadDraft(_draftKey);
+    _inputCtrl.text = saved ?? '';
+    if (_inputCtrl.text.isNotEmpty) {
+      _inputCtrl.selection =
+          TextSelection.collapsed(offset: _inputCtrl.text.length);
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(coachChatNotifierProvider(conversationId).notifier).loadHistory();
@@ -134,117 +172,6 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     );
   }
 
-  void _onGhostModeButtonTap() {
-    final isGhost = ref.read(ghostModeProvider);
-    if (isGhost) {
-      _showExitGhostSheet();
-    } else {
-      _showActivateGhostSheet();
-    }
-  }
-
-  Future<void> _showActivateGhostSheet() async {
-    final colors = AppColorsOf(context);
-    final confirmed = await showModalBottomSheet<bool>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        margin: const EdgeInsets.all(AppDimens.spaceMd),
-        padding: const EdgeInsets.all(AppDimens.spaceMd),
-        decoration: BoxDecoration(
-          color: colors.cardBackground,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Ghost Mode', style: AppTextStyles.titleMedium),
-            const SizedBox(height: AppDimens.spaceSm),
-            Text(
-              'Nothing you say here will be saved or remembered by Zura. This conversation disappears when you leave.',
-              style: AppTextStyles.bodyMedium
-                  .copyWith(color: colors.textSecondary),
-            ),
-            const SizedBox(height: AppDimens.spaceMd),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                const SizedBox(width: AppDimens.spaceSm),
-                FilledButton(
-                  onPressed: () => Navigator.of(ctx).pop(true),
-                  child: const Text('Start Ghost Session'),
-                ),
-              ],
-            ),
-            SizedBox(height: MediaQuery.of(ctx).padding.bottom),
-          ],
-        ),
-      ),
-    );
-    if (!mounted || confirmed != true) return;
-    ref.read(ghostModeProvider.notifier).state = true;
-    setState(() {
-      _activeConversationId = 'ghost_${DateTime.now().millisecondsSinceEpoch}';
-    });
-  }
-
-  Future<void> _showExitGhostSheet() async {
-    final colors = AppColorsOf(context);
-    final confirmed = await showModalBottomSheet<bool>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        margin: const EdgeInsets.all(AppDimens.spaceMd),
-        padding: const EdgeInsets.all(AppDimens.spaceMd),
-        decoration: BoxDecoration(
-          color: colors.cardBackground,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('End ghost session?', style: AppTextStyles.titleMedium),
-            const SizedBox(height: AppDimens.spaceSm),
-            Text(
-              'This conversation will be cleared.',
-              style: AppTextStyles.bodyMedium
-                  .copyWith(color: colors.textSecondary),
-            ),
-            const SizedBox(height: AppDimens.spaceMd),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                const SizedBox(width: AppDimens.spaceSm),
-                FilledButton(
-                  onPressed: () => Navigator.of(ctx).pop(true),
-                  child: const Text('End Session'),
-                ),
-              ],
-            ),
-            SizedBox(height: MediaQuery.of(ctx).padding.bottom),
-          ],
-        ),
-      ),
-    );
-    if (!mounted || confirmed != true) return;
-    ref.read(ghostModeProvider.notifier).state = false;
-    _startNewConversation();
-  }
-
   Future<void> _sendMessage({
     List<Map<String, dynamic>> attachments = const [],
   }) async {
@@ -255,16 +182,14 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     final persona = ref.read(coachPersonaProvider).value;
     final proactivity = ref.read(proactivityLevelProvider).value;
     final responseLength = ref.read(responseLengthProvider).value;
-    final isGhost = ref.read(ghostModeProvider);
-
     final notifierState =
         ref.read(coachChatNotifierProvider(_activeConversationId));
     final effectiveId = notifierState.resolvedConversationId;
-    final isNew = effectiveId == null ||
-        effectiveId.startsWith('new_') ||
-        effectiveId.startsWith('ghost_');
+    final isNew = effectiveId == null || effectiveId.startsWith('new_');
 
     _inputCtrl.clear();
+    _draftDebounce?.cancel();
+    ref.read(coachDraftServiceProvider).clearDraft(_draftKey);
 
     try {
       await ref
@@ -276,7 +201,6 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
             proactivity: proactivity,
             responseLength: responseLength,
             attachments: attachments,
-            isGhost: isGhost,
           );
     } catch (e) {
       if (mounted) {
@@ -332,43 +256,27 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
 
     final chatState =
         ref.watch(coachChatNotifierProvider(_activeConversationId));
-    final isGhost = ref.watch(ghostModeProvider);
     final messages = _buildMessages(chatState);
     final isIdle = messages.isEmpty;
 
-    final placeholder = isGhost
-        ? 'Ask anything — this stays private'
-        : isIdle
-            ? 'Ask Zura anything…'
-            : 'Message Zura…';
+    final placeholder = isIdle ? 'Ask Zura anything…' : 'Message Zura…';
 
     // Effective conversation ID to pass to CoachInputBar for live attachment
-    // uploads. Ghost sessions and new conversations pass null so attachments
-    // upload after the server creates a real ID.
+    // uploads. New conversations pass null so attachments upload after the
+    // server creates a real ID.
     final effectiveConversationId =
-        _activeConversationId.startsWith('new_') ||
-                _activeConversationId.startsWith('ghost_')
-            ? null
-            : _activeConversationId;
+        _activeConversationId.startsWith('new_') ? null : _activeConversationId;
 
     final colors = AppColorsOf(context);
 
     return ZuralogScaffold(
       appBar: ZuralogAppBar(
-        title: isGhost ? 'Ghost Mode' : 'Coach',
+        title: 'Coach',
         leading: IconButton(
           icon: const Icon(Icons.menu_rounded),
           onPressed: _openDrawer,
           tooltip: 'Conversations',
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.sentiment_very_dissatisfied_rounded),
-            color: isGhost ? colors.primary : colors.textSecondary,
-            onPressed: _onGhostModeButtonTap,
-            tooltip: isGhost ? 'Exit Ghost Mode' : 'Ghost Mode',
-          ),
-        ],
       ),
       body: ColoredBox(
         color: colors.canvas,
@@ -377,7 +285,6 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
             // Layer 1: Content (full height)
             Column(
               children: [
-                if (isGhost) CoachGhostBanner(onExit: _showExitGhostSheet),
                 Expanded(
                   child: isIdle
                       ? CoachIdleState(
@@ -418,6 +325,27 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                                 behavior: SnackBarBehavior.floating,
                               ),
                             );
+                          },
+                          onThumbUp: (_) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Thanks for the feedback!'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
+                          onThumbDown: (_) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Got it. We\'ll work on improving this.'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
+                          onRedo: () {
+                            ref
+                                .read(coachChatNotifierProvider(_activeConversationId).notifier)
+                                .regenerate();
                           },
                         ),
                 ),
@@ -480,15 +408,11 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                   conversationId: effectiveConversationId,
                   isSending: chatState.isSending,
                   isFloating: true,
-                  isGhost: isGhost,
                   stagedAttachmentsNotifier: _stagedAttachments,
                 ),
               ),
             ),
 
-            // Layer 4: Ghost vignette (never blocks taps)
-            if (isGhost)
-              const _GhostVignette(),
           ],
         ),
       ),
@@ -573,30 +497,3 @@ class _ErrorBanner extends StatelessWidget {
   }
 }
 
-// ── _GhostVignette ────────────────────────────────────────────────────────────
-
-/// Edge border overlay that signals ghost mode is active.
-///
-/// Renders a thin colored border around the full screen perimeter.
-/// The center of the screen remains fully clear.
-/// Self-wraps in [IgnorePointer] so it never blocks touches at any call site.
-class _GhostVignette extends StatelessWidget {
-  const _GhostVignette();
-
-  @override
-  Widget build(BuildContext context) {
-    final color = AppColorsOf(context).primary.withValues(alpha: 0.6);
-    return IgnorePointer(
-      child: SizedBox.expand(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: color,
-              width: 2.5,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
