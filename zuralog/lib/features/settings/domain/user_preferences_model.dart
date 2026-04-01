@@ -248,6 +248,8 @@ class UserPreferencesModel {
     // Privacy & visibility
     this.dataMaturityBannerDismissed = false,
     this.analyticsOptOut = false,
+    // AI memory
+    this.memoryEnabled = true,
     // Account
     this.goals,
     this.unitsSystem = UnitsSystem.metric,
@@ -292,6 +294,9 @@ class UserPreferencesModel {
   // Privacy & visibility
   final bool dataMaturityBannerDismissed;
   final bool analyticsOptOut;
+
+  // AI memory
+  final bool memoryEnabled;
 
   // Account
   final List<String>? goals;
@@ -358,6 +363,7 @@ class UserPreferencesModel {
       dataMaturityBannerDismissed:
           json['data_maturity_banner_dismissed'] as bool? ?? false,
       analyticsOptOut: json['analytics_opt_out'] as bool? ?? false,
+      memoryEnabled: json['memory_enabled'] as bool? ?? true,
       // Account
       goals: goalsList,
       unitsSystem: UnitsSystem.fromValue(
@@ -397,6 +403,7 @@ class UserPreferencesModel {
         'quiet_hours_end': _timeToString(quietHoursEnd),
         'data_maturity_banner_dismissed': dataMaturityBannerDismissed,
         'analytics_opt_out': analyticsOptOut,
+        'memory_enabled': memoryEnabled,
         'goals': goals,
         'units_system': unitsSystem.value,
         'fitness_level': fitnessLevel?.value,
@@ -425,6 +432,7 @@ class UserPreferencesModel {
         'quiet_hours_end': _timeToString(quietHoursEnd),
         'data_maturity_banner_dismissed': dataMaturityBannerDismissed,
         'analytics_opt_out': analyticsOptOut,
+        'memory_enabled': memoryEnabled,
         'goals': goals,
         'units_system': unitsSystem.value,
         'fitness_level': fitnessLevel?.value,
@@ -455,6 +463,7 @@ class UserPreferencesModel {
     TimeOfDay? quietHoursEnd,
     bool? dataMaturityBannerDismissed,
     bool? analyticsOptOut,
+    bool? memoryEnabled,
     List<String>? goals,
     UnitsSystem? unitsSystem,
     FitnessLevel? fitnessLevel,
@@ -488,6 +497,7 @@ class UserPreferencesModel {
         dataMaturityBannerDismissed:
             dataMaturityBannerDismissed ?? this.dataMaturityBannerDismissed,
         analyticsOptOut: analyticsOptOut ?? this.analyticsOptOut,
+        memoryEnabled: memoryEnabled ?? this.memoryEnabled,
         goals: goals ?? this.goals,
         unitsSystem: unitsSystem ?? this.unitsSystem,
         fitnessLevel: fitnessLevel ?? this.fitnessLevel,

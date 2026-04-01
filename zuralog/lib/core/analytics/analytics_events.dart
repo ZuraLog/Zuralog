@@ -194,6 +194,7 @@ abstract final class AnalyticsEvents {
   static const String tooltipsReset = 'tooltips_reset';
   static const String memoryDeleted = 'memory_deleted';
   static const String allMemoriesCleared = 'all_memories_cleared';
+  static const String memoryToggled = 'memory_toggled';
   static const String dataExportRequested = 'data_export_requested';
   /// Include `confirmation` (bool — always true when fired, only fire on confirm).
   static const String accountDeleteRequested = 'account_delete_requested';

@@ -232,6 +232,14 @@ final analyticsOptOutProvider = Provider<bool>((ref) {
       ?.analyticsOptOut ?? false;
 });
 
+/// Whether the AI coach should build and use long-term memories.
+final memoryEnabledProvider = Provider<bool>((ref) {
+  return ref
+      .watch(userPreferencesProvider)
+      .valueOrNull
+      ?.memoryEnabled ?? true;
+});
+
 // ── Account ────────────────────────────────────────────────────────────────────
 
 /// The user's preferred measurement system (metric or imperial).
