@@ -18,6 +18,19 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Create the table if it doesn't exist — it was missing from the
+    # migration that was supposed to create it.
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS usage_logs (
+            id VARCHAR NOT NULL PRIMARY KEY,
+            user_id VARCHAR NOT NULL,
+            model VARCHAR NOT NULL DEFAULT '',
+            input_tokens INTEGER NOT NULL DEFAULT 0,
+            output_tokens INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+    """)
+    op.execute("CREATE INDEX IF NOT EXISTS ix_usage_logs_user_id ON usage_logs (user_id)")
     op.add_column("usage_logs", sa.Column("model_tier", sa.String(), nullable=True))
 
 
