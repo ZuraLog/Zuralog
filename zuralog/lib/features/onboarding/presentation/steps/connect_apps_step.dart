@@ -248,7 +248,8 @@ class _HealthConnectCard extends StatelessWidget {
 
           const SizedBox(height: AppDimens.spaceLg),
 
-          // Connect button.
+          // Connect button — secondary to avoid competing with the
+          // primary patterned "Next" button at the bottom of the screen.
           SizedBox(
             width: double.infinity,
             child: ZButton(
@@ -258,9 +259,7 @@ class _HealthConnectCard extends StatelessWidget {
                       ? 'Connecting...'
                       : 'Connect ${Platform.isIOS ? 'Apple Health' : 'Health Connect'}',
               icon: isConnected ? Icons.check_circle_rounded : null,
-              variant: isConnected
-                  ? ZButtonVariant.secondary
-                  : ZButtonVariant.primary,
+              variant: ZButtonVariant.secondary,
               size: ZButtonSize.large,
               isLoading: isConnecting,
               onPressed: isConnected || isConnecting ? null : onConnect,
