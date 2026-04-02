@@ -168,7 +168,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         onLevelChanged: (v) => setState(() => _fitnessLevel = v),
       ),
 
-      // Step 6 — Connect Apps (informational)
+      // Step 6 — Connect Apps (Apple Health / Health Connect)
       const ConnectAppsStep(),
 
       // Step 7 — Notifications
