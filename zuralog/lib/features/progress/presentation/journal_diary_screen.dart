@@ -111,6 +111,7 @@ class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
 
     return ZuralogScaffold(
       appBar: ZuralogAppBar(title: isEditing ? 'Edit Entry' : 'Journal'),
+      addBottomNavPadding: true,
       body: Padding(
         padding: EdgeInsets.fromLTRB(
           AppDimens.spaceMd,
