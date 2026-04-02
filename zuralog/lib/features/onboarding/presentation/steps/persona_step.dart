@@ -17,14 +17,14 @@ import 'package:zuralog/shared/widgets/widgets.dart';
 class _Persona {
   const _Persona({
     required this.id,
-    required this.emoji,
+    required this.icon,
     required this.title,
     required this.description,
     required this.accentColor,
   });
 
   final String id;
-  final String emoji;
+  final IconData icon;
   final String title;
   final String description;
 
@@ -35,21 +35,21 @@ class _Persona {
 const List<_Persona> _personas = [
   _Persona(
     id: 'motivator',
-    emoji: '🔥',
+    icon: Icons.local_fire_department_rounded,
     title: 'Motivator',
     description: 'Energetic, upbeat, pushes you to achieve more every day.',
     accentColor: AppColors.categoryActivity,
   ),
   _Persona(
     id: 'analyst',
-    emoji: '📊',
+    icon: Icons.insights_rounded,
     title: 'Analyst',
     description: 'Data-driven, precise, explains the numbers behind your health.',
     accentColor: AppColors.categoryBody,
   ),
   _Persona(
     id: 'coach',
-    emoji: '🧘',
+    icon: Icons.self_improvement_rounded,
     title: 'Coach',
     description: 'Balanced, supportive, focuses on sustainable long-term habits.',
     accentColor: AppColors.categoryWellness,
@@ -217,11 +217,10 @@ class _PersonaCard extends StatelessWidget {
                               : colors.surfaceRaised,
                           shape: BoxShape.circle,
                         ),
-                        child: Center(
-                          child: Text(
-                            persona.emoji,
-                            style: AppTextStyles.bodyLarge.copyWith(fontSize: 22),
-                          ),
+                        child: Icon(
+                          persona.icon,
+                          size: 24,
+                          color: persona.accentColor,
                         ),
                       ),
                       const SizedBox(width: AppDimens.spaceMd),
