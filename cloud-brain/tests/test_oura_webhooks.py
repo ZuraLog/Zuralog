@@ -31,7 +31,7 @@ class TestOuraWebhookEvent:
         mock_task = MagicMock()
         with patch(_TASK_PATH, mock_task):
             response = client.post(
-                "/api/v1/webhooks/oura",
+                "/api/v1/webhooks/oura/testtoken",
                 json={
                     "event_type": "create",
                     "data_type": "daily_sleep",
@@ -47,7 +47,7 @@ class TestOuraWebhookEvent:
         mock_task = MagicMock()
         with patch(_TASK_PATH, mock_task):
             client.post(
-                "/api/v1/webhooks/oura",
+                "/api/v1/webhooks/oura/testtoken",
                 json={
                     "event_type": "create",
                     "data_type": "daily_sleep",
@@ -67,7 +67,7 @@ class TestOuraWebhookEvent:
         mock_task = MagicMock()
         with patch(_TASK_PATH, mock_task):
             response = client.post(
-                "/api/v1/webhooks/oura",
+                "/api/v1/webhooks/oura/testtoken",
                 json={
                     "event_type": "update",
                     "data_type": "daily_activity",
@@ -88,7 +88,7 @@ class TestOuraWebhookEvent:
         mock_task = MagicMock()
         with patch(_TASK_PATH, mock_task):
             response = client.post(
-                "/api/v1/webhooks/oura",
+                "/api/v1/webhooks/oura/testtoken",
                 json={
                     "event_type": "delete",
                     "data_type": "sleep",
@@ -107,7 +107,7 @@ class TestOuraWebhookEvent:
     def test_malformed_json_returns_200(self, client):
         """Malformed JSON body → 200 (never expose errors to Oura)."""
         response = client.post(
-            "/api/v1/webhooks/oura",
+            "/api/v1/webhooks/oura/testtoken",
             content=b"not-valid-json-{{{",
             headers={"Content-Type": "application/json"},
         )
@@ -118,7 +118,7 @@ class TestOuraWebhookEvent:
         mock_task = MagicMock()
         with patch(_TASK_PATH, mock_task):
             response = client.post(
-                "/api/v1/webhooks/oura",
+                "/api/v1/webhooks/oura/testtoken",
                 json={},
             )
 
@@ -130,7 +130,7 @@ class TestOuraWebhookEvent:
         mock_task = MagicMock()
         with patch(_TASK_PATH, mock_task):
             response = client.post(
-                "/api/v1/webhooks/oura",
+                "/api/v1/webhooks/oura/testtoken",
                 json={
                     "event_type": "create",
                     "object_id": "obj-1",
@@ -147,7 +147,7 @@ class TestOuraWebhookEvent:
         mock_task = MagicMock()
         with patch(_TASK_PATH, mock_task):
             response = client.post(
-                "/api/v1/webhooks/oura",
+                "/api/v1/webhooks/oura/testtoken",
                 json={
                     "data_type": "daily_sleep",
                     "object_id": "obj-1",
@@ -166,7 +166,7 @@ class TestOuraWebhookEvent:
 
         with patch(_TASK_PATH, mock_task):
             response = client.post(
-                "/api/v1/webhooks/oura",
+                "/api/v1/webhooks/oura/testtoken",
                 json={
                     "event_type": "create",
                     "data_type": "daily_readiness",
@@ -182,7 +182,7 @@ class TestOuraWebhookEvent:
         mock_task = MagicMock()
         with patch(_TASK_PATH, mock_task):
             response = client.post(
-                "/api/v1/webhooks/oura",
+                "/api/v1/webhooks/oura/testtoken",
                 json={
                     "event_type": "create",
                     "data_type": "daily_sleep",
@@ -216,7 +216,7 @@ class TestOuraWebhookEvent:
             mock_task = MagicMock()
             with patch(_TASK_PATH, mock_task):
                 response = client.post(
-                    "/api/v1/webhooks/oura",
+                    "/api/v1/webhooks/oura/testtoken",
                     json={
                         "event_type": "create",
                         "data_type": data_type,
@@ -232,7 +232,7 @@ class TestOuraWebhookEvent:
         mock_task = MagicMock()
         with patch(_TASK_PATH, mock_task):
             response = client.post(
-                "/api/v1/webhooks/oura",
+                "/api/v1/webhooks/oura/testtoken",
                 json={
                     "event_type": "create",
                     "data_type": "daily_sleep",
@@ -241,3 +241,33 @@ class TestOuraWebhookEvent:
             )
         assert response.status_code == 200
         assert response.content == b""
+
+    def test_invalid_path_token_returns_404(self, client):
+        """Wrong path token when oura_webhook_path_token is configured → 404."""
+        with patch("app.api.v1.oura_webhooks.settings") as mock_settings:
+            mock_settings.oura_webhook_path_token = "correct-secret-token"
+            response = client.post(
+                "/api/v1/webhooks/oura/wrong_token",
+                json={
+                    "event_type": "create",
+                    "data_type": "daily_sleep",
+                    "user_id": "OURA123",
+                },
+            )
+        assert response.status_code == 404
+
+    def test_valid_path_token_accepted(self, client):
+        """Correct path token when oura_webhook_path_token is configured → 200."""
+        mock_task = MagicMock()
+        with patch("app.api.v1.oura_webhooks.settings") as mock_settings:
+            mock_settings.oura_webhook_path_token = "correct-secret-token"
+            with patch(_TASK_PATH, mock_task):
+                response = client.post(
+                    "/api/v1/webhooks/oura/correct-secret-token",
+                    json={
+                        "event_type": "create",
+                        "data_type": "daily_sleep",
+                        "user_id": "OURA123",
+                    },
+                )
+        assert response.status_code == 200

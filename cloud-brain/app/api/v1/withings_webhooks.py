@@ -49,7 +49,7 @@ async def withings_webhook_event(request: Request) -> Response:
     # Validate shared secret to reject unauthenticated requests.
     # Withings does not support payload signing, so the secret is a
     # query parameter registered in the subscription callback URL.
-    expected_secret = settings.withings_webhook_secret
+    expected_secret = settings.withings_webhook_secret.get_secret_value()
     if expected_secret:
         received_token = request.query_params.get("token", "")
         if not hmac.compare_digest(received_token, expected_secret):

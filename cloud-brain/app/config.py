@@ -116,6 +116,7 @@ class Settings(BaseSettings):
     oura_client_secret: SecretStr = SecretStr("")  # OURA_CLIENT_SECRET
     oura_redirect_uri: str = "zuralog://oauth/oura"  # OURA_REDIRECT_URI
     oura_webhook_verification_token: str = ""  # OURA_WEBHOOK_VERIFICATION_TOKEN
+    oura_webhook_path_token: str = ""  # OURA_WEBHOOK_PATH_TOKEN — secret embedded in the webhook URL path
     oura_use_sandbox: bool = False  # OURA_USE_SANDBOX
     # Withings OAuth 2.0
     withings_client_id: str = ""  # WITHINGS_CLIENT_ID
@@ -127,7 +128,7 @@ class Settings(BaseSettings):
     # Shared secret appended as ?token=... to the Withings webhook callback URL.
     # Withings does not sign webhook payloads with HMAC; this query-param secret
     # is the standard defence against unauthenticated webhook spoofing.
-    withings_webhook_secret: str = ""  # WITHINGS_WEBHOOK_SECRET
+    withings_webhook_secret: SecretStr = SecretStr("")  # WITHINGS_WEBHOOK_SECRET
     # Polar AccessLink
     polar_client_id: str = ""  # POLAR_CLIENT_ID
     polar_client_secret: SecretStr = SecretStr("")  # POLAR_CLIENT_SECRET
@@ -178,6 +179,10 @@ class Settings(BaseSettings):
                 raise ValueError("SUPABASE_SERVICE_KEY must be set in production")
 
         # Fail fast if any integration credential is set but a required companion value is missing.
+        if self.app_env == "production" and self.withings_client_id and not self.withings_webhook_secret.get_secret_value():
+            raise ValueError(
+                "WITHINGS_WEBHOOK_SECRET must be set when WITHINGS_CLIENT_ID is configured in production"
+            )
         if self.withings_client_id and not self.withings_redirect_uri.strip():
             raise ValueError(
                 "WITHINGS_REDIRECT_URI must be set when WITHINGS_CLIENT_ID is provided. "

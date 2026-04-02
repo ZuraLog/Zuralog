@@ -212,3 +212,17 @@ class TestFitbitWebhookEvent:
                 json=[self._valid_notification()],
             )
         assert response.status_code == 204
+
+    def test_unknown_subscription_id_is_skipped(self, client):
+        """Notification with a subscriptionId not matching our configured ID is
+        silently dropped — no task dispatched, but still returns 204."""
+        mock_task = MagicMock()
+        with patch("app.api.v1.fitbit_webhooks.settings") as mock_settings:
+            mock_settings.fitbit_webhook_subscriber_id = "our-real-subscriber-id"
+            with patch(_TASK_PATH, mock_task):
+                response = client.post(
+                    "/api/v1/webhooks/fitbit",
+                    json=[self._valid_notification(subscription_id="forged-id")],
+                )
+        assert response.status_code == 204
+        mock_task.delay.assert_not_called()

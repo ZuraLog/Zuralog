@@ -22,22 +22,34 @@ Oura webhook payload format:
   }
 """
 
+import hmac
 import logging
 
 from fastapi import APIRouter, Request, Response
+
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 webhook_router = APIRouter(tags=["oura-webhooks"])
 
 
-@webhook_router.post("/webhooks/oura")
-async def oura_webhook_event(request: Request) -> Response:
+@webhook_router.post("/webhooks/oura/{path_token}")
+async def oura_webhook_event(request: Request, path_token: str) -> Response:
     """Receive Oura webhook notifications.
 
     Always returns 200 OK immediately. Dispatches Celery tasks for sync.
     Never lets processing errors prevent the 200 response.
+
+    Authentication: Oura does not sign webhook deliveries. Security relies on
+    the URL being kept private. We embed a configurable secret token in the
+    path to make the URL hard to guess. Returns 404 (not 401) on mismatch to
+    avoid confirming the endpoint exists.
     """
+    expected = settings.oura_webhook_path_token
+    if expected and not hmac.compare_digest(path_token, expected):
+        logger.warning("Oura webhook: invalid path token, rejecting request")
+        return Response(status_code=404)  # 404 — don't confirm endpoint exists
     try:
         body = await request.json()
         logger.info(

@@ -134,6 +134,19 @@ async def fitbit_webhook_event(request: Request) -> Response:
             )
             continue
 
+        # Validate subscriptionId matches our configured subscriber ID.
+        # Fitbit does not sign payloads, but forged notifications with unknown
+        # subscription IDs should be silently dropped (not 4xx — Fitbit requires 204).
+        if (
+            settings.fitbit_webhook_subscriber_id
+            and notification.subscriptionId != settings.fitbit_webhook_subscriber_id
+        ):
+            logger.warning(
+                "Fitbit webhook: unknown subscriptionId=%s, skipping notification",
+                notification.subscriptionId,
+            )
+            continue
+
         try:
             # Lazy import to avoid circular imports at module load time.
             from app.tasks.fitbit_sync import sync_fitbit_collection_task  # noqa: PLC0415
