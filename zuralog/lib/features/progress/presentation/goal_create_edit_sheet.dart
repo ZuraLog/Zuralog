@@ -432,8 +432,8 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
               child: Column(
                 children: [
                   const SizedBox(height: AppDimens.spaceMd),
-                  // Period selector
-                  _buildPeriodSection(colors),
+                  // Period selector — only in create mode (locked after creation)
+                  if (!_isEdit) _buildPeriodSection(colors),
                   // Title field
                   _buildTitleField(colors),
                   // Target + Unit in a row
