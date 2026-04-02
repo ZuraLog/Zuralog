@@ -18,6 +18,7 @@ import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
 import 'package:zuralog/shared/widgets/feedback/z_premium_gate_sheet.dart';
 import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/widgets.dart' show ZSearchBar;
 import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -73,18 +74,32 @@ class _JournalSection {
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 /// Journal screen — date-grouped list of daily check-in entries.
-class JournalScreen extends ConsumerWidget {
+class JournalScreen extends ConsumerStatefulWidget {
   /// Creates the [JournalScreen].
   const JournalScreen({super.key});
 
-  Future<void> _refresh(WidgetRef ref) async {
+  @override
+  ConsumerState<JournalScreen> createState() => _JournalScreenState();
+}
+
+class _JournalScreenState extends ConsumerState<JournalScreen> {
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _refresh() async {
     ref.invalidate(journalProvider);
     await ref.read(journalProvider.future).catchError(
           (Object e, StackTrace _) => const JournalPage(entries: [], hasMore: false),
         );
   }
 
-  void _openNewEntry(BuildContext context, WidgetRef ref) {
+  void _openNewEntry() {
     ref.read(hapticServiceProvider).light();
 
     // Free users: gate at 5 journal entries per month.
@@ -119,22 +134,15 @@ class JournalScreen extends ConsumerWidget {
     );
   }
 
-  void _openEditEntry(
-    BuildContext context,
-    WidgetRef ref,
-    JournalEntry entry,
-  ) {
+  void _openEditEntry(JournalEntry entry) {
     ref.read(hapticServiceProvider).light();
     if (entry.source == 'conversational') {
-      // Show read-only content for conversational entries.
-      // Deep-linking back to the Coach conversation is a future phase.
       showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         builder: (ctx) => _EntryDetailSheet(entry: entry),
       );
     } else {
-      // Open diary screen in edit mode for diary entries.
       showDialog<void>(
         context: context,
         barrierColor: Colors.transparent,
@@ -144,7 +152,7 @@ class JournalScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final journalAsync = ref.watch(journalProvider);
 
@@ -157,7 +165,7 @@ class JournalScreen extends ConsumerWidget {
               Icons.add_rounded,
               color: colors.textPrimary,
             ),
-            onPressed: () => _openNewEntry(context, ref),
+            onPressed: _openNewEntry,
           ),
         ],
       ),
@@ -168,7 +176,7 @@ class JournalScreen extends ConsumerWidget {
         error: (err, _) => RefreshIndicator(
           color: AppColors.primary,
           backgroundColor: colors.cardBackground,
-          onRefresh: () => _refresh(ref),
+          onRefresh: _refresh,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: SizedBox(
@@ -213,7 +221,7 @@ class JournalScreen extends ConsumerWidget {
             return RefreshIndicator(
               color: AppColors.primary,
               backgroundColor: colors.cardBackground,
-              onRefresh: () => _refresh(ref),
+              onRefresh: _refresh,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: SizedBox(
@@ -243,7 +251,7 @@ class JournalScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: AppDimens.spaceLg),
                         FilledButton(
-                          onPressed: () => _openNewEntry(context, ref),
+                          onPressed: _openNewEntry,
                           style: FilledButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: AppColors.primaryButtonText,
@@ -261,50 +269,114 @@ class JournalScreen extends ConsumerWidget {
             );
           }
 
-          final sections = _groupByMonth(page.entries);
+          // Filter entries based on search query.
+          final filteredEntries = page.entries.where((e) {
+            if (_searchQuery.isEmpty) return true;
+            final contentMatch =
+                e.content.toLowerCase().contains(_searchQuery);
+            final tagMatch =
+                e.tags.any((t) => t.toLowerCase().contains(_searchQuery));
+            return contentMatch || tagMatch;
+          }).toList();
+
+          final sections = _groupByMonth(filteredEntries);
 
           return RefreshIndicator(
             color: AppColors.primary,
             backgroundColor: colors.cardBackground,
-            onRefresh: () => _refresh(ref),
-            child: ListView.builder(
-              padding: EdgeInsets.only(
-                left: AppDimens.spaceMd,
-                right: AppDimens.spaceMd,
-                bottom: AppDimens.bottomClearance(context),
-              ),
-              itemCount: _sectionItemCount(sections),
-              itemBuilder: (context, index) {
-                final resolved = _resolveIndex(sections, index);
-                if (resolved == null) return const SizedBox.shrink();
-
-                if (resolved.isHeader) {
-                  return Padding(
-                    padding: const EdgeInsets.only(
-                      top: AppDimens.spaceLg,
-                      bottom: AppDimens.spaceSm,
-                    ),
-                    child: Text(
-                      resolved.header!,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textTertiary,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.6,
-                      ),
-                    ),
-                  );
-                }
-
-                final entry = resolved.entry!;
-                return Padding(
-                  padding:
-                      const EdgeInsets.only(bottom: AppDimens.spaceSm),
-                  child: _EntryCard(
-                    entry: entry,
-                    onTap: () => _openEditEntry(context, ref, entry),
+            onRefresh: _refresh,
+            child: Column(
+              children: [
+                // Search bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceMd,
+                    vertical: AppDimens.spaceSm,
                   ),
-                );
-              },
+                  child: ZSearchBar(
+                    controller: _searchController,
+                    placeholder: 'Search journal entries...',
+                    onChanged: (query) =>
+                        setState(() => _searchQuery = query.toLowerCase()),
+                    onClear: () => setState(() {
+                      _searchQuery = '';
+                      _searchController.clear();
+                    }),
+                  ),
+                ),
+                // Entry list or empty search results
+                Expanded(
+                  child: filteredEntries.isEmpty && _searchQuery.isNotEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.search_off_rounded,
+                                size: 48,
+                                color: AppColors.textTertiary,
+                              ),
+                              const SizedBox(height: AppDimens.spaceMd),
+                              Text(
+                                'No results',
+                                style: AppTextStyles.titleMedium.copyWith(
+                                  color: colors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: AppDimens.spaceSm),
+                              Text(
+                                'Try a different search term.',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: AppColors.textTertiary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: EdgeInsets.only(
+                            left: AppDimens.spaceMd,
+                            right: AppDimens.spaceMd,
+                            bottom: AppDimens.bottomClearance(context),
+                          ),
+                          itemCount: _sectionItemCount(sections),
+                          itemBuilder: (context, index) {
+                            final resolved =
+                                _resolveIndex(sections, index);
+                            if (resolved == null) {
+                              return const SizedBox.shrink();
+                            }
+
+                            if (resolved.isHeader) {
+                              return Padding(
+                                padding: const EdgeInsets.only(
+                                  top: AppDimens.spaceLg,
+                                  bottom: AppDimens.spaceSm,
+                                ),
+                                child: Text(
+                                  resolved.header!,
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: AppColors.textTertiary,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.6,
+                                  ),
+                                ),
+                              );
+                            }
+
+                            final entry = resolved.entry!;
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                  bottom: AppDimens.spaceSm),
+                              child: _EntryCard(
+                                entry: entry,
+                                onTap: () => _openEditEntry(entry),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
           );
         },
