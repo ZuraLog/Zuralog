@@ -409,9 +409,9 @@ class _GoalsSection extends ConsumerWidget {
                 child: GoalTrajectoryCard(
                   goal: entry.value,
                   onTap: () {
-                    ref.read(selectedGoalIdProvider.notifier).state =
-                        entry.value.id;
-                    context.push(RouteNames.goalDetailPath);
+                    context.push(
+                      RouteNames.goalDetailPath.replaceFirst(':id', entry.value.id),
+                    );
                   },
                 ),
               )),
