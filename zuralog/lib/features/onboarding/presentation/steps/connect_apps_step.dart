@@ -82,6 +82,8 @@ class ConnectAppsStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceLg,
@@ -96,7 +98,7 @@ class ConnectAppsStep extends StatelessWidget {
           Text(
             'Connect your\napps & devices',
             style: AppTextStyles.displayLarge.copyWith(
-              color: AppColors.primary,
+              color: colors.primary,
               height: 1.15,
             ),
           ),
@@ -105,7 +107,7 @@ class ConnectAppsStep extends StatelessWidget {
             'Zuralog works best with your existing health apps. '
             'Connect them now or any time from Settings.',
             style: AppTextStyles.bodyLarge
-                .copyWith(color: AppColors.textSecondaryDark),
+                .copyWith(color: colors.textSecondary),
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
@@ -118,7 +120,7 @@ class ConnectAppsStep extends StatelessWidget {
               crossAxisCount: 2,
               mainAxisSpacing: AppDimens.spaceMd,
               crossAxisSpacing: AppDimens.spaceMd,
-              childAspectRatio: 1.0,
+              childAspectRatio: 0.9,
             ),
             itemCount: _featuredApps.length,
             itemBuilder: (context, index) =>
@@ -131,14 +133,14 @@ class ConnectAppsStep extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppDimens.spaceMd),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
+              color: colors.primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(AppDimens.shapeSm),
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.info_outline_rounded,
-                  color: AppColors.primary,
+                  color: colors.primary,
                   size: AppDimens.iconSm,
                 ),
                 const SizedBox(width: AppDimens.spaceSm),
@@ -146,7 +148,7 @@ class ConnectAppsStep extends StatelessWidget {
                   child: Text(
                     '45+ apps supported via Apple Health and Google Health Connect.',
                     style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.textSecondaryDark),
+                        .copyWith(color: colors.textSecondary),
                   ),
                 ),
               ],
@@ -168,10 +170,12 @@ class _IntegrationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppDimens.shapeMd),
       ),
       child: Column(
@@ -193,7 +197,7 @@ class _IntegrationTile extends StatelessWidget {
               Text(
                 app.name,
                 style: AppTextStyles.titleMedium
-                    .copyWith(color: AppColors.textPrimaryDark),
+                    .copyWith(color: colors.textPrimary),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -201,7 +205,7 @@ class _IntegrationTile extends StatelessWidget {
               Text(
                 app.description,
                 style: AppTextStyles.bodyMedium
-                    .copyWith(color: AppColors.textSecondaryDark),
+                    .copyWith(color: colors.textSecondary),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -217,13 +221,13 @@ class _IntegrationTile extends StatelessWidget {
                 vertical: 4,
               ),
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.12),
+                color: colors.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(AppDimens.shapePill),
               ),
               child: Text(
                 'Later',
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.primary,
+                  color: colors.primary,
                   fontWeight: FontWeight.w600,
                 ),
               ),

@@ -76,6 +76,8 @@ class FitnessLevelStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceLg,
@@ -90,7 +92,7 @@ class FitnessLevelStep extends StatelessWidget {
           Text(
             'How active\nare you?',
             style: AppTextStyles.displayLarge.copyWith(
-              color: AppColors.primary,
+              color: colors.primary,
               height: 1.1,
             ),
           ),
@@ -98,7 +100,7 @@ class FitnessLevelStep extends StatelessWidget {
           Text(
             'Helps your AI coach calibrate recommendations.',
             style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.textSecondaryDark,
+              color: colors.textSecondary,
             ),
           ),
 
@@ -148,6 +150,8 @@ class _FitnessLevelTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
     return ZSelectableTile(
       isSelected: isSelected,
       onTap: onTap,
@@ -161,16 +165,16 @@ class _FitnessLevelTile extends StatelessWidget {
             height: 44,
             decoration: BoxDecoration(
               color: isSelected
-                  ? AppColors.primary.withValues(alpha: 0.15)
-                  : AppColors.surfaceRaised,
+                  ? colors.primary.withValues(alpha: 0.15)
+                  : colors.surfaceRaised,
               borderRadius: BorderRadius.circular(AppDimens.shapeSm),
             ),
             child: Icon(
               level.icon,
               size: 22,
               color: isSelected
-                  ? AppColors.primary
-                  : AppColors.textSecondaryDark,
+                  ? colors.primary
+                  : colors.textSecondary,
             ),
           ),
 
@@ -185,15 +189,15 @@ class _FitnessLevelTile extends StatelessWidget {
                   level.title,
                   style: AppTextStyles.titleMedium.copyWith(
                     color: isSelected
-                        ? AppColors.primary
-                        : AppColors.textPrimaryDark,
+                        ? colors.primary
+                        : colors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   level.subtitle,
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondaryDark,
+                    color: colors.textSecondary,
                   ),
                 ),
               ],

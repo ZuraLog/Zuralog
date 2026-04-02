@@ -48,6 +48,8 @@ class DiscoveryStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceLg,
@@ -62,7 +64,7 @@ class DiscoveryStep extends StatelessWidget {
           Text(
             'One last thing',
             style: AppTextStyles.displayLarge.copyWith(
-              color: AppColors.primary,
+              color: colors.primary,
               height: 1.15,
             ),
           ),
@@ -70,7 +72,7 @@ class DiscoveryStep extends StatelessWidget {
           Text(
             'Where did you hear about Zuralog?',
             style: AppTextStyles.bodyLarge
-                .copyWith(color: AppColors.textSecondaryDark),
+                .copyWith(color: colors.textSecondary),
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
@@ -100,7 +102,7 @@ class DiscoveryStep extends StatelessWidget {
           Text(
             'This is optional — tap Finish to complete setup.',
             style: AppTextStyles.bodySmall
-                .copyWith(color: AppColors.textSecondaryDark),
+                .copyWith(color: colors.textSecondary),
           ),
           const SizedBox(height: AppDimens.spaceLg),
         ],
@@ -125,6 +127,8 @@ class _SourceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
     return ZSelectableTile(
       isSelected: isSelected,
       onTap: onTap,
@@ -140,15 +144,15 @@ class _SourceTile extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: isSelected ? AppColors.primary : AppColors.textSecondaryDark,
+                color: isSelected ? colors.primary : colors.textSecondary,
                 width: isSelected ? 0 : 1.5,
               ),
-              color: isSelected ? AppColors.primary : const Color(0x00000000),
+              color: isSelected ? colors.primary : const Color(0x00000000),
             ),
             child: isSelected
-                ? const Icon(
+                ? Icon(
                     Icons.check_rounded,
-                    color: AppColors.primaryButtonText,
+                    color: colors.textOnSage,
                     size: 14,
                   )
                 : null,
@@ -159,8 +163,8 @@ class _SourceTile extends StatelessWidget {
               label,
               style: AppTextStyles.bodyLarge.copyWith(
                 color: isSelected
-                    ? AppColors.textPrimaryDark
-                    : AppColors.textSecondaryDark,
+                    ? colors.textPrimary
+                    : colors.textSecondary,
                 fontWeight:
                     isSelected ? FontWeight.w600 : FontWeight.normal,
               ),

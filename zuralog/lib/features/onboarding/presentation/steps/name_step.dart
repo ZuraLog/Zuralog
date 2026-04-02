@@ -67,6 +67,8 @@ class _NameStepState extends State<NameStep> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceLg,
@@ -81,7 +83,7 @@ class _NameStepState extends State<NameStep> {
           Text(
             'What should we\ncall you?',
             style: AppTextStyles.displayLarge.copyWith(
-              color: AppColors.primary,
+              color: colors.primary,
               height: 1.1,
             ),
           ),
@@ -89,7 +91,7 @@ class _NameStepState extends State<NameStep> {
           Text(
             'Your AI coach will use this name.',
             style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.textSecondaryDark,
+              color: colors.textSecondary,
             ),
           ),
 
@@ -104,7 +106,7 @@ class _NameStepState extends State<NameStep> {
             keyboardType: TextInputType.name,
             textInputAction: TextInputAction.done,
             style: AppTextStyles.titleLarge.copyWith(
-              color: AppColors.textPrimaryDark,
+              color: colors.textPrimary,
             ),
             decoration: InputDecoration(
               hintText: 'Your name or nickname...',
@@ -139,6 +141,7 @@ class _LivePreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final greeting = nickname.trim().isEmpty ? 'there' : nickname.trim();
 
     return ZuralogCard(
@@ -150,15 +153,15 @@ class _LivePreviewCard extends StatelessWidget {
           Container(
             width: 28,
             height: 28,
-            decoration: const BoxDecoration(
-              color: AppColors.primary,
+            decoration: BoxDecoration(
+              color: colors.primary,
               shape: BoxShape.circle,
             ),
-            child: const Center(
+            child: Center(
               child: Icon(
                 Icons.smart_toy_rounded,
                 size: 14,
-                color: AppColors.primaryButtonText,
+                color: colors.textOnSage,
               ),
             ),
           ),
@@ -172,7 +175,7 @@ class _LivePreviewCard extends StatelessWidget {
                 Text(
                   'Preview',
                   style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.primary,
+                    color: colors.primary,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.5,
                   ),
@@ -181,7 +184,7 @@ class _LivePreviewCard extends StatelessWidget {
                 Text(
                   'Hi $greeting, here\'s your morning briefing...',
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textPrimaryDark,
+                    color: colors.textPrimary,
                   ),
                 ),
               ],

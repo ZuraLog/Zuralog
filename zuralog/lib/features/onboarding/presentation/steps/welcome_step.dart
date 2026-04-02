@@ -125,6 +125,8 @@ class _WelcomeStepState extends State<WelcomeStep>
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceLg),
       child: Column(
@@ -144,7 +146,7 @@ class _WelcomeStepState extends State<WelcomeStep>
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          color: AppColors.primary,
+                          color: colors.primary,
                           borderRadius:
                               BorderRadius.circular(AppDimens.shapeLg),
                         ),
@@ -160,8 +162,8 @@ class _WelcomeStepState extends State<WelcomeStep>
                         padding: const EdgeInsets.all(18),
                         child: SvgPicture.asset(
                           AppAssets.logoSvg,
-                          colorFilter: const ColorFilter.mode(
-                            AppColors.primaryButtonText,
+                          colorFilter: ColorFilter.mode(
+                            colors.textOnSage,
                             BlendMode.srcIn,
                           ),
                         ),
@@ -183,7 +185,7 @@ class _WelcomeStepState extends State<WelcomeStep>
               child: Text(
                 'Hi, welcome\nto Zuralog.',
                 style: AppTextStyles.displayLarge.copyWith(
-                  color: AppColors.primary,
+                  color: colors.primary,
                   height: 1.1,
                 ),
               ),
@@ -200,7 +202,7 @@ class _WelcomeStepState extends State<WelcomeStep>
               child: Text(
                 "Let's set up your AI health coach.",
                 style: AppTextStyles.bodyLarge.copyWith(
-                  color: AppColors.textSecondaryDark,
+                  color: colors.textSecondary,
                 ),
               ),
             ),
