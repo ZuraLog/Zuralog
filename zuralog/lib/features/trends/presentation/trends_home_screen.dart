@@ -284,7 +284,10 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody>
                   final anim = _animFor(index + 1);
                   final isLocked = index >= unlockedFeedCount;
 
-                  Widget card = _PatternCard(highlight: h);
+                  Widget card = _PatternCard(
+                    highlight: h,
+                    isLocked: isLocked,
+                  );
 
                   if (isLocked) {
                     card = ZLockedOverlay(
@@ -507,9 +510,12 @@ class _HeroPatternCardState extends ConsumerState<_HeroPatternCard> {
 // ── _PatternCard ──────────────────────────────────────────────────────────────
 
 class _PatternCard extends ConsumerStatefulWidget {
-  const _PatternCard({required this.highlight});
+  const _PatternCard({required this.highlight, this.isLocked = false});
 
   final CorrelationHighlight highlight;
+
+  /// Whether this card is behind the premium gate (cannot expand).
+  final bool isLocked;
 
   @override
   ConsumerState<_PatternCard> createState() => _PatternCardState();
@@ -518,12 +524,11 @@ class _PatternCard extends ConsumerStatefulWidget {
 class _PatternCardState extends ConsumerState<_PatternCard> {
   void _handleTap() {
     final h = widget.highlight;
-    final isPremium = ref.read(isPremiumProvider);
 
     ref.read(hapticServiceProvider).light();
 
-    // Free users cannot expand feed cards — show the premium gate instead.
-    if (!isPremium) {
+    // Locked cards cannot expand — show the premium gate instead.
+    if (widget.isLocked) {
       ZPremiumGateSheet.show(
         context,
         headline: 'See all your patterns',
