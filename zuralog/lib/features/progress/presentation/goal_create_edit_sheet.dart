@@ -380,6 +380,11 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
                           setState(() {
                             _selectedType = type;
                             _typeChosen = true;
+                            // Auto-fill title and unit from goal type
+                            if (_titleCtrl.text.isEmpty ||
+                                GoalType.values.any((t) => _titleCtrl.text == t.displayName)) {
+                              _titleCtrl.text = type.displayName;
+                            }
                             if (_unitCtrl.text.isEmpty ||
                                 _unitCtrl.text == _defaultUnitFor(_selectedType)) {
                               _unitCtrl.text = _defaultUnitFor(type);
@@ -574,9 +579,11 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
     );
   }
 
-  // ── Deadline section ─────────────────────────────────────────────────────────
+  // ── Deadline section — inline calendar ───────────────────────────────────────
 
   Widget _buildDeadlineSection(AppColorsOf colors) {
+    final now = DateTime.now();
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceLg,
@@ -587,87 +594,70 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Deadline',
-            style: AppTextStyles.caption.copyWith(
-              color: colors.textSecondary,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: AppDimens.spaceXs),
-          if (_deadline == null)
-            TextButton.icon(
-              onPressed: _pickDeadline,
-              icon: const Icon(
-                Icons.calendar_today_rounded,
-                size: 16,
-                color: AppColors.primary,
-              ),
-              label: Text(
-                'Add deadline (optional)',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.primary,
+          Row(
+            children: [
+              Text(
+                'Deadline',
+                style: AppTextStyles.caption.copyWith(
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
                 ),
               ),
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-            )
-          else
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: _pickDeadline,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppDimens.spaceSm + 4,
-                      vertical: AppDimens.spaceSm,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.12),
-                      borderRadius:
-                          BorderRadius.circular(AppDimens.radiusChip),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.calendar_today_rounded,
-                          size: 14,
-                          color: AppColors.primary,
-                        ),
-                        const SizedBox(width: AppDimens.spaceSm),
-                        Text(
-                          _formatDeadline(_deadline!),
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+              const SizedBox(width: AppDimens.spaceSm),
+              Text(
+                '(optional)',
+                style: AppTextStyles.caption.copyWith(
+                  color: colors.textSecondary.withValues(alpha: 0.5),
                 ),
-                const SizedBox(width: AppDimens.spaceSm),
+              ),
+              if (_deadline != null) ...[
+                const Spacer(),
                 GestureDetector(
                   onTap: _clearDeadline,
-                  child: Container(
-                    padding: const EdgeInsets.all(AppDimens.spaceXs + 2),
-                    decoration: BoxDecoration(
-                      color: colors.inputBackground,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.close_rounded,
-                      size: 14,
-                      color: AppColors.textTertiary,
+                  child: Text(
+                    'Clear',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
               ],
+            ],
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          Container(
+            decoration: BoxDecoration(
+              color: colors.inputBackground,
+              borderRadius: BorderRadius.circular(AppDimens.shapeMd),
             ),
+            clipBehavior: Clip.antiAlias,
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                colorScheme: Theme.of(context).colorScheme.copyWith(
+                  primary: AppColors.primary,
+                  onPrimary: AppColors.primaryButtonText,
+                  surface: colors.inputBackground,
+                  onSurface: colors.textPrimary,
+                ),
+                textTheme: Theme.of(context).textTheme.copyWith(
+                  bodyLarge: AppTextStyles.bodyMedium.copyWith(
+                    color: colors.textPrimary,
+                  ),
+                ),
+              ),
+              child: CalendarDatePicker(
+                initialDate: _deadline ?? now.add(const Duration(days: 30)),
+                firstDate: now,
+                lastDate: now.add(const Duration(days: 365 * 5)),
+                onDateChanged: (date) {
+                  ref.read(hapticServiceProvider).selectionTick();
+                  setState(() => _deadline = date);
+                },
+              ),
+            ),
+          ),
         ],
       ),
     );
