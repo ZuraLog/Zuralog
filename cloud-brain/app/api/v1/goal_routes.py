@@ -241,6 +241,8 @@ async def update_goal(
     # deadline uses model_fields_set so sending "deadline": null clears it
     if "deadline" in body.model_fields_set:
         goal.deadline = body.deadline
+    if body.period is not None and body.period in _SLUG_TO_PERIOD:
+        goal.period = _SLUG_TO_PERIOD[body.period]
 
     await db.commit()
     await db.refresh(goal)

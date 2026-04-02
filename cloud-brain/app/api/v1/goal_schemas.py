@@ -153,6 +153,7 @@ class GoalUpdateRequest(BaseModel):
     target_value: float | None = None
     unit: str | None = None
     deadline: _date | None = None
+    period: str | None = None
 
     @field_validator("title")
     @classmethod
