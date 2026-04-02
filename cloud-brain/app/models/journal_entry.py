@@ -11,7 +11,7 @@ in the database for backward compatibility but are not exposed in the API.
 
 import uuid
 
-from sqlalchemy import DateTime, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy import Date, DateTime, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -57,7 +57,7 @@ class JournalEntry(Base):
         comment="Supabase UID of the owning user",
     )
     date: Mapped[str] = mapped_column(
-        String,
+        Date,
         nullable=False,
         index=True,
         comment="Calendar date in YYYY-MM-DD format",

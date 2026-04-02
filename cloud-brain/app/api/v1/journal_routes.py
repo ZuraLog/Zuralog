@@ -133,11 +133,14 @@ async def create_journal_entry(
     Raises:
         HTTPException: 422 if any field fails Pydantic validation.
     """
+    # Parse the date string to a date object — the DB column is Date type.
+    entry_date = _date.fromisoformat(body.date)
+
     # Check for existing entry on this date
     result = await db.execute(
         select(JournalEntry).where(
             JournalEntry.user_id == user_id,
-            JournalEntry.date == body.date,
+            JournalEntry.date == entry_date,
         )
     )
     entry = result.scalar_one_or_none()
@@ -154,7 +157,7 @@ async def create_journal_entry(
         entry = JournalEntry(
             id=str(uuid.uuid4()),
             user_id=user_id,
-            date=body.date,
+            date=entry_date,
             notes=body.content,
             source=body.source,
             conversation_id=body.conversation_id,
