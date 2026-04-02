@@ -17,14 +17,20 @@ class TimePeriodCard extends StatelessWidget {
   /// The period data to display.
   final TimePeriodSummary summary;
 
+  /// Card width in logical pixels.
+  static const double _cardWidth = 160.0;
+
+  /// Inner padding of the card.
+  static const double _cardPadding = 12.0;
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final scoreFraction = summary.overallScore / 100;
 
     return Container(
-      width: 160,
-      padding: const EdgeInsets.all(12),
+      width: _cardWidth,
+      padding: const EdgeInsets.all(_cardPadding),
       decoration: BoxDecoration(
         color: colors.trendsSurface,
         borderRadius: BorderRadius.circular(AppDimens.shapeMd),
@@ -97,48 +103,60 @@ class _MetricRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final isPositive = metric.deltaPercent >= 0;
-    final deltaColor =
-        isPositive ? AppColors.categoryActivity : AppColors.error;
-    final sign = isPositive ? '+' : '';
-    final deltaText = '$sign${metric.deltaPercent.toStringAsFixed(0)}%';
+    final delta = metric.deltaPercent;
+    final isZero = delta == 0;
+    final isPositive = delta > 0;
+
+    final Color deltaColor;
+    final String deltaText;
+    if (isZero) {
+      deltaColor = colors.trendsTextMuted;
+      deltaText = '0%';
+    } else {
+      deltaColor = isPositive ? AppColors.categoryActivity : AppColors.error;
+      final sign = isPositive ? '+' : '';
+      deltaText = '$sign${delta.toStringAsFixed(0)}%';
+    }
 
     return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  metric.label,
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: colors.trendsTextMuted,
+      padding: const EdgeInsets.only(top: AppDimens.spaceXs),
+      child: Semantics(
+        label: '${metric.label}: ${metric.value} ${metric.unit}, $deltaText',
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    metric.label,
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: colors.trendsTextMuted,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  '${metric.value} ${metric.unit}',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: colors.trendsTextPrimary,
+                  Text(
+                    '${metric.value} ${metric.unit}',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: colors.trendsTextPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            deltaText,
-            style: AppTextStyles.labelSmall.copyWith(
-              color: deltaColor,
-              fontWeight: FontWeight.w600,
+            const SizedBox(width: AppDimens.spaceXs),
+            Text(
+              deltaText,
+              style: AppTextStyles.labelSmall.copyWith(
+                color: deltaColor,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

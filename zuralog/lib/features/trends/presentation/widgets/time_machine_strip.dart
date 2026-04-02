@@ -19,6 +19,10 @@ class TimeMachineStrip extends StatelessWidget {
   /// Weekly summaries to display — most recent first.
   final List<TimePeriodSummary> periods;
 
+  /// Fixed height for the horizontal scroll region. Sized to fit a
+  /// TimePeriodCard with score ring + 3 metric rows at default font scale.
+  static const double _stripHeight = 180.0;
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
@@ -44,7 +48,7 @@ class TimeMachineStrip extends StatelessWidget {
 
         // Horizontal card strip
         SizedBox(
-          height: 180,
+          height: _stripHeight,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(
