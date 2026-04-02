@@ -79,7 +79,7 @@ const List<_Goal> _goals = [
     id: 'general_wellness',
     label: 'General wellness',
     emoji: '✨',
-    color: AppColors.primary,
+    color: AppColors.categoryMobility,
   ),
 ];
 
@@ -211,7 +211,7 @@ class _GoalTile extends StatelessWidget {
           Text(
             goal.label,
             style: AppTextStyles.labelMedium.copyWith(
-              color: isSelected ? goal.color : colors.textPrimary,
+              color: colors.textPrimary,
               fontWeight:
                   isSelected ? FontWeight.w600 : FontWeight.w500,
             ),
