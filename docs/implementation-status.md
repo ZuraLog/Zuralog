@@ -4,6 +4,45 @@ A running record of completed work — what was built, when, and at what scope.
 
 ---
 
+## 2026-04-02 — Security Hardening & Abuse Avoidance
+
+**Branch:** `fix/abuse-avoidance-security-hardening`
+
+A focused security pass across the backend — tightening the AI persona, closing webhook authentication gaps, normalizing untrusted input, and adding a dedicated adversarial test suite.
+
+**What was built:**
+
+- **System prompt security guardrails** (`app/agent/prompts/system.py`, `app/agent/prompts/personas.py`): A `_SAFETY_BLOCK` is now injected into all three persona prompts (tough love, balanced, gentle). It enforces role-lock ("You are Zura"), restricts the Coach to health-only topics, keeps system instructions and model/tool names confidential, resists prompt injection attempts, prevents PII requests, and appends a medical disclaimer. A companion `personas.py` file was added with richer per-persona text used by the test suite.
+
+- **Unicode normalization in the input sanitizer** (`app/utils/sanitize.py`): NFKC normalization now runs before regex matching, collapsing Unicode homoglyphs (e.g. Turkish dotless-i, full-width characters) that could previously bypass keyword filters. Zero-width characters are also stripped. Four new tests cover this in `tests/test_sanitize.py`.
+
+- **Fitbit webhook authentication hardened** (`app/api/v1/fitbit_webhooks.py`): Incoming payloads now have their `subscriptionId` field validated against the configured subscriber ID using `hmac.compare_digest`. Unknown subscription IDs are silently skipped rather than processed, preventing an attacker from spoofing webhook events for subscriptions they do not own.
+
+- **Oura webhook endpoint obscured** (`app/api/v1/oura_webhooks.py`): The route now requires a secret token in the URL path (`/webhooks/oura/{path_token}`). Requests with a mismatched token receive a 404 response, which prevents an attacker from discovering or enumerating the endpoint.
+
+- **Secrets promoted to `SecretStr`** (`app/config.py`): `fitbit_webhook_subscriber_id`, `oura_webhook_path_token`, and `withings_webhook_secret` are now typed as `SecretStr` so they are redacted from logs and tracebacks. A startup validation check now requires `withings_webhook_secret` to be set whenever `withings_client_id` is configured, preventing production deployments with incomplete webhook authentication.
+
+- **HTTP security headers middleware** (`app/main.py`): A `SecurityHeadersMiddleware` (Starlette `BaseHTTPMiddleware`) is mounted on every response. Headers added: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Strict-Transport-Security: max-age=63072000; includeSubDomains`, `X-XSS-Protection: 0`.
+
+- **PromptFoo adversarial test suite** (`promptfoo/`): 20 test cases exercise the AI persona against real attack patterns — jailbreak attempts, role-play bypass, system prompt extraction, model/vendor name extraction, tool name extraction, off-topic requests, PII extraction, prompt injection, and instruction injection. Includes a provider bridge (`provider.py`) and usage guide (`README.md`).
+
+**Pre-existing test failures fixed:**
+
+- `tests/analytics/test_insight_signal_detector.py`: Deadline calculation changed from `date.today()` to `_NOW.date()` to match the frozen test timestamp.
+- `tests/test_orchestrator.py`: Tool count assertion now filters to entries where `type == "function"`, accounting for the `openrouter:web_search` tool that `_build_tools_for_llm` always appends.
+- `tests/test_rate_limit_middleware.py`: Wrong keyword argument `user=mock_user` corrected to `user_id="user-1"`.
+
+**Files created:**
+- `cloud-brain/app/agent/prompts/personas.py`
+- `cloud-brain/tests/test_sanitize.py`
+- `cloud-brain/promptfoo/promptfooconfig.yaml`
+- `cloud-brain/promptfoo/provider.py`
+- `cloud-brain/promptfoo/README.md`
+
+**Files modified:** `app/agent/prompts/system.py`, `app/utils/sanitize.py`, `app/api/v1/fitbit_webhooks.py`, `app/api/v1/oura_webhooks.py`, `app/config.py`, `app/main.py`, `tests/analytics/test_insight_signal_detector.py`, `tests/test_orchestrator.py`, `tests/test_rate_limit_middleware.py`
+
+---
+
 ## 2026-04-02 — Coach Skills: Platform-Specific Health Guidance
 
 **Branch:** `feat/memory-mcp-server`
