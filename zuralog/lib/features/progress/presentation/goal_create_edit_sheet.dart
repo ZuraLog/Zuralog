@@ -479,9 +479,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
                   )
                   .toList(),
               selected: {_selectedPeriod},
-              onSelectionChanged: _isEdit
-                  ? null
-                  : (set) {
+              onSelectionChanged: (set) {
                       ref.read(hapticServiceProvider).selectionTick();
                       setState(() => _selectedPeriod = set.first);
                     },
