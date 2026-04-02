@@ -234,7 +234,14 @@ class RateLimiter:
             for key, raw_ttl, window in ((fk, raw_ttls[0], ft), (zk, raw_ttls[1], zt), (bk, raw_ttls[2], bt)):
                 if raw_ttl == -1:
                     import asyncio as _asyncio
-                    _asyncio.create_task(self._redis.expire(key, window))
+
+                    async def _fix_expiry(k: str, w: int) -> None:
+                        try:
+                            await self._redis.expire(k, w)
+                        except Exception:
+                            pass
+
+                    _asyncio.create_task(_fix_expiry(key, window))
             fr = max(raw_ttls[0], 0)
             zr = max(raw_ttls[1], 0)
             br = max(raw_ttls[2], 0)

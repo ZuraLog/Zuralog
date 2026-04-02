@@ -20,6 +20,19 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Module-level singleton — reuses the connection pool across all classify calls.
+_classifier_client: AsyncOpenAI | None = None
+
+
+def _get_classifier_client() -> AsyncOpenAI:
+    global _classifier_client
+    if _classifier_client is None:
+        _classifier_client = AsyncOpenAI(
+            api_key=settings.openrouter_api_key.get_secret_value(),
+            base_url="https://openrouter.ai/api/v1",
+        )
+    return _classifier_client
+
 
 class MessageTier(str, Enum):
     """Classification result for a user message."""
@@ -94,10 +107,7 @@ async def classify_message(text: str) -> MessageTier:
 
     # LLM path: ask the classifier model.
     try:
-        client = AsyncOpenAI(
-            api_key=settings.openrouter_api_key.get_secret_value(),
-            base_url="https://openrouter.ai/api/v1",
-        )
+        client = _get_classifier_client()
         response = await asyncio.wait_for(
             client.chat.completions.create(
                 model=settings.openrouter_classifier_model,
