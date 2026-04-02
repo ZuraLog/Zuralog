@@ -11,7 +11,7 @@ in the database for backward compatibility but are not exposed in the API.
 
 import uuid
 
-from sqlalchemy import Date, DateTime, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy import Date, DateTime, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -37,13 +37,6 @@ class JournalEntry(Base):
     """
 
     __tablename__ = "journal_entries"
-    __table_args__ = (
-        UniqueConstraint(
-            "user_id",
-            "date",
-            name="uq_journal_entries_user_date",
-        ),
-    )
 
     id: Mapped[str] = mapped_column(
         String,

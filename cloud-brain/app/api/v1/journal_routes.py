@@ -110,17 +110,13 @@ def _entry_to_response(entry: JournalEntry) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@router.post("", summary="Create or update a journal entry (upsert by date)", status_code=status.HTTP_201_CREATED)
+@router.post("", summary="Create a new journal entry", status_code=status.HTTP_201_CREATED)
 async def create_journal_entry(
     body: JournalEntryCreate,
     user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Create a journal entry for the given date, or update it if one already exists.
-
-    The POST endpoint implements upsert semantics: if an entry already exists
-    for the specified ``date`` and ``user_id``, all provided fields are
-    overwritten. This allows the mobile app to call POST idempotently.
+    """Create a new journal entry. Multiple entries per day are allowed.
 
     Args:
         body: Entry fields including the target date.
@@ -128,43 +124,24 @@ async def create_journal_entry(
         db: Async database session.
 
     Returns:
-        The created or updated JournalEntryResponse.
+        The created JournalEntryResponse.
 
     Raises:
         HTTPException: 422 if any field fails Pydantic validation.
     """
-    # Parse the date string to a date object — the DB column is Date type.
     entry_date = _date.fromisoformat(body.date)
 
-    # Check for existing entry on this date
-    result = await db.execute(
-        select(JournalEntry).where(
-            JournalEntry.user_id == user_id,
-            JournalEntry.date == entry_date,
-        )
+    entry = JournalEntry(
+        id=str(uuid.uuid4()),
+        user_id=user_id,
+        date=entry_date,
+        notes=body.content,
+        source=body.source,
+        conversation_id=body.conversation_id,
+        tags=body.tags,
     )
-    entry = result.scalar_one_or_none()
-
-    if entry is not None:
-        # Update existing entry (upsert)
-        entry.notes = body.content
-        entry.source = body.source
-        entry.conversation_id = body.conversation_id
-        entry.tags = body.tags
-        logger.info("Updated journal entry %s for user %s on %s", entry.id, user_id, body.date)
-    else:
-        # Create new entry
-        entry = JournalEntry(
-            id=str(uuid.uuid4()),
-            user_id=user_id,
-            date=entry_date,
-            notes=body.content,
-            source=body.source,
-            conversation_id=body.conversation_id,
-            tags=body.tags,
-        )
-        db.add(entry)
-        logger.info("Created journal entry for user %s on %s", user_id, body.date)
+    db.add(entry)
+    logger.info("Created journal entry for user %s on %s", user_id, body.date)
 
     await db.commit()
     await db.refresh(entry)
