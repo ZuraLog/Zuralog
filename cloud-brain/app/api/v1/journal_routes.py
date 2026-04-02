@@ -101,7 +101,7 @@ def _entry_to_response(entry: JournalEntry) -> dict:
         "tags": entry.tags or [],
         "source": entry.source or "diary",
         "conversation_id": entry.conversation_id,
-        "created_at": entry.created_at or "",
+        "created_at": str(entry.created_at) if entry.created_at else "",
     }
 
 
