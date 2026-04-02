@@ -130,6 +130,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
           targetValue: target,
           unit: unit.isNotEmpty ? unit : null,
           deadline: deadlineIso,
+          period: _selectedPeriod.apiSlug,
         );
         await haptics.light();
         ref.read(analyticsServiceProvider).capture(
