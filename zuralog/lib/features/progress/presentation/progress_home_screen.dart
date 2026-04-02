@@ -402,16 +402,9 @@ class _GoalsSection extends ConsumerWidget {
         if (goals.isEmpty)
           GoalsEmptyCard(
             onTap: () {
-              // Free users: gate at 3 active goals.
-              if (!isPremium && goals.length >= 3) {
-                ZPremiumGateSheet.show(
-                  context,
-                  headline: 'Set unlimited goals',
-                  body: 'Upgrade to Pro to track as many goals as you want.',
-                  icon: Icons.flag_rounded,
-                );
-                return;
-              }
+              // Goal limit (3 for free users) is enforced in
+              // GoalsScreen._openCreateSheet(), not here — this card only
+              // renders when goals is empty so no limit can apply.
               ref.read(hapticServiceProvider).light();
               context.push(RouteNames.goalsPath);
             },
