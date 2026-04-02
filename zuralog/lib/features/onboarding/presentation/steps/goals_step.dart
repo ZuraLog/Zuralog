@@ -19,13 +19,13 @@ class _Goal {
   const _Goal({
     required this.id,
     required this.label,
-    required this.emoji,
+    required this.icon,
     required this.color,
   });
 
   final String id;
   final String label;
-  final String emoji;
+  final IconData icon;
 
   /// Health category color for the selected state.
   final Color color;
@@ -36,50 +36,50 @@ const List<_Goal> _goals = [
   _Goal(
     id: 'lose_weight',
     label: 'Lose weight',
-    emoji: '⚖️',
+    icon: Icons.monitor_weight_outlined,
     color: AppColors.categoryBody,
   ),
   _Goal(
     id: 'build_muscle',
     label: 'Build muscle',
-    emoji: '💪',
+    icon: Icons.fitness_center_rounded,
     color: AppColors.categoryActivity,
   ),
   _Goal(
     id: 'sleep_better',
     label: 'Sleep better',
-    emoji: '😴',
+    icon: Icons.bedtime_outlined,
     color: AppColors.categorySleep,
   ),
   _Goal(
     id: 'improve_fitness',
     label: 'Improve fitness',
-    emoji: '🏃',
+    icon: Icons.directions_run_rounded,
     color: AppColors.categoryActivity,
   ),
   _Goal(
     id: 'reduce_stress',
     label: 'Reduce stress',
-    emoji: '🧘',
+    icon: Icons.self_improvement_rounded,
     color: AppColors.categoryWellness,
   ),
   _Goal(
     id: 'track_nutrition',
     label: 'Track nutrition',
-    emoji: '🥗',
+    icon: Icons.restaurant_rounded,
     color: AppColors.categoryNutrition,
   ),
   _Goal(
     id: 'heart_health',
     label: 'Heart health',
-    emoji: '❤️',
+    icon: Icons.favorite_outline_rounded,
     color: AppColors.categoryHeart,
   ),
   _Goal(
     id: 'general_wellness',
     label: 'General wellness',
-    emoji: '✨',
-    color: AppColors.categoryMobility,
+    icon: Icons.spa_outlined,
+    color: AppColors.categoryWellness,
   ),
 ];
 
@@ -207,7 +207,19 @@ class _GoalTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(goal.emoji, style: AppTextStyles.bodyLarge.copyWith(fontSize: 24)),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: goal.color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+            ),
+            child: Icon(
+              goal.icon,
+              size: 22,
+              color: goal.color,
+            ),
+          ),
           Text(
             goal.label,
             style: AppTextStyles.labelMedium.copyWith(
