@@ -639,6 +639,7 @@ final class ApiCoachRepository implements CoachRepository {
         responseLength: responseLength,
         attachments: attachments,
         isRegenerate: isRegenerate,
+        systemPromptExtra: systemPromptExtra,
       );
     }
   }

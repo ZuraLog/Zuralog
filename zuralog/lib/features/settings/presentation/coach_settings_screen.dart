@@ -528,11 +528,25 @@ class _PersonaCard extends StatelessWidget {
 
 // ── Usage Section ─────────────────────────────────────────────────────────────
 
-class _UsageSection extends ConsumerWidget {
+class _UsageSection extends ConsumerStatefulWidget {
   const _UsageSection();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_UsageSection> createState() => _UsageSectionState();
+}
+
+class _UsageSectionState extends ConsumerState<_UsageSection> {
+  @override
+  void initState() {
+    super.initState();
+    // Refresh every time the settings screen is opened.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.invalidate(coachUsageProvider);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final usageAsync = ref.watch(coachUsageProvider);
 
