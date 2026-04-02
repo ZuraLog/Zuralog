@@ -174,7 +174,7 @@ class PgVectorMemoryStore:
         ]
 
     async def delete(self, memory_id: str) -> None:
-        """Hard-delete a memory by ID."""
+        """Hard-delete a memory by ID (no user scope — internal use only)."""
         async with async_session() as db:
             await db.execute(
                 text("DELETE FROM user_memories WHERE id = :id"),
@@ -186,9 +186,14 @@ class PgVectorMemoryStore:
     # Extended interface (for memory_routes.py)
     # ------------------------------------------------------------------
 
-    async def delete_memory(self, memory_id: str) -> bool:
-        """Delete a memory by ID. Returns True when acknowledged."""
-        await self.delete(memory_id)
+    async def delete_memory(self, memory_id: str, user_id: str) -> bool:
+        """Delete a memory by ID, scoped to the owning user. Returns True when acknowledged."""
+        async with async_session() as db:
+            await db.execute(
+                text("DELETE FROM user_memories WHERE id = :id AND user_id = :user_id"),
+                {"id": memory_id, "user_id": user_id},
+            )
+            await db.commit()
         return True
 
     async def list_memories(self, user_id: str) -> list[MemoryItem]:

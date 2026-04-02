@@ -4,6 +4,28 @@ A running record of completed work — what was built, when, and at what scope.
 
 ---
 
+## 2026-04-02 — System Prompt & Persona Hardening
+
+**Branch:** `fix/system-prompt-persona-hardening`
+
+A second focused security and quality pass — adding explicit AI output rules, consolidating duplicate persona code, closing a broken object-level authorization hole in memory management, promoting secrets to `SecretStr`, and expanding the adversarial test suite.
+
+**What was built:**
+
+- **No-emoji safety rule** (`app/agent/prompts/system.py`): Rule 8 added to `_SAFETY_BLOCK`. Zura now explicitly never uses emoji characters in any response — plain text only, unconditionally, regardless of persona.
+
+- **Persona module consolidation** (`app/agent/prompts/system.py`, `app/agent/prompts/personas.py`): `personas.py` was a diverged duplicate that had richer persona texts than the live `system.py`. Now `system.py` is the single source of truth — it exports `PERSONAS`, `PROACTIVITY_MODIFIERS`, and a stricter `build_system_prompt` that raises `ValueError` for unknown personas, adds "not yet connected" text when no integrations are present, and includes the richer per-persona coaching texts. `personas.py` is a thin re-export wrapper with no duplicate definitions.
+
+- **Memory deletion BOLA fix** (`app/agent/context_manager/pgvector_memory_store.py`, `app/api/v1/memory_routes.py`): `DELETE /api/v1/memories/{memory_id}` was missing user ownership verification — any authenticated user could delete another user's memory by ID. Fixed: `delete_memory()` now executes `DELETE FROM user_memories WHERE id = :id AND user_id = :user_id`, and the route passes the authenticated user's ID.
+
+- **Webhook tokens promoted to `SecretStr`** (`app/config.py`, `app/api/v1/strava_webhooks.py`, `app/api/v1/fitbit_webhooks.py`, `app/tasks/fitbit_sync.py`): `strava_webhook_verify_token` and `fitbit_webhook_verify_code` were plain `str`. Both are now `SecretStr`, redacting them from logs and tracebacks. All call sites updated to use `.get_secret_value()`.
+
+- **PromptFoo suite expanded from 20 to 30 tests** (`promptfoo/promptfooconfig.yaml`, `promptfoo/provider.py`): Provider now accepts `persona` and `proactivity` from test vars so tests can target specific personas. Added: per-persona safety checks for `tough_love` and `gentle`, and 6 new attack cases: multi-turn friendship exploit, translation wrapper injection, flattery-based persona switching, fake developer authority claim, hypothetical framing bypass, and a dedicated emoji-output check.
+
+**Files modified:** `cloud-brain/app/agent/prompts/system.py`, `cloud-brain/app/agent/prompts/personas.py`, `cloud-brain/app/agent/context_manager/pgvector_memory_store.py`, `cloud-brain/app/api/v1/memory_routes.py`, `cloud-brain/app/config.py`, `cloud-brain/app/api/v1/strava_webhooks.py`, `cloud-brain/app/api/v1/fitbit_webhooks.py`, `cloud-brain/app/tasks/fitbit_sync.py`, `cloud-brain/tests/test_strava_webhooks.py`, `cloud-brain/tests/test_fitbit_webhooks.py`, `promptfoo/provider.py`, `promptfoo/promptfooconfig.yaml`
+
+---
+
 ## 2026-04-02 — Security Hardening & Abuse Avoidance
 
 **Branch:** `fix/abuse-avoidance-security-hardening`

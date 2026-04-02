@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from app.main import app
 
@@ -20,7 +21,7 @@ class TestWebhookValidation:
     def test_responds_with_challenge(self, client):
         """Strava subscription validation echoes hub.challenge."""
         with patch("app.api.v1.strava_webhooks.settings") as mock_settings:
-            mock_settings.strava_webhook_verify_token = "test-token"
+            mock_settings.strava_webhook_verify_token = SecretStr("test-token")
             response = client.get(
                 "/api/v1/webhooks/strava",
                 params={
@@ -35,7 +36,7 @@ class TestWebhookValidation:
     def test_rejects_wrong_verify_token(self, client):
         """Rejects validation with wrong verify token."""
         with patch("app.api.v1.strava_webhooks.settings") as mock_settings:
-            mock_settings.strava_webhook_verify_token = "test-token"
+            mock_settings.strava_webhook_verify_token = SecretStr("test-token")
             response = client.get(
                 "/api/v1/webhooks/strava",
                 params={
@@ -49,7 +50,7 @@ class TestWebhookValidation:
     def test_rejects_unconfigured_verify_token(self, client):
         """Returns 503 when STRAVA_WEBHOOK_VERIFY_TOKEN is not configured."""
         with patch("app.api.v1.strava_webhooks.settings") as mock_settings:
-            mock_settings.strava_webhook_verify_token = ""
+            mock_settings.strava_webhook_verify_token = SecretStr("")
             response = client.get(
                 "/api/v1/webhooks/strava",
                 params={
@@ -63,7 +64,7 @@ class TestWebhookValidation:
     def test_rejects_invalid_hub_mode(self, client):
         """Returns 400 when hub.mode is not 'subscribe'."""
         with patch("app.api.v1.strava_webhooks.settings") as mock_settings:
-            mock_settings.strava_webhook_verify_token = "test-token"
+            mock_settings.strava_webhook_verify_token = SecretStr("test-token")
             response = client.get(
                 "/api/v1/webhooks/strava",
                 params={

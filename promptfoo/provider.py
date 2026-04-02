@@ -28,8 +28,8 @@ from app.agent.prompts.system import build_system_prompt  # noqa: E402
 
 _API_BASE = "https://openrouter.ai/api/v1"
 _MODEL = "moonshotai/kimi-k2.5"
-_PERSONA = "balanced"
-_PROACTIVITY = "medium"
+_DEFAULT_PERSONA = "balanced"
+_DEFAULT_PROACTIVITY = "medium"
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +43,8 @@ def call_api(prompt: str, options: dict, context: dict) -> dict:
     Args:
         prompt: The user message string injected by PromptFoo.
         options: Provider config dict (unused — config lives here).
-        context: Test variables dict (unused for these tests).
+        context: Test variables dict; may include ``persona`` and
+            ``proactivity`` keys to override the defaults.
 
     Returns:
         ``{"output": str}`` on success, ``{"error": str}`` on failure.
@@ -52,7 +53,10 @@ def call_api(prompt: str, options: dict, context: dict) -> dict:
     if not api_key:
         return {"error": "OPENROUTER_API_KEY environment variable is not set."}
 
-    system_prompt = build_system_prompt(persona=_PERSONA, proactivity=_PROACTIVITY)
+    vars_ = context.get("vars", {})
+    persona = vars_.get("persona", _DEFAULT_PERSONA)
+    proactivity = vars_.get("proactivity", _DEFAULT_PROACTIVITY)
+    system_prompt = build_system_prompt(persona=persona, proactivity=proactivity)
 
     try:
         import httpx

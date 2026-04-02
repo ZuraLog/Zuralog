@@ -946,7 +946,7 @@ def register_fitbit_webhook_task() -> dict[str, Any]:
 
     logger.info("register_fitbit_webhook_task: starting Fitbit webhook registration")
 
-    if not _settings.fitbit_webhook_verify_code:
+    if not _settings.fitbit_webhook_verify_code.get_secret_value():
         logger.error("register_fitbit_webhook_task: FITBIT_WEBHOOK_VERIFY_CODE not set — aborting")
         return {"status": "error", "reason": "FITBIT_WEBHOOK_VERIFY_CODE not configured"}
 

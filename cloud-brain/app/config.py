@@ -103,13 +103,13 @@ class Settings(BaseSettings):
     # Comma-separated list of allowed CORS origins.
     # Use "*" for development; lock down for production.
     allowed_origins: str = ""
-    strava_webhook_verify_token: str = ""
+    strava_webhook_verify_token: SecretStr = SecretStr("")
     strava_webhook_subscription_id: int = 0  # STRAVA_WEBHOOK_SUBSCRIPTION_ID — set after first webhook registration
     # Fitbit OAuth 2.0
     fitbit_client_id: str = ""
     fitbit_client_secret: SecretStr = SecretStr("")
     fitbit_redirect_uri: str = "zuralog://oauth/fitbit"
-    fitbit_webhook_verify_code: str = ""
+    fitbit_webhook_verify_code: SecretStr = SecretStr("")
     fitbit_webhook_subscriber_id: SecretStr = SecretStr("")
     # Oura Ring OAuth 2.0
     oura_client_id: str = ""  # OURA_CLIENT_ID
