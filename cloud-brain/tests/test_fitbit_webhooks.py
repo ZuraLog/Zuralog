@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from app.main import app
 
@@ -29,7 +30,7 @@ class TestFitbitWebhookVerification:
     def test_correct_verify_code_returns_204(self, client):
         """Correct verify code → HTTP 204 (empty body)."""
         with patch("app.api.v1.fitbit_webhooks.settings") as mock_settings:
-            mock_settings.fitbit_webhook_verify_code = "secret-verify-code"
+            mock_settings.fitbit_webhook_verify_code = SecretStr("secret-verify-code")
             response = client.get(
                 "/api/v1/webhooks/fitbit",
                 params={"verify": "secret-verify-code"},
@@ -40,7 +41,7 @@ class TestFitbitWebhookVerification:
     def test_wrong_verify_code_returns_404(self, client):
         """Wrong verify code → HTTP 404 (empty body)."""
         with patch("app.api.v1.fitbit_webhooks.settings") as mock_settings:
-            mock_settings.fitbit_webhook_verify_code = "secret-verify-code"
+            mock_settings.fitbit_webhook_verify_code = SecretStr("secret-verify-code")
             response = client.get(
                 "/api/v1/webhooks/fitbit",
                 params={"verify": "wrong-code"},
@@ -51,14 +52,14 @@ class TestFitbitWebhookVerification:
     def test_missing_verify_param_returns_404(self, client):
         """Missing verify param → HTTP 404 (empty string mismatch)."""
         with patch("app.api.v1.fitbit_webhooks.settings") as mock_settings:
-            mock_settings.fitbit_webhook_verify_code = "secret-verify-code"
+            mock_settings.fitbit_webhook_verify_code = SecretStr("secret-verify-code")
             response = client.get("/api/v1/webhooks/fitbit")
         assert response.status_code == 404
 
     def test_empty_verify_code_matches_empty_config(self, client):
         """If configured code is empty string, empty verify param matches → 204."""
         with patch("app.api.v1.fitbit_webhooks.settings") as mock_settings:
-            mock_settings.fitbit_webhook_verify_code = ""
+            mock_settings.fitbit_webhook_verify_code = SecretStr("")
             response = client.get(
                 "/api/v1/webhooks/fitbit",
                 params={"verify": ""},
@@ -218,7 +219,6 @@ class TestFitbitWebhookEvent:
         silently dropped — no task dispatched, but still returns 204."""
         mock_task = MagicMock()
         with patch("app.api.v1.fitbit_webhooks.settings") as mock_settings:
-            from pydantic import SecretStr
             mock_settings.fitbit_webhook_subscriber_id = SecretStr("our-real-subscriber-id")
             with patch(_TASK_PATH, mock_task):
                 response = client.post(
