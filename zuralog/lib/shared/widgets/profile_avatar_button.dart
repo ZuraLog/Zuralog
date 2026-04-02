@@ -44,28 +44,37 @@ class ProfileAvatarButton extends ConsumerWidget {
 
     final displayName = profile?.aiName ?? (email.isNotEmpty ? email : '');
     final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : '';
+    final avatarUrl = profile?.avatarUrl;
+    // Append a cache-busting query param so Flutter reloads the image
+    // when the avatar is re-uploaded at the same URL.
+    final avatarUrlWithBuster = avatarUrl != null && avatarUrl.isNotEmpty
+        ? '$avatarUrl?v=${profile.hashCode}'
+        : null;
 
     return GestureDetector(
       onTap: () => context.pushNamed(RouteNames.settings),
-      // opaque so the full avatar hit-box registers taps even when the
-      // CircleAvatar child has transparent pixels around its edges.
       behavior: HitTestBehavior.opaque,
       child: CircleAvatar(
         radius: AppDimens.avatarMd / 2,
         backgroundColor: colors.primary.withValues(alpha: 0.85),
-        child: initial.isNotEmpty
-            ? Text(
-                initial,
-                style: AppTextStyles.body.copyWith(
-                  color: colors.textOnSage,
-                  fontWeight: FontWeight.w700,
-                ),
-              )
-            : Icon(
-                Icons.person_rounded,
-                size: 18,
-                color: colors.textOnSage,
-              ),
+        backgroundImage: avatarUrlWithBuster != null
+            ? NetworkImage(avatarUrlWithBuster)
+            : null,
+        child: avatarUrlWithBuster != null
+            ? null
+            : initial.isNotEmpty
+                ? Text(
+                    initial,
+                    style: AppTextStyles.body.copyWith(
+                      color: colors.textOnSage,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  )
+                : Icon(
+                    Icons.person_rounded,
+                    size: 18,
+                    color: colors.textOnSage,
+                  ),
       ),
     );
   }

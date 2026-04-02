@@ -29,6 +29,7 @@ import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/presentation/widgets/achievements_section_card.dart';
 import 'package:zuralog/features/progress/presentation/widgets/goal_trajectory_card.dart';
 import 'package:zuralog/features/progress/presentation/widgets/goals_empty_card.dart';
+import 'package:zuralog/features/progress/presentation/journal_diary_screen.dart';
 import 'package:zuralog/features/progress/presentation/journal_entry_router.dart';
 import 'package:zuralog/features/progress/presentation/widgets/journal_prompt_cta.dart';
 import 'package:zuralog/features/progress/presentation/widgets/progress_skeleton_loader.dart';
@@ -162,6 +163,12 @@ class _ContentView extends ConsumerWidget {
         lastEntryDateStr = page.entries.first.date;
         journalledToday = page.entries.first.date == todayStr;
       }
+    });
+
+    // Extract the 5 most recent journal entries for the compact list.
+    List<JournalEntry> recentEntries = [];
+    journalAsync.whenData((page) {
+      recentEntries = page.entries.take(5).toList();
     });
 
     final hasAchievements =
@@ -314,6 +321,24 @@ class _ContentView extends ConsumerWidget {
                     lastEntryDate: lastEntryDateStr,
                     journalledToday: journalledToday,
                   ),
+                  if (recentEntries.isNotEmpty) ...[
+                    const SizedBox(height: AppDimens.spaceSm),
+                    ...recentEntries.asMap().entries.map((mapEntry) {
+                      final index = mapEntry.key;
+                      final entry = mapEntry.value;
+                      return ZFadeSlideIn(
+                        delay: Duration(milliseconds: 60 * index),
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            bottom: index < recentEntries.length - 1
+                                ? AppDimens.spaceSm
+                                : 0,
+                          ),
+                          child: _JournalEntryCard(entry: entry),
+                        ),
+                      );
+                    }),
+                  ],
                 ],
               );
             },
@@ -672,4 +697,88 @@ class _WeeklyReportCard extends ConsumerWidget {
       child: card,
     );
   }
+}
+
+// ── _JournalEntryCard ─────────────────────────────────────────────────────────
+
+/// Compact card showing a single journal entry preview.
+class _JournalEntryCard extends StatelessWidget {
+  const _JournalEntryCard({required this.entry});
+
+  final JournalEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => JournalDiaryScreen(existingEntry: entry),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.cardBackground,
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        ),
+        padding: const EdgeInsets.all(AppDimens.spaceSm + 4),
+        child: Row(
+          children: [
+            Text(
+              _formatShortDate(entry.date),
+              style: AppTextStyles.labelSmall.copyWith(
+                color: colors.textSecondary,
+              ),
+            ),
+            const SizedBox(width: AppDimens.spaceSm),
+            Expanded(
+              child: Text(
+                entry.content,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: colors.textPrimary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (entry.tags.isNotEmpty) ...[
+              const SizedBox(width: AppDimens.spaceSm),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceSm,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+                ),
+                child: Text(
+                  entry.tags.first,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Formats an ISO date string (YYYY-MM-DD) as a short human-readable date
+/// like "Thu, Apr 2".
+String _formatShortDate(String isoDate) {
+  final dt = DateTime.tryParse(isoDate);
+  if (dt == null) return isoDate;
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  return '${days[dt.weekday - 1]}, ${months[dt.month - 1]} ${dt.day}';
 }
