@@ -156,30 +156,51 @@ class ZPremiumGateSheet extends ConsumerWidget {
 
                 const SizedBox(height: AppDimens.spaceLg),
 
-                // Primary CTA — opens the paywall.
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () async {
-                      Navigator.of(context).pop();
-                      try {
-                        await ref
-                            .read(subscriptionProvider.notifier)
-                            .presentPaywall();
-                      } catch (e) {
-                        debugPrint('[ZPremiumGateSheet] presentPaywall error: $e');
-                      }
-                    },
-                    style: FilledButton.styleFrom(
-                      backgroundColor: colors.primary,
-                      foregroundColor: AppColors.textOnSage,
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppDimens.shapePill),
+                // Primary CTA — opens the paywall (pattern-filled button).
+                GestureDetector(
+                  onTap: () async {
+                    Navigator.of(context).pop();
+                    try {
+                      await ref
+                          .read(subscriptionProvider.notifier)
+                          .presentPaywall();
+                    } catch (e) {
+                      debugPrint(
+                          '[ZPremiumGateSheet] presentPaywall error: $e');
+                    }
+                  },
+                  child: ClipRRect(
+                    borderRadius:
+                        BorderRadius.circular(AppDimens.shapePill),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Sage background
+                          Positioned.fill(
+                            child: Container(color: colors.primary),
+                          ),
+                          // Animated pattern overlay
+                          Positioned.fill(
+                            child: ZPatternOverlay(
+                              variant: ZPatternVariant.sage,
+                              opacity: 0.15,
+                              animate: true,
+                            ),
+                          ),
+                          // Label
+                          Text(
+                            'Upgrade to Pro',
+                            style: AppTextStyles.labelLarge.copyWith(
+                              color: AppColors.textOnSage,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: const Text('Upgrade to Pro'),
                   ),
                 ),
 
