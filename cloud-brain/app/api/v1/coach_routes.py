@@ -148,7 +148,6 @@ async def coach_usage(
         }
 
     from app.models.user import User
-    from app.services.rate_limiter import RateLimiter
 
     row = await db.execute(select(User).where(User.id == user_id))
     user = row.scalar_one_or_none()
