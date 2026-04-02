@@ -190,11 +190,12 @@ async def list_journal_entries(
     offset: int = 0,
     user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> dict:
     """List journal entries for the authenticated user, optionally filtered by date range.
 
-    Entries are returned newest-first. Both ``date_from`` and ``date_to`` are
-    inclusive and must be YYYY-MM-DD strings.
+    Entries are returned newest-first in a paginated envelope that the
+    Flutter ``JournalPage.fromJson`` expects:
+    ``{"entries": [...], "has_more": bool}``.
 
     Args:
         date_from: Earliest date to include (YYYY-MM-DD). Optional.
@@ -205,20 +206,29 @@ async def list_journal_entries(
         db: Async database session.
 
     Returns:
-        List of JournalEntryResponse dicts.
+        Paginated dict with ``entries`` list and ``has_more`` flag.
     """
     query = select(JournalEntry).where(JournalEntry.user_id == user_id)
 
     if date_from:
-        query = query.where(JournalEntry.date >= date_from)
+        query = query.where(JournalEntry.date >= _date.fromisoformat(date_from))
     if date_to:
-        query = query.where(JournalEntry.date <= date_to)
+        query = query.where(JournalEntry.date <= _date.fromisoformat(date_to))
 
-    query = query.order_by(JournalEntry.date.desc()).offset(offset).limit(limit)
+    # Fetch one extra to determine has_more.
+    query = query.order_by(JournalEntry.date.desc()).offset(offset).limit(limit + 1)
 
     result = await db.execute(query)
-    entries = result.scalars().all()
-    return [_entry_to_response(e) for e in entries]
+    entries = list(result.scalars().all())
+
+    has_more = len(entries) > limit
+    if has_more:
+        entries = entries[:limit]
+
+    return {
+        "entries": [_entry_to_response(e) for e in entries],
+        "has_more": has_more,
+    }
 
 
 @router.put("/{entry_id}", summary="Full replacement of a journal entry")
