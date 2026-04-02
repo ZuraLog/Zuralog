@@ -499,8 +499,19 @@ final class ApiCoachRepository implements CoachRepository {
                 }
 
               case 'rate_limit':
-                final msg2 = msg['content'] as String? ?? 'Rate limit reached. Please try again later.';
-                controller.add(StreamError(msg2));
+                final rawContent = msg['content'] as String?;
+                final resetSecs = msg['reset_seconds'] as int? ?? 0;
+                String limitMsg;
+                if (rawContent != null && rawContent.isNotEmpty) {
+                  limitMsg = rawContent;
+                } else if (resetSecs >= 3600) {
+                  final hours = (resetSecs / 3600).round();
+                  limitMsg = 'You have reached your daily limit. Resets in $hours hour${hours != 1 ? 's' : ''}.';
+                } else {
+                  final minutes = (resetSecs / 60).ceil().clamp(1, 60);
+                  limitMsg = 'You have reached your daily limit. Resets in $minutes minute${minutes != 1 ? 's' : ''}.';
+                }
+                controller.add(StreamError(limitMsg));
                 if (!sinkClosed) {
                   sinkClosed = true;
                   channel?.sink.close();
