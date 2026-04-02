@@ -672,9 +672,6 @@ async def websocket_chat(
                     )
                     routed_model = routing_result.model
                     routed_model_tier = routing_result.model_tier
-                    await rate_limiter.increment_model_usage(
-                        user_id, normalized_tier, routing_result.model_tier
-                    )
                 except LimitExhaustedException as limit_exc:
                     reset_str = _format_reset_time(limit_exc.reset_seconds)
                     if limit_exc.is_burst:
@@ -690,6 +687,8 @@ async def websocket_chat(
                     continue
                 except Exception as routing_exc:
                     logger.warning("Router failed (fail-open): %s", routing_exc)
+
+            _usage_incremented = False
 
             # ── Analytics ─────────────────────────────────────────────────────
             if analytics:
@@ -790,6 +789,7 @@ async def websocket_chat(
                         user_profile=user_profile,
                         memory_enabled=memory_enabled,
                         model=routed_model,
+                        model_tier=routed_model_tier,
                     ):
                         etype = event.get("type")
 
@@ -803,6 +803,14 @@ async def websocket_chat(
                         elif etype == "stream_end":
                             full_content = event.get("content", full_content)
                             client_action = event.get("client_action")
+                            if rate_limiter and routed_model_tier and not _usage_incremented:
+                                try:
+                                    await rate_limiter.increment_model_usage(
+                                        user_id, normalized_tier, routed_model_tier
+                                    )
+                                    _usage_incremented = True
+                                except Exception as inc_exc:
+                                    logger.warning("Failed to increment model usage: %s", inc_exc)
 
                         elif etype == "error":
                             had_error = True

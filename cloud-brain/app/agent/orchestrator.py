@@ -245,6 +245,7 @@ class Orchestrator:
         user_profile: UserProfile | None = None,
         memory_enabled: bool = True,
         model: str | None = None,
+        model_tier: str | None = None,
     ) -> AgentResponse:
         """Process a user message through the AI Brain.
 
@@ -337,7 +338,7 @@ class Orchestrator:
                 # Track token usage for billing / analytics
                 if self.usage_tracker:
                     try:
-                        await self.usage_tracker.track_from_response(user_id, response)
+                        await self.usage_tracker.track_from_response(user_id, response, model_tier=model_tier)
                     except Exception:
                         logger.warning(
                             "Failed to track usage for user '%s' on turn %d",
@@ -466,6 +467,7 @@ class Orchestrator:
         user_profile: UserProfile | None = None,
         memory_enabled: bool = True,
         model: str | None = None,
+        model_tier: str | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """Process a user message and stream the final response token-by-token.
 

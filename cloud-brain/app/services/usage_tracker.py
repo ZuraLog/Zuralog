@@ -65,15 +65,16 @@ class UsageTracker:
             output_tokens,
         )
 
-    async def track_from_response(self, user_id: str, response: Any) -> None:
+    async def track_from_response(self, user_id: str, response: Any, model_tier: str | None = None) -> None:
         """Extract usage from an OpenAI response and record it.
 
         Args:
             user_id: The user who triggered the request.
             response: The ChatCompletion response from the OpenAI SDK.
+            model_tier: The routing tier used (e.g. "zura_flash", "zura_pro").
         """
         usage = getattr(response, "usage", None)
         model = getattr(response, "model", "unknown")
         input_tokens = getattr(usage, "prompt_tokens", 0) if usage else 0
         output_tokens = getattr(usage, "completion_tokens", 0) if usage else 0
-        await self.track(user_id, model, input_tokens, output_tokens)
+        await self.track(user_id, model, input_tokens, output_tokens, model_tier=model_tier)
