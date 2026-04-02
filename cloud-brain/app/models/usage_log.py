@@ -22,6 +22,7 @@ class UsageLog(Base):
         model: The LLM model used.
         input_tokens: Prompt tokens consumed.
         output_tokens: Completion tokens generated.
+        model_tier: The routing tier used (e.g. "fast", "smart").
         created_at: Timestamp of the API call.
     """
 
@@ -32,4 +33,5 @@ class UsageLog(Base):
     model: Mapped[str] = mapped_column(String)
     input_tokens: Mapped[int] = mapped_column(Integer, default=0)
     output_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    model_tier: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[str] = mapped_column(DateTime(timezone=True), server_default=func.now())

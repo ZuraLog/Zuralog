@@ -23,6 +23,7 @@ import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/coach/data/api_coach_repository.dart';
 import 'package:zuralog/features/coach/data/coach_repository.dart';
 import 'package:zuralog/features/coach/domain/coach_models.dart';
+import 'package:zuralog/features/coach/domain/coach_usage.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 
 // ── Repository ────────────────────────────────────────────────────────────────
@@ -413,6 +414,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
 
             // Refresh the conversation list so the drawer shows the new entry.
             ref.read(coachConversationsProvider.notifier).refresh();
+            ref.invalidate(coachUsageProvider);
 
             if (!completer.isCompleted) completer.complete();
 
@@ -700,6 +702,13 @@ final coachQuickActionsProvider =
   } catch (_) {
     return [];
   }
+});
+
+// ── Coach Usage ───────────────────────────────────────────────────────────────
+
+/// Loads the current per-model usage limits for the authenticated user.
+final coachUsageProvider = FutureProvider<CoachUsage>((ref) async {
+  return ref.watch(coachRepositoryProvider).fetchUsage();
 });
 
 // ── Coach Prefill ─────────────────────────────────────────────────────────────

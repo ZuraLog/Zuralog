@@ -234,6 +234,8 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
     final speechState = ref.watch(speechNotifierProvider);
     final isListening = speechState.status == SpeechStatus.listening;
     final voiceInputEnabled = ref.watch(voiceInputEnabledProvider);
+    final usageAsync = ref.watch(coachUsageProvider);
+    final isExhausted = usageAsync.whenOrNull(data: (u) => u.isFullyExhausted) ?? false;
 
     ref.listen<SpeechState>(speechNotifierProvider, (prev, next) {
       if (next.recognizedText.isNotEmpty && !next.isFinal) {
@@ -350,11 +352,12 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
                       focusNode: widget.focusNode,
                       maxLines: 5,
                       minLines: 1,
+                      readOnly: isExhausted,
                       maxLength: CoachInputBar.maxLength,
                       maxLengthEnforcement: MaxLengthEnforcement.enforced,
                       style: AppTextStyles.bodyLarge,
                       decoration: InputDecoration(
-                        hintText: widget.placeholder,
+                        hintText: isExhausted ? 'Message limit reached' : widget.placeholder,
                         hintStyle: AppTextStyles.bodyLarge
                             .copyWith(color: colors.textTertiary),
                         border: InputBorder.none,
@@ -393,8 +396,8 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
                     if (hasContent) {
                       return _InputIcon(
                         icon: Icons.arrow_upward_rounded,
-                        filled: true,
-                        onTap: _handleSend,
+                        filled: !isExhausted,
+                        onTap: isExhausted ? null : _handleSend,
                         tooltip: 'Send',
                       );
                     }

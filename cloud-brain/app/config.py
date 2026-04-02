@@ -13,6 +13,33 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 logger = logging.getLogger(__name__)
 
 
+# -- Model Routing -------------------------------------------------------------
+
+ROUTER_MODEL_ZURA = "moonshotai/kimi-k2.5"
+ROUTER_MODEL_ZURA_FLASH = "qwen/qwen3.5-flash-02-23"
+
+# Maps internal tier names to OpenRouter model IDs.
+MODEL_IDS: dict[str, str] = {
+    "zura": ROUTER_MODEL_ZURA,
+    "zura_flash": ROUTER_MODEL_ZURA_FLASH,
+}
+
+# -- Free Tier Limits ----------------------------------------------------------
+
+FREE_FLASH_DAILY = 20
+FREE_ZURA_DAILY = 5
+FREE_BURST_5H = 20
+
+# -- Pro Tier Limits -----------------------------------------------------------
+
+PRO_FLASH_WEEKLY = 350
+PRO_ZURA_WEEKLY = 60
+PRO_BURST_5H = 60
+
+# Burst window duration in seconds (5 hours).
+BURST_WINDOW_SECONDS = 5 * 60 * 60  # 18000
+
+
 class Settings(BaseSettings):
     """Application settings loaded from environment variables.
 
@@ -56,11 +83,12 @@ class Settings(BaseSettings):
     openrouter_referer: str = "https://zuralog.app"
     openrouter_title: str = "Zuralog"
     openrouter_model: str = "moonshotai/kimi-k2.5"
-    openrouter_insight_model: str = "google/gemini-3.1-flash-lite-preview"
+    openrouter_insight_model: str = "qwen/qwen3.5-flash-02-23"
     # OPENROUTER_INSIGHT_MODEL — cheap fast model for daily insight generation.
     # Separate from openrouter_model (Kimi K2.5) which is the Coach tab model.
-    openrouter_title_model: str = "openai/gpt-4.1-nano"
-    openrouter_fallback_model: str = "openai/gpt-4o-mini"
+    openrouter_title_model: str = "qwen/qwen3.5-flash-02-23"
+    openrouter_fallback_model: str = "qwen/qwen3.5-flash-02-23"
+    openrouter_classifier_model: str = "qwen/qwen3.5-flash-02-23"
     google_web_client_id: str = ""
     google_web_client_secret: SecretStr = SecretStr("")
     strava_client_id: str = ""

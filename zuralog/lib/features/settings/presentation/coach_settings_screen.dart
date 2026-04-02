@@ -23,6 +23,7 @@ import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
+import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -57,7 +58,7 @@ class _PersonaOption {
 /// The three available persona options in display order.
 const List<_PersonaOption> _personas = [
   _PersonaOption(
-    key: 'toughLove',
+    key: 'tough_love',
     label: 'Tough Love',
     description: 'Blunt, data-driven, pushes you hard. No sugar-coating.',
     icon: Icons.fitness_center_rounded,
@@ -360,6 +361,10 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
             ),
           ),
 
+          // ── USAGE section ────────────────────────────────────────────────
+          const SettingsSectionLabel('Usage'),
+          const _UsageSection(),
+
           // ── MEMORY section ───────────────────────────────────────────────
           const SettingsSectionLabel('Memory'),
 
@@ -517,6 +522,123 @@ class _PersonaCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Usage Section ─────────────────────────────────────────────────────────────
+
+class _UsageSection extends ConsumerStatefulWidget {
+  const _UsageSection();
+
+  @override
+  ConsumerState<_UsageSection> createState() => _UsageSectionState();
+}
+
+class _UsageSectionState extends ConsumerState<_UsageSection> {
+  @override
+  void initState() {
+    super.initState();
+    // Refresh every time the settings screen is opened.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.invalidate(coachUsageProvider);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final usageAsync = ref.watch(coachUsageProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+      child: usageAsync.when(
+        loading: () => const SizedBox(
+          height: 80,
+          child: Center(child: CircularProgressIndicator.adaptive()),
+        ),
+        error: (err, st) => const Padding(
+          padding: EdgeInsets.all(AppDimens.spaceMd),
+          child: Text('Could not load usage data'),
+        ),
+        data: (usage) => Container(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceMd),
+          child: Column(
+            children: [
+              _UsageBar(
+                label: 'Zura Flash',
+                used: usage.flashUsed,
+                limit: usage.flashLimit,
+              ),
+              const SizedBox(height: AppDimens.spaceXs),
+              _UsageBar(
+                label: 'Zura',
+                used: usage.zuraUsed,
+                limit: usage.zuraLimit,
+              ),
+              if (usage.burstUsed >= (usage.burstLimit * 0.8).floor()) ...[
+                const SizedBox(height: AppDimens.spaceXs),
+                _UsageBar(
+                  label: 'Burst window',
+                  used: usage.burstUsed,
+                  limit: usage.burstLimit,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _UsageBar extends StatelessWidget {
+  const _UsageBar({
+    required this.label,
+    required this.used,
+    required this.limit,
+  });
+
+  final String label;
+  final int used;
+  final int limit;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final double progress = limit > 0 ? (used / limit).clamp(0.0, 1.0) : 0.0;
+
+    final Color barColor;
+    if (progress >= 1.0) {
+      barColor = AppColors.statusError;
+    } else if (progress >= 0.8) {
+      barColor = AppColors.warning;
+    } else {
+      barColor = AppColors.primary;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: AppTextStyles.bodySmall),
+            Text('$used / $limit', style: AppTextStyles.bodySmall.copyWith(color: colors.textSecondary)),
+          ],
+        ),
+        const SizedBox(height: 4),
+        LinearProgressIndicator(
+          value: progress,
+          backgroundColor: colors.surfaceRaised,
+          valueColor: AlwaysStoppedAnimation<Color>(barColor),
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ],
     );
   }
 }

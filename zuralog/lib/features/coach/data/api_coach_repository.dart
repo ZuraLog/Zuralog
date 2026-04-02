@@ -23,6 +23,7 @@ import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/core/storage/secure_storage.dart';
 import 'package:zuralog/features/coach/data/coach_repository.dart';
 import 'package:zuralog/features/coach/domain/coach_models.dart';
+import 'package:zuralog/features/coach/domain/coach_usage.dart';
 
 // ── Icon name → Material code point mapping ───────────────────────────────────
 
@@ -119,6 +120,12 @@ final class ApiCoachRepository implements CoachRepository {
     await _activeChannel?.sink.close();
     _activeDoneCompleter = null;
     _activeChannel = null;
+  }
+
+  @override
+  Future<CoachUsage> fetchUsage() async {
+    final response = await _apiClient.get('/api/v1/coach/usage');
+    return CoachUsage.fromJson(response.data as Map<String, dynamic>);
   }
 
   static String _deriveWsUrl() {
@@ -462,12 +469,14 @@ final class ApiCoachRepository implements CoachRepository {
                     return;
                   }
 
+                  final modelUsed = msg['model_used'] as String?;
                   final chatMsg = ChatMessage(
                     id: msgId,
                     conversationId: convId,
                     role: MessageRole.assistant,
                     content: content,
                     createdAt: DateTime.now(),
+                    modelUsed: modelUsed,
                   );
                   controller.add(StreamComplete(
                     message: chatMsg,
@@ -490,8 +499,19 @@ final class ApiCoachRepository implements CoachRepository {
                 }
 
               case 'rate_limit':
-                final msg2 = msg['content'] as String? ?? 'Rate limit reached. Please try again later.';
-                controller.add(StreamError(msg2));
+                final rawContent = msg['content'] as String?;
+                final resetSecs = msg['reset_seconds'] as int? ?? 0;
+                String limitMsg;
+                if (rawContent != null && rawContent.isNotEmpty) {
+                  limitMsg = rawContent;
+                } else if (resetSecs >= 3600) {
+                  final hours = (resetSecs / 3600).round();
+                  limitMsg = 'You have reached your daily limit. Resets in $hours hour${hours != 1 ? 's' : ''}.';
+                } else {
+                  final minutes = (resetSecs / 60).ceil().clamp(1, 60);
+                  limitMsg = 'You have reached your daily limit. Resets in $minutes minute${minutes != 1 ? 's' : ''}.';
+                }
+                controller.add(StreamError(limitMsg));
                 if (!sinkClosed) {
                   sinkClosed = true;
                   channel?.sink.close();
@@ -619,6 +639,7 @@ final class ApiCoachRepository implements CoachRepository {
         responseLength: responseLength,
         attachments: attachments,
         isRegenerate: isRegenerate,
+        systemPromptExtra: systemPromptExtra,
       );
     }
   }

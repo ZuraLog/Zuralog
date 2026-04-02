@@ -185,6 +185,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
             onThumbUp: () => widget.onThumbUp?.call(index),
             onThumbDown: () => widget.onThumbDown?.call(index),
             onRedo: () => widget.onRedo?.call(),
+            modelUsed: message.modelUsed,
           ),
         );
 
