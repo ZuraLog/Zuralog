@@ -60,7 +60,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
   bool _isSaving = false;
 
   /// Whether a goal type has been chosen (always true in edit mode).
-  bool _typeChosen = false;
+  late bool _typeChosen;
 
   bool get _isEdit => widget.initialGoal != null;
 
@@ -76,6 +76,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
     );
     _unitCtrl = TextEditingController(text: g?.unit ?? '');
     _deadline = g?.deadline != null ? DateTime.tryParse(g!.deadline!) : null;
+    _typeChosen = _isEdit; // In edit mode, type is already chosen.
 
     // In edit mode, all sections are visible immediately.
     if (_isEdit) _typeChosen = true;

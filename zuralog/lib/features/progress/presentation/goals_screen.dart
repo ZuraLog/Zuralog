@@ -461,7 +461,7 @@ class _GoalRing extends StatelessWidget {
                 child: Text(
                 '${(value * 100).round()}%',
                 style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.primary,
+                  color: AppColorsOf(context).textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -488,18 +488,18 @@ class _RingPainter extends CustomPainter {
     final radius = (math.min(size.width, size.height) - _strokeWidth) / 2;
     const startAngle = -math.pi / 2; // 12-o'clock
 
-    // Track
+    // Track — use a visible gray that works in both themes.
     final trackPaint = Paint()
-      ..color = AppColors.primary.withValues(alpha: 0.15)
+      ..color = const Color(0xFF9B9894).withValues(alpha: 0.25)
       ..style = PaintingStyle.stroke
       ..strokeWidth = _strokeWidth
       ..strokeCap = StrokeCap.round;
     canvas.drawCircle(center, radius, trackPaint);
 
-    // Fill arc
+    // Fill arc — use a darker green that pops in light mode.
     if (progress > 0) {
       final fillPaint = Paint()
-        ..color = AppColors.primary
+        ..color = const Color(0xFF344E41) // Deep Forest Green — visible on both themes
         ..style = PaintingStyle.stroke
         ..strokeWidth = _strokeWidth
         ..strokeCap = StrokeCap.round;
