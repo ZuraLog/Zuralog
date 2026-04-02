@@ -578,8 +578,11 @@ class UserProfileNotifier extends Notifier<UserProfile?> {
       filePath: filePath,
       contentType: contentType,
     );
+    // Append a cache-busting timestamp so Flutter's NetworkImage treats
+    // this as a new URL and doesn't serve the old cached image.
+    final bustedUrl = '$avatarUrl?t=${DateTime.now().millisecondsSinceEpoch}';
     if (state != null) {
-      state = state!.copyWith(avatarUrl: avatarUrl);
+      state = state!.copyWith(avatarUrl: bustedUrl);
     } else {
       // Profile not loaded yet — re-fetch so state reflects the upload
       await load();
