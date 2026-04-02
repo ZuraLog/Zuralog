@@ -59,15 +59,19 @@ class ZLockedOverlay extends StatelessWidget {
 
         // Tap target — opens the premium gate sheet.
         Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => ZPremiumGateSheet.show(
-              context,
-              headline: headline,
-              body: body,
-              icon: icon,
+          child: Semantics(
+            label: 'Locked premium feature. Tap to learn more.',
+            button: true,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => ZPremiumGateSheet.show(
+                context,
+                headline: headline,
+                body: body,
+                icon: icon,
+              ),
+              child: const SizedBox.expand(),
             ),
-            child: const SizedBox.expand(),
           ),
         ),
 

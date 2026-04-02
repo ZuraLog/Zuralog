@@ -160,11 +160,15 @@ class ZPremiumGateSheet extends ConsumerWidget {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: () {
+                    onPressed: () async {
                       Navigator.of(context).pop();
-                      ref
-                          .read(subscriptionProvider.notifier)
-                          .presentPaywall();
+                      try {
+                        await ref
+                            .read(subscriptionProvider.notifier)
+                            .presentPaywall();
+                      } catch (e) {
+                        debugPrint('[ZPremiumGateSheet] presentPaywall error: $e');
+                      }
                     },
                     style: FilledButton.styleFrom(
                       backgroundColor: colors.primary,
