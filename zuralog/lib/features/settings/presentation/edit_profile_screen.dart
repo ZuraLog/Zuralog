@@ -118,6 +118,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             filePath: file.path,
             contentType: mimeType,
           );
+      // Clear Flutter's image cache so the new avatar loads immediately
+      // instead of showing the cached old image at the same URL.
+      imageCache.clear();
+      imageCache.clearLiveImages();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
