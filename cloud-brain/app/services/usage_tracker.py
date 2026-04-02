@@ -36,6 +36,7 @@ class UsageTracker:
         model: str,
         input_tokens: int,
         output_tokens: int,
+        model_tier: str | None = None,
     ) -> None:
         """Record a single LLM usage event.
 
@@ -44,6 +45,9 @@ class UsageTracker:
             model: The LLM model identifier.
             input_tokens: Prompt tokens consumed.
             output_tokens: Completion tokens generated.
+            model_tier: The routing tier used (e.g. "fast", "smart"). Not yet
+                persisted to the database — stored here for observability until
+                the G1 migration adds the column.
         """
         log = UsageLog(
             user_id=user_id,
@@ -54,9 +58,10 @@ class UsageTracker:
         self._session.add(log)
         await self._session.commit()
         logger.info(
-            "Usage tracked: user=%s model=%s in=%d out=%d",
+            "Usage tracked: user=%s model=%s model_tier=%s in=%d out=%d",
             user_id,
             model,
+            model_tier or "unknown",
             input_tokens,
             output_tokens,
         )

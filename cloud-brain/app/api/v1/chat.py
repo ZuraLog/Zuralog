@@ -45,6 +45,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agent.router import LimitExhaustedException, route_message
 from app.agent.context_manager.memory_store import MemoryStore
 from app.agent.context_manager.token_counter import count_messages, count_tokens, truncate_to_tokens
 from app.agent.context_manager.summarization_service import summarize_oldest_messages
@@ -67,6 +68,16 @@ from app.services.usage_tracker import UsageTracker
 from app.utils.sanitize import sanitize_for_llm
 
 logger = logging.getLogger(__name__)
+
+
+def _format_reset_time(seconds: int) -> str:
+    """Convert seconds to a human-readable reset time string."""
+    if seconds >= 3600:
+        hours = round(seconds / 3600)
+        return f"{hours} hour{'s' if hours != 1 else ''}"
+    minutes = max(1, round(seconds / 60))
+    return f"{minutes} minute{'s' if minutes != 1 else ''}"
+
 
 # Fix 6.6 (H-2): Allowlist for client-supplied preference values
 _VALID_PERSONAS = {"tough_love", "balanced", "gentle"}
@@ -647,40 +658,38 @@ async def websocket_chat(
                     })
                     continue
 
-            # Fix 6.5 (H-1): Per-minute burst limit check before daily rate limit
+            # ── Model routing + per-model rate limiting ───────────────────────
+            normalized_tier = "premium" if user_subscription_tier and user_subscription_tier not in ("", "free") else "free"
+            routed_model: str | None = None
+            routed_model_tier: str | None = None
             if rate_limiter:
                 try:
-                    normalized_tier = "premium" if user_subscription_tier and user_subscription_tier not in ("", "free") else "free"
-                    burst_result = await rate_limiter.check_burst_limit(user_id, tier=normalized_tier)
-                    if not burst_result.allowed:
-                        await websocket.send_json({
-                            "type": "error",
-                            "content": "Too many messages. Please wait a moment.",
-                            "limit": burst_result.limit,
-                            "remaining": burst_result.remaining,
-                            "reset_seconds": burst_result.reset_seconds,
-                        })
-                        continue
-                except Exception as burst_exc:
-                    logger.warning("Burst limit check failed (fail-open): %s", burst_exc)
-
-            # ── Rate limiting ─────────────────────────────────────────────────
-            if rate_limiter:
-                try:
-                    async with async_session() as db:
-                        await check_rate_limit(user_id, rate_limiter, db)
-                except HTTPException as exc:
-                    if exc.status_code == 429:
-                        rate_headers = exc.headers or {}
-                        await websocket.send_json({
-                            "type": "rate_limit",
-                            "content": exc.detail or "Rate limit exceeded",
-                            "reset_seconds": int(rate_headers.get("X-RateLimit-Reset", 0)),
-                            "limit": int(rate_headers.get("X-RateLimit-Limit", 0)),
-                            "remaining": 0,
-                        })
-                        continue
-                    raise
+                    routing_result = await route_message(
+                        text=message_text,
+                        user_id=user_id,
+                        tier=normalized_tier,
+                        rate_limiter=rate_limiter,
+                    )
+                    routed_model = routing_result.model
+                    routed_model_tier = routing_result.model_tier
+                    await rate_limiter.increment_model_usage(
+                        user_id, normalized_tier, routing_result.model_tier
+                    )
+                except LimitExhaustedException as limit_exc:
+                    reset_str = _format_reset_time(limit_exc.reset_seconds)
+                    if limit_exc.is_burst:
+                        msg = f"You're sending messages too quickly. Please wait a moment and try again."
+                    else:
+                        msg = f"You've used all your messages for this period. Resets in {reset_str}."
+                    await websocket.send_json({
+                        "type": "rate_limit",
+                        "content": msg,
+                        "reset_seconds": limit_exc.reset_seconds,
+                        "is_burst": limit_exc.is_burst,
+                    })
+                    continue
+                except Exception as routing_exc:
+                    logger.warning("Router failed (fail-open): %s", routing_exc)
 
             # ── Analytics ─────────────────────────────────────────────────────
             if analytics:
@@ -780,6 +789,7 @@ async def websocket_chat(
                         conversation_history=history,
                         user_profile=user_profile,
                         memory_enabled=memory_enabled,
+                        model=routed_model,
                     ):
                         etype = event.get("type")
 
@@ -899,6 +909,7 @@ async def websocket_chat(
                 "message_id": str(assistant_msg_id),
                 "conversation_id": str(resolved_conv_id),
                 "client_action": client_action,
+                "model_used": routed_model_tier,
             }
             await websocket.send_json(final_payload)
 

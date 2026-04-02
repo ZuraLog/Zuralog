@@ -244,6 +244,7 @@ class Orchestrator:
         conversation_history: list[dict[str, Any]] | None = None,
         user_profile: UserProfile | None = None,
         memory_enabled: bool = True,
+        model: str | None = None,
     ) -> AgentResponse:
         """Process a user message through the AI Brain.
 
@@ -303,6 +304,10 @@ class Orchestrator:
                 mcp_tools = self.mcp_client.get_all_tools()
             tools = self._build_tools_for_llm(mcp_tools)
 
+            active_client = self.llm_client
+            if model and model != self.llm_client.model:
+                active_client = LLMClient(model=model)
+
             injection_mode = "dynamic" if db is not None else "static"
             logger.info(
                 "Processing message for user '%s': %d memory items, %d tools (%s)",
@@ -318,7 +323,7 @@ class Orchestrator:
                 with sentry_sdk.start_span(op="ai.llm_call", description=f"LLM turn {turn + 1}") as llm_span:
                     llm_span.set_tag("turn", turn + 1)
                     try:
-                        response = await self.llm_client.chat(
+                        response = await active_client.chat(
                             messages,
                             tools=tools if tools else None,
                         )
@@ -460,6 +465,7 @@ class Orchestrator:
         conversation_history: list[dict[str, Any]] | None = None,
         user_profile: UserProfile | None = None,
         memory_enabled: bool = True,
+        model: str | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """Process a user message and stream the final response token-by-token.
 
@@ -515,13 +521,17 @@ class Orchestrator:
                     mcp_tools = self.mcp_client.get_all_tools()
                 tools = self._build_tools_for_llm(mcp_tools)
 
+                active_client = self.llm_client
+                if model and model != self.llm_client.model:
+                    active_client = LLMClient(model=model)
+
                 last_client_action: dict[str, Any] | None = None
 
                 for turn in range(MAX_TOOL_TURNS):
                     # Single streaming call per turn — tool-call detection from stream deltas.
                     with sentry_sdk.start_span(op="ai.llm_call", description=f"Stream turn {turn + 1}") as llm_span:
                         llm_span.set_tag("turn", turn + 1)
-                        stream = await self.llm_client.stream_chat(
+                        stream = await active_client.stream_chat(
                             messages,
                             tools=tools if tools else None,
                         )
