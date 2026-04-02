@@ -45,15 +45,14 @@ class UsageTracker:
             model: The LLM model identifier.
             input_tokens: Prompt tokens consumed.
             output_tokens: Completion tokens generated.
-            model_tier: The routing tier used (e.g. "fast", "smart"). Not yet
-                persisted to the database — stored here for observability until
-                the G1 migration adds the column.
+            model_tier: The routing tier used (e.g. "fast", "smart").
         """
         log = UsageLog(
             user_id=user_id,
             model=model,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            model_tier=model_tier,
         )
         self._session.add(log)
         await self._session.commit()
