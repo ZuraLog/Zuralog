@@ -111,13 +111,8 @@ class _ZPatternTextState extends State<ZPatternText>
       _loadImage(resolvedVariant);
     }
 
-    if (widget.animate) {
-      final reduceMotion = MediaQuery.of(context).disableAnimations;
-      if (reduceMotion && _controller != null) {
-        _disposeAnimation();
-      } else if (!reduceMotion && _controller == null) {
-        _maybeStartAnimation();
-      }
+    if (widget.animate && _controller == null) {
+      _maybeStartAnimation();
     }
   }
 
@@ -165,16 +160,11 @@ class _ZPatternTextState extends State<ZPatternText>
 
   void _maybeStartAnimation() {
     if (!widget.animate || _image == null) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final reduceMotion = MediaQuery.of(context).disableAnimations;
-      if (reduceMotion) return;
-      _controller ??= AnimationController(
-        vsync: this,
-        duration: const Duration(seconds: 8),
-      )..repeat(reverse: true);
-      if (mounted) setState(() {});
-    });
+    _controller ??= AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    )..repeat(reverse: true);
+    if (mounted) setState(() {});
   }
 
   void _disposeAnimation() {
