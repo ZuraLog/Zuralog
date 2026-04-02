@@ -44,28 +44,32 @@ class ProfileAvatarButton extends ConsumerWidget {
 
     final displayName = profile?.aiName ?? (email.isNotEmpty ? email : '');
     final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : '';
+    final avatarUrl = profile?.avatarUrl;
 
     return GestureDetector(
       onTap: () => context.pushNamed(RouteNames.settings),
-      // opaque so the full avatar hit-box registers taps even when the
-      // CircleAvatar child has transparent pixels around its edges.
       behavior: HitTestBehavior.opaque,
       child: CircleAvatar(
         radius: AppDimens.avatarMd / 2,
         backgroundColor: colors.primary.withValues(alpha: 0.85),
-        child: initial.isNotEmpty
-            ? Text(
-                initial,
-                style: AppTextStyles.body.copyWith(
-                  color: colors.textOnSage,
-                  fontWeight: FontWeight.w700,
-                ),
-              )
-            : Icon(
-                Icons.person_rounded,
-                size: 18,
-                color: colors.textOnSage,
-              ),
+        backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+            ? NetworkImage(avatarUrl)
+            : null,
+        child: avatarUrl != null && avatarUrl.isNotEmpty
+            ? null
+            : initial.isNotEmpty
+                ? Text(
+                    initial,
+                    style: AppTextStyles.body.copyWith(
+                      color: colors.textOnSage,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  )
+                : Icon(
+                    Icons.person_rounded,
+                    size: 18,
+                    color: colors.textOnSage,
+                  ),
       ),
     );
   }
