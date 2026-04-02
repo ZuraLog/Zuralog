@@ -53,7 +53,7 @@ class _JournalEntryRouterState extends ConsumerState<JournalEntryRouter> {
 
   void _openConversationalMode() {
     ref.read(coachJournalModeProvider.notifier).state = true;
-    context.push(RouteNames.coachPath);
+    context.go(RouteNames.coachPath);
   }
 
   @override
