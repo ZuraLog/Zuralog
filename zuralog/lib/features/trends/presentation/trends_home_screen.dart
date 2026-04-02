@@ -18,6 +18,7 @@ import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/trends/domain/trends_models.dart';
 import 'package:zuralog/features/trends/providers/trends_providers.dart';
 import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
+import 'package:zuralog/features/trends/presentation/widgets/time_machine_strip.dart';
 import 'package:zuralog/shared/widgets/buttons/z_button.dart';
 import 'package:zuralog/shared/widgets/cards/z_locked_overlay.dart';
 import 'package:zuralog/shared/widgets/cards/z_topographic_card.dart';
@@ -319,6 +320,12 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody>
                 childCount: feed.length,
               ),
             ),
+
+            // Time Machine — weekly summaries (Pro only)
+            if (isPremium && widget.data.timePeriods.isNotEmpty)
+              SliverToBoxAdapter(
+                child: TimeMachineStrip(periods: widget.data.timePeriods),
+              ),
 
             const SliverToBoxAdapter(child: SizedBox(height: AppDimens.spaceXl)),
           ],
