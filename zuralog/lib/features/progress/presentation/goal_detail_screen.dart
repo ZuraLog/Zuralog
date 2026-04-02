@@ -155,7 +155,9 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
       ),
       data: (goalList) {
         Goal? goal;
+        debugPrint('[GoalDetail] Looking for goalId=${widget.goalId} in ${goalList.goals.length} goals');
         for (final g in goalList.goals) {
+          debugPrint('[GoalDetail]   goal.id=${g.id}');
           if (g.id == widget.goalId) {
             goal = g;
             break;
@@ -186,7 +188,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
                     child: Text(
                       'Go back',
                       style:
-                          AppTextStyles.bodyLarge.copyWith(color: AppColors.primary),
+                          AppTextStyles.bodyLarge.copyWith(color: colors.textPrimary),
                     ),
                   ),
                 ],
