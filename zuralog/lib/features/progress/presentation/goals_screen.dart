@@ -532,12 +532,14 @@ class _PeriodChip extends StatelessWidget {
         vertical: AppDimens.spaceXs,
       ),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.12),
+        color: AppColorsOf(context).textSecondary.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppDimens.radiusChip),
       ),
       child: Text(
         period.displayName,
-        style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary),
+        style: AppTextStyles.labelSmall.copyWith(
+          color: AppColorsOf(context).textSecondary,
+        ),
       ),
     );
   }

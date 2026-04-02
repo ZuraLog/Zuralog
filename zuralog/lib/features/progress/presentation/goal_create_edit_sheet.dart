@@ -268,7 +268,10 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
                     controller: scrollController,
                     slivers: [
                       SliverToBoxAdapter(child: _buildHeader(colors)),
-                      SliverToBoxAdapter(child: _buildTypeSection(colors)),
+                      // In edit mode, skip the type grid — type can't be changed
+                      // and showing it pushes the editable fields off-screen.
+                      if (!_isEdit)
+                        SliverToBoxAdapter(child: _buildTypeSection(colors)),
                       // Progressive reveal: these sections appear after type is chosen
                       SliverToBoxAdapter(child: _buildDetailsSection(colors)),
                       // Extra bottom space so content is not hidden behind the button
