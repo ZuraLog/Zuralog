@@ -265,9 +265,10 @@ class _MetricHeader extends StatelessWidget {
             ],
           ),
         ),
-        Text(
+        Icon(
           tileId.icon,
-          style: const TextStyle(fontSize: 14),
+          size: 16,
+          color: AppColorsOf(context).textSecondary,
         ),
       ],
     );

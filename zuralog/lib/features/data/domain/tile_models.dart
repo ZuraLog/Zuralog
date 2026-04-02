@@ -9,6 +9,7 @@
 /// - [TileConfig]             — extension on TileId for display/layout metadata
 library;
 
+import 'package:flutter/material.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 
@@ -322,40 +323,40 @@ extension TileConfig on TileId {
   List<TileSize> get allowedSizes =>
       const [TileSize.square, TileSize.wide, TileSize.tall];
 
-  /// Emoji icon representing this metric tile.
-  String get icon {
+  /// Material icon representing this metric tile.
+  IconData get icon {
     return switch (this) {
-      TileId.steps            => '👟',
-      TileId.activeCalories   => '🔥',
-      TileId.workouts         => '💪',
-      TileId.sleepDuration    => '🌙',
-      TileId.sleepStages      => '😴',
-      TileId.restingHeartRate => '❤️',
-      TileId.hrv              => '💓',
-      TileId.vo2Max           => '🫁',
-      TileId.weight           => '⚖️',
-      TileId.bodyFat          => '📉',
-      TileId.bloodPressure    => '🩺',
-      TileId.spo2             => '🫧',
-      TileId.calories         => '🥗',
-      TileId.water            => '💧',
-      TileId.mood             => '😊',
-      TileId.energy           => '⚡',
-      TileId.stress           => '🧠',
-      TileId.cycle            => '🌸',
-      TileId.environment      => '🌿',
-      TileId.mobility         => '🦵',
-      TileId.distance         => '📍',
-      TileId.floorsClimbed    => '🏢',
-      TileId.exerciseMinutes  => '⏱️',
-      TileId.walkingSpeed     => '🚶',
-      TileId.runningPace      => '🏃',
-      TileId.respiratoryRate  => '🫀',
-      TileId.bodyTemperature  => '🌡️',
-      TileId.wristTemperature => '⌚',
-      TileId.macros           => '🥦',
-      TileId.bloodGlucose     => '🩸',
-      TileId.mindfulMinutes   => '🧘',
+      TileId.steps            => Icons.directions_walk_rounded,
+      TileId.activeCalories   => Icons.local_fire_department_rounded,
+      TileId.workouts         => Icons.fitness_center_rounded,
+      TileId.sleepDuration    => Icons.bedtime_rounded,
+      TileId.sleepStages      => Icons.nightlight_rounded,
+      TileId.restingHeartRate => Icons.favorite_rounded,
+      TileId.hrv              => Icons.monitor_heart_rounded,
+      TileId.vo2Max           => Icons.air_rounded,
+      TileId.weight           => Icons.monitor_weight_rounded,
+      TileId.bodyFat          => Icons.trending_down_rounded,
+      TileId.bloodPressure    => Icons.medical_services_rounded,
+      TileId.spo2             => Icons.bubble_chart_rounded,
+      TileId.calories         => Icons.restaurant_rounded,
+      TileId.water            => Icons.water_drop_rounded,
+      TileId.mood             => Icons.sentiment_satisfied_rounded,
+      TileId.energy           => Icons.bolt_rounded,
+      TileId.stress           => Icons.psychology_rounded,
+      TileId.cycle            => Icons.spa_rounded,
+      TileId.environment      => Icons.eco_rounded,
+      TileId.mobility         => Icons.accessibility_new_rounded,
+      TileId.distance         => Icons.place_rounded,
+      TileId.floorsClimbed    => Icons.stairs_rounded,
+      TileId.exerciseMinutes  => Icons.timer_rounded,
+      TileId.walkingSpeed     => Icons.speed_rounded,
+      TileId.runningPace      => Icons.directions_run_rounded,
+      TileId.respiratoryRate  => Icons.air_rounded,
+      TileId.bodyTemperature  => Icons.thermostat_rounded,
+      TileId.wristTemperature => Icons.watch_rounded,
+      TileId.macros           => Icons.pie_chart_rounded,
+      TileId.bloodGlucose     => Icons.bloodtype_rounded,
+      TileId.mindfulMinutes   => Icons.self_improvement_rounded,
     };
   }
 
