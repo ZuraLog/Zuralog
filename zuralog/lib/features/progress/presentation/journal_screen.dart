@@ -368,9 +368,92 @@ class _JournalScreenState extends ConsumerState<JournalScreen> {
                             return Padding(
                               padding: const EdgeInsets.only(
                                   bottom: AppDimens.spaceSm),
-                              child: _EntryCard(
-                                entry: entry,
-                                onTap: () => _openEditEntry(entry),
+                              child: Dismissible(
+                                key: ValueKey(entry.id),
+                                direction: DismissDirection.endToStart,
+                                background: Container(
+                                  alignment: Alignment.centerRight,
+                                  padding: const EdgeInsets.only(
+                                      right: AppDimens.spaceLg),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.statusError
+                                        .withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(
+                                        AppDimens.radiusCard),
+                                  ),
+                                  child: const Icon(
+                                    Icons.delete_outline_rounded,
+                                    color: AppColors.statusError,
+                                  ),
+                                ),
+                                confirmDismiss: (_) async {
+                                  return await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) {
+                                      final dlgColors = AppColorsOf(ctx);
+                                      return AlertDialog(
+                                        backgroundColor:
+                                            dlgColors.elevatedSurface,
+                                        title: Text('Delete entry?',
+                                            style:
+                                                AppTextStyles.titleMedium),
+                                        content: Text(
+                                          'This action cannot be undone.',
+                                          style: AppTextStyles.bodyMedium
+                                              .copyWith(
+                                            color: dlgColors.textSecondary,
+                                          ),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.of(ctx).pop(false),
+                                            child: Text('Cancel',
+                                                style: AppTextStyles
+                                                    .bodyMedium
+                                                    .copyWith(
+                                                  color:
+                                                      dlgColors.textSecondary,
+                                                )),
+                                          ),
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.of(ctx).pop(true),
+                                            child: Text('Delete',
+                                                style: AppTextStyles
+                                                    .bodyMedium
+                                                    .copyWith(
+                                                  color:
+                                                      AppColors.statusError,
+                                                )),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
+                                onDismissed: (_) async {
+                                  try {
+                                    await ref
+                                        .read(progressRepositoryProvider)
+                                        .deleteJournalEntry(entry.id);
+                                    ref.invalidate(journalProvider);
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                              'Failed to delete entry.'),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                child: _EntryCard(
+                                  entry: entry,
+                                  onTap: () => _openEditEntry(entry),
+                                ),
                               ),
                             );
                           },
