@@ -194,7 +194,7 @@ class ZPremiumGateSheet extends ConsumerWidget {
                           Text(
                             'Upgrade to Pro',
                             style: AppTextStyles.labelLarge.copyWith(
-                              color: AppColors.textOnSage,
+                              color: Colors.white,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
