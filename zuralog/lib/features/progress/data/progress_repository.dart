@@ -45,6 +45,7 @@ abstract interface class ProgressRepositoryInterface {
     double? targetValue,
     String? unit,
     String? deadline,
+    String? period,
   });
 
   /// Deletes a goal by ID. Invalidates goals cache on success.
@@ -188,6 +189,7 @@ class ProgressRepository implements ProgressRepositoryInterface {
     double? targetValue,
     String? unit,
     String? deadline,
+    String? period,
   }) async {
     final response = await _api.patch(
       '/api/v1/goals/$goalId',
@@ -196,6 +198,7 @@ class ProgressRepository implements ProgressRepositoryInterface {
         'target_value': ?targetValue,
         'unit': ?unit,
         'deadline': ?deadline,
+        'period': ?period,
       },
     );
     _goalsCache = null;

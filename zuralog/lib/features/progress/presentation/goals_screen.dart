@@ -20,6 +20,7 @@ import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/progress/presentation/goal_create_edit_sheet.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── GoalsScreen ───────────────────────────────────────────────────────────────
@@ -44,6 +45,19 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
   }
 
   void _openCreateSheet() {
+    // Free users are limited to 3 active goals.
+    final isPremium = ref.read(isPremiumProvider);
+    final goalCount = ref.read(goalsProvider).valueOrNull?.goals.length ?? 0;
+    if (!isPremium && goalCount >= 3) {
+      ZPremiumGateSheet.show(
+        context,
+        headline: 'Set unlimited goals',
+        body: 'Upgrade to Pro to track as many goals as you want.',
+        icon: Icons.flag_rounded,
+      );
+      return;
+    }
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -90,8 +104,11 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
         title: 'Goals',
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_rounded),
-            color: AppColors.primary,
+            icon: Icon(
+              Icons.add_rounded,
+              color: AppColorsOf(context).textPrimary,
+              size: 28,
+            ),
             onPressed: _openCreateSheet,
             tooltip: 'New goal',
           ),
@@ -444,7 +461,7 @@ class _GoalRing extends StatelessWidget {
                 child: Text(
                 '${(value * 100).round()}%',
                 style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.primary,
+                  color: AppColorsOf(context).textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -471,18 +488,18 @@ class _RingPainter extends CustomPainter {
     final radius = (math.min(size.width, size.height) - _strokeWidth) / 2;
     const startAngle = -math.pi / 2; // 12-o'clock
 
-    // Track
+    // Track — use a visible gray that works in both themes.
     final trackPaint = Paint()
-      ..color = AppColors.primary.withValues(alpha: 0.15)
+      ..color = const Color(0xFF9B9894).withValues(alpha: 0.25)
       ..style = PaintingStyle.stroke
       ..strokeWidth = _strokeWidth
       ..strokeCap = StrokeCap.round;
     canvas.drawCircle(center, radius, trackPaint);
 
-    // Fill arc
+    // Fill arc — use a darker green that pops in light mode.
     if (progress > 0) {
       final fillPaint = Paint()
-        ..color = AppColors.primary
+        ..color = const Color(0xFF344E41) // Deep Forest Green — visible on both themes
         ..style = PaintingStyle.stroke
         ..strokeWidth = _strokeWidth
         ..strokeCap = StrokeCap.round;
@@ -515,12 +532,14 @@ class _PeriodChip extends StatelessWidget {
         vertical: AppDimens.spaceXs,
       ),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.12),
+        color: AppColorsOf(context).textSecondary.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppDimens.radiusChip),
       ),
       child: Text(
         period.displayName,
-        style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary),
+        style: AppTextStyles.labelSmall.copyWith(
+          color: AppColorsOf(context).textSecondary,
+        ),
       ),
     );
   }

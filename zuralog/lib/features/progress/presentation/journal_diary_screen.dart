@@ -107,10 +107,17 @@ class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
     final colors = AppColorsOf(context);
     final isEditing = widget.existingEntry != null;
 
+    final bottomPad = MediaQuery.paddingOf(context).bottom + 80;
+
     return ZuralogScaffold(
       appBar: ZuralogAppBar(title: isEditing ? 'Edit Entry' : 'Journal'),
       body: Padding(
-        padding: const EdgeInsets.all(AppDimens.spaceMd),
+        padding: EdgeInsets.fromLTRB(
+          AppDimens.spaceMd,
+          AppDimens.spaceMd,
+          AppDimens.spaceMd,
+          bottomPad,
+        ),
         child: Column(
           children: [
             // ── Text field ─────────────────────────────────────────────────

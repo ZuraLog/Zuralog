@@ -173,6 +173,8 @@ abstract final class AnalyticsEvents {
   static const String trendsPatternExpanded = 'trends_pattern_expanded';
   /// Fired when the category filter chip changes. Include: category.
   static const String trendsFilterChanged = 'trends_filter_changed';
+  /// Fired when the time range chip is changed on an expanded card. Include: pattern_id, time_range.
+  static const String trendsTimeRangeChanged = 'trends_time_range_changed';
   /// Fired when the "Ask Coach" CTA inside an expanded card is tapped. Include: pattern_id.
   static const String trendsCoachCtaTapped = 'trends_coach_cta_tapped';
 
