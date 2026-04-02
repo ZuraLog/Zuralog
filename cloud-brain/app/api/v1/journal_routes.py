@@ -193,7 +193,7 @@ async def list_journal_entries(
         query = query.where(JournalEntry.date <= _date.fromisoformat(date_to))
 
     # Fetch one extra to determine has_more.
-    query = query.order_by(JournalEntry.date.desc()).offset(offset).limit(limit + 1)
+    query = query.order_by(JournalEntry.created_at.desc()).offset(offset).limit(limit + 1)
 
     result = await db.execute(query)
     entries = list(result.scalars().all())
