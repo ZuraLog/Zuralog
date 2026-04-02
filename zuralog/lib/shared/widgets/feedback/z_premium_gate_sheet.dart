@@ -196,7 +196,12 @@ class ZPremiumGateSheet extends ConsumerWidget {
                   ),
                 ),
 
-                const SizedBox(height: AppDimens.spaceMd),
+                // Extra bottom padding to clear the tab bar.
+                SizedBox(
+                  height: AppDimens.spaceLg +
+                      MediaQuery.paddingOf(context).bottom +
+                      80,
+                ),
               ],
             ),
           ),

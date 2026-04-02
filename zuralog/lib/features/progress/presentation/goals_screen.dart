@@ -104,8 +104,11 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
         title: 'Goals',
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_rounded),
-            color: AppColors.primary,
+            icon: Icon(
+              Icons.add_rounded,
+              color: AppColorsOf(context).textPrimary,
+              size: 28,
+            ),
             onPressed: _openCreateSheet,
             tooltip: 'New goal',
           ),
