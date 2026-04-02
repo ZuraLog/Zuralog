@@ -86,8 +86,8 @@ class Settings(BaseSettings):
     openrouter_insight_model: str = "qwen/qwen3.5-flash-02-23"
     # OPENROUTER_INSIGHT_MODEL — cheap fast model for daily insight generation.
     # Separate from openrouter_model (Kimi K2.5) which is the Coach tab model.
-    openrouter_title_model: str = "openai/gpt-4.1-nano"
-    openrouter_fallback_model: str = "openai/gpt-4o-mini"
+    openrouter_title_model: str = "qwen/qwen3.5-flash-02-23"
+    openrouter_fallback_model: str = "qwen/qwen3.5-flash-02-23"
     openrouter_classifier_model: str = "qwen/qwen3.5-flash-02-23"
     google_web_client_id: str = ""
     google_web_client_secret: SecretStr = SecretStr("")
