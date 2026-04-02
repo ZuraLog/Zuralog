@@ -16,7 +16,7 @@ Decision tree (evaluated in order):
 import logging
 
 from app.agent.classifier import MessageTier, classify_message
-from app.config import MODEL_IDS, ROUTER_MODEL_ZURA, ROUTER_MODEL_ZURA_FLASH
+from app.config import ROUTER_MODEL_ZURA, ROUTER_MODEL_ZURA_FLASH
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
