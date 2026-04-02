@@ -89,12 +89,13 @@ class FitnessLevelStep extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Heading ───────────────────────────────────────────────────
-          Text(
-            'How active\nare you?',
+          ZPatternText(
+            text: 'How active\nare you?',
             style: AppTextStyles.displayLarge.copyWith(
-              color: colors.primary,
               height: 1.1,
             ),
+            variant: ZPatternVariant.sage,
+            animate: true,
           ),
           const SizedBox(height: AppDimens.spaceXs),
           Text(

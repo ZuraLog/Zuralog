@@ -83,12 +83,13 @@ class NotificationsStep extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Heading ────────────────────────────────────────────────────
-          Text(
-            'Stay in the loop',
+          ZPatternText(
+            text: 'Stay in the loop',
             style: AppTextStyles.displayLarge.copyWith(
-              color: colors.primary,
               height: 1.15,
             ),
+            variant: ZPatternVariant.sage,
+            animate: true,
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(

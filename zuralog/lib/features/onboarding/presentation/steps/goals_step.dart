@@ -128,12 +128,13 @@ class GoalsStep extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Heading ────────────────────────────────────────────────────
-          Text(
-            'What are your\nhealth goals?',
+          ZPatternText(
+            text: 'What are your\nhealth goals?',
             style: AppTextStyles.displayLarge.copyWith(
-              color: colors.primary,
               height: 1.15,
             ),
+            variant: ZPatternVariant.sage,
+            animate: true,
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(

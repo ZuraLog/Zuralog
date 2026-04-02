@@ -15,7 +15,6 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/integrations/domain/integrations_provider.dart';
 import 'package:zuralog/features/integrations/domain/integration_model.dart';
-import 'package:zuralog/shared/widgets/pattern/z_pattern_text.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── Step Widget ──────────────────────────────────────────────────────────────
