@@ -84,7 +84,7 @@ class _ZPatternTextState extends State<ZPatternText>
     if (widget.animate) {
       _controller = AnimationController(
         vsync: this,
-        duration: const Duration(seconds: 8),
+        duration: const Duration(seconds: 6),
       )..repeat(reverse: true);
     }
   }
@@ -181,7 +181,7 @@ class _ZPatternTextState extends State<ZPatternText>
   // ── Build ─────────────────────────────────────────────────────────────
 
   /// Maximum diagonal drift in logical pixels.
-  static const double _driftRange = 60.0;
+  static const double _driftRange = 200.0;
 
   Float64List _buildMatrix(Rect bounds) {
     if (_image == null) return Matrix4.identity().storage;
