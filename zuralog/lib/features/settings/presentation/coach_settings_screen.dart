@@ -547,7 +547,7 @@ class _UsageSectionState extends ConsumerState<_UsageSection> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final colors = AppColorsOf(context);
     final usageAsync = ref.watch(coachUsageProvider);
 
     return Padding(
@@ -580,6 +580,14 @@ class _UsageSectionState extends ConsumerState<_UsageSection> {
                 used: usage.zuraUsed,
                 limit: usage.zuraLimit,
               ),
+              if (usage.burstUsed >= (usage.burstLimit * 0.8).floor()) ...[
+                const SizedBox(height: AppDimens.spaceXs),
+                _UsageBar(
+                  label: 'Burst window',
+                  used: usage.burstUsed,
+                  limit: usage.burstLimit,
+                ),
+              ],
             ],
           ),
         ),
@@ -601,7 +609,7 @@ class _UsageBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final colors = AppColorsOf(context);
     final double progress = limit > 0 ? (used / limit).clamp(0.0, 1.0) : 0.0;
 
     final Color barColor;
@@ -620,13 +628,13 @@ class _UsageBar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label, style: AppTextStyles.bodySmall),
-            Text('$used / $limit', style: AppTextStyles.bodySmall.copyWith(color: colors.onSurfaceVariant)),
+            Text('$used / $limit', style: AppTextStyles.bodySmall.copyWith(color: colors.textSecondary)),
           ],
         ),
         const SizedBox(height: 4),
         LinearProgressIndicator(
           value: progress,
-          backgroundColor: colors.surfaceContainerHighest,
+          backgroundColor: colors.surfaceRaised,
           valueColor: AlwaysStoppedAnimation<Color>(barColor),
           borderRadius: BorderRadius.circular(2),
         ),

@@ -73,7 +73,7 @@ logger = logging.getLogger(__name__)
 def _format_reset_time(seconds: int) -> str:
     """Convert seconds to a human-readable reset time string."""
     if seconds >= 3600:
-        hours = round(seconds / 3600)
+        hours = max(1, round(seconds / 3600))
         return f"{hours} hour{'s' if hours != 1 else ''}"
     minutes = max(1, round(seconds / 60))
     return f"{minutes} minute{'s' if minutes != 1 else ''}"

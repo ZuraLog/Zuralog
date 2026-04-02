@@ -275,7 +275,7 @@ class RateLimiter:
         Args:
             user_id: The authenticated user's ID.
             tier: Subscription tier ('free' or 'premium').
-            model_tier: Which model was used ('zura_flash' or 'zura_pro').
+            model_tier: Which model was used ('zura_flash' or 'zura').
         """
         (fk, zk, bk, _1, _2, _3, ft, zt, bt) = self._resolve_model_keys(user_id, tier)
         mk = fk if model_tier == "zura_flash" else zk
