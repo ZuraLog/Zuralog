@@ -378,12 +378,6 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     return ZuralogScaffold(
       body: Stack(
         children: [
-          const Positioned.fill(
-            child: ZPatternOverlay(
-              variant: ZPatternVariant.sage,
-              opacity: 0.10,
-            ),
-          ),
           Column(
             children: [
               _OnboardingTopBar(
