@@ -17,8 +17,11 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/trends/domain/trends_models.dart';
 import 'package:zuralog/features/trends/providers/trends_providers.dart';
+import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
 import 'package:zuralog/shared/widgets/buttons/z_button.dart';
+import 'package:zuralog/shared/widgets/cards/z_locked_overlay.dart';
 import 'package:zuralog/shared/widgets/cards/z_topographic_card.dart';
+import 'package:zuralog/shared/widgets/feedback/z_premium_gate_sheet.dart';
 import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/loading/z_loading_skeleton.dart';
 import 'package:zuralog/shared/widgets/z_badge.dart';
@@ -61,12 +64,16 @@ class TrendsHomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final trendsAsync = ref.watch(trendsHomeProvider);
+    final isPremium = ref.watch(isPremiumProvider);
 
     String? subtitle;
     if (trendsAsync.hasValue) {
       final data = trendsAsync.value!;
       if (data.patternCount > 0) {
-        subtitle = '${data.patternCount} patterns discovered';
+        // Free users see "3 of N patterns" when there are more than 3.
+        subtitle = !isPremium && data.patternCount > 3
+            ? '3 of ${data.patternCount} patterns'
+            : '${data.patternCount} patterns discovered';
       }
     }
 
@@ -151,13 +158,23 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody>
   String _capitalize(String category) =>
       category.isEmpty ? category : category[0].toUpperCase() + category.substring(1);
 
+  /// Maximum number of patterns visible to free users (1 hero + 2 feed).
+  static const _freePatternLimit = 3;
+
   @override
   Widget build(BuildContext context) {
     final category = ref.watch(selectedCategoryFilterProvider);
+    final isPremium = ref.watch(isPremiumProvider);
     final filtered = _buildFilteredList(category);
 
     final hero = filtered.isNotEmpty ? filtered.first : null;
-    final feed = filtered.length > 1 ? filtered.sublist(1) : <CorrelationHighlight>[];
+    final allFeed =
+        filtered.length > 1 ? filtered.sublist(1) : <CorrelationHighlight>[];
+
+    // Free users see at most 2 unlocked feed cards (hero + 2 = 3 total).
+    final int unlockedFeedCount =
+        isPremium ? allFeed.length : (allFeed.length).clamp(0, _freePatternLimit - 1);
+    final feed = allFeed;
 
     return RefreshIndicator(
       color: AppColorsOf(context).trendsSage,
@@ -265,6 +282,20 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody>
                   final h = feed[index];
                   // +1 because hero is index 0 in animation list
                   final anim = _animFor(index + 1);
+                  final isLocked = index >= unlockedFeedCount;
+
+                  Widget card = _PatternCard(highlight: h);
+
+                  if (isLocked) {
+                    card = ZLockedOverlay(
+                      headline: 'See all your patterns',
+                      body:
+                          'Upgrade to Pro to explore every pattern Zuralog discovers in your data.',
+                      icon: Icons.auto_awesome_rounded,
+                      child: card,
+                    );
+                  }
+
                   return Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppDimens.spaceMd,
@@ -277,7 +308,7 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody>
                           begin: const Offset(0, 0.08),
                           end: Offset.zero,
                         ).animate(anim),
-                        child: _PatternCard(highlight: h),
+                        child: card,
                       ),
                     ),
                   );
@@ -487,10 +518,25 @@ class _PatternCard extends ConsumerStatefulWidget {
 class _PatternCardState extends ConsumerState<_PatternCard> {
   void _handleTap() {
     final h = widget.highlight;
+    final isPremium = ref.read(isPremiumProvider);
+
+    ref.read(hapticServiceProvider).light();
+
+    // Free users cannot expand feed cards — show the premium gate instead.
+    if (!isPremium) {
+      ZPremiumGateSheet.show(
+        context,
+        headline: 'See all your patterns',
+        body:
+            'Upgrade to Pro to explore every pattern Zuralog discovers in your data.',
+        icon: Icons.auto_awesome_rounded,
+      );
+      return;
+    }
+
     final strength = _strengthLabel(h.coefficient);
     final isExpanded = ref.read(expandedPatternIdsProvider).contains(h.id);
 
-    ref.read(hapticServiceProvider).light();
     ref.read(analyticsServiceProvider).capture(
       event: AnalyticsEvents.trendsPatternTapped,
       properties: {
@@ -675,40 +721,10 @@ class _ExpandedPatternContent extends ConsumerWidget {
             Divider(color: AppColorsOf(context).trendsBorderDefault),
             const SizedBox(height: AppDimens.spaceSm),
 
-            // Time range chips (static — 30D active)
-            Row(
-              children: ['7D', '30D', '90D'].map((label) {
-                final isActive = label == '30D';
-                return Padding(
-                  padding: const EdgeInsets.only(right: AppDimens.spaceSm),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppDimens.spaceSm,
-                      vertical: AppDimens.spaceXs,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? categoryColor.withValues(alpha: 0.15)
-                          : AppColorsOf(context).trendsBorderDefault,
-                      borderRadius:
-                          BorderRadius.circular(AppDimens.radiusChip),
-                      border: Border.all(
-                        color: isActive
-                            ? categoryColor.withValues(alpha: 0.4)
-                            : AppColorsOf(context).trendsBorderDefault,
-                      ),
-                    ),
-                    child: Text(
-                      label,
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: isActive
-                            ? categoryColor
-                            : AppColorsOf(context).trendsTextMuted,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
+            // Time range chips — wired to selectedTimeRangeProvider
+            _TimeRangeChipsRow(
+              patternId: patternId,
+              categoryColor: categoryColor,
             ),
             const SizedBox(height: AppDimens.spaceMd),
 
@@ -811,6 +827,105 @@ class _ExpandedPatternContent extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── _TimeRangeChipsRow ────────────────────────────────────────────────────────
+
+/// Row of time range chips for expanded pattern cards.
+///
+/// Pro users can switch between all ranges. Free users can only use 30D;
+/// tapping a locked chip opens [ZPremiumGateSheet].
+class _TimeRangeChipsRow extends ConsumerWidget {
+  const _TimeRangeChipsRow({
+    required this.patternId,
+    required this.categoryColor,
+  });
+
+  final String patternId;
+  final Color categoryColor;
+
+  /// Display label -> query value mapping.
+  static const _ranges = {
+    '7D': '7d',
+    '30D': '30d',
+    '90D': '90d',
+    '6M': '6m',
+    '1Y': '1y',
+  };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedRange = ref.watch(selectedTimeRangeProvider(patternId));
+    final isPremium = ref.watch(isPremiumProvider);
+
+    return Row(
+      children: _ranges.entries.map((entry) {
+        final label = entry.key;
+        final value = entry.value;
+        final isActive = value == selectedRange;
+        // Free users can only use 30D.
+        final isLocked = !isPremium && value != '30d';
+
+        return Padding(
+          padding: const EdgeInsets.only(right: AppDimens.spaceSm),
+          child: Opacity(
+            opacity: isLocked ? 0.5 : 1.0,
+            child: GestureDetector(
+              onTap: () {
+                if (isLocked) {
+                  ref.read(hapticServiceProvider).light();
+                  ZPremiumGateSheet.show(
+                    context,
+                    headline: 'Explore longer time ranges',
+                    body:
+                        'Upgrade to Pro to see how your patterns change over weeks and months.',
+                    icon: Icons.date_range_rounded,
+                  );
+                  return;
+                }
+                if (isActive) return;
+                ref.read(hapticServiceProvider).selectionTick();
+                ref.read(selectedTimeRangeProvider(patternId).notifier).state =
+                    value;
+                ref.read(analyticsServiceProvider).capture(
+                  event: AnalyticsEvents.trendsTimeRangeChanged,
+                  properties: {
+                    'pattern_id': patternId,
+                    'time_range': value,
+                  },
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceSm,
+                  vertical: AppDimens.spaceXs,
+                ),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? categoryColor.withValues(alpha: 0.15)
+                      : AppColorsOf(context).trendsBorderDefault,
+                  borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+                  border: Border.all(
+                    color: isActive
+                        ? categoryColor.withValues(alpha: 0.4)
+                        : AppColorsOf(context).trendsBorderDefault,
+                  ),
+                ),
+                child: Text(
+                  label,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: isActive
+                        ? categoryColor
+                        : AppColorsOf(context).trendsTextMuted,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
@@ -923,6 +1038,7 @@ class _FilterChipsRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(selectedCategoryFilterProvider);
+    final isPremium = ref.watch(isPremiumProvider);
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -931,39 +1047,55 @@ class _FilterChipsRow extends ConsumerWidget {
         children: _categories.map((cat) {
           final isActive = cat == selected;
           final catColor = _categoryColor(cat, context);
+          // Free users can only use the "All" chip.
+          final isLockedChip = !isPremium && cat != 'all';
 
           return Padding(
             padding: const EdgeInsets.only(right: AppDimens.spaceSm),
-            child: GestureDetector(
-              onTap: () {
-                ref.read(hapticServiceProvider).selectionTick();
-                ref.read(selectedCategoryFilterProvider.notifier).state = cat;
-                ref.read(analyticsServiceProvider).capture(
-                  event: AnalyticsEvents.trendsFilterChanged,
-                  properties: {'category': cat},
-                );
-                onCategoryChanged?.call(cat);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceMd,
-                  vertical: AppDimens.spaceXs,
-                ),
-                decoration: BoxDecoration(
-                  color: isActive
-                      ? catColor.withValues(alpha: 0.15)
-                      : AppColorsOf(context).trendsSurface,
-                  borderRadius: BorderRadius.circular(AppDimens.radiusChip),
-                  border: Border.all(
-                    color: isActive
-                        ? catColor.withValues(alpha: 0.4)
-                        : AppColorsOf(context).trendsBorderDefault,
+            child: Opacity(
+              opacity: isLockedChip ? 0.5 : 1.0,
+              child: GestureDetector(
+                onTap: () {
+                  if (isLockedChip) {
+                    ref.read(hapticServiceProvider).light();
+                    ZPremiumGateSheet.show(
+                      context,
+                      headline: 'Filter by category',
+                      body:
+                          'Upgrade to Pro to filter patterns by Sleep, Activity, Heart, and more.',
+                      icon: Icons.filter_list_rounded,
+                    );
+                    return;
+                  }
+                  ref.read(hapticServiceProvider).selectionTick();
+                  ref.read(selectedCategoryFilterProvider.notifier).state = cat;
+                  ref.read(analyticsServiceProvider).capture(
+                    event: AnalyticsEvents.trendsFilterChanged,
+                    properties: {'category': cat},
+                  );
+                  onCategoryChanged?.call(cat);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceMd,
+                    vertical: AppDimens.spaceXs,
                   ),
-                ),
-                child: Text(
-                  _capitalize(cat),
-                  style: AppTextStyles.labelMedium.copyWith(
-                    color: isActive ? catColor : AppColorsOf(context).trendsTextMuted,
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? catColor.withValues(alpha: 0.15)
+                        : AppColorsOf(context).trendsSurface,
+                    borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+                    border: Border.all(
+                      color: isActive
+                          ? catColor.withValues(alpha: 0.4)
+                          : AppColorsOf(context).trendsBorderDefault,
+                    ),
+                  ),
+                  child: Text(
+                    _capitalize(cat),
+                    style: AppTextStyles.labelMedium.copyWith(
+                      color: isActive ? catColor : AppColorsOf(context).trendsTextMuted,
+                    ),
                   ),
                 ),
               ),

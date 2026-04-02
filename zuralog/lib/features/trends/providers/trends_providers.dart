@@ -61,6 +61,16 @@ final selectedCategoryFilterProvider = StateProvider<String>((ref) => 'all');
 /// expansion state survives scroll recycling.
 final expandedPatternIdsProvider = StateProvider<Set<String>>((ref) => const {});
 
+// ── Selected Time Range ──────────────────────────────────────────────────────
+
+/// Active time range for each expanded pattern card, keyed by pattern ID.
+///
+/// Defaults to `'30d'`. When the user picks a different chip (e.g. 7D, 90D),
+/// updating this provider causes [patternExpandProvider] to re-fetch with the
+/// new range.
+final selectedTimeRangeProvider =
+    StateProvider.family<String, String>((ref, patternId) => '30d');
+
 // ── Pattern Expand ────────────────────────────────────────────────────────────
 
 /// Chart data and AI explanation for a single pattern card identified by its
@@ -69,22 +79,8 @@ final expandedPatternIdsProvider = StateProvider<Set<String>>((ref) => const {})
 /// Not autoDisposed — the data stays alive after the card collapses so a
 /// second tap re-expands instantly without a loading spinner.
 ///
-/// **Design: [ref.read] vs [ref.watch]**
-///
-/// This provider uses [ref.read] (not [ref.watch]) to read the repository
-/// instance once at provider build time. This prevents the future from
-/// re-firing if [trendsRepositoryProvider] rebuilds. We use [ref.read]
-/// because:
-///   - Pattern expand is a one-shot fetch (user taps to expand), not a
-///     continuous subscription.
-///   - If [trendsRepositoryProvider] ever becomes reactive (e.g., toggles
-///     between mock and real), the expanded card will simply show stale data
-///     until manually invalidated — acceptable for this use case.
-///   - If we used [ref.watch], every repository swap would re-fetch the
-///     pattern, creating unnecessary network churn.
-///
-/// Call [ref.invalidate(patternExpandProvider)] explicitly to force a
-/// re-fetch if the data source changes.
+/// Watches [selectedTimeRangeProvider] for the given pattern so that
+/// changing the time range chip triggers a fresh fetch automatically.
 ///
 /// **Error handling — why errors propagate:**
 ///
@@ -97,5 +93,6 @@ final expandedPatternIdsProvider = StateProvider<Set<String>>((ref) => const {})
 final patternExpandProvider =
     FutureProvider.family<PatternExpandData, String>((ref, patternId) {
   final repo = ref.read(trendsRepositoryProvider);
-  return repo.fetchPatternExpand(patternId);
+  final timeRange = ref.watch(selectedTimeRangeProvider(patternId));
+  return repo.fetchPatternExpand(patternId, timeRange: timeRange);
 });
