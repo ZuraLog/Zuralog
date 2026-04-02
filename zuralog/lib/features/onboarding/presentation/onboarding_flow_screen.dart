@@ -321,10 +321,6 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         body['fitness_level'] = _fitnessLevel;
       }
 
-      if (_nickname.isNotEmpty) {
-        body['nickname'] = _nickname;
-      }
-
       await apiClient.patch('/api/v1/preferences', body: body);
 
       // PostHog completion events
