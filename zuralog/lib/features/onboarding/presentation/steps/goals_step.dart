@@ -115,6 +115,8 @@ class GoalsStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceLg,
@@ -129,14 +131,14 @@ class GoalsStep extends StatelessWidget {
           Text(
             'What are your\nhealth goals?',
             style: AppTextStyles.displayLarge.copyWith(
-              color: AppColors.primary,
+              color: colors.primary,
               height: 1.15,
             ),
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(
             'Select all that apply. You can change these later.',
-            style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondaryDark),
+            style: AppTextStyles.bodyLarge.copyWith(color: colors.textSecondary),
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
@@ -168,7 +170,7 @@ class GoalsStep extends StatelessWidget {
             Text(
               'You can skip this — tap Next to continue.',
               style: AppTextStyles.bodySmall
-                  .copyWith(color: AppColors.textSecondaryDark),
+                  .copyWith(color: colors.textSecondary),
             ),
           const SizedBox(height: AppDimens.spaceLg),
         ],
@@ -193,6 +195,8 @@ class _GoalTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
     return ZSelectableTile(
       isSelected: isSelected,
       onTap: onTap,
@@ -207,7 +211,7 @@ class _GoalTile extends StatelessWidget {
           Text(
             goal.label,
             style: AppTextStyles.labelMedium.copyWith(
-              color: isSelected ? goal.color : AppColors.textPrimaryDark,
+              color: isSelected ? goal.color : colors.textPrimary,
               fontWeight:
                   isSelected ? FontWeight.w600 : FontWeight.w500,
             ),

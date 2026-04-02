@@ -380,9 +380,9 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         children: [
           const Positioned.fill(
             child: ZPatternOverlay(
-              variant: ZPatternVariant.original,
+              variant: ZPatternVariant.sage,
               opacity: 0.10,
-              blendMode: BlendMode.screen,
+              animate: true,
             ),
           ),
           Column(
@@ -437,6 +437,8 @@ class _OnboardingTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceSm,
@@ -452,7 +454,7 @@ class _OnboardingTopBar extends StatelessWidget {
             child: onBack != null
                 ? IconButton(
                     icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-                    color: AppColors.textSecondaryDark,
+                    color: colors.textSecondary,
                     onPressed: onBack,
                     tooltip: 'Back',
                     padding: EdgeInsets.zero,
@@ -476,7 +478,7 @@ class _OnboardingTopBar extends StatelessWidget {
                 ? TextButton(
                     onPressed: onSkip,
                     style: TextButton.styleFrom(
-                      foregroundColor: AppColors.textSecondaryDark,
+                      foregroundColor: colors.textSecondary,
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       padding: const EdgeInsets.symmetric(

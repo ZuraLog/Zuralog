@@ -49,6 +49,7 @@ class NotificationsStep extends StatelessWidget {
   }
 
   Future<void> _pickTime(BuildContext context) async {
+    final colors = AppColorsOf(context);
     final picked = await showTimePicker(
       context: context,
       initialTime: morningBriefingTime,
@@ -56,8 +57,8 @@ class NotificationsStep extends StatelessWidget {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: AppColors.primary,
-                  onPrimary: AppColors.primaryButtonText,
+                  primary: colors.primary,
+                  onPrimary: colors.textOnSage,
                 ),
           ),
           child: child!,
@@ -69,6 +70,8 @@ class NotificationsStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceLg,
@@ -83,7 +86,7 @@ class NotificationsStep extends StatelessWidget {
           Text(
             'Stay in the loop',
             style: AppTextStyles.displayLarge.copyWith(
-              color: AppColors.primary,
+              color: colors.primary,
               height: 1.15,
             ),
           ),
@@ -92,7 +95,7 @@ class NotificationsStep extends StatelessWidget {
             'Customise how Zuralog keeps you informed. '
             'You can change these any time in Settings.',
             style: AppTextStyles.bodyLarge
-                .copyWith(color: AppColors.textSecondaryDark),
+                .copyWith(color: colors.textSecondary),
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
@@ -118,7 +121,7 @@ class NotificationsStep extends StatelessWidget {
                           vertical: 4,
                         ),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.12),
+                        color: colors.primary.withValues(alpha: 0.12),
                         borderRadius:
                             BorderRadius.circular(AppDimens.shapePill),
                       ),
@@ -128,14 +131,14 @@ class NotificationsStep extends StatelessWidget {
                           Text(
                             _formatTime(morningBriefingTime),
                             style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.primary,
+                              color: colors.primary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           const SizedBox(width: 2),
-                          const Icon(
+                          Icon(
                             Icons.edit_rounded,
-                            color: AppColors.primary,
+                            color: colors.primary,
                             size: 12,
                           ),
                         ],
@@ -202,12 +205,14 @@ class _NotificationRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
         color: isEnabled
             ? iconColor.withValues(alpha: 0.06)
-            : AppColors.surface,
+            : colors.surface,
         borderRadius: BorderRadius.circular(AppDimens.shapeMd),
       ),
       padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -233,14 +238,14 @@ class _NotificationRow extends StatelessWidget {
                 Text(
                   title,
                   style: AppTextStyles.titleMedium.copyWith(
-                    color: AppColors.textPrimaryDark,
+                    color: colors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   description,
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondaryDark,
+                    color: colors.textSecondary,
                   ),
                 ),
                 if (trailing != null) ...[
