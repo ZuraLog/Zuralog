@@ -167,31 +167,35 @@ class TileChartShell extends StatelessWidget {
 
     return switch (mode) {
       ChartMode.square => LayoutBuilder(
-          builder: (context, constraints) => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Expanded(
-                child: Center(
+          builder: (context, constraints) {
+            final gaugeW = constraints.maxWidth * 0.85;
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: gaugeW,
+                  height: gaugeW / 2 + 16,
                   child: GaugeRenderer(
                     config: c,
                     color: color,
                     renderCtx: renderCtx,
-                    gaugeSize: constraints.maxWidth,
+                    gaugeSize: gaugeW,
                   ),
                 ),
-              ),
-              Text(
-                '${c.value}',
-                style: AppTextStyles.titleMedium
-                    .copyWith(color: color, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                zoneLabel,
-                style: AppTextStyles.labelSmall
-                    .copyWith(color: colors.textSecondary),
-              ),
-            ],
-          ),
+                const SizedBox(height: 4),
+                Text(
+                  '${c.value}',
+                  style: AppTextStyles.titleMedium
+                      .copyWith(color: color, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  zoneLabel,
+                  style: AppTextStyles.labelSmall
+                      .copyWith(color: colors.textSecondary),
+                ),
+              ],
+            );
+          },
         ),
       ChartMode.wide => LayoutBuilder(
           builder: (context, constraints) => Column(
