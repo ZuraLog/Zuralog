@@ -7,6 +7,7 @@ library;
 
 import 'package:flutter/widgets.dart';
 import 'package:zuralog/features/coach/domain/coach_models.dart';
+import 'package:zuralog/features/coach/domain/coach_usage.dart';
 
 // ── Stream Events ─────────────────────────────────────────────────────────────
 
@@ -136,6 +137,9 @@ abstract interface class CoachRepository {
   ///
   /// Safe to call when no stream is active.
   Future<void> cancelActiveStream();
+
+  /// Returns the current per-model usage limits for the authenticated user.
+  Future<CoachUsage> fetchUsage();
 }
 
 // ── Mock Implementation ────────────────────────────────────────────────────────
@@ -275,6 +279,17 @@ final class MockCoachRepository implements CoachRepository {
 
   @override
   Future<void> cancelActiveStream() async {}
+
+  @override
+  Future<CoachUsage> fetchUsage() async {
+    return const CoachUsage(
+      flashUsed: 0, flashLimit: 20,
+      zuraUsed: 0, zuraLimit: 5,
+      burstUsed: 0, burstLimit: 20,
+      flashResetSeconds: 86400, zuraResetSeconds: 86400, burstResetSeconds: 18000,
+      tier: 'free',
+    );
+  }
 
   @override
   Future<List<QuickAction>> fetchQuickActions() async {

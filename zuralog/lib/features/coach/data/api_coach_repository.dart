@@ -23,6 +23,7 @@ import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/core/storage/secure_storage.dart';
 import 'package:zuralog/features/coach/data/coach_repository.dart';
 import 'package:zuralog/features/coach/domain/coach_models.dart';
+import 'package:zuralog/features/coach/domain/coach_usage.dart';
 
 // ── Icon name → Material code point mapping ───────────────────────────────────
 
@@ -119,6 +120,12 @@ final class ApiCoachRepository implements CoachRepository {
     await _activeChannel?.sink.close();
     _activeDoneCompleter = null;
     _activeChannel = null;
+  }
+
+  @override
+  Future<CoachUsage> fetchUsage() async {
+    final response = await _apiClient.get('/api/v1/coach/usage');
+    return CoachUsage.fromJson(response.data as Map<String, dynamic>);
   }
 
   static String _deriveWsUrl() {
@@ -462,12 +469,14 @@ final class ApiCoachRepository implements CoachRepository {
                     return;
                   }
 
+                  final modelUsed = msg['model_used'] as String?;
                   final chatMsg = ChatMessage(
                     id: msgId,
                     conversationId: convId,
                     role: MessageRole.assistant,
                     content: content,
                     createdAt: DateTime.now(),
+                    modelUsed: modelUsed,
                   );
                   controller.add(StreamComplete(
                     message: chatMsg,

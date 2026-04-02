@@ -100,6 +100,7 @@ class ChatMessage {
     required this.content,
     required this.createdAt,
     this.attachmentUrls = const [],
+    this.modelUsed,
   });
 
   /// Unique message identifier.
@@ -120,6 +121,9 @@ class ChatMessage {
   /// Attachment preview URLs (images, PDFs).
   final List<String> attachmentUrls;
 
+  /// Which AI model produced this message (e.g. "zura_flash", "zura"). Null for user messages.
+  final String? modelUsed;
+
   /// Whether the message has any attachments.
   bool get hasAttachments => attachmentUrls.isNotEmpty;
 
@@ -131,6 +135,7 @@ class ChatMessage {
     String? content,
     DateTime? createdAt,
     List<String>? attachmentUrls,
+    String? modelUsed,
   }) {
     return ChatMessage(
       id: id ?? this.id,
@@ -139,6 +144,7 @@ class ChatMessage {
       content: content ?? this.content,
       createdAt: createdAt ?? this.createdAt,
       attachmentUrls: attachmentUrls ?? this.attachmentUrls,
+      modelUsed: modelUsed ?? this.modelUsed,
     );
   }
 
