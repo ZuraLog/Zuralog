@@ -218,7 +218,8 @@ class TestFitbitWebhookEvent:
         silently dropped — no task dispatched, but still returns 204."""
         mock_task = MagicMock()
         with patch("app.api.v1.fitbit_webhooks.settings") as mock_settings:
-            mock_settings.fitbit_webhook_subscriber_id = "our-real-subscriber-id"
+            from pydantic import SecretStr
+            mock_settings.fitbit_webhook_subscriber_id = SecretStr("our-real-subscriber-id")
             with patch(_TASK_PATH, mock_task):
                 response = client.post(
                     "/api/v1/webhooks/fitbit",

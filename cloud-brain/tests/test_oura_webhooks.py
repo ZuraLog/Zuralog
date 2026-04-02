@@ -245,7 +245,8 @@ class TestOuraWebhookEvent:
     def test_invalid_path_token_returns_404(self, client):
         """Wrong path token when oura_webhook_path_token is configured → 404."""
         with patch("app.api.v1.oura_webhooks.settings") as mock_settings:
-            mock_settings.oura_webhook_path_token = "correct-secret-token"
+            from pydantic import SecretStr
+            mock_settings.oura_webhook_path_token = SecretStr("correct-secret-token")
             response = client.post(
                 "/api/v1/webhooks/oura/wrong_token",
                 json={
@@ -260,7 +261,8 @@ class TestOuraWebhookEvent:
         """Correct path token when oura_webhook_path_token is configured → 200."""
         mock_task = MagicMock()
         with patch("app.api.v1.oura_webhooks.settings") as mock_settings:
-            mock_settings.oura_webhook_path_token = "correct-secret-token"
+            from pydantic import SecretStr
+            mock_settings.oura_webhook_path_token = SecretStr("correct-secret-token")
             with patch(_TASK_PATH, mock_task):
                 response = client.post(
                     "/api/v1/webhooks/oura/correct-secret-token",

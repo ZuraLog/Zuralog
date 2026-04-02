@@ -110,13 +110,13 @@ class Settings(BaseSettings):
     fitbit_client_secret: SecretStr = SecretStr("")
     fitbit_redirect_uri: str = "zuralog://oauth/fitbit"
     fitbit_webhook_verify_code: str = ""
-    fitbit_webhook_subscriber_id: str = ""
+    fitbit_webhook_subscriber_id: SecretStr = SecretStr("")
     # Oura Ring OAuth 2.0
     oura_client_id: str = ""  # OURA_CLIENT_ID
     oura_client_secret: SecretStr = SecretStr("")  # OURA_CLIENT_SECRET
     oura_redirect_uri: str = "zuralog://oauth/oura"  # OURA_REDIRECT_URI
     oura_webhook_verification_token: str = ""  # OURA_WEBHOOK_VERIFICATION_TOKEN
-    oura_webhook_path_token: str = ""  # OURA_WEBHOOK_PATH_TOKEN — secret embedded in the webhook URL path
+    oura_webhook_path_token: SecretStr = SecretStr("")  # OURA_WEBHOOK_PATH_TOKEN — secret embedded in the webhook URL path
     oura_use_sandbox: bool = False  # OURA_USE_SANDBOX
     # Withings OAuth 2.0
     withings_client_id: str = ""  # WITHINGS_CLIENT_ID

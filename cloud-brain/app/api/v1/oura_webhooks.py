@@ -46,7 +46,7 @@ async def oura_webhook_event(request: Request, path_token: str) -> Response:
     path to make the URL hard to guess. Returns 404 (not 401) on mismatch to
     avoid confirming the endpoint exists.
     """
-    expected = settings.oura_webhook_path_token
+    expected = settings.oura_webhook_path_token.get_secret_value()
     if expected and not hmac.compare_digest(path_token, expected):
         logger.warning("Oura webhook: invalid path token, rejecting request")
         return Response(status_code=404)  # 404 — don't confirm endpoint exists

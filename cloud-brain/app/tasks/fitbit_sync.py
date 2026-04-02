@@ -950,7 +950,7 @@ def register_fitbit_webhook_task() -> dict[str, Any]:
         logger.error("register_fitbit_webhook_task: FITBIT_WEBHOOK_VERIFY_CODE not set — aborting")
         return {"status": "error", "reason": "FITBIT_WEBHOOK_VERIFY_CODE not configured"}
 
-    if not _settings.fitbit_webhook_subscriber_id:
+    if not _settings.fitbit_webhook_subscriber_id.get_secret_value():
         logger.error("register_fitbit_webhook_task: FITBIT_WEBHOOK_SUBSCRIBER_ID not set — aborting")
         return {"status": "error", "reason": "FITBIT_WEBHOOK_SUBSCRIBER_ID not configured"}
 
@@ -958,7 +958,7 @@ def register_fitbit_webhook_task() -> dict[str, Any]:
         logger.error("register_fitbit_webhook_task: Fitbit OAuth credentials not set — aborting")
         return {"status": "error", "reason": "FITBIT_CLIENT_ID or FITBIT_CLIENT_SECRET not configured"}
 
-    subscriber_id = _settings.fitbit_webhook_subscriber_id
+    subscriber_id = _settings.fitbit_webhook_subscriber_id.get_secret_value()
     collections = ["activities", "body", "foods", "sleep"]
     registered: list[str] = []
     errors: list[dict] = []

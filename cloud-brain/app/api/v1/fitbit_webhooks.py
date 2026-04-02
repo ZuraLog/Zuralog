@@ -138,8 +138,8 @@ async def fitbit_webhook_event(request: Request) -> Response:
         # Fitbit does not sign payloads, but forged notifications with unknown
         # subscription IDs should be silently dropped (not 4xx — Fitbit requires 204).
         if (
-            settings.fitbit_webhook_subscriber_id
-            and notification.subscriptionId != settings.fitbit_webhook_subscriber_id
+            settings.fitbit_webhook_subscriber_id.get_secret_value()
+            and not hmac.compare_digest(notification.subscriptionId, settings.fitbit_webhook_subscriber_id.get_secret_value())
         ):
             logger.warning(
                 "Fitbit webhook: unknown subscriptionId=%s, skipping notification",
