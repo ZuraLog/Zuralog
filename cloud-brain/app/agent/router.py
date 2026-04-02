@@ -8,8 +8,8 @@ Decision tree (evaluated in order):
   1. Burst window exhausted → reject (LimitExhaustedException, is_burst=True)
   2. Both models exhausted → reject (LimitExhaustedException, is_burst=False)
   3. Only Zura Flash available → route to Zura Flash (skip classifier)
-  4. Only Zura available + message is deep_analysis → route to Zura
-  5. Only Zura available + message is standard → reject (Flash exhausted, standard msg needs Flash)
+  4. Only Zura available (Flash exhausted) → route to Zura (skip classifier)
+  5. **Path E — Only Zura available:** (Flash exhausted) Skip classifier, always route to Zura.
   6. Both available → classify → route accordingly
 """
 
@@ -90,24 +90,13 @@ async def route_message(
             classifier_result="skipped",
         )
 
-    # Path 4 & 5: Only Zura available (Flash exhausted) — classify to decide.
+    # Path 4: Only Zura available (Flash exhausted) — skip classifier, use Zura.
     if not limits.flash_allowed:
-        classification = await classify_message(text)
-        if classification == MessageTier.deep_analysis:
-            # Deep analysis and only Zura available — use Zura.
-            return RoutingResult(
-                model=ROUTER_MODEL_ZURA,
-                model_tier="zura",
-                classifier_result=classification.value,
-            )
-        else:
-            # Standard message but Flash is exhausted — reject.
-            raise LimitExhaustedException(
-                message="You've used all your Zura Flash messages for this period.",
-                reset_seconds=limits.flash_reset_seconds,
-                is_burst=False,
-                tier=tier,
-            )
+        return RoutingResult(
+            model=ROUTER_MODEL_ZURA,
+            model_tier="zura",
+            classifier_result="skipped",
+        )
 
     # Path 6: Both available — classify and route.
     classification = await classify_message(text)

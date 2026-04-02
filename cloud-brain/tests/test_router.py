@@ -95,18 +95,22 @@ class TestRouteMessage:
 
     @pytest.mark.asyncio
     async def test_only_zura_available_deep_routes_to_zura(self):
-        """Only Zura available + deep_analysis → routes to Zura."""
+        """Only Zura available (Flash exhausted) → routes to Zura without calling classifier."""
         limits = _make_limits(flash_allowed=False)
         rl = _make_rate_limiter(limits)
-        with patch("app.agent.router.classify_message", return_value=MessageTier.deep_analysis):
+        with patch("app.agent.router.classify_message") as mock_classify:
             result = await route_message("analyze my training load", "user1", "free", rl)
+            mock_classify.assert_not_called()
         assert result.model_tier == "zura"
+        assert result.classifier_result == "skipped"
 
     @pytest.mark.asyncio
-    async def test_only_zura_available_standard_raises(self):
-        """Only Zura available + standard → raises LimitExhaustedException (Flash needed but gone)."""
+    async def test_only_zura_available_standard_routes_to_zura(self):
+        """Only Zura available (Flash exhausted) + standard message → routes to Zura, not rejected."""
         limits = _make_limits(flash_allowed=False)
         rl = _make_rate_limiter(limits)
-        with patch("app.agent.router.classify_message", return_value=MessageTier.standard):
-            with pytest.raises(LimitExhaustedException):
-                await route_message("good morning", "user1", "free", rl)
+        with patch("app.agent.router.classify_message") as mock_classify:
+            result = await route_message("good morning", "user1", "free", rl)
+            mock_classify.assert_not_called()
+        assert result.model_tier == "zura"
+        assert result.classifier_result == "skipped"

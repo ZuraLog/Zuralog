@@ -149,9 +149,10 @@ async def coach_usage(
 
     from app.models.user import User
 
-    row = await db.execute(select(User).where(User.id == user_id))
-    user = row.scalar_one_or_none()
-    raw_tier = getattr(user, "subscription_tier", "free") if user else "free"
+    row = await db.execute(
+        select(User.subscription_tier).where(User.id == user_id)
+    )
+    raw_tier = row.scalar_one_or_none() or "free"
     tier = "premium" if raw_tier and raw_tier not in ("", "free") else "free"
 
     limits = await rate_limiter.check_model_limits(user_id, tier)

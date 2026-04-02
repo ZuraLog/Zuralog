@@ -228,9 +228,16 @@ class RateLimiter:
             fu = int(vals[0] or 0)
             zu = int(vals[1] or 0)
             bu = int(vals[2] or 0)
-            fr = max(int(vals[3] or 0), 0)
-            zr = max(int(vals[4] or 0), 0)
-            br = max(int(vals[5] or 0), 0)
+            raw_ttls = [int(vals[3]), int(vals[4]), int(vals[5])]
+            # TTL = -1 means key exists but has no expiry (EXPIRE failed after INCR).
+            # Reactively fix it: set the correct TTL in the background.
+            for key, raw_ttl, window in ((fk, raw_ttls[0], ft), (zk, raw_ttls[1], zt), (bk, raw_ttls[2], bt)):
+                if raw_ttl == -1:
+                    import asyncio as _asyncio
+                    _asyncio.create_task(self._redis.expire(key, window))
+            fr = max(raw_ttls[0], 0)
+            zr = max(raw_ttls[1], 0)
+            br = max(raw_ttls[2], 0)
         except Exception as exc:
             logger.error("Redis error in check_model_limits: %s", exc)
             return ModelLimitResult(
