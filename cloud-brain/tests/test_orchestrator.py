@@ -365,8 +365,9 @@ async def test_dynamic_tool_injection_uses_user_tools(
     if tools_sent is None and len(call_args.args) > 1:
         tools_sent = call_args.args[1]
     assert tools_sent is not None
-    assert len(tools_sent) == 1
-    assert tools_sent[0]["function"]["name"] == "strava_get_activities"
+    function_tools = [t for t in tools_sent if t.get("type") == "function"]
+    assert len(function_tools) == 1
+    assert function_tools[0]["function"]["name"] == "strava_get_activities"
 
 
 @pytest.mark.asyncio

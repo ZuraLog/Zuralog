@@ -628,7 +628,7 @@ def test_cat_b_goal_deadline_approaching_fires():
     from app.analytics.insight_signal_detector import InsightSignalDetector
     from datetime import timedelta
 
-    deadline = (date.today() + timedelta(days=3)).isoformat()
+    deadline = (_NOW.date() + timedelta(days=3)).isoformat()
     goal = GoalRow(
         id="g1",
         metric="steps",
