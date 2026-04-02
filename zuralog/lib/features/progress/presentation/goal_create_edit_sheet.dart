@@ -680,7 +680,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
 
   Widget _buildStickyButton(AppColorsOf colors, double bottomPadding) {
     // Ensure the button clears the tab bar: at least 100px + safe area
-    final effectiveBottomPad = bottomPadding + 100;
+    final effectiveBottomPad = bottomPadding + 16;
 
     return Container(
       padding: EdgeInsets.fromLTRB(
