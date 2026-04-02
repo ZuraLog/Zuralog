@@ -179,7 +179,7 @@ async def create_goal(
         title=body.title,
         current_value=0.0,
         unit=body.unit,
-        start_date=str(date.today()),
+        start_date=date.today(),
         deadline=body.deadline,
         is_completed=False,
         ai_commentary=None,
