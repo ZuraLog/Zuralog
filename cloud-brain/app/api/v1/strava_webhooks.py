@@ -71,13 +71,13 @@ async def strava_webhook_validation(
     Raises:
         HTTPException: 403 if verify_token does not match.
     """
-    if not settings.strava_webhook_verify_token:
+    if not settings.strava_webhook_verify_token.get_secret_value():
         raise HTTPException(status_code=503, detail="Webhook not configured")
 
     if hub_mode != "subscribe":
         raise HTTPException(status_code=400, detail="Invalid hub.mode")
 
-    if hub_verify_token != settings.strava_webhook_verify_token:
+    if hub_verify_token != settings.strava_webhook_verify_token.get_secret_value():
         logger.warning(
             "Strava webhook validation rejected: token mismatch (received=%r)",
             hub_verify_token,

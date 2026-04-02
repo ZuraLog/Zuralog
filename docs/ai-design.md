@@ -154,3 +154,17 @@ It contains twenty test cases that deliberately try to break Zura:
 - **Sanity check** — a normal health question that should always answer correctly
 
 Each test has an assertion that describes what a correct response looks like. The suite grades responses automatically using a language model as the judge. It should be re-run whenever the system prompt or safety block changes.
+
+---
+
+## Known Gaps
+
+These are architectural security findings that require schema changes or major refactoring. They are documented here for tracking rather than attempted as in-line fixes.
+
+### Memory deletion does not return ownership confirmation
+
+`DELETE /api/v1/memories/{memory_id}` always returns `{"deleted": true}` even when zero rows were affected (e.g. when a valid but wrong-user memory ID is supplied). This is safe from a BOLA standpoint — the user learns nothing about other users' memories — but the response is misleading to the legitimate caller. A future improvement would check `rowcount` after the delete and return `{"deleted": false}` when the record did not exist or did not belong to the user.
+
+### `oura_webhook_verification_token` is dead config
+
+`settings.oura_webhook_verification_token` is defined in `config.py` but is never referenced anywhere in the codebase. The Oura webhook is authenticated via the URL path token (`oura_webhook_path_token`), not this field. The dead config value should be removed in a cleanup pass to avoid confusion.

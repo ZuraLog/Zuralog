@@ -215,7 +215,7 @@ async def delete_memory(
             ),
         )
 
-    deleted = await memory_store.delete_memory(memory_id)
+    deleted = await memory_store.delete_memory(memory_id, user_id)
     logger.info(
         "delete_memory: user='%s', id='%s', success=%s.", user_id, memory_id, deleted
     )

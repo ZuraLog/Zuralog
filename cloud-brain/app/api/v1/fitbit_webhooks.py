@@ -78,7 +78,7 @@ async def fitbit_webhook_verification(request: Request) -> Response:
         HTTP 204 on match; HTTP 404 on mismatch.
     """
     verify_code = request.query_params.get("verify", "")
-    expected = settings.fitbit_webhook_verify_code
+    expected = settings.fitbit_webhook_verify_code.get_secret_value()
 
     if hmac.compare_digest(verify_code.encode(), expected.encode()):
         logger.info("Fitbit webhook subscriber verified successfully")
