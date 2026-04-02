@@ -58,7 +58,7 @@ class _PersonaOption {
 /// The three available persona options in display order.
 const List<_PersonaOption> _personas = [
   _PersonaOption(
-    key: 'toughLove',
+    key: 'tough_love',
     label: 'Tough Love',
     description: 'Blunt, data-driven, pushes you hard. No sugar-coating.',
     icon: Icons.fitness_center_rounded,

@@ -157,11 +157,11 @@ async def coach_usage(
     limits = await rate_limiter.check_model_limits(user_id, tier)
 
     return {
-        "flash_used": limits.flash_limit - limits.flash_remaining,
+        "flash_used": max(0, limits.flash_limit - limits.flash_remaining) if limits.flash_remaining >= 0 else 0,
         "flash_limit": limits.flash_limit,
-        "zura_used": limits.zura_limit - limits.zura_remaining,
+        "zura_used": max(0, limits.zura_limit - limits.zura_remaining) if limits.zura_remaining >= 0 else 0,
         "zura_limit": limits.zura_limit,
-        "burst_used": limits.burst_limit - limits.burst_remaining,
+        "burst_used": max(0, limits.burst_limit - limits.burst_remaining) if limits.burst_remaining >= 0 else 0,
         "burst_limit": limits.burst_limit,
         "flash_reset_seconds": limits.flash_reset_seconds,
         "zura_reset_seconds": limits.zura_reset_seconds,
