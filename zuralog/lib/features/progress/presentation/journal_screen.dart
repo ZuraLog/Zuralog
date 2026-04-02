@@ -15,6 +15,8 @@ import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/presentation/journal_diary_screen.dart';
 import 'package:zuralog/features/progress/presentation/journal_entry_router.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
+import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
+import 'package:zuralog/shared/widgets/feedback/z_premium_gate_sheet.dart';
 import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
@@ -84,6 +86,29 @@ class JournalScreen extends ConsumerWidget {
 
   void _openNewEntry(BuildContext context, WidgetRef ref) {
     ref.read(hapticServiceProvider).light();
+
+    // Free users: gate at 5 journal entries per month.
+    final isPremium = ref.read(isPremiumProvider);
+    if (!isPremium) {
+      final page = ref.read(journalProvider).valueOrNull;
+      if (page != null) {
+        final now = DateTime.now();
+        final entriesThisMonth = page.entries.where((e) {
+          final dt = DateTime.tryParse(e.date);
+          return dt != null && dt.year == now.year && dt.month == now.month;
+        }).length;
+        if (entriesThisMonth >= 5) {
+          ZPremiumGateSheet.show(
+            context,
+            headline: 'Journal without limits',
+            body: 'Upgrade to Pro for unlimited journal entries each month.',
+            icon: Icons.edit_note_rounded,
+          );
+          return;
+        }
+      }
+    }
+
     showDialog<void>(
       context: context,
       barrierColor: Colors.transparent,

@@ -20,6 +20,7 @@ import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/progress/presentation/goal_create_edit_sheet.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── GoalsScreen ───────────────────────────────────────────────────────────────
@@ -44,6 +45,19 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
   }
 
   void _openCreateSheet() {
+    // Free users are limited to 3 active goals.
+    final isPremium = ref.read(isPremiumProvider);
+    final goalCount = ref.read(goalsProvider).valueOrNull?.goals.length ?? 0;
+    if (!isPremium && goalCount >= 3) {
+      ZPremiumGateSheet.show(
+        context,
+        headline: 'Set unlimited goals',
+        body: 'Upgrade to Pro to track as many goals as you want.',
+        icon: Icons.flag_rounded,
+      );
+      return;
+    }
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,

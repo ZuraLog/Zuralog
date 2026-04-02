@@ -11,6 +11,8 @@
 /// and [journalProvider].
 library;
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -34,6 +36,7 @@ import 'package:zuralog/features/progress/presentation/widgets/streak_flame_hero
 import 'package:zuralog/features/progress/presentation/widgets/streak_freeze_dialog.dart';
 import 'package:zuralog/features/progress/presentation/widgets/this_week_snapshot_card.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
+import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── ProgressHomeScreen ────────────────────────────────────────────────────────
@@ -120,6 +123,7 @@ class _ContentView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final reducedMotion = MediaQuery.of(context).disableAnimations;
     final journalAsync = ref.watch(journalProvider);
+    final isPremium = ref.watch(isPremiumProvider);
 
     Widget wrap(Widget child, int index) {
       if (reducedMotion) return child;
@@ -130,6 +134,11 @@ class _ContentView extends ConsumerWidget {
       );
     }
 
+    // Free-tier limit: only the engagement streak is shown.
+    // The API may return additional streak types (steps, workouts, check-in)
+    // but those are reserved for Pro users. The firstWhere below intentionally
+    // filters to the engagement streak only, which enforces this limit for
+    // free users without needing an explicit isPremium check.
     final engagementStreak = data.streaks.firstWhere(
       (s) => s.type == StreakType.engagement,
       orElse: () => const UserStreak(
@@ -180,23 +189,44 @@ class _ContentView extends ConsumerWidget {
         if (data.milestoneStreakCount != null)
           wrap(_MilestoneCelebrationCard(days: data.milestoneStreakCount!), 0),
 
-        // Streak Flame Hero with freeze pill
+        // Streak Flame Hero with freeze pill.
+        // Free users see at most 2 freeze tokens; Pro users see the real count.
         wrap(
           Consumer(
-            builder: (context, innerRef, _) => StreakFlameHero(
-              currentCount: engagementStreak.currentCount,
-              longestCount: engagementStreak.longestCount,
-              weekHits: weekHits,
-              todayIndex: todayIndex,
-              isFrozen: engagementStreak.isFrozen,
-              freezeCount: engagementStreak.freezeCount,
-              nudgeMessage: nudgeMessage,
-              onFreezeTap: () => showStreakFreezeDialog(
-                context,
-                innerRef,
-                engagementStreak,
-              ),
-            ),
+            builder: (context, innerRef, _) {
+              final displayFreezeCount = isPremium
+                  ? engagementStreak.freezeCount
+                  : math.min(engagementStreak.freezeCount, 2);
+
+              return StreakFlameHero(
+                currentCount: engagementStreak.currentCount,
+                longestCount: engagementStreak.longestCount,
+                weekHits: weekHits,
+                todayIndex: todayIndex,
+                isFrozen: engagementStreak.isFrozen,
+                freezeCount: displayFreezeCount,
+                nudgeMessage: nudgeMessage,
+                onFreezeTap: () {
+                  // When a free user has 0 tokens, show the upgrade sheet
+                  // instead of the freeze dialog.
+                  if (!isPremium && displayFreezeCount <= 0) {
+                    ZPremiumGateSheet.show(
+                      context,
+                      headline: 'Protect your streak',
+                      body: 'Upgrade to Pro for unlimited freeze tokens '
+                          'to protect your streak on rest days.',
+                      icon: Icons.ac_unit_rounded,
+                    );
+                    return;
+                  }
+                  showStreakFreezeDialog(
+                    context,
+                    innerRef,
+                    engagementStreak,
+                  );
+                },
+              );
+            },
           ),
           1,
         ),
@@ -234,36 +264,70 @@ class _ContentView extends ConsumerWidget {
           const SizedBox(height: AppDimens.spaceLg),
         ],
 
-        // Goals section (with empty state CTA when no goals)
-        wrap(_GoalsSection(goals: data.goals), 4),
+        // Weekly Report CTA — Pro users navigate, free users see locked overlay.
+        wrap(_WeeklyReportCard(isPremium: isPremium), 4),
         const SizedBox(height: AppDimens.spaceLg),
 
-        // Journal CTA (hidden automatically when user already journalled today)
+        // Goals section (with empty state CTA when no goals)
+        wrap(_GoalsSection(goals: data.goals, isPremium: isPremium), 5),
+        const SizedBox(height: AppDimens.spaceLg),
+
+        // Journal CTA (hidden automatically when user already journalled today).
+        // Free users are limited to 5 journal entries per month.
         wrap(
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (!journalledToday)
-                _SectionHeader(
-                  title: 'Journal',
-                  trailingLabel: 'History',
-                  onTrailingTap: () {
-                    ref.read(hapticServiceProvider).light();
-                    context.push(RouteNames.journalPath);
-                  },
-                ),
-              JournalPromptCta(
-                onTap: () => showDialog(
-                  context: context,
-                  barrierColor: Colors.transparent,
-                  builder: (_) => const JournalEntryRouter(),
-                ),
-                lastEntryDate: lastEntryDateStr,
-                journalledToday: journalledToday,
-              ),
-            ],
+          Consumer(
+            builder: (context, innerRef, _) {
+              // Count how many entries fall in the current month.
+              int entriesThisMonth = 0;
+              journalAsync.whenData((page) {
+                final now = DateTime.now();
+                entriesThisMonth = page.entries.where((e) {
+                  final dt = DateTime.tryParse(e.date);
+                  return dt != null &&
+                      dt.year == now.year &&
+                      dt.month == now.month;
+                }).length;
+              });
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!journalledToday)
+                    _SectionHeader(
+                      title: 'Journal',
+                      trailingLabel: 'History',
+                      onTrailingTap: () {
+                        ref.read(hapticServiceProvider).light();
+                        context.push(RouteNames.journalPath);
+                      },
+                    ),
+                  JournalPromptCta(
+                    onTap: () {
+                      // Free users: gate at 5 entries per month.
+                      if (!isPremium && entriesThisMonth >= 5) {
+                        ZPremiumGateSheet.show(
+                          context,
+                          headline: 'Journal without limits',
+                          body: 'Upgrade to Pro for unlimited journal '
+                              'entries each month.',
+                          icon: Icons.edit_note_rounded,
+                        );
+                        return;
+                      }
+                      showDialog(
+                        context: context,
+                        barrierColor: Colors.transparent,
+                        builder: (_) => const JournalEntryRouter(),
+                      );
+                    },
+                    lastEntryDate: lastEntryDateStr,
+                    journalledToday: journalledToday,
+                  ),
+                ],
+              );
+            },
           ),
-          5,
+          6,
         ),
       ],
     );
@@ -318,8 +382,9 @@ class _SectionHeader extends StatelessWidget {
 // ── _GoalsSection ─────────────────────────────────────────────────────────────
 
 class _GoalsSection extends ConsumerWidget {
-  const _GoalsSection({required this.goals});
+  const _GoalsSection({required this.goals, required this.isPremium});
   final List<Goal> goals;
+  final bool isPremium;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -337,6 +402,16 @@ class _GoalsSection extends ConsumerWidget {
         if (goals.isEmpty)
           GoalsEmptyCard(
             onTap: () {
+              // Free users: gate at 3 active goals.
+              if (!isPremium && goals.length >= 3) {
+                ZPremiumGateSheet.show(
+                  context,
+                  headline: 'Set unlimited goals',
+                  body: 'Upgrade to Pro to track as many goals as you want.',
+                  icon: Icons.flag_rounded,
+                );
+                return;
+              }
               ref.read(hapticServiceProvider).light();
               context.push(RouteNames.goalsPath);
             },
@@ -521,6 +596,96 @@ class _MilestoneCelebrationCardState
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── _WeeklyReportCard ────────────────────────────────────────────────────────
+
+/// Surface card that links to the weekly report for Pro users, or shows
+/// a locked overlay for free users prompting them to upgrade.
+class _WeeklyReportCard extends ConsumerWidget {
+  const _WeeklyReportCard({required this.isPremium});
+
+  final bool isPremium;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
+
+    final card = Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
+      decoration: BoxDecoration(
+        color: colors.progressSurface,
+        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        border: Border.all(color: colors.progressBorderDefault),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: AppDimens.iconContainerSm,
+            height: AppDimens.iconContainerSm,
+            decoration: BoxDecoration(
+              color: colors.progressSage.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+              border: Border.all(
+                color: colors.progressSage.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Center(
+              child: Icon(
+                Icons.calendar_view_week_rounded,
+                size: AppDimens.iconSm,
+                color: colors.progressSage,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppDimens.spaceMd),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Weekly Report',
+                  style: AppTextStyles.titleMedium.copyWith(
+                    color: colors.progressTextPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Your week at a glance',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: colors.progressTextSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            Icons.chevron_right_rounded,
+            color: colors.progressTextMuted,
+          ),
+        ],
+      ),
+    );
+
+    if (!isPremium) {
+      return ZLockedOverlay(
+        headline: 'Your weekly summary',
+        body: 'Upgrade to Pro to get a personalized weekly report with '
+            'your key metrics, trends, and AI insights.',
+        icon: Icons.calendar_view_week_rounded,
+        child: card,
+      );
+    }
+
+    return GestureDetector(
+      onTap: () {
+        ref.read(hapticServiceProvider).light();
+        context.push(RouteNames.weeklyReportPath);
+      },
+      child: card,
     );
   }
 }
