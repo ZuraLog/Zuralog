@@ -81,7 +81,12 @@ class _ZPatternTextState extends State<ZPatternText>
   @override
   void initState() {
     super.initState();
-    // _loadImage is called from didChangeDependencies once context is available.
+    if (widget.animate) {
+      _controller = AnimationController(
+        vsync: this,
+        duration: const Duration(seconds: 8),
+      )..repeat(reverse: true);
+    }
   }
 
   @override
@@ -159,12 +164,7 @@ class _ZPatternTextState extends State<ZPatternText>
   // ── Animation ─────────────────────────────────────────────────────────
 
   void _maybeStartAnimation() {
-    if (!widget.animate || _image == null) return;
-    _controller ??= AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 8),
-    )..repeat(reverse: true);
-    if (mounted) setState(() {});
+    // Controller is created in initState — nothing extra needed.
   }
 
   void _disposeAnimation() {
