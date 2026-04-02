@@ -88,24 +88,27 @@ class JournalScreen extends ConsumerWidget {
     ref.read(hapticServiceProvider).light();
 
     // Free users: gate at 5 journal entries per month.
+    // When journal data is still loading, default to the limit (fail-closed).
     final isPremium = ref.read(isPremiumProvider);
     if (!isPremium) {
       final page = ref.read(journalProvider).valueOrNull;
-      if (page != null) {
-        final now = DateTime.now();
-        final entriesThisMonth = page.entries.where((e) {
-          final dt = DateTime.tryParse(e.date);
-          return dt != null && dt.year == now.year && dt.month == now.month;
-        }).length;
-        if (entriesThisMonth >= 5) {
-          ZPremiumGateSheet.show(
-            context,
-            headline: 'Journal without limits',
-            body: 'Upgrade to Pro for unlimited journal entries each month.',
-            icon: Icons.edit_note_rounded,
-          );
-          return;
-        }
+      final now = DateTime.now();
+      final entriesThisMonth = page == null
+          ? 5 // fail-closed: gate during loading/error
+          : page.entries.where((e) {
+              final dt = DateTime.tryParse(e.date);
+              return dt != null &&
+                  dt.year == now.year &&
+                  dt.month == now.month;
+            }).length;
+      if (entriesThisMonth >= 5) {
+        ZPremiumGateSheet.show(
+          context,
+          headline: 'Journal without limits',
+          body: 'Upgrade to Pro for unlimited journal entries each month.',
+          icon: Icons.edit_note_rounded,
+        );
+        return;
       }
     }
 

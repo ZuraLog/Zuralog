@@ -278,7 +278,9 @@ class _ContentView extends ConsumerWidget {
           Consumer(
             builder: (context, innerRef, _) {
               // Count how many entries fall in the current month.
-              int entriesThisMonth = 0;
+              // Default to the free limit so the gate stays closed during
+              // loading/error states (fail-closed, not fail-open).
+              int entriesThisMonth = isPremium ? 0 : 5;
               journalAsync.whenData((page) {
                 final now = DateTime.now();
                 entriesThisMonth = page.entries.where((e) {
