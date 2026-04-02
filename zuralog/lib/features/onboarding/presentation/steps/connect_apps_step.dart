@@ -66,6 +66,8 @@ class ConnectAppsStep extends ConsumerWidget {
             style: AppTextStyles.displayLarge.copyWith(
               height: 1.15,
             ),
+            variant: ZPatternVariant.sage,
+            animate: true,
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(
