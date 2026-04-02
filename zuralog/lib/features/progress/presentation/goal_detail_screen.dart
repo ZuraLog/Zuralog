@@ -19,8 +19,8 @@ import 'package:zuralog/features/progress/presentation/goal_create_edit_sheet.da
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
-import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
+import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── GoalDetailScreen ──────────────────────────────────────────────────────────
 
@@ -135,6 +135,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
     final colors = AppColorsOf(context);
     final goalsAsync = ref.watch(goalsProvider);
     final unitsSystem = ref.watch(unitsSystemProvider);
+    final isPremium = ref.watch(isPremiumProvider);
 
     return goalsAsync.when(
       loading: () => ZuralogScaffold(
@@ -198,6 +199,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
           goal: goal,
           ringAnimation: _ringAnimation,
           unitsSystem: unitsSystem,
+          isPremium: isPremium,
           onEdit: () => _openEdit(context, goal!),
           onDelete: () => _confirmDelete(context, goal!),
         );
@@ -213,6 +215,7 @@ class _GoalDetailView extends StatelessWidget {
     required this.goal,
     required this.ringAnimation,
     required this.unitsSystem,
+    required this.isPremium,
     required this.onEdit,
     required this.onDelete,
   });
@@ -220,6 +223,7 @@ class _GoalDetailView extends StatelessWidget {
   final Goal goal;
   final Animation<double> ringAnimation;
   final UnitsSystem unitsSystem;
+  final bool isPremium;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -307,7 +311,16 @@ class _GoalDetailView extends StatelessWidget {
             _buildDetailsCard(colors, projected: projected),
             if (showAiCard) ...[
               const SizedBox(height: AppDimens.spaceMd),
-              _buildAiCommentaryCard(colors, projected: projected),
+              if (!isPremium && hasAiCommentary)
+                ZLockedOverlay(
+                  headline: 'Get AI insights on your goals',
+                  body:
+                      'Upgrade to Pro for personalized AI commentary that tells you exactly how your goals are tracking.',
+                  icon: Icons.auto_awesome_rounded,
+                  child: _buildAiCommentaryCard(colors, projected: projected),
+                )
+              else
+                _buildAiCommentaryCard(colors, projected: projected),
             ],
             const SizedBox(height: AppDimens.spaceXl),
           ],
