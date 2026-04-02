@@ -2,15 +2,7 @@
 ///
 /// Shows the platform's native health integration (Apple Health on iOS,
 /// Health Connect on Android) as a prominent connectable card, plus a
-/// preview grid of third-party integrations available later in Settings.
-///
-/// Tapping the health card triggers the real permission flow via
-/// [IntegrationsNotifier.connect], which requests HealthKit / Health Connect
-/// access, configures background sync, and fires the initial 30-day import.
-///
-/// Third-party integrations (Strava, Fitbit, Oura, MyFitnessPal) require
-/// OAuth flows that need the full app context, so they show "Later" badges
-/// and can be connected from Settings → Integrations after onboarding.
+/// compact row of third-party integrations available later in Settings.
 library;
 
 import 'dart:io' show Platform;
@@ -25,49 +17,6 @@ import 'package:zuralog/features/integrations/domain/integrations_provider.dart'
 import 'package:zuralog/features/integrations/domain/integration_model.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
-// ── Third-party Apps (connect later via Settings) ────────────────────────────
-
-class _ThirdPartyApp {
-  const _ThirdPartyApp({
-    required this.name,
-    required this.icon,
-    required this.description,
-    required this.color,
-  });
-
-  final String name;
-  final IconData icon;
-  final String description;
-  final Color color;
-}
-
-const List<_ThirdPartyApp> _thirdPartyApps = [
-  _ThirdPartyApp(
-    name: 'Strava',
-    icon: Icons.directions_run_rounded,
-    description: 'Running & cycling workouts',
-    color: AppColors.brandStrava,
-  ),
-  _ThirdPartyApp(
-    name: 'Fitbit',
-    icon: Icons.watch_rounded,
-    description: 'Activity, sleep & heart rate',
-    color: AppColors.brandFitbit,
-  ),
-  _ThirdPartyApp(
-    name: 'Oura Ring',
-    icon: Icons.nightlight_round,
-    description: 'Sleep, readiness & recovery',
-    color: AppColors.brandOura,
-  ),
-  _ThirdPartyApp(
-    name: 'MyFitnessPal',
-    icon: Icons.restaurant_rounded,
-    description: 'Nutrition & calorie tracking',
-    color: AppColors.brandMfp,
-  ),
-];
-
 // ── Step Widget ──────────────────────────────────────────────────────────────
 
 /// Step 6 — health platform connection + third-party integration preview.
@@ -79,23 +28,23 @@ class ConnectAppsStep extends ConsumerWidget {
     final colors = AppColorsOf(context);
     final integrationsState = ref.watch(integrationsProvider);
 
-    // Show the platform-appropriate health integration.
+    // Platform-appropriate health integration.
     final healthId =
         Platform.isIOS ? 'apple_health' : 'google_health_connect';
     final healthName = Platform.isIOS ? 'Apple Health' : 'Health Connect';
     final healthDescription = Platform.isIOS
-        ? 'Steps, heart rate, sleep & more from HealthKit'
-        : 'Sync workouts and health data from Android';
-    final healthIcon =
-        Platform.isIOS ? Icons.favorite_rounded : Icons.health_and_safety_rounded;
+        ? 'Automatically sync your health data from HealthKit'
+        : 'Automatically sync your health data from Android';
+    final healthIcon = Platform.isIOS
+        ? Icons.favorite_rounded
+        : Icons.health_and_safety_rounded;
     final healthColor =
         Platform.isIOS ? AppColors.categoryHeart : AppColors.categoryActivity;
 
-    // Check connection status from the integrations provider.
-    final healthModel = integrationsState.integrations.cast<IntegrationModel?>().firstWhere(
-          (i) => i!.id == healthId,
-          orElse: () => null,
-        );
+    // Connection status from the integrations provider.
+    final healthModel = integrationsState.integrations
+        .cast<IntegrationModel?>()
+        .firstWhere((i) => i!.id == healthId, orElse: () => null);
     final healthStatus = healthModel?.status ?? IntegrationStatus.available;
     final isConnected = healthStatus == IntegrationStatus.connected;
     final isConnecting = healthStatus == IntegrationStatus.syncing;
@@ -110,7 +59,7 @@ class ConnectAppsStep extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Heading ──────────────────────────────────────────────────────
+          // ── Heading ────────────────────────────────────────────────────
           Text(
             'Connect your\nhealth data',
             style: AppTextStyles.displayLarge.copyWith(
@@ -120,15 +69,14 @@ class ConnectAppsStep extends ConsumerWidget {
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(
-            'Zuralog works best when it can read your health data. '
-            'Connect now to get personalised insights right away.',
+            'Get personalised insights powered by your real health data.',
             style: AppTextStyles.bodyLarge
                 .copyWith(color: colors.textSecondary),
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
 
-          // ── Primary health platform card ─────────────────────────────────
+          // ── Health platform card ───────────────────────────────────────
           _HealthConnectCard(
             name: healthName,
             description: healthDescription,
@@ -137,41 +85,59 @@ class ConnectAppsStep extends ConsumerWidget {
             isConnected: isConnected,
             isConnecting: isConnecting,
             onConnect: () {
-              ref.read(integrationsProvider.notifier).connect(healthId, context);
+              ref
+                  .read(integrationsProvider.notifier)
+                  .connect(healthId, context);
             },
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
 
-          // ── Third-party integrations header ──────────────────────────────
+          // ── Third-party integrations ───────────────────────────────────
           Text(
-            'More integrations',
-            style: AppTextStyles.titleMedium.copyWith(
-              color: colors.textPrimary,
+            'More integrations available',
+            style: AppTextStyles.labelLarge.copyWith(
+              color: colors.textSecondary,
             ),
           ),
-          const SizedBox(height: AppDimens.spaceXs),
-          Text(
-            'Connect these from Settings after setup.',
-            style: AppTextStyles.bodyMedium
-                .copyWith(color: colors.textSecondary),
+          const SizedBox(height: AppDimens.spaceMd),
+
+          // Horizontal row of app icons.
+          Row(
+            children: [
+              _AppIconChip(
+                icon: Icons.directions_run_rounded,
+                label: 'Strava',
+                color: AppColors.brandStrava,
+              ),
+              const SizedBox(width: AppDimens.spaceSm),
+              _AppIconChip(
+                icon: Icons.watch_rounded,
+                label: 'Fitbit',
+                color: AppColors.brandFitbit,
+              ),
+              const SizedBox(width: AppDimens.spaceSm),
+              _AppIconChip(
+                icon: Icons.nightlight_round,
+                label: 'Oura',
+                color: AppColors.brandOura,
+              ),
+              const SizedBox(width: AppDimens.spaceSm),
+              _AppIconChip(
+                icon: Icons.restaurant_rounded,
+                label: 'MFP',
+                color: AppColors.brandMfp,
+              ),
+            ],
           ),
 
           const SizedBox(height: AppDimens.spaceMd),
 
-          // ── Third-party grid ─────────────────────────────────────────────
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: AppDimens.spaceMd,
-              crossAxisSpacing: AppDimens.spaceMd,
-              childAspectRatio: 1.6,
-            ),
-            itemCount: _thirdPartyApps.length,
-            itemBuilder: (context, index) =>
-                _ThirdPartyTile(app: _thirdPartyApps[index]),
+          // Footer note.
+          Text(
+            'Connect these and 40+ more from Settings after setup.',
+            style: AppTextStyles.bodySmall
+                .copyWith(color: colors.textSecondary),
           ),
 
           const SizedBox(height: AppDimens.spaceLg),
@@ -183,7 +149,6 @@ class ConnectAppsStep extends ConsumerWidget {
 
 // ── Health Connect Card ──────────────────────────────────────────────────────
 
-/// Prominent card for the platform health integration with a Connect button.
 class _HealthConnectCard extends StatelessWidget {
   const _HealthConnectCard({
     required this.name,
@@ -211,30 +176,32 @@ class _HealthConnectCard extends StatelessWidget {
       padding: const EdgeInsets.all(AppDimens.spaceLg),
       decoration: BoxDecoration(
         color: isConnected
-            ? colors.primary.withValues(alpha: 0.08)
+            ? colors.primary.withValues(alpha: 0.06)
             : colors.surface,
         border: Border.all(
-          color: isConnected ? colors.primary : Colors.transparent,
-          width: 1.5,
+          color: isConnected
+              ? colors.primary
+              : colors.border,
+          width: isConnected ? 1.5 : 1,
         ),
-        borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+        borderRadius: BorderRadius.circular(AppDimens.shapeLg),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Icon + name row.
           Row(
             children: [
-              // Icon badge.
               Container(
-                width: 52,
-                height: 52,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, size: 28, color: color),
+                child: Icon(icon, size: 26, color: color),
               ),
               const SizedBox(width: AppDimens.spaceMd),
-              // Name + description.
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,7 +215,7 @@ class _HealthConnectCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       description,
-                      style: AppTextStyles.bodyMedium.copyWith(
+                      style: AppTextStyles.bodySmall.copyWith(
                         color: colors.textSecondary,
                       ),
                     ),
@@ -258,9 +225,30 @@ class _HealthConnectCard extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: AppDimens.spaceMd),
+          const SizedBox(height: AppDimens.spaceLg),
 
-          // Connect / Connected button.
+          // Feature bullets.
+          _FeatureBullet(
+            icon: Icons.sync_rounded,
+            text: 'Background sync — always up to date',
+            colors: colors,
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          _FeatureBullet(
+            icon: Icons.insights_rounded,
+            text: 'AI-powered trends and health insights',
+            colors: colors,
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          _FeatureBullet(
+            icon: Icons.lock_outline_rounded,
+            text: 'Your data stays private and secure',
+            colors: colors,
+          ),
+
+          const SizedBox(height: AppDimens.spaceLg),
+
+          // Connect button.
           SizedBox(
             width: double.infinity,
             child: ZButton(
@@ -268,12 +256,12 @@ class _HealthConnectCard extends StatelessWidget {
                   ? 'Connected'
                   : isConnecting
                       ? 'Connecting...'
-                      : 'Connect',
+                      : 'Connect ${Platform.isIOS ? 'Apple Health' : 'Health Connect'}',
               icon: isConnected ? Icons.check_circle_rounded : null,
               variant: isConnected
                   ? ZButtonVariant.secondary
                   : ZButtonVariant.primary,
-              size: ZButtonSize.medium,
+              size: ZButtonSize.large,
               isLoading: isConnecting,
               onPressed: isConnected || isConnecting ? null : onConnect,
             ),
@@ -284,57 +272,85 @@ class _HealthConnectCard extends StatelessWidget {
   }
 }
 
-// ── Third-party Tile ─────────────────────────────────────────────────────────
+// ── Feature Bullet ───────────────────────────────────────────────────────────
 
-/// Compact tile for third-party integrations available after onboarding.
-class _ThirdPartyTile extends StatelessWidget {
-  const _ThirdPartyTile({required this.app});
+class _FeatureBullet extends StatelessWidget {
+  const _FeatureBullet({
+    required this.icon,
+    required this.text,
+    required this.colors,
+  });
 
-  final _ThirdPartyApp app;
+  final IconData icon;
+  final String text;
+  final AppColorsOf colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: colors.primary),
+        const SizedBox(width: AppDimens.spaceSm),
+        Expanded(
+          child: Text(
+            text,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: colors.textSecondary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── App Icon Chip ────────────────────────────────────────────────────────────
+
+class _AppIconChip extends StatelessWidget {
+  const _AppIconChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
 
-    return Container(
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppDimens.shapeMd),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // App icon.
-          ZIconBadge(
-            icon: app.icon,
-            color: app.color,
-            size: 36,
-            iconSize: 18,
-          ),
-
-          // Name + "Later" badge.
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                app.name,
-                style: AppTextStyles.labelMedium
-                    .copyWith(color: colors.textPrimary),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          vertical: AppDimens.spaceSm,
+        ),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
               ),
-              const SizedBox(height: 4),
-              Text(
-                'In Settings',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: colors.textSecondary,
-                ),
+              child: Icon(icon, size: 16, color: color),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: AppTextStyles.labelSmall.copyWith(
+                color: colors.textSecondary,
+                fontSize: 10,
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
