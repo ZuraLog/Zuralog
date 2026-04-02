@@ -35,6 +35,7 @@ class CoachAiResponse extends StatelessWidget {
     this.thinkingContent,
     this.activeToolName,
     this.showFooter = false,
+    this.modelUsed,
   });
 
   final String content;
@@ -47,6 +48,7 @@ class CoachAiResponse extends StatelessWidget {
   final String? thinkingContent;
   final String? activeToolName;
   final bool showFooter;
+  final String? modelUsed;
 
   @override
   Widget build(BuildContext context) {
@@ -221,6 +223,16 @@ class CoachAiResponse extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (modelUsed != null) ...[
+                  const SizedBox(width: AppDimens.spaceSm),
+                  Text(
+                    modelUsed == 'zura' ? '✦ Zura' : '⚡ Zura Flash',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: colors.textTertiary,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
               ],
             ),
         ],
