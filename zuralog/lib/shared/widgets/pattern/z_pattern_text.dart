@@ -42,7 +42,7 @@ class ZPatternText extends StatefulWidget {
     required this.text,
     required this.style,
     this.variant = ZPatternVariant.sage,
-    this.animate = false,
+    this.animate = true,
     this.textAlign,
   });
 
@@ -84,7 +84,7 @@ class _ZPatternTextState extends State<ZPatternText>
     if (widget.animate) {
       _controller = AnimationController(
         vsync: this,
-        duration: const Duration(seconds: 6),
+        duration: const Duration(seconds: 20),
       )..repeat(reverse: true);
     }
   }
@@ -181,7 +181,7 @@ class _ZPatternTextState extends State<ZPatternText>
   // ── Build ─────────────────────────────────────────────────────────────
 
   /// Maximum diagonal drift in logical pixels.
-  static const double _driftRange = 200.0;
+  static const double _driftRange = 60.0;
 
   Float64List _buildMatrix(Rect bounds) {
     if (_image == null) return Matrix4.identity().storage;
@@ -202,7 +202,7 @@ class _ZPatternTextState extends State<ZPatternText>
     }
 
     final matrix = Matrix4.identity()
-      ..translateByDouble(dx, dy, 0, 0)
+      ..translateByDouble(dx, dy, 0, 1)
       ..scaleByDouble(scale, scale, 1, 1);
     return matrix.storage;
   }
