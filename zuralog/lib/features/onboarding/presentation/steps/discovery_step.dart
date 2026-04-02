@@ -61,12 +61,13 @@ class DiscoveryStep extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Heading ────────────────────────────────────────────────────
-          Text(
-            'One last thing',
+          ZPatternText(
+            text: 'One last thing',
             style: AppTextStyles.displayLarge.copyWith(
-              color: colors.primary,
               height: 1.15,
             ),
+            variant: ZPatternVariant.sage,
+            animate: true,
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(

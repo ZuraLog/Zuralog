@@ -42,7 +42,7 @@ class ZPatternText extends StatefulWidget {
     required this.text,
     required this.style,
     this.variant = ZPatternVariant.sage,
-    this.animate = false,
+    this.animate = true,
     this.textAlign,
   });
 
@@ -81,7 +81,12 @@ class _ZPatternTextState extends State<ZPatternText>
   @override
   void initState() {
     super.initState();
-    // _loadImage is called from didChangeDependencies once context is available.
+    if (widget.animate) {
+      _controller = AnimationController(
+        vsync: this,
+        duration: const Duration(seconds: 20),
+      )..repeat(reverse: true);
+    }
   }
 
   @override
@@ -111,13 +116,8 @@ class _ZPatternTextState extends State<ZPatternText>
       _loadImage(resolvedVariant);
     }
 
-    if (widget.animate) {
-      final reduceMotion = MediaQuery.of(context).disableAnimations;
-      if (reduceMotion && _controller != null) {
-        _disposeAnimation();
-      } else if (!reduceMotion && _controller == null) {
-        _maybeStartAnimation();
-      }
+    if (widget.animate && _controller == null) {
+      _maybeStartAnimation();
     }
   }
 
@@ -164,17 +164,7 @@ class _ZPatternTextState extends State<ZPatternText>
   // ── Animation ─────────────────────────────────────────────────────────
 
   void _maybeStartAnimation() {
-    if (!widget.animate || _image == null) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final reduceMotion = MediaQuery.of(context).disableAnimations;
-      if (reduceMotion) return;
-      _controller ??= AnimationController(
-        vsync: this,
-        duration: const Duration(seconds: 20),
-      )..repeat(reverse: true);
-      if (mounted) setState(() {});
-    });
+    // Controller is created in initState — nothing extra needed.
   }
 
   void _disposeAnimation() {
@@ -212,7 +202,7 @@ class _ZPatternTextState extends State<ZPatternText>
     }
 
     final matrix = Matrix4.identity()
-      ..translateByDouble(dx, dy, 0, 0)
+      ..translateByDouble(dx, dy, 0, 1)
       ..scaleByDouble(scale, scale, 1, 1);
     return matrix.storage;
   }

@@ -94,12 +94,13 @@ class PersonaStep extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Heading ────────────────────────────────────────────────────
-          Text(
-            'Choose your\nAI persona',
+          ZPatternText(
+            text: 'Choose your\nAI persona',
             style: AppTextStyles.displayLarge.copyWith(
-              color: colors.primary,
               height: 1.15,
             ),
+            variant: ZPatternVariant.sage,
+            animate: true,
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(

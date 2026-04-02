@@ -168,7 +168,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         onLevelChanged: (v) => setState(() => _fitnessLevel = v),
       ),
 
-      // Step 6 — Connect Apps (informational)
+      // Step 6 — Connect Apps (Apple Health / Health Connect)
       const ConnectAppsStep(),
 
       // Step 7 — Notifications
@@ -378,13 +378,6 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     return ZuralogScaffold(
       body: Stack(
         children: [
-          const Positioned.fill(
-            child: ZPatternOverlay(
-              variant: ZPatternVariant.sage,
-              opacity: 0.10,
-              animate: true,
-            ),
-          ),
           Column(
             children: [
               _OnboardingTopBar(

@@ -182,12 +182,13 @@ class _WelcomeStepState extends State<WelcomeStep>
             opacity: _text1Opacity,
             child: SlideTransition(
               position: _text1Slide,
-              child: Text(
-                'Hi, welcome\nto Zuralog.',
+              child: ZPatternText(
+                text: 'Hi, welcome\nto Zuralog.',
                 style: AppTextStyles.displayLarge.copyWith(
-                  color: colors.primary,
                   height: 1.1,
                 ),
+                variant: ZPatternVariant.sage,
+                animate: true,
               ),
             ),
           ),

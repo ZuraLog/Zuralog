@@ -80,12 +80,13 @@ class _NameStepState extends State<NameStep> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Heading ───────────────────────────────────────────────────
-          Text(
-            'What should we\ncall you?',
+          ZPatternText(
+            text: 'What should we\ncall you?',
             style: AppTextStyles.displayLarge.copyWith(
-              color: colors.primary,
               height: 1.1,
             ),
+            variant: ZPatternVariant.sage,
+            animate: true,
           ),
           const SizedBox(height: AppDimens.spaceXs),
           Text(
