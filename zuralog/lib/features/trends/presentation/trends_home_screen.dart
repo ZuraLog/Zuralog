@@ -1313,15 +1313,18 @@ class _TrendsLoadingSkeleton extends StatelessWidget {
               horizontal: AppDimens.spaceMd,
               vertical: AppDimens.spaceSm,
             ),
-            child: Row(
-              children: List.generate(
-                5,
-                (i) => Padding(
-                  padding: const EdgeInsets.only(right: AppDimens.spaceSm),
-                  child: ZLoadingSkeleton(
-                    width: i == 0 ? 48 : 72,
-                    height: 32,
-                    borderRadius: AppDimens.radiusChip,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: List.generate(
+                  5,
+                  (i) => Padding(
+                    padding: const EdgeInsets.only(right: AppDimens.spaceSm),
+                    child: ZLoadingSkeleton(
+                      width: i == 0 ? 48 : 72,
+                      height: 32,
+                      borderRadius: AppDimens.radiusChip,
+                    ),
                   ),
                 ),
               ),
