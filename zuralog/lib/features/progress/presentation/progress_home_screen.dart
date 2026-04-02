@@ -284,15 +284,14 @@ class _ContentView extends ConsumerWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (!journalledToday)
-                    _SectionHeader(
-                      title: 'Journal',
-                      trailingLabel: 'History',
-                      onTrailingTap: () {
-                        ref.read(hapticServiceProvider).light();
-                        context.push(RouteNames.journalPath);
-                      },
-                    ),
+                  _SectionHeader(
+                    title: 'Journal',
+                    trailingLabel: 'History',
+                    onTrailingTap: () {
+                      ref.read(hapticServiceProvider).light();
+                      context.push(RouteNames.journalPath);
+                    },
+                  ),
                   JournalPromptCta(
                     onTap: () {
                       // Free users: gate at 5 entries per month.
