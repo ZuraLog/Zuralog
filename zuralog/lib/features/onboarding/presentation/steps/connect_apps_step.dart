@@ -259,7 +259,9 @@ class _HealthConnectCard extends StatelessWidget {
                       ? 'Connecting...'
                       : 'Connect ${Platform.isIOS ? 'Apple Health' : 'Health Connect'}',
               icon: isConnected ? Icons.check_circle_rounded : null,
-              variant: ZButtonVariant.secondary,
+              variant: isConnected
+                  ? ZButtonVariant.secondary
+                  : ZButtonVariant.primary,
               size: ZButtonSize.large,
               isLoading: isConnecting,
               onPressed: isConnected || isConnecting ? null : onConnect,

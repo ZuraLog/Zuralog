@@ -382,7 +382,6 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
             child: ZPatternOverlay(
               variant: ZPatternVariant.sage,
               opacity: 0.10,
-              animate: true,
             ),
           ),
           Column(
