@@ -45,6 +45,11 @@ class ProfileAvatarButton extends ConsumerWidget {
     final displayName = profile?.aiName ?? (email.isNotEmpty ? email : '');
     final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : '';
     final avatarUrl = profile?.avatarUrl;
+    // Append a cache-busting query param so Flutter reloads the image
+    // when the avatar is re-uploaded at the same URL.
+    final avatarUrlWithBuster = avatarUrl != null && avatarUrl.isNotEmpty
+        ? '$avatarUrl?v=${profile.hashCode}'
+        : null;
 
     return GestureDetector(
       onTap: () => context.pushNamed(RouteNames.settings),
@@ -52,10 +57,10 @@ class ProfileAvatarButton extends ConsumerWidget {
       child: CircleAvatar(
         radius: AppDimens.avatarMd / 2,
         backgroundColor: colors.primary.withValues(alpha: 0.85),
-        backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-            ? NetworkImage(avatarUrl)
+        backgroundImage: avatarUrlWithBuster != null
+            ? NetworkImage(avatarUrlWithBuster)
             : null,
-        child: avatarUrl != null && avatarUrl.isNotEmpty
+        child: avatarUrlWithBuster != null
             ? null
             : initial.isNotEmpty
                 ? Text(
