@@ -406,14 +406,25 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
     final show = _typeChosen;
 
     return AnimatedSize(
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOut,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
       alignment: Alignment.topCenter,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 300),
-        opacity: show ? 1.0 : 0.0,
-        child: show
-            ? Column(
+      child: !show
+          ? const SizedBox.shrink()
+          : TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 600),
+              curve: Curves.easeOut,
+              builder: (context, value, child) {
+                return Opacity(
+                  opacity: value,
+                  child: Transform.translate(
+                    offset: Offset(0, 12 * (1 - value)),
+                    child: child,
+                  ),
+                );
+              },
+              child: Column(
                 children: [
                   const SizedBox(height: AppDimens.spaceMd),
                   // Period selector
@@ -425,9 +436,8 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
                   // Deadline
                   _buildDeadlineSection(colors),
                 ],
-              )
-            : const SizedBox.shrink(),
-      ),
+              ),
+            ),
     );
   }
 
