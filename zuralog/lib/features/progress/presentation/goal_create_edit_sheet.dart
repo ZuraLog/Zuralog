@@ -2,6 +2,9 @@
 ///
 /// Handles both creating a new [Goal] and editing an existing one.
 /// Opens from [GoalsScreen] via [showModalBottomSheet].
+///
+/// Features a stepped/progressive layout with staggered entrance animations,
+/// visual goal-type cards, and a sticky save button with animated brand pattern.
 library;
 
 import 'package:flutter/material.dart';
@@ -20,6 +23,8 @@ import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/shared/widgets/animations/z_fade_slide_in.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 
 // ── GoalCreateEditSheet ───────────────────────────────────────────────────────
 
@@ -54,6 +59,9 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
 
   bool _isSaving = false;
 
+  /// Whether a goal type has been chosen (always true in edit mode).
+  bool _typeChosen = false;
+
   bool get _isEdit => widget.initialGoal != null;
 
   @override
@@ -68,6 +76,9 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
     );
     _unitCtrl = TextEditingController(text: g?.unit ?? '');
     _deadline = g?.deadline != null ? DateTime.tryParse(g!.deadline!) : null;
+
+    // In edit mode, all sections are visible immediately.
+    if (_isEdit) _typeChosen = true;
   }
 
   @override
@@ -199,41 +210,69 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }
 
+  // ── Icon mapping for goal types ──────────────────────────────────────────
+
+  IconData _iconForType(GoalType type) {
+    switch (type) {
+      case GoalType.weightTarget:
+        return Icons.monitor_weight_rounded;
+      case GoalType.weeklyRunCount:
+        return Icons.directions_run_rounded;
+      case GoalType.dailyCalorieLimit:
+        return Icons.local_fire_department_rounded;
+      case GoalType.sleepDuration:
+        return Icons.bedtime_rounded;
+      case GoalType.stepCount:
+        return Icons.directions_walk_rounded;
+      case GoalType.waterIntake:
+        return Icons.water_drop_rounded;
+      case GoalType.custom:
+        return Icons.tune_rounded;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
 
     return Container(
       decoration: BoxDecoration(
         color: colors.elevatedSurface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: EdgeInsets.only(bottom: bottomInset),
       child: DraggableScrollableSheet(
         expand: false,
-        initialChildSize: 0.92,
+        initialChildSize: 0.85,
         minChildSize: 0.5,
         maxChildSize: 0.95,
         builder: (context, scrollController) {
-          return Form(
-            key: _formKey,
-            child: CustomScrollView(
-              controller: scrollController,
-              slivers: [
-                SliverToBoxAdapter(child: _buildHeader(colors)),
-                SliverToBoxAdapter(child: _buildTypeSection(colors)),
-                SliverToBoxAdapter(child: _buildPeriodSection(colors)),
-                SliverToBoxAdapter(child: _buildTitleField(colors)),
-                SliverToBoxAdapter(child: _buildTargetField(colors)),
-                SliverToBoxAdapter(child: _buildUnitField(colors)),
-                SliverToBoxAdapter(child: _buildDeadlineSection(colors)),
-                SliverToBoxAdapter(child: _buildSaveButton()),
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: AppDimens.spaceXl),
+          return Column(
+            children: [
+              // ── Scrollable content ──────────────────────────────────
+              Expanded(
+                child: Form(
+                  key: _formKey,
+                  child: CustomScrollView(
+                    controller: scrollController,
+                    slivers: [
+                      SliverToBoxAdapter(child: _buildHeader(colors)),
+                      SliverToBoxAdapter(child: _buildTypeSection(colors)),
+                      // Progressive reveal: these sections appear after type is chosen
+                      SliverToBoxAdapter(child: _buildDetailsSection(colors)),
+                      // Extra bottom space so content is not hidden behind the button
+                      SliverToBoxAdapter(
+                        child: SizedBox(height: AppDimens.spaceLg),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              ),
+              // ── Sticky save button ──────────────────────────────────
+              _buildStickyButton(colors, bottomPadding),
+            ],
           );
         },
       ),
@@ -245,9 +284,9 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
   Widget _buildHeader(AppColorsOf colors) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
+        AppDimens.spaceLg,
         AppDimens.spaceMd,
-        AppDimens.spaceMd,
-        AppDimens.spaceMd,
+        AppDimens.spaceLg,
         AppDimens.spaceSm,
       ),
       child: Column(
@@ -264,74 +303,117 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
               ),
             ),
           ),
-          const SizedBox(height: AppDimens.spaceMd),
-          Text(
-            _isEdit ? 'Edit Goal' : 'New Goal',
-            style: AppTextStyles.h2,
+          const SizedBox(height: AppDimens.spaceLg),
+          ZFadeSlideIn(
+            child: Text(
+              _isEdit ? 'Edit Goal' : 'New Goal',
+              style: AppTextStyles.h2,
+            ),
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          ZFadeSlideIn(
+            delay: const Duration(milliseconds: 80),
+            child: Text(
+              _isEdit
+                  ? 'Update your goal details below.'
+                  : 'Choose a goal type to get started.',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: colors.textSecondary,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // ── Goal type picker ─────────────────────────────────────────────────────────
+  // ── Goal type picker — visual card grid ─────────────────────────────────────
 
   Widget _buildTypeSection(AppColorsOf colors) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceMd,
-        AppDimens.spaceMd,
-        0,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Goal Type',
-            style: AppTextStyles.caption.copyWith(
-              color: colors.textSecondary,
+    return ZFadeSlideIn(
+      delay: const Duration(milliseconds: 160),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppDimens.spaceLg,
+          AppDimens.spaceMd,
+          AppDimens.spaceLg,
+          0,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Goal Type',
+              style: AppTextStyles.caption.copyWith(
+                color: colors.textSecondary,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
             ),
-          ),
-          const SizedBox(height: AppDimens.spaceSm),
-          Wrap(
-            spacing: AppDimens.spaceSm,
-            runSpacing: AppDimens.spaceSm,
-            children: GoalType.values.map((type) {
-              final selected = type == _selectedType;
-              return ChoiceChip(
-                label: Text(type.displayName),
-                selected: selected,
-                onSelected: _isEdit
-                    ? null // type locked in edit mode
-                    : (_) {
-                        setState(() {
-                          _selectedType = type;
-                          // Auto-fill default unit for known types when the
-                          // unit field has not been customised yet.
-                          if (_unitCtrl.text.isEmpty ||
-                              _unitCtrl.text == _defaultUnitFor(_selectedType)) {
-                            _unitCtrl.text = _defaultUnitFor(type);
-                          }
-                        });
-                      },
-                selectedColor: AppColors.primary,
-                backgroundColor: colors.inputBackground,
-                disabledColor: colors.inputBackground,
-                labelStyle: AppTextStyles.caption.copyWith(
-                  color: selected
-                      ? AppColors.primaryButtonText
-                      : colors.textSecondary,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppDimens.radiusChip),
-                  side: BorderSide.none,
-                ),
-                showCheckmark: false,
-              );
-            }).toList(),
-          ),
-        ],
+            const SizedBox(height: AppDimens.spaceSm + 4),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: AppDimens.spaceSm + 4,
+              crossAxisSpacing: AppDimens.spaceSm + 4,
+              childAspectRatio: 2.2,
+              children: GoalType.values.map((type) {
+                final selected = type == _selectedType && _typeChosen;
+                return _GoalTypeCard(
+                  type: type,
+                  icon: _iconForType(type),
+                  selected: selected,
+                  enabled: !_isEdit,
+                  onTap: _isEdit
+                      ? null
+                      : () {
+                          ref.read(hapticServiceProvider).selectionTick();
+                          setState(() {
+                            _selectedType = type;
+                            _typeChosen = true;
+                            if (_unitCtrl.text.isEmpty ||
+                                _unitCtrl.text == _defaultUnitFor(_selectedType)) {
+                              _unitCtrl.text = _defaultUnitFor(type);
+                            }
+                          });
+                        },
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Details section (progressive reveal) ────────────────────────────────────
+
+  Widget _buildDetailsSection(AppColorsOf colors) {
+    final show = _typeChosen;
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOut,
+      alignment: Alignment.topCenter,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 300),
+        opacity: show ? 1.0 : 0.0,
+        child: show
+            ? Column(
+                children: [
+                  const SizedBox(height: AppDimens.spaceMd),
+                  // Period selector
+                  _buildPeriodSection(colors),
+                  // Title field
+                  _buildTitleField(colors),
+                  // Target + Unit in a row
+                  _buildTargetUnitRow(colors),
+                  // Deadline
+                  _buildDeadlineSection(colors),
+                ],
+              )
+            : const SizedBox.shrink(),
       ),
     );
   }
@@ -341,9 +423,9 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
   Widget _buildPeriodSection(AppColorsOf colors) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceMd,
-        AppDimens.spaceMd,
+        AppDimens.spaceLg,
+        0,
+        AppDimens.spaceLg,
         0,
       ),
       child: Column(
@@ -353,36 +435,44 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
             'Period',
             style: AppTextStyles.caption.copyWith(
               color: colors.textSecondary,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
             ),
           ),
           const SizedBox(height: AppDimens.spaceSm),
-          SegmentedButton<GoalPeriod>(
-            segments: GoalPeriod.values
-                .map(
-                  (p) => ButtonSegment<GoalPeriod>(
-                    value: p,
-                    label: Text(p.displayName),
-                  ),
-                )
-                .toList(),
-            selected: {_selectedPeriod},
-            onSelectionChanged: _isEdit
-                ? null // period locked in edit mode
-                : (set) => setState(() => _selectedPeriod = set.first),
-            style: ButtonStyle(
-              backgroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) {
-                  return AppColors.primary;
-                }
-                return colors.inputBackground;
-              }),
-              foregroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) {
-                  return AppColors.primaryButtonText;
-                }
-                return colors.textSecondary;
-              }),
-              textStyle: WidgetStatePropertyAll(AppTextStyles.caption),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<GoalPeriod>(
+              segments: GoalPeriod.values
+                  .map(
+                    (p) => ButtonSegment<GoalPeriod>(
+                      value: p,
+                      label: Text(p.displayName),
+                    ),
+                  )
+                  .toList(),
+              selected: {_selectedPeriod},
+              onSelectionChanged: _isEdit
+                  ? null
+                  : (set) {
+                      ref.read(hapticServiceProvider).selectionTick();
+                      setState(() => _selectedPeriod = set.first);
+                    },
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return AppColors.primary;
+                  }
+                  return colors.inputBackground;
+                }),
+                foregroundColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return AppColors.primaryButtonText;
+                  }
+                  return colors.textSecondary;
+                }),
+                textStyle: WidgetStatePropertyAll(AppTextStyles.caption),
+              ),
             ),
           ),
         ],
@@ -395,9 +485,9 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
   Widget _buildTitleField(AppColorsOf colors) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
+        AppDimens.spaceLg,
         AppDimens.spaceMd,
-        AppDimens.spaceMd,
-        AppDimens.spaceMd,
+        AppDimens.spaceLg,
         0,
       ),
       child: TextFormField(
@@ -417,60 +507,61 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
     );
   }
 
-  // ── Target value field ───────────────────────────────────────────────────────
+  // ── Target + Unit fields in a row ─────────────────────────────────────────
 
-  Widget _buildTargetField(AppColorsOf colors) {
+  Widget _buildTargetUnitRow(AppColorsOf colors) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
+        AppDimens.spaceLg,
         AppDimens.spaceMd,
-        AppDimens.spaceMd,
-        AppDimens.spaceMd,
+        AppDimens.spaceLg,
         0,
       ),
-      child: TextFormField(
-        controller: _targetCtrl,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Target value — takes more space
+          Expanded(
+            flex: 3,
+            child: TextFormField(
+              controller: _targetCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+              ],
+              style: AppTextStyles.body.copyWith(color: colors.textPrimary),
+              decoration: _inputDecoration(colors,
+                label: 'Target',
+                hint: 'e.g. 10000',
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Required';
+                final d = double.tryParse(v.trim());
+                if (d == null || d <= 0) return 'Must be > 0';
+                return null;
+              },
+            ),
+          ),
+          const SizedBox(width: AppDimens.spaceSm + 4),
+          // Unit — narrower
+          Expanded(
+            flex: 2,
+            child: TextFormField(
+              controller: _unitCtrl,
+              style: AppTextStyles.body.copyWith(color: colors.textPrimary),
+              decoration: _inputDecoration(colors,
+                label: 'Unit',
+                hint: 'e.g. steps',
+              ),
+              validator: (v) {
+                if (v != null && v.trim().length > 50) {
+                  return 'Max 50 chars';
+                }
+                return null;
+              },
+            ),
+          ),
         ],
-        style: AppTextStyles.body.copyWith(color: colors.textPrimary),
-        decoration: _inputDecoration(colors,
-          label: 'Target Value',
-          hint: 'e.g. 10000',
-        ),
-        validator: (v) {
-          if (v == null || v.trim().isEmpty) return 'Target value is required';
-          final d = double.tryParse(v.trim());
-          if (d == null || d <= 0) return 'Enter a value greater than 0';
-          return null;
-        },
-      ),
-    );
-  }
-
-  // ── Unit field ───────────────────────────────────────────────────────────────
-
-  Widget _buildUnitField(AppColorsOf colors) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceMd,
-        AppDimens.spaceMd,
-        0,
-      ),
-      child: TextFormField(
-        controller: _unitCtrl,
-        style: AppTextStyles.body.copyWith(color: colors.textPrimary),
-        decoration: _inputDecoration(colors,
-          label: 'Unit',
-          hint: 'e.g. steps, kg, hrs',
-        ),
-        validator: (v) {
-          if (v != null && v.trim().length > 50) {
-            return 'Unit must be 50 characters or fewer';
-          }
-          return null;
-        },
       ),
     );
   }
@@ -480,9 +571,9 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
   Widget _buildDeadlineSection(AppColorsOf colors) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
+        AppDimens.spaceLg,
         AppDimens.spaceMd,
-        AppDimens.spaceMd,
-        AppDimens.spaceMd,
+        AppDimens.spaceLg,
         0,
       ),
       child: Column(
@@ -492,6 +583,8 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
             'Deadline',
             style: AppTextStyles.caption.copyWith(
               color: colors.textSecondary,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
             ),
           ),
           const SizedBox(height: AppDimens.spaceXs),
@@ -504,7 +597,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
                 color: AppColors.primary,
               ),
               label: Text(
-                'Add deadline',
+                'Add deadline (optional)',
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: AppColors.primary,
                 ),
@@ -521,8 +614,8 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
                   onTap: _pickDeadline,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: AppDimens.spaceSm,
-                      vertical: AppDimens.spaceXs,
+                      horizontal: AppDimens.spaceSm + 4,
+                      vertical: AppDimens.spaceSm,
                     ),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withValues(alpha: 0.12),
@@ -534,14 +627,15 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
                       children: [
                         const Icon(
                           Icons.calendar_today_rounded,
-                          size: 12,
+                          size: 14,
                           color: AppColors.primary,
                         ),
-                        const SizedBox(width: AppDimens.spaceXs),
+                        const SizedBox(width: AppDimens.spaceSm),
                         Text(
                           _formatDeadline(_deadline!),
-                          style: AppTextStyles.caption.copyWith(
+                          style: AppTextStyles.bodyMedium.copyWith(
                             color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
@@ -551,10 +645,17 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
                 const SizedBox(width: AppDimens.spaceSm),
                 GestureDetector(
                   onTap: _clearDeadline,
-                  child: const Icon(
-                    Icons.close_rounded,
-                    size: 16,
-                    color: AppColors.textTertiary,
+                  child: Container(
+                    padding: const EdgeInsets.all(AppDimens.spaceXs + 2),
+                    decoration: BoxDecoration(
+                      color: colors.inputBackground,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      size: 14,
+                      color: AppColors.textTertiary,
+                    ),
                   ),
                 ),
               ],
@@ -564,44 +665,81 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
     );
   }
 
-  // ── Save button ──────────────────────────────────────────────────────────────
+  // ── Sticky save button with pattern overlay ───────────────────────────────
 
-  Widget _buildSaveButton() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
+  Widget _buildStickyButton(AppColorsOf colors, double bottomPadding) {
+    // Ensure the button clears the tab bar: at least 100px + safe area
+    final effectiveBottomPad = bottomPadding + 100;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
         AppDimens.spaceLg,
-        AppDimens.spaceMd,
-        0,
+        AppDimens.spaceSm,
+        AppDimens.spaceLg,
+        effectiveBottomPad,
       ),
-      child: SizedBox(
-        width: double.infinity,
-        child: FilledButton(
-          onPressed: _isSaving ? null : _save,
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: AppColors.primaryButtonText,
-            disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.4),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
-            ),
-            padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceMd),
+      decoration: BoxDecoration(
+        color: colors.elevatedSurface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
           ),
-          child: _isSaving
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppColors.primaryButtonText,
+        ],
+      ),
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 250),
+        opacity: _typeChosen ? 1.0 : 0.4,
+        child: GestureDetector(
+          onTap: (_isSaving || !_typeChosen) ? null : _save,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppDimens.shapePill),
+            child: SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Layer 1: Sage background
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(AppDimens.shapePill),
+                      ),
+                    ),
                   ),
-                )
-              : Text(
-                  _isEdit ? 'Save Changes' : 'Create Goal',
-                  style: AppTextStyles.h3.copyWith(
-                    color: AppColors.primaryButtonText,
+                  // Layer 2: Animated pattern overlay
+                  Positioned.fill(
+                    child: ZPatternOverlay(
+                      variant: ZPatternVariant.sage,
+                      opacity: 0.15,
+                      animate: true,
+                    ),
                   ),
-                ),
+                  // Layer 3: Button content
+                  Center(
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: AppColors.primaryButtonText,
+                            ),
+                          )
+                        : Text(
+                            _isEdit ? 'Save Changes' : 'Create Goal',
+                            style: AppTextStyles.h3.copyWith(
+                              color: AppColors.primaryButtonText,
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -668,6 +806,95 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusInput),
         borderSide: const BorderSide(color: AppColors.statusError, width: 1.5),
+      ),
+    );
+  }
+}
+
+// ── Goal Type Card ──────────────────────────────────────────────────────────
+
+/// A visual card for selecting a goal type in the 2-column grid.
+class _GoalTypeCard extends StatelessWidget {
+  const _GoalTypeCard({
+    required this.type,
+    required this.icon,
+    required this.selected,
+    required this.enabled,
+    this.onTap,
+  });
+
+  final GoalType type;
+  final IconData icon;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.primary
+              : colors.cardBackground,
+          borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          border: Border.all(
+            color: selected
+                ? AppColors.primary
+                : colors.border.withValues(alpha: 0.5),
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimens.spaceSm + 4,
+          vertical: AppDimens.spaceSm,
+        ),
+        child: Row(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.all(AppDimens.spaceSm),
+              decoration: BoxDecoration(
+                color: selected
+                    ? Colors.white.withValues(alpha: 0.2)
+                    : AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppDimens.spaceSm + 4),
+              ),
+              child: Icon(
+                icon,
+                size: 20,
+                color: selected
+                    ? AppColors.primaryButtonText
+                    : AppColors.primary,
+              ),
+            ),
+            const SizedBox(width: AppDimens.spaceSm),
+            Expanded(
+              child: Text(
+                type.displayName,
+                style: AppTextStyles.caption.copyWith(
+                  color: selected
+                      ? AppColors.primaryButtonText
+                      : colors.textPrimary,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (selected)
+              Icon(
+                Icons.check_circle_rounded,
+                size: 18,
+                color: AppColors.primaryButtonText.withValues(alpha: 0.8),
+              ),
+          ],
+        ),
       ),
     );
   }
