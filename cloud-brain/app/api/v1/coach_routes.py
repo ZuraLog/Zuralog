@@ -127,3 +127,45 @@ async def coach_events(
         for e in rows.scalars().all()
     ]
     return {"metric_type": metric_type, "events": events}
+
+
+@limiter.limit("30/minute")
+@router.get("/usage")
+async def coach_usage(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_authenticated_user_id),
+) -> dict:
+    """Current per-model usage limits for the authenticated user."""
+    rate_limiter = getattr(request.app.state, "rate_limiter", None)
+    if rate_limiter is None:
+        return {
+            "flash_used": 0, "flash_limit": 0,
+            "zura_used": 0, "zura_limit": 0,
+            "burst_used": 0, "burst_limit": 0,
+            "flash_reset_seconds": 0, "zura_reset_seconds": 0, "burst_reset_seconds": 0,
+            "tier": "free",
+        }
+
+    from app.models.user import User
+    from app.services.rate_limiter import RateLimiter
+
+    row = await db.execute(select(User).where(User.id == user_id))
+    user = row.scalar_one_or_none()
+    raw_tier = getattr(user, "subscription_tier", "free") if user else "free"
+    tier = "premium" if raw_tier and raw_tier not in ("", "free") else "free"
+
+    limits = await rate_limiter.check_model_limits(user_id, tier)
+
+    return {
+        "flash_used": limits.flash_limit - limits.flash_remaining,
+        "flash_limit": limits.flash_limit,
+        "zura_used": limits.zura_limit - limits.zura_remaining,
+        "zura_limit": limits.zura_limit,
+        "burst_used": limits.burst_limit - limits.burst_remaining,
+        "burst_limit": limits.burst_limit,
+        "flash_reset_seconds": limits.flash_reset_seconds,
+        "zura_reset_seconds": limits.zura_reset_seconds,
+        "burst_reset_seconds": limits.burst_reset_seconds,
+        "tier": tier,
+    }
