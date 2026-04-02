@@ -95,7 +95,15 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
   }
 
   Future<void> _save() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    // Ensure the details section is visible before validating.
+    if (!_typeChosen) {
+      ref.read(hapticServiceProvider).warning();
+      return;
+    }
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      ref.read(hapticServiceProvider).warning();
+      return;
+    }
     setState(() => _isSaving = true);
 
     final repo = ref.read(progressRepositoryProvider);
@@ -692,7 +700,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
         duration: const Duration(milliseconds: 250),
         opacity: _typeChosen ? 1.0 : 0.4,
         child: GestureDetector(
-          onTap: (_isSaving || !_typeChosen) ? null : _save,
+          onTap: _isSaving ? null : _save,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(AppDimens.shapePill),
             child: SizedBox(
@@ -861,16 +869,16 @@ class _GoalTypeCard extends StatelessWidget {
               padding: const EdgeInsets.all(AppDimens.spaceSm),
               decoration: BoxDecoration(
                 color: selected
-                    ? Colors.white.withValues(alpha: 0.2)
-                    : AppColors.primary.withValues(alpha: 0.1),
+                    ? Colors.white.withValues(alpha: 0.25)
+                    : colors.inputBackground,
                 borderRadius: BorderRadius.circular(AppDimens.spaceSm + 4),
               ),
               child: Icon(
                 icon,
-                size: 20,
+                size: 22,
                 color: selected
                     ? AppColors.primaryButtonText
-                    : AppColors.primary,
+                    : colors.textPrimary,
               ),
             ),
             const SizedBox(width: AppDimens.spaceSm),
