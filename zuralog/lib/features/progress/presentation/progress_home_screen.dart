@@ -84,18 +84,16 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen> {
         backgroundColor: colors.cardBackground,
         onRefresh: _onRefresh,
         child: asyncData.when(
-          loading: () => ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            children: const [ProgressSkeletonLoader()],
+          loading: () => const SingleChildScrollView(
+            physics: AlwaysScrollableScrollPhysics(),
+            child: ProgressSkeletonLoader(),
           ),
-          error: (error, _) => ListView(
+          error: (error, _) => SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            children: [
-              ZErrorState(
-                message: 'Something went wrong. Please try again.',
-                onRetry: () => ref.invalidate(progressHomeProvider),
-              ),
-            ],
+            child: ZErrorState(
+              message: 'Something went wrong. Please try again.',
+              onRetry: () => ref.invalidate(progressHomeProvider),
+            ),
           ),
           data: (data) => _ContentView(data: data),
         ),

@@ -9,14 +9,14 @@ class ProgressSkeletonLoader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    return Padding(
       padding: EdgeInsets.fromLTRB(
         AppDimens.spaceMd,
         AppDimens.spaceMd,
         AppDimens.spaceMd,
         AppDimens.bottomClearance(context),
       ),
-      children: [
+      child: Column(children: [
         const ZLoadingSkeleton(
           width: double.infinity,
           height: 160,
@@ -64,7 +64,7 @@ class ProgressSkeletonLoader extends StatelessWidget {
           height: 72,
           borderRadius: AppDimens.radiusCard,
         ),
-      ],
+      ]),
     );
   }
 }
