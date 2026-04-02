@@ -290,6 +290,46 @@ async def update_journal_entry(
     return _entry_to_response(entry)
 
 
+@router.patch("/{entry_id}", summary="Partial update of a journal entry")
+async def patch_journal_entry(
+    entry_id: str,
+    body: dict,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Update only the provided fields of an existing journal entry.
+
+    The Flutter app sends PATCH with partial fields (content, tags, source).
+    """
+    result = await db.execute(
+        select(JournalEntry).where(
+            JournalEntry.id == entry_id,
+            JournalEntry.user_id == user_id,
+        )
+    )
+    entry = result.scalar_one_or_none()
+
+    if entry is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Journal entry '{entry_id}' not found.",
+        )
+
+    if "content" in body and body["content"] is not None:
+        entry.notes = body["content"]
+    if "tags" in body and body["tags"] is not None:
+        entry.tags = body["tags"]
+    if "source" in body and body["source"] is not None:
+        entry.source = body["source"]
+    if "conversation_id" in body:
+        entry.conversation_id = body.get("conversation_id")
+
+    await db.commit()
+    await db.refresh(entry)
+    logger.info("Patched journal entry %s for user %s", entry_id, user_id)
+    return _entry_to_response(entry)
+
+
 @router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a journal entry")
 async def delete_journal_entry(
     entry_id: str,
