@@ -15,6 +15,11 @@ from dataclasses import dataclass
 
 import redis.asyncio as redis
 
+from app.config import (
+    FREE_BURST_5H, FREE_FLASH_DAILY, FREE_ZURA_DAILY,
+    PRO_BURST_5H, PRO_FLASH_WEEKLY, PRO_ZURA_WEEKLY,
+    BURST_WINDOW_SECONDS,
+)
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -36,6 +41,34 @@ BURST_LIMITS: dict[str, int] = {
     "free": 10,
     "premium": 30,
 }
+
+
+_READ_THREE_SCRIPT = """
+local v1 = redis.call('GET', KEYS[1]) or '0'
+local v2 = redis.call('GET', KEYS[2]) or '0'
+local v3 = redis.call('GET', KEYS[3]) or '0'
+local t1 = redis.call('TTL', KEYS[1])
+local t2 = redis.call('TTL', KEYS[2])
+local t3 = redis.call('TTL', KEYS[3])
+return {tonumber(v1), tonumber(v2), tonumber(v3), t1, t2, t3}
+"""
+
+
+@dataclass
+class ModelLimitResult:
+    """Result of a dual-model limit check."""
+    flash_allowed: bool
+    zura_allowed: bool
+    burst_allowed: bool
+    flash_remaining: int
+    zura_remaining: int
+    burst_remaining: int
+    flash_limit: int
+    zura_limit: int
+    burst_limit: int
+    flash_reset_seconds: int
+    zura_reset_seconds: int
+    burst_reset_seconds: int
 
 
 @dataclass
@@ -158,6 +191,91 @@ class RateLimiter:
                 remaining=-1,
                 reset_seconds=reset_seconds,
             )
+
+    @staticmethod
+    def _resolve_model_keys(user_id: str, tier: str):
+        import datetime as _dt
+        burst_key = f"burst:window:{user_id}"
+        burst_ttl = BURST_WINDOW_SECONDS
+        if tier == "premium":
+            iso = _dt.date.today().isocalendar()
+            wk = f"{iso.year}-W{iso.week:02d}"
+            flash_key = f"limit:flash:weekly:{user_id}:{wk}"
+            zura_key = f"limit:zura:weekly:{user_id}:{wk}"
+            return (flash_key, zura_key, burst_key,
+                    PRO_FLASH_WEEKLY, PRO_ZURA_WEEKLY, PRO_BURST_5H,
+                    7*86400, 7*86400, burst_ttl)
+        day = _dt.date.today().isoformat()
+        flash_key = f"limit:flash:daily:{user_id}:{day}"
+        zura_key = f"limit:zura:daily:{user_id}:{day}"
+        return (flash_key, zura_key, burst_key,
+                FREE_FLASH_DAILY, FREE_ZURA_DAILY, FREE_BURST_5H,
+                86400, 86400, burst_ttl)
+
+    async def check_model_limits(self, user_id: str, tier: str = "free") -> ModelLimitResult:
+        """Check per-model limits for a user (read-only, does not increment).
+
+        Args:
+            user_id: The authenticated user's ID.
+            tier: Subscription tier ('free' or 'premium').
+
+        Returns:
+            A ModelLimitResult with the current state of all three buckets.
+        """
+        (fk, zk, bk, fl, zl, bl, ft, zt, bt) = self._resolve_model_keys(user_id, tier)
+        try:
+            vals = await self._redis.eval(_READ_THREE_SCRIPT, 3, fk, zk, bk)
+            fu = int(vals[0] or 0)
+            zu = int(vals[1] or 0)
+            bu = int(vals[2] or 0)
+            fr = max(int(vals[3] or 0), 0)
+            zr = max(int(vals[4] or 0), 0)
+            br = max(int(vals[5] or 0), 0)
+        except Exception as exc:
+            logger.error("Redis error in check_model_limits: %s", exc)
+            return ModelLimitResult(
+                flash_allowed=True, zura_allowed=True, burst_allowed=True,
+                flash_remaining=-1, zura_remaining=-1, burst_remaining=-1,
+                flash_limit=fl, zura_limit=zl, burst_limit=bl,
+                flash_reset_seconds=0, zura_reset_seconds=0, burst_reset_seconds=0)
+        frem = max(0, fl - fu)
+        zrem = max(0, zl - zu)
+        brem = max(0, bl - bu)
+        return ModelLimitResult(
+            flash_allowed=frem > 0,
+            zura_allowed=zrem > 0,
+            burst_allowed=brem > 0,
+            flash_remaining=frem,
+            zura_remaining=zrem,
+            burst_remaining=brem,
+            flash_limit=fl,
+            zura_limit=zl,
+            burst_limit=bl,
+            flash_reset_seconds=fr if fr > 0 else ft,
+            zura_reset_seconds=zr if zr > 0 else zt,
+            burst_reset_seconds=br if br > 0 else bt)
+
+    async def increment_model_usage(self, user_id: str, tier: str, model_tier: str) -> None:
+        """Atomically increment the model bucket and 5-hour burst window counter.
+
+        Args:
+            user_id: The authenticated user's ID.
+            tier: Subscription tier ('free' or 'premium').
+            model_tier: Which model was used ('zura_flash' or 'zura_pro').
+        """
+        (fk, zk, bk, _1, _2, _3, ft, zt, bt) = self._resolve_model_keys(user_id, tier)
+        mk = fk if model_tier == "zura_flash" else zk
+        mt = ft if model_tier == "zura_flash" else zt
+        try:
+            pipe = self._redis.pipeline(transaction=False)
+            pipe.eval(_INCR_EXPIRE_SCRIPT, 1, mk, str(mt))
+            pipe.eval(_INCR_EXPIRE_SCRIPT, 1, bk, str(bt))
+            results = await pipe.execute()
+            for r in results:
+                if isinstance(r, Exception):
+                    logger.error("Partial failure in increment_model_usage: %s", r)
+        except Exception as exc:
+            logger.error("Redis error in increment_model_usage: %s", exc)
 
     @staticmethod
     def headers(result: RateLimitResult) -> dict[str, str]:
