@@ -570,7 +570,7 @@ class UserProgressServer(BaseMCPServer):
                     "streak_type": s.streak_type,
                     "current_count": s.current_count,
                     "longest_count": s.longest_count,
-                    "last_activity_date": s.last_activity_date,
+                    "last_activity_date": s.last_activity_date.isoformat() if s.last_activity_date is not None else None,
                     "freeze_tokens_available": s.freeze_count,
                 }
                 for s in streaks
@@ -605,7 +605,7 @@ class UserProgressServer(BaseMCPServer):
     # Resources
     # ------------------------------------------------------------------
 
-    async def get_resources(self, user_id: str) -> list[Resource]:
+    async def get_resources(self, user_id: str) -> list[Resource]:  # noqa: ARG002
         """Return a description of resources available for the LLM's context.
 
         Args:

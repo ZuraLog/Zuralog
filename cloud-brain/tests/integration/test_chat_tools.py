@@ -71,7 +71,7 @@ HTTP_BASE = "https://api.zuralog.com"
 WS_URL = "wss://api.zuralog.com/api/v1/chat/ws"
 
 # How long to wait for the AI to finish one response (seconds).
-_AI_TIMEOUT = 90
+_AI_TIMEOUT = 120
 
 
 # ---------------------------------------------------------------------------

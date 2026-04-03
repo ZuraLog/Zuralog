@@ -105,7 +105,12 @@ async def classify_message(text: str) -> MessageTier:
     if signals["word_count"] < 8 and not signals["has_plan_keyword"]:
         return MessageTier.standard
 
-    # LLM path: ask the classifier model.
+    # Positive fast path: long messages with plan keywords are always deep_analysis.
+    # The LLM classifier consistently under-classifies these as standard.
+    if signals["word_count"] >= 8 and signals["has_plan_keyword"]:
+        return MessageTier.deep_analysis
+
+    # LLM path: ask the classifier model for ambiguous cases.
     try:
         client = _get_classifier_client()
         response = await asyncio.wait_for(
