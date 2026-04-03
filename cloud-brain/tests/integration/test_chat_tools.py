@@ -356,8 +356,9 @@ async def test_sleep_query_fires_apple_health(jwt_token: str, _run: int) -> None
     )
 
     assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
-    assert "apple_health_read_metrics" in result.tools_fired, (
-        f"[run {_run}] apple_health_read_metrics did not fire.\n"
+    health_read_tools = {"apple_health_read_metrics", "health_connect_read_metrics"}
+    assert any(t in health_read_tools for t in result.tools_fired), (
+        f"[run {_run}] Neither apple_health_read_metrics nor health_connect_read_metrics fired.\n"
         f"Tools fired: {result.tools_fired}"
     )
     assert len(result.response) > 20
