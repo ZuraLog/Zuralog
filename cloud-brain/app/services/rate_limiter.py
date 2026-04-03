@@ -279,7 +279,7 @@ class RateLimiter:
 
         (fk, zk, bk, fl, zl, bl, ft, zt, bt) = self._resolve_model_keys(user_id, tier)
         try:
-            vals = await self._redis.eval(_READ_THREE_SCRIPT, 3, fk, zk, bk)
+            vals = await self._redis.eval(_READ_THREE_SCRIPT, 3, fk, zk, bk)  # type: ignore[misc]
             fu = int(vals[0] or 0)
             zu = int(vals[1] or 0)
             bu = int(vals[2] or 0)
@@ -335,7 +335,7 @@ class RateLimiter:
         if user_id.lower() in _BYPASS_USER_IDS:
             return  # Do not count usage for bypass accounts.
 
-        (fk, zk, bk, _1, _2, _3, ft, zt, bt) = self._resolve_model_keys(user_id, tier)
+        (fk, zk, bk, _, _, _, ft, zt, bt) = self._resolve_model_keys(user_id, tier)
         mk = fk if model_tier == "zura_flash" else zk
         mt = ft if model_tier == "zura_flash" else zt
         try:
