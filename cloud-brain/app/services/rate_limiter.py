@@ -263,7 +263,11 @@ class RateLimiter:
         Returns:
             A ModelLimitResult with the current state of all three buckets.
         """
-        if user_id.lower() in _BYPASS_USER_IDS:
+        if (
+            _BYPASS_USER_IDS
+            and _UUID_RE.match(user_id)          # user_id must be a valid UUID — no exceptions
+            and user_id.lower() in _BYPASS_USER_IDS
+        ):
             logger.info("Rate limit bypass used by user %s", user_id[:8])
             (_, _, _, fl, zl, bl, _, _, _) = self._resolve_model_keys(user_id, tier)
             return ModelLimitResult(
