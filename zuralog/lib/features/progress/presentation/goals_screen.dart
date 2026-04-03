@@ -211,8 +211,13 @@ class _GoalsList extends StatelessWidget {
           key: ValueKey(goal.id),
           direction: DismissDirection.endToStart,
           background: _DismissBackground(),
-          confirmDismiss: (_) => _confirmDelete(context),
-          onDismissed: (_) => onDelete(goal.id),
+          confirmDismiss: (_) async {
+            final confirmed = await _confirmDelete(context);
+            if (confirmed == true) {
+              await onDelete(goal.id);
+            }
+            return false; // Let provider refresh remove the item
+          },
           child: _GoalCard(
             goal: goal,
             onTap: () => onTap(goal),
