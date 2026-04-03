@@ -20,7 +20,7 @@ providers:
   - id: "python:provider.py"
     label: "Zura/Kimi-K2.5 (primary)"
   - id: "python:provider.py"
-    label: "Zura/Qwen3.5-Flash (fallback)"
+    label: "Zura/Qwen3.5-Flash (parity check)"
     config:
       model: "qwen/qwen3.5-flash-02-23"
 

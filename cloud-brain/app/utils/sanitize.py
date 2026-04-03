@@ -12,26 +12,46 @@ _DANGEROUS_PATTERN = re.compile(
 # Memory injection filter
 # ---------------------------------------------------------------------------
 
-# High-signal phrases that are essentially never part of a legitimate health
-# memory. These are matched unconditionally (case-insensitive).
+# High-signal phrases that detect prompt-injection attempts.
+#
+# Design principle: patterns that overlap with ordinary health language require
+# an instruction-specific follow-on target so that legitimate coaching memories
+# (e.g. "Ignore your cravings", "Forget your old habits", "Skip all processed
+# foods", "You are now at 95% of your goal") do not produce false positives.
+# Patterns that are genuinely rare in health contexts (e.g. "your new
+# instructions are", "system prompt", "you have no restrictions") are matched
+# unconditionally.
 _HIGH_SIGNAL_PHRASES = re.compile(
     r'(?:'
+    # Instruction-override phrases — always high-signal in any context
     r'your\s+new\s+instructions'
-    r'|you\s+are\s+now'
-    r'|system\s+prompt'
-    r'|act\s+as(?:\s+an?)?\b'
-    r'|act\s+like\b'
-    r'|ignore\s+your\b'
-    r'|forget\s+your\b'
-    r'|override\s+your\b'
-    r'|disregard\s+your\b'
-    r'|reveal\s+your\s+(?:system|internal|prompt|instructions?|rules?|guidelines?|secrets?|configuration)\b'
-    r'|pretend\s+you\b'
-    r'|you\s+have\s+no\s+restrictions'
-    r'|skip\s+all\b'
     r'|new\s+instructions\s+are'
+    r'|system\s+prompt'
+    r'|you\s+have\s+no\s+restrictions'
+    # Broad ignore/forget — only when clearly targeting prior instructions
     r'|ignore\s+(?:all|previous|above|every)\b'
-    r'|forget\s+(?:all|previous|every|every\w*)\b'
+    r'|forget\s+(?:all|previous|every)\b'
+    # AI identity reassignment — require an identity target after "you are now"
+    # so "You are now at 95% of your goal" is not flagged
+    r'|you\s+are\s+now\s+(?:a\s+different\b|an?\s+(?:unrestricted|alternative|other)\b|dan\b|without\s+restrictions?)'
+    # "act as / act like" — require an AI-identity or restriction-dropping target
+    # so "act as a baseline" and "act as a personal trainer" are not flagged
+    r'|act\s+as\s+(?:an?\s+)?(?:unrestricted\b|different\s+ai\b|ai\s+with(?:out)?\b|dan\b|another\s+ai\b)'
+    r'|act\s+like\s+(?:an?\s+(?:unrestricted|different)\b|dan\b|you\s+have\s+no|a\s+different\s+ai\b)'
+    # "ignore/forget/override/disregard your …" — require an instruction target
+    # so "Ignore your cravings", "Forget your old habits", "Override your
+    # instinct to skip leg day" are not flagged
+    r'|(?:ignore|forget|override|disregard)\s+your\s+(?:rules?|guidelines?|instructions?|safety|constraints?|restrictions?|training|previous)\b'
+    # Reveal — already requires an instruction target (tightened in review)
+    r'|reveal\s+your\s+(?:system|internal|prompt|instructions?|rules?|guidelines?|secrets?|configuration)\b'
+    # "pretend you …" — require a restriction-dropping follow-on so
+    # "pretend you ate only vegetables" is not flagged
+    r'|pretend\s+you\s+(?:have\s+no\s+(?:restrictions?|rules?|guidelines?)'
+    r'|are\s+(?:an?\s+)?(?:unrestricted\b|a\s+different\s+ai\b)'
+    r'|don.t\s+have\s+(?:any\s+)?(?:restrictions?|rules?|guidelines?|safety)\b)'
+    # "skip all …" — require a safety/rule target so "skip all processed foods"
+    # is not flagged
+    r'|skip\s+all\s+(?:safety|rules?|guidelines?|restrictions?|warnings?|disclaimers?|checks?|filters?)\b'
     r')',
     re.IGNORECASE,
 )
