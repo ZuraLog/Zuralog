@@ -168,13 +168,19 @@ class TileChartShell extends StatelessWidget {
     return switch (mode) {
       ChartMode.square => LayoutBuilder(
           builder: (context, constraints) {
-            final gaugeW = constraints.maxWidth * 0.85;
+            // Size the gauge to fit within the tile without overflow.
+            final maxH = constraints.maxHeight;
+            // Reserve space for value text (~20) + zone label (~14) + spacing (8)
+            final textSpace = 42.0;
+            final availableH = maxH - textSpace;
+            // Gauge height is half its width, so maxWidth = availableH * 2
+            final gaugeW = (availableH * 2).clamp(0.0, constraints.maxWidth * 0.85);
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 SizedBox(
                   width: gaugeW,
-                  height: gaugeW / 2 + 16,
+                  height: gaugeW / 2,
                   child: GaugeRenderer(
                     config: c,
                     color: color,
