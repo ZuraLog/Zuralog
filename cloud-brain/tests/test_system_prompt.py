@@ -12,15 +12,15 @@ from app.agent.prompts.system import SYSTEM_PROMPT, UserProfile, build_system_pr
 
 def test_system_prompt_contains_persona():
     """System prompt must contain a defined coaching persona."""
-    assert "Zuralog" in SYSTEM_PROMPT
+    assert "ZuraLog" in SYSTEM_PROMPT
     assert "coach" in SYSTEM_PROMPT.lower()
 
 
 def test_system_prompt_contains_capabilities():
-    """System prompt must mention key data sources."""
+    """System prompt must mention key data sources and the integrations tool."""
     assert "Apple Health" in SYSTEM_PROMPT or "apple_health" in SYSTEM_PROMPT
-    assert "Strava" in SYSTEM_PROMPT or "strava" in SYSTEM_PROMPT
     assert "Health Connect" in SYSTEM_PROMPT or "health_connect" in SYSTEM_PROMPT
+    assert "get_integrations" in SYSTEM_PROMPT
 
 
 def test_system_prompt_contains_safety():
@@ -128,7 +128,9 @@ class TestUserProfileInjection:
 
     def test_no_profile_does_not_break_prompt(self) -> None:
         prompt = build_system_prompt(user_profile=None)
-        assert "About This User" not in prompt
+        # The orchestration block references "About This User" as a phrase;
+        # check for the section header specifically to confirm no profile block was injected.
+        assert "## About This User" not in prompt
 
     def test_profile_injected_before_memories(self) -> None:
         profile = UserProfile(

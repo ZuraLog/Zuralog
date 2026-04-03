@@ -83,6 +83,7 @@ from app.mcp_servers.memory_server import MemoryMCPServer
 from app.mcp_servers.coach_skill_server import CoachSkillMCPServer
 from app.mcp_servers.oura_server import OuraServer
 from app.mcp_servers.polar_server import PolarServer
+from app.mcp_servers.integrations_server import IntegrationsMCPServer
 from app.mcp_servers.user_progress_server import UserProgressServer
 from app.mcp_servers.user_wellbeing_server import UserWellbeingServer
 from app.mcp_servers.withings_server import WithingsServer
@@ -243,6 +244,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     else:
         app.state.strava_token_service = None
 
+    registry.register(IntegrationsMCPServer(db_factory=async_session))
     registry.register(DeepLinkServer())  # Phase 1.12
     registry.register(UserProgressServer(db_factory=async_session))
     registry.register(UserWellbeingServer(db_factory=async_session))

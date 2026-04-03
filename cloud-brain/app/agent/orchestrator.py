@@ -34,6 +34,8 @@ from app.agent.mcp_client import MCPClient
 from app.agent.prompts.system import UserProfile, build_system_prompt
 from app.agent.response import AgentResponse
 from app.config import settings
+from app.mcp_servers.integrations_server import get_display_name
+from app.models.integration import Integration
 from app.services.usage_tracker import UsageTracker
 
 if TYPE_CHECKING:
@@ -285,13 +287,32 @@ class Orchestrator:
             else:
                 memory_texts = []
 
-            # Build system prompt with persona, proactivity, and memory context
+            # 2. Fetch connected integrations for system prompt context.
+            # This gives Zura quick knowledge of which services are connected
+            # without a tool call. The AI can call get_integrations for full details.
+            from sqlalchemy import select as _sa_select
+            connected_integrations: list[str] | None = None
+            if db is not None:
+                _int_result = await db.execute(
+                    _sa_select(Integration.provider)
+                    .where(
+                        Integration.user_id == user_id,
+                        Integration.is_active.is_(True),
+                    )
+                    .order_by(Integration.created_at)
+                )
+                _providers = _int_result.scalars().all()
+                if _providers:
+                    connected_integrations = [get_display_name(p) for p in _providers]
+
+            # Build system prompt with persona, proactivity, memory, and integrations context
             system_prompt = build_system_prompt(
                 persona=persona,
                 proactivity=proactivity,
                 response_length=response_length,
                 skill_index=self.mcp_client.get_skill_index(),
                 memories=memory_texts if memory_texts else None,
+                connected_integrations=connected_integrations,
                 user_context_suffix=user_context_suffix,
                 user_profile=user_profile,
             )
