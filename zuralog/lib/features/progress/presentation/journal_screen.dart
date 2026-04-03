@@ -387,7 +387,7 @@ class _JournalScreenState extends ConsumerState<JournalScreen> {
                                   ),
                                 ),
                                 confirmDismiss: (_) async {
-                                  return await showDialog<bool>(
+                                  final confirmed = await showDialog<bool>(
                                     context: context,
                                     builder: (ctx) {
                                       final dlgColors = AppColorsOf(ctx);
@@ -431,24 +431,28 @@ class _JournalScreenState extends ConsumerState<JournalScreen> {
                                       );
                                     },
                                   );
-                                },
-                                onDismissed: (_) async {
-                                  try {
-                                    await ref
-                                        .read(progressRepositoryProvider)
-                                        .deleteJournalEntry(entry.id);
-                                    ref.invalidate(journalProvider);
-                                  } catch (e) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                              'Failed to delete entry.'),
-                                        ),
-                                      );
+                                  if (confirmed == true) {
+                                    try {
+                                      await ref
+                                          .read(progressRepositoryProvider)
+                                          .deleteJournalEntry(entry.id);
+                                      ref.invalidate(journalProvider);
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                                'Failed to delete entry.'),
+                                          ),
+                                        );
+                                      }
                                     }
                                   }
+                                  // Always return false — let the provider
+                                  // refresh remove the item from the list
+                                  // instead of Dismissible animating it out.
+                                  return false;
                                 },
                                 child: _EntryCard(
                                   entry: entry,
