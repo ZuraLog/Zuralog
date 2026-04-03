@@ -432,7 +432,17 @@ class Orchestrator:
                     continue
 
                 # No tool calls — return final text response
-                final_content = assistant_message.content or ""
+                final_content = (assistant_message.content or "").strip()
+                if not final_content:
+                    logger.warning(
+                        "Empty response from model for user '%s' on turn %d — using safety fallback",
+                        user_id[:8],
+                        turn + 1,
+                    )
+                    final_content = (
+                        "I'm only able to help with health and fitness topics"
+                        " — is there something health-related I can help you with?"
+                    )
                 logger.info(
                     "Final response for user '%s' after %d turn(s)",
                     user_id[:8],
@@ -639,6 +649,18 @@ class Orchestrator:
                         continue  # Next ReAct turn
 
                     # No tool calls — full_content already streamed token-by-token above.
+                    if not full_content.strip():
+                        logger.warning(
+                            "Empty stream response from model for user '%s' on turn %d — using safety fallback",
+                            user_id[:8],
+                            turn + 1,
+                        )
+                        fallback = (
+                            "I'm only able to help with health and fitness topics"
+                            " — is there something health-related I can help you with?"
+                        )
+                        yield {"type": "stream_token", "content": fallback}
+                        full_content = fallback
                     yield {
                         "type": "stream_end",
                         "content": full_content,
