@@ -60,6 +60,7 @@ from app.database import async_session, get_db
 from app.limiter import limiter
 from app.models.conversation import Conversation, Message
 from app.models.user import User
+from app.models.user_device import UserDevice
 from app.models.user_preferences import UserPreferences
 from app.services.auth_service import AuthService
 from app.services.rate_limiter import RateLimiter
@@ -294,10 +295,10 @@ async def _load_user_profile(
     db: AsyncSession,
     user_id: str,
 ) -> tuple[UserProfile, str, str, str, bool]:
-    """Load the user's full profile and preferences in a single JOIN query.
+    """Load the user's full profile and preferences via two sequential queries.
 
-    JOINs users and user_preferences to avoid two round-trips.
-    A LEFT JOIN handles the case where user_preferences does not exist yet.
+    First query: JOIN on users and user_preferences (LEFT JOIN handles missing prefs).
+    Second query: lookup on user_device for the most recently active device platform.
 
     Args:
         db: Async database session.
@@ -315,6 +316,7 @@ async def _load_user_profile(
         timezone="UTC",
         birthday=None,
         height_cm=None,
+        platform=None,
     )
     try:
         result = await db.execute(
@@ -329,6 +331,14 @@ async def _load_user_profile(
         user = row[0]
         prefs = row[1]  # May be None (LEFT JOIN)
 
+        device_result = await db.execute(
+            select(UserDevice.platform)
+            .where(UserDevice.user_id == user_id)
+            .order_by(UserDevice.last_seen_at.desc().nulls_last())
+            .limit(1)
+        )
+        platform: str | None = device_result.scalar_one_or_none()
+
         profile = UserProfile(
             display_name=user.display_name,
             goals=(prefs.goals or []) if prefs else [],
@@ -337,6 +347,7 @@ async def _load_user_profile(
             timezone=(prefs.timezone or "UTC") if prefs else "UTC",
             birthday=user.birthday,
             height_cm=user.height_cm,
+            platform=platform,
         )
         persona = (prefs.coach_persona or "balanced") if prefs else "balanced"
         proactivity = (prefs.proactivity_level or "medium") if prefs else "medium"
