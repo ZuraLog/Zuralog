@@ -12,7 +12,7 @@ crash on every chat connection.
 from typing import Sequence, Union
 
 import sqlalchemy as sa
-from alembic import op
+from alembic import op  # type: ignore[attr-defined]
 
 
 revision: str = "h00d00000003"
