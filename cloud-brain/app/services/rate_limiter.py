@@ -10,6 +10,7 @@ IP-level rate limiter for different concerns:
 """
 
 import logging
+import re
 import time
 from dataclasses import dataclass
 
@@ -23,6 +24,46 @@ from app.config import (
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
+
+
+def _load_bypass_set() -> frozenset[str]:
+    """Parse and validate RATE_LIMIT_BYPASS_USER_IDS at startup.
+
+    Only accepts properly-formatted UUIDs. Any malformed entry is logged
+    and dropped — it can never silently grant bypass to an unexpected ID.
+    """
+    raw = settings.rate_limit_bypass_user_ids.strip()
+    if not raw:
+        return frozenset()
+    result: set[str] = set()
+    for entry in raw.split(","):
+        uid = entry.strip().lower()
+        if not uid:
+            continue
+        if _UUID_RE.match(uid):
+            result.add(uid)
+        else:
+            logger.error(
+                "RATE_LIMIT_BYPASS_USER_IDS: ignored malformed entry %r — must be a UUID",
+                uid,
+            )
+    if result:
+        logger.info(
+            "Rate limit bypass active for %d user ID(s). "
+            "LLM quotas only — auth and IP limits remain enforced.",
+            len(result),
+        )
+    return frozenset(result)
+
+
+# Parsed once at import time from the server-side environment variable.
+# Immutable after startup — cannot be changed without a redeploy.
+_BYPASS_USER_IDS: frozenset[str] = _load_bypass_set()
 
 _INCR_EXPIRE_SCRIPT = """
 local current = redis.call('INCR', KEYS[1])
@@ -222,6 +263,16 @@ class RateLimiter:
         Returns:
             A ModelLimitResult with the current state of all three buckets.
         """
+        if user_id.lower() in _BYPASS_USER_IDS:
+            logger.info("Rate limit bypass used by user %s", user_id[:8])
+            (_, _, _, fl, zl, bl, _, _, _) = self._resolve_model_keys(user_id, tier)
+            return ModelLimitResult(
+                flash_allowed=True, zura_allowed=True, burst_allowed=True,
+                flash_remaining=fl, zura_remaining=zl, burst_remaining=bl,
+                flash_limit=fl, zura_limit=zl, burst_limit=bl,
+                flash_reset_seconds=0, zura_reset_seconds=0, burst_reset_seconds=0,
+            )
+
         (fk, zk, bk, fl, zl, bl, ft, zt, bt) = self._resolve_model_keys(user_id, tier)
         try:
             vals = await self._redis.eval(_READ_THREE_SCRIPT, 3, fk, zk, bk)
@@ -277,6 +328,9 @@ class RateLimiter:
             tier: Subscription tier ('free' or 'premium').
             model_tier: Which model was used ('zura_flash' or 'zura').
         """
+        if user_id.lower() in _BYPASS_USER_IDS:
+            return  # Do not count usage for bypass accounts.
+
         (fk, zk, bk, _1, _2, _3, ft, zt, bt) = self._resolve_model_keys(user_id, tier)
         mk = fk if model_tier == "zura_flash" else zk
         mt = ft if model_tier == "zura_flash" else zt

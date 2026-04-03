@@ -80,6 +80,11 @@ class Settings(BaseSettings):
     supabase_service_key: SecretStr = SecretStr("")
     openrouter_api_key: SecretStr = SecretStr("")
     openrouter_referer: str = "https://zuralog.app"
+    # Comma-separated user IDs that are exempt from LLM rate limits.
+    # Used for automated test accounts only. Only affects model quotas —
+    # auth, IP limits, and all other security checks remain active.
+    # Only configurable via server-side environment variable.
+    rate_limit_bypass_user_ids: str = ""
     openrouter_title: str = "Zuralog"
     openrouter_model: str = "moonshotai/kimi-k2.5"
     openrouter_insight_model: str = "qwen/qwen3.5-flash-02-23"
