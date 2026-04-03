@@ -61,7 +61,7 @@ def call_api(prompt: str, options: dict, context: dict) -> dict:
     proactivity = vars_.get("proactivity", _DEFAULT_PROACTIVITY)
     system_prompt = build_system_prompt(persona=persona, proactivity=proactivity)
 
-    history = vars_.get("conversation_history", [])
+    history = vars_.get("conversation_history") or []
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(history)
     messages.append({"role": "user", "content": prompt})

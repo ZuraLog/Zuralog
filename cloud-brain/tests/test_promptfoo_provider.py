@@ -100,7 +100,7 @@ def test_model_resolution_falls_back_to_default():
 
 
 # ---------------------------------------------------------------------------
-# Test 5: conversation_history is prepended between system and final user msg
+# conversation_history is prepended between system and final user msg
 # ---------------------------------------------------------------------------
 
 
@@ -115,7 +115,7 @@ def test_conversation_history_prepended_in_correct_order():
     ]
     captured: list = []
 
-    def _fake_post(*args, **kwargs):
+    def _fake_post(*_, **kwargs):
         captured.append(kwargs.get("json", {}).get("messages", []))
         raise RuntimeError("stop after capture")
 
@@ -150,7 +150,7 @@ def test_conversation_history_prepended_in_correct_order():
 
 
 # ---------------------------------------------------------------------------
-# Test 6: missing conversation_history does not break the provider
+# missing conversation_history does not break the provider
 # ---------------------------------------------------------------------------
 
 
@@ -161,7 +161,7 @@ def test_missing_conversation_history_does_not_regress():
 
     captured: list = []
 
-    def _fake_post(*args, **kwargs):
+    def _fake_post(*_, **kwargs):
         captured.append(kwargs.get("json", {}).get("messages", []))
         raise RuntimeError("stop after capture")
 
