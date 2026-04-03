@@ -69,7 +69,7 @@ def call_api(prompt: str, options: dict, context: dict) -> dict:
     try:
         import httpx
 
-        with httpx.Client(timeout=60.0) as client:
+        with httpx.Client(timeout=httpx.Timeout(connect=10.0, read=90.0, write=10.0, pool=5.0)) as client:
             response = client.post(
                 f"{_API_BASE}/chat/completions",
                 headers={
