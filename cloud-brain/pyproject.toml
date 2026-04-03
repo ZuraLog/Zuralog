@@ -41,6 +41,8 @@ dev = [
     "httpx>=0.28.0",
     "aiosqlite>=0.22.1",
     "psycopg2-binary>=2.9.11",
+    "websockets>=12.0",
+    "pytest-json-report>=1.5.0",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -56,5 +58,7 @@ select = ["E", "F", "I", "W"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+addopts = "--json-report --json-report-file=tests/integration/last_run.json --json-report-indent=2"
+
 
 

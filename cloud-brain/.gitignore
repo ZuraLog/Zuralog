@@ -40,3 +40,4 @@ firebase-service-account.json
 
 # Generated OpenAPI snapshot — produced by scripts/export_openapi.py, not hand-maintained
 openapi.json
+tests/integration/last_run.json
