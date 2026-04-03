@@ -34,7 +34,7 @@ class MemoryMCPServer(BaseMCPServer):
 
     Delegates all persistence to the injected memory store. Only
     registered when PgVectorMemoryStore is available (i.e. when
-    OPENAI_API_KEY is configured) so memories are never silently lost
+    JINA_API_KEY is configured) so memories are never silently lost
     to an in-memory fallback.
 
     Args:

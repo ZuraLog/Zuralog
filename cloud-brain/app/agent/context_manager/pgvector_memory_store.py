@@ -2,14 +2,11 @@
 Zuralog Cloud Brain — PgVector Memory Store.
 
 Production vector-backed memory store using pgvector (Supabase) for
-similarity search and OpenAI text-embedding-3-small for embeddings.
-
-Replaces PineconeMemoryStore. Uses the same embedding model and
-dimensions (1536) so existing embeddings would be compatible.
+similarity search and Jina AI jina-embeddings-v3 for embeddings.
 
 All DB calls use asyncpg via SQLAlchemy async sessions.
-Embedding calls use the synchronous OpenAI SDK wrapped in asyncio.to_thread
-to avoid blocking the event loop.
+Embedding calls use httpx (already a project dependency) against the
+Jina AI embeddings API — no OpenAI dependency.
 
 Implements the full MemoryStore protocol plus list_memories, delete_memory,
 and clear_memories for compatibility with memory_routes.py.
@@ -17,11 +14,10 @@ and clear_memories for compatibility with memory_routes.py.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import uuid
-from typing import Any
 
+import httpx
 from sqlalchemy import text
 
 from app.agent.context_manager.memory_store import MemoryItem
@@ -29,7 +25,9 @@ from app.database import async_session
 
 logger = logging.getLogger(__name__)
 
-_EMBEDDING_MODEL = "text-embedding-3-small"
+_JINA_EMBEDDINGS_URL = "https://api.jina.ai/v1/embeddings"
+_EMBEDDING_MODEL = "jina-embeddings-v3"
+_EMBEDDING_DIMENSIONS = 1536  # matches the vector(1536) column in user_memories
 
 
 def _vec_str(embedding: list[float]) -> str:
@@ -38,50 +36,60 @@ def _vec_str(embedding: list[float]) -> str:
 
 
 class PgVectorMemoryStore:
-    """Vector-backed memory store using pgvector and OpenAI embeddings.
+    """Vector-backed memory store using pgvector and Jina AI embeddings.
 
     Each user's memories are isolated by WHERE user_id = :user_id on every
     query. RLS provides a second layer of isolation at the DB level.
 
     Attributes:
-        is_available: True when OpenAI is configured and the store is ready.
+        is_available: True when JINA_API_KEY is configured.
     """
 
     def __init__(self) -> None:
         from app.config import settings
 
-        api_key = settings.openai_api_key.get_secret_value()
-        self._openai_client: Any = None
-        if api_key:
-            try:
-                from openai import OpenAI
-
-                self._openai_client = OpenAI(api_key=api_key)
-                logger.info("PgVectorMemoryStore initialised.")
-            except Exception:
-                logger.warning("PgVectorMemoryStore: failed to create OpenAI client.", exc_info=True)
+        self._api_key = settings.jina_api_key.get_secret_value()
+        if self._api_key:
+            logger.info("PgVectorMemoryStore initialised with Jina AI embeddings.")
         else:
-            logger.info("PgVectorMemoryStore: OPENAI_API_KEY not set — embedding calls will fail.")
+            logger.info("PgVectorMemoryStore: JINA_API_KEY not set — embedding calls will fail.")
 
     @property
     def is_available(self) -> bool:
-        """True when the OpenAI client is configured."""
-        return self._openai_client is not None
+        """True when the Jina API key is configured."""
+        return bool(self._api_key)
 
-    def _embed_sync(self, text_to_embed: str) -> list[float]:
-        """Synchronous embedding call (run via asyncio.to_thread)."""
-        if self._openai_client is None:
-            raise RuntimeError("OpenAI client not configured — set OPENAI_API_KEY.")
-        response = self._openai_client.embeddings.create(
-            model=_EMBEDDING_MODEL,
-            input=text_to_embed,
-        )
-        return response.data[0].embedding
+    async def _embed(self, text_to_embed: str, task: str = "retrieval.passage") -> list[float] | None:
+        """Embed text using the Jina AI embeddings API.
 
-    async def _embed(self, text_to_embed: str) -> list[float] | None:
-        """Async wrapper: embeds text without blocking the event loop."""
+        Args:
+            text_to_embed: The text to embed.
+            task: Jina task type — 'retrieval.passage' for storing,
+                  'retrieval.query' for searching.
+
+        Returns:
+            A list of floats, or None on failure.
+        """
+        if not self._api_key:
+            logger.warning("Embedding skipped — JINA_API_KEY not set.")
+            return None
         try:
-            return await asyncio.to_thread(self._embed_sync, text_to_embed)
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.post(
+                    _JINA_EMBEDDINGS_URL,
+                    headers={
+                        "Authorization": f"Bearer {self._api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": _EMBEDDING_MODEL,
+                        "input": [text_to_embed],
+                        "dimensions": _EMBEDDING_DIMENSIONS,
+                        "task": task,
+                    },
+                )
+                resp.raise_for_status()
+                return resp.json()["data"][0]["embedding"]
         except Exception:
             logger.exception("Embedding failed for text: %.50s", text_to_embed)
             return None
@@ -98,7 +106,7 @@ class PgVectorMemoryStore:
         source_conversation_id: str | None = None,
     ) -> None:
         """Embed content and insert into user_memories."""
-        embedding = await self._embed(content)
+        embedding = await self._embed(content, task="retrieval.passage")
         async with async_session() as db:
             await db.execute(
                 text(
@@ -141,7 +149,7 @@ class PgVectorMemoryStore:
         """
         if not query_text:
             return []
-        embedding = await self._embed(query_text)
+        embedding = await self._embed(query_text, task="retrieval.query")
         if embedding is None:
             return []
 
