@@ -42,7 +42,8 @@ def call_api(prompt: str, options: dict, context: dict) -> dict:
 
     Args:
         prompt: The user message string injected by PromptFoo.
-        options: Provider config dict (unused — config lives here).
+        options: Provider config dict; may contain a ``config`` key with
+            provider-specific settings (e.g. ``model`` to override the default).
         context: Test variables dict; may include ``persona`` and
             ``proactivity`` keys to override the defaults.
 
@@ -52,6 +53,8 @@ def call_api(prompt: str, options: dict, context: dict) -> dict:
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
     if not api_key:
         return {"error": "OPENROUTER_API_KEY environment variable is not set."}
+
+    model = options.get("config", {}).get("model", _MODEL)
 
     vars_ = context.get("vars", {})
     persona = vars_.get("persona", _DEFAULT_PERSONA)
@@ -71,7 +74,7 @@ def call_api(prompt: str, options: dict, context: dict) -> dict:
                     "X-Title": "Zuralog PromptFoo Tests",
                 },
                 json={
-                    "model": _MODEL,
+                    "model": model,
                     "messages": [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": prompt},

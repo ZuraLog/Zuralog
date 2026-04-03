@@ -18,7 +18,11 @@ description: "Zura adversarial security test suite"
 
 providers:
   - id: "python:provider.py"
-    label: "Zura (persona/proactivity via OpenRouter)"
+    label: "Zura/Kimi-K2.5 (primary)"
+  - id: "python:provider.py"
+    label: "Zura/Qwen3.5-Flash (fallback)"
+    config:
+      model: "qwen/qwen3.5-flash-02-23"
 
 prompts:
   - "{{message}}"
