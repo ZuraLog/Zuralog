@@ -49,7 +49,7 @@ class Settings(BaseSettings):
         supabase_url: Supabase project URL for Auth/RLS.
         supabase_anon_key: Supabase anonymous (public) key.
         supabase_service_key: Supabase service role key.
-        jina_api_key: Jina AI API key for text embeddings (memory search).
+        openrouter_api_key: OpenRouter API key for all LLM calls.
         google_web_client_id: Google OAuth 2.0 Web Application client ID.
         google_web_client_secret: Google OAuth 2.0 Web Application client secret.
         strava_client_id: Strava application Client ID (Phase 1.6).
@@ -78,7 +78,6 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_anon_key: SecretStr = SecretStr("")
     supabase_service_key: SecretStr = SecretStr("")
-    jina_api_key: SecretStr = SecretStr("")
     openrouter_api_key: SecretStr = SecretStr("")
     openrouter_referer: str = "https://zuralog.app"
     openrouter_title: str = "Zuralog"
