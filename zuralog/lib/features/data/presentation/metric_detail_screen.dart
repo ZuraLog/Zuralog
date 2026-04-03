@@ -26,6 +26,7 @@ import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/core/widgets/shimmer.dart';
 import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/buttons/z_button.dart';
 import 'package:zuralog/shared/widgets/time_range_selector.dart';
 
 // ── Private constants ─────────────────────────────────────────────────────────
@@ -853,34 +854,19 @@ class _AskCoachButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return FilledButton.icon(
-      style: FilledButton.styleFrom(
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.primaryButtonText,
-        minimumSize: const Size.fromHeight(AppDimens.touchTargetMin),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-      ),
+    return ZButton(
+      label: 'Ask Coach about $metricName',
+      icon: Icons.chat_bubble_outline_rounded,
       onPressed: () {
         final currentVal = currentValue ?? '';
         var prefill = 'Tell me about my $metricName'
             '${currentVal.isNotEmpty ? ': $currentVal${unit.isNotEmpty ? ' $unit' : ''}' : ''}';
-        // HIGH-05: prevent abnormally large strings from reaching the coach input
         if (prefill.length > _kCoachPrefillMaxLength) {
           prefill = '${prefill.substring(0, _kCoachPrefillMaxLength - 1)}…';
         }
         ref.read(coachPrefillProvider.notifier).state = prefill;
         context.go(RouteNames.coachPath);
       },
-      icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
-      label: Text(
-        'Ask Coach about $metricName',
-        style: AppTextStyles.bodyLarge.copyWith(
-          color: AppColors.primaryButtonText,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
     );
   }
 }
