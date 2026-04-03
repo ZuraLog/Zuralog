@@ -40,10 +40,14 @@ _HIGH_SIGNAL_PHRASES = re.compile(
 def is_memory_injection_attempt(text: str) -> bool:
     """Return True if *text* looks like a prompt-injection attempt.
 
-    This is used exclusively when deciding whether to inject a stored memory
-    into the system prompt.  It is intentionally narrower than
-    ``sanitize_for_llm`` — that function sanitises user input; this one
-    guards the memory injection path.
+    Used as a general-purpose injection guard at two points in the pipeline:
+    1. Before injecting a stored memory into the system prompt.
+    2. Before feeding a tool result back to the model in the orchestrator.
+
+    Intentionally narrower than ``sanitize_for_llm`` — that function
+    sanitises arbitrary user input by replacing dangerous patterns.  This
+    function is a binary gate: it returns True so the caller can decide to
+    skip or redact the content entirely.
 
     Design goals:
     - Catch classic injection phrases ("your new instructions are", "act as",
