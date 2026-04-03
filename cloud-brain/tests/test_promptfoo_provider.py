@@ -97,3 +97,90 @@ def test_model_resolution_falls_back_to_default():
 
     assert resolved == provider._MODEL
     assert resolved == "moonshotai/kimi-k2.5"
+
+
+# ---------------------------------------------------------------------------
+# Test 5: conversation_history is prepended between system and final user msg
+# ---------------------------------------------------------------------------
+
+
+def test_conversation_history_prepended_in_correct_order():
+    """When conversation_history is supplied in vars, the assembled messages
+    array must be: [system, ...history, user_prompt] — in that exact order."""
+    provider = _load_provider()
+
+    history = [
+        {"role": "user", "content": "How many steps daily?"},
+        {"role": "assistant", "content": "Aim for 7,000-10,000 steps."},
+    ]
+    captured: list = []
+
+    def _fake_post(*args, **kwargs):
+        captured.append(kwargs.get("json", {}).get("messages", []))
+        raise RuntimeError("stop after capture")
+
+    import httpx
+
+    with (
+        mock.patch.dict(
+            os.environ,
+            {"OPENROUTER_API_KEY": "fake-key"},
+            clear=False,
+        ),
+        mock.patch.object(httpx.Client, "post", _fake_post),
+    ):
+        provider.call_api(
+            "Final attack prompt",
+            {},
+            {"vars": {"conversation_history": history}},
+        )
+
+    assert len(captured) == 1, "post should have been called exactly once"
+    messages = captured[0]
+
+    # First message must be the system prompt
+    assert messages[0]["role"] == "system"
+
+    # Middle messages must be the history in order
+    assert messages[1] == history[0]
+    assert messages[2] == history[1]
+
+    # Last message must be the final user prompt
+    assert messages[-1] == {"role": "user", "content": "Final attack prompt"}
+
+
+# ---------------------------------------------------------------------------
+# Test 6: missing conversation_history does not break the provider
+# ---------------------------------------------------------------------------
+
+
+def test_missing_conversation_history_does_not_regress():
+    """When conversation_history is absent from vars, the messages array must
+    still be [system, user] — the provider must not crash or produce extras."""
+    provider = _load_provider()
+
+    captured: list = []
+
+    def _fake_post(*args, **kwargs):
+        captured.append(kwargs.get("json", {}).get("messages", []))
+        raise RuntimeError("stop after capture")
+
+    import httpx
+
+    with (
+        mock.patch.dict(
+            os.environ,
+            {"OPENROUTER_API_KEY": "fake-key"},
+            clear=False,
+        ),
+        mock.patch.object(httpx.Client, "post", _fake_post),
+    ):
+        provider.call_api("Hello", {}, {"vars": {}})
+
+    assert len(captured) == 1
+    messages = captured[0]
+
+    # Exactly two messages: system then user
+    assert len(messages) == 2
+    assert messages[0]["role"] == "system"
+    assert messages[1] == {"role": "user", "content": "Hello"}

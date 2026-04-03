@@ -61,6 +61,11 @@ def call_api(prompt: str, options: dict, context: dict) -> dict:
     proactivity = vars_.get("proactivity", _DEFAULT_PROACTIVITY)
     system_prompt = build_system_prompt(persona=persona, proactivity=proactivity)
 
+    history = vars_.get("conversation_history", [])
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history)
+    messages.append({"role": "user", "content": prompt})
+
     try:
         import httpx
 
@@ -75,10 +80,7 @@ def call_api(prompt: str, options: dict, context: dict) -> dict:
                 },
                 json={
                     "model": model,
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": prompt},
-                    ],
+                    "messages": messages,
                     "temperature": 0.0,
                     "max_tokens": 512,
                 },
