@@ -16,10 +16,13 @@ the balanced persona with medium proactivity.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import date
 
-from app.utils.sanitize import sanitize_for_llm
+from app.utils.sanitize import is_memory_injection_attempt, sanitize_for_llm
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -409,10 +412,16 @@ def build_system_prompt(
     if user_profile is not None:
         prompt += "\n\n" + _build_profile_block(user_profile)
 
-    # Inject memories (up to 5)
+    # Inject memories (up to 5), skipping any that look like injection attempts
     if memories:
         prompt += "\n\n## What I Know About You\n"
         for memory_text in memories[:5]:
+            if is_memory_injection_attempt(memory_text):
+                logger.warning(
+                    "Skipping suspicious memory for injection: %.50s...",
+                    memory_text[:50],
+                )
+                continue
             prompt += f"- {memory_text}\n"
 
     # Inject connected integrations
