@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING, Any, AsyncGenerator
 import sentry_sdk
 
 from app.agent.context_manager.memory_store import MemoryItem, MemoryStore
+from app.utils.sanitize import is_memory_injection_attempt
 from app.agent.context_manager.token_counter import count_messages, truncate_to_tokens
 from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
@@ -417,6 +418,13 @@ class Orchestrator:
                             result_content = json.dumps(result.data)
                             if len(result_content.encode("utf-8")) > 32768:  # 32KB cap on tool results
                                 result_content = json.dumps({"error": "Tool result too large", "truncated": True})
+                            elif is_memory_injection_attempt(result_content):
+                                logger.warning(
+                                    "Potential injection attempt in tool result '%s' for user '%s'",
+                                    func_name,
+                                    user_id[:8],
+                                )
+                                result_content = json.dumps({"content": "[content redacted — potential injection attempt]"})
                         else:
                             result_content = json.dumps({"error": result.error or "Tool execution failed"})
 
@@ -634,6 +642,13 @@ class Orchestrator:
                                 result_content = json.dumps(result.data)
                                 if len(result_content.encode("utf-8")) > 32768:  # 32KB cap on tool results
                                     result_content = json.dumps({"error": "Tool result too large", "truncated": True})
+                                elif is_memory_injection_attempt(result_content):
+                                    logger.warning(
+                                        "Potential injection attempt in tool result '%s' for user '%s'",
+                                        func_name,
+                                        user_id[:8],
+                                    )
+                                    result_content = json.dumps({"content": "[content redacted — potential injection attempt]"})
                             else:
                                 result_content = json.dumps({"error": result.error or "Tool execution failed"})
 
