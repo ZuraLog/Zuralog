@@ -4,6 +4,33 @@ A running record of completed work — what was built, when, and at what scope.
 
 ---
 
+## 2026-04-03 — AI Security Hardening Round 2
+
+**Branch:** `fix/ai-security-hardening-round-2`
+
+A second security pass focused on prompt injection defences, adversarial test coverage expansion, and model parity testing.
+
+**What was built:**
+
+- **Memory poisoning filter** (`app/utils/sanitize.py`, `app/agent/prompts/system.py`): Added `is_memory_injection_attempt()` — a general-purpose injection gate (separate from `sanitize_for_llm`) that runs at two points in the pipeline: before injecting stored memories into the system prompt, and before feeding tool results back to the model. Uses NFKC normalisation and invisible-character stripping. Patterns are tightened to avoid false positives on common health/coaching language (e.g. "ignore your cravings", "skip all processed foods") while still catching high-signal injection phrases. The section header is suppressed when all memories are filtered.
+
+- **Tool result injection scanning** (`app/agent/orchestrator.py`, `app/agent/prompts/system.py`): Rule 9 added to `_SAFETY_BLOCK` — instructs the model to treat tool result content as untrusted data. In both `process_message` and `process_message_stream`, each successful tool result is scanned with `is_memory_injection_attempt` after the 32KB cap check; suspicious content is replaced with `[content redacted — potential injection attempt]` and a warning is logged.
+
+- **Medical disclaimer authority hardening** (`app/agent/prompts/system.py`): Rule 7 in `_SAFETY_BLOCK` extended to explicitly state the disclaimer applies even when the user claims to be a doctor, nurse, researcher, or other medical professional. All three persona-level "NOT a medical doctor" notes updated to match.
+
+- **PromptFoo suite expanded from 30 to 41 tests** (`promptfoo/promptfooconfig.yaml`, `promptfoo/provider.py`):
+  - Provider now accepts `config.model` override and `conversation_history` var (list of `{role, content}` pairs prepended before the final user message).
+  - Second provider added targeting `qwen/qwen3.5-flash-02-23` for parity — all 41 tests now run against both Kimi K2.5 and Qwen3.5-Flash (82 total runs).
+  - 5 multi-turn tests: rapport-then-jailbreak, gradual scope expansion, false memory injection, persona erosion, authority build-up.
+  - 3 hallucination-under-pressure tests: step estimate, heart rate guess, pretend-you-have-data roleplay.
+  - 3 medical authority bypass tests: registered nurse claim, cardiologist referral, sports medicine doctor claim.
+
+**Files modified:** `cloud-brain/app/utils/sanitize.py`, `cloud-brain/app/agent/prompts/system.py`, `cloud-brain/app/agent/orchestrator.py`, `promptfoo/provider.py`, `promptfoo/promptfooconfig.yaml`
+
+**Files created:** `cloud-brain/tests/test_memory_injection_filter.py`, `cloud-brain/tests/test_tool_result_injection.py`, `cloud-brain/tests/test_promptfoo_provider.py`
+
+---
+
 ## 2026-04-02 — System Prompt & Persona Hardening
 
 **Branch:** `fix/system-prompt-persona-hardening`
