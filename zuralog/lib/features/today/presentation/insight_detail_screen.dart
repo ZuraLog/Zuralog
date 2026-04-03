@@ -394,7 +394,9 @@ class _DetailBody extends ConsumerWidget {
                 AppDimens.spaceMd,
                 AppDimens.spaceXxl,
               ),
-              child: _PressScaleButton(
+              child: ZButton(
+                label: 'Discuss with Coach',
+                icon: Icons.chat_bubble_outline_rounded,
                 onPressed: () {
                   ref.read(hapticServiceProvider).medium();
                   ref.read(analyticsServiceProvider).capture(
@@ -410,24 +412,6 @@ class _DetailBody extends ConsumerWidget {
                   ref.read(coachPrefillProvider.notifier).state = prefill;
                   context.go(RouteNames.coachPath);
                 },
-                child: FilledButton.icon(
-                  onPressed: null, // handled by _PressScaleButton
-                  icon: const Icon(
-                    Icons.chat_bubble_outline_rounded,
-                    size: 18,
-                  ),
-                  label: const Text('Discuss with Coach'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: colors.primary,
-                    foregroundColor: AppColors.primaryButtonText,
-                    disabledBackgroundColor: colors.primary,
-                    disabledForegroundColor: AppColors.primaryButtonText,
-                    minimumSize: const Size(double.infinity, 52),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
               ),
             ),
           ),
