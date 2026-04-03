@@ -662,6 +662,7 @@ async def websocket_chat(
             normalized_tier = "premium" if user_subscription_tier and user_subscription_tier not in ("", "free") else "free"
             routed_model: str | None = None
             routed_model_tier: str | None = None
+            classifier_result: str | None = None
             if rate_limiter:
                 try:
                     routing_result = await route_message(
@@ -672,6 +673,7 @@ async def websocket_chat(
                     )
                     routed_model = routing_result.model
                     routed_model_tier = routing_result.model_tier
+                    classifier_result = routing_result.classifier_result
                 except LimitExhaustedException as limit_exc:
                     reset_str = _format_reset_time(limit_exc.reset_seconds)
                     if limit_exc.is_burst:
@@ -918,6 +920,7 @@ async def websocket_chat(
                 "conversation_id": str(resolved_conv_id),
                 "client_action": client_action,
                 "model_used": routed_model_tier,
+                "classifier_result": classifier_result,
             }
             await websocket.send_json(final_payload)
 
