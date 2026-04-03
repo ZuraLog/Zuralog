@@ -15,8 +15,6 @@ import sys
 from pathlib import Path
 from unittest import mock
 
-import pytest
-
 # ---------------------------------------------------------------------------
 # Make sure the promptfoo directory is importable as "provider"
 # ---------------------------------------------------------------------------

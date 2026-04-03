@@ -27,9 +27,6 @@ providers:
 prompts:
   - "{{message}}"
 
-defaultTest:
-  options:
-    provider: "python:provider.py"
 
 tests:
   # ---------------------------------------------------------------------------
