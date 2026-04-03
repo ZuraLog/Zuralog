@@ -412,17 +412,23 @@ def build_system_prompt(
     if user_profile is not None:
         prompt += "\n\n" + _build_profile_block(user_profile)
 
-    # Inject memories (up to 5), skipping any that look like injection attempts
+    # Inject memories (up to 5), skipping any that look like injection attempts.
+    # Build the bullet list first so we only emit the section header when at
+    # least one memory survived the filter.
     if memories:
-        prompt += "\n\n## What I Know About You\n"
+        safe_bullets: list[str] = []
         for memory_text in memories[:5]:
             if is_memory_injection_attempt(memory_text):
                 logger.warning(
                     "Skipping suspicious memory for injection: %.50s...",
                     memory_text[:50],
                 )
-                continue
-            prompt += f"- {memory_text}\n"
+            else:
+                safe_bullets.append(memory_text)
+        if safe_bullets:
+            prompt += "\n\n## What I Know About You\n"
+            for bullet in safe_bullets:
+                prompt += f"- {bullet}\n"
 
     # Inject connected integrations
     if connected_integrations:

@@ -25,7 +25,7 @@ _HIGH_SIGNAL_PHRASES = re.compile(
     r'|forget\s+your\b'
     r'|override\s+your\b'
     r'|disregard\s+your\b'
-    r'|reveal\s+your\b'
+    r'|reveal\s+your\s+(?:system|internal|prompt|instructions?|rules?|guidelines?|secrets?|configuration)\b'
     r'|pretend\s+you\b'
     r'|you\s+have\s+no\s+restrictions'
     r'|skip\s+all\b'
