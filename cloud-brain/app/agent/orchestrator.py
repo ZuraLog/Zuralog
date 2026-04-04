@@ -22,6 +22,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import secrets
 from typing import TYPE_CHECKING, Any, AsyncGenerator
 
 import sentry_sdk
@@ -63,6 +64,19 @@ continues from there.
 # the response reaches us. We never route these through MCPClient — they have no
 # local handler. This is a defensive guard in case a model exposes them as tool_calls.
 _OPENROUTER_SERVER_TOOLS: frozenset[str] = frozenset({"web_search"})
+
+# Tools that modify user data — require server-side confirmation before executing.
+_WRITE_TOOLS: frozenset[str] = frozenset({
+    "add_supplement",
+    "remove_supplement",
+    "create_goal",
+    "update_goal",
+    "complete_goal",
+    "delete_goal",
+    "send_notification",
+    "apple_health_write_entry",
+    "health_connect_write_entry",
+})
 
 # Lightweight model used only for auto-generating conversation titles.
 # A small, cheap model is preferred since this is a one-shot, low-stakes call.
@@ -526,6 +540,7 @@ class Orchestrator:
         memory_enabled: bool = True,
         model: str | None = None,
         model_tier: str | None = None,
+        write_confirm_token: str | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """Process a user message and stream the final response token-by-token.
 
@@ -670,6 +685,24 @@ class Orchestrator:
                                 arguments = json.loads(tc["function"]["arguments"])
                             except json.JSONDecodeError:
                                 arguments = {}
+
+                            if func_name in _WRITE_TOOLS:
+                                if write_confirm_token is None:
+                                    # No confirmed token — emit write_pending and skip execution.
+                                    yield {
+                                        "type": "write_pending",
+                                        "tool_name": func_name,
+                                        "params": arguments,
+                                        "token": secrets.token_hex(16),
+                                    }
+                                    messages.append({
+                                        "role": "tool",
+                                        "tool_call_id": tc["id"],
+                                        "content": '{"status": "pending_confirmation", "message": "Awaiting user confirmation before executing."}',
+                                    })
+                                    continue
+                                # Token was confirmed — proceed with execution and clear it.
+                                write_confirm_token = None
 
                             yield {"type": "tool_start", "tool_name": func_name}
 

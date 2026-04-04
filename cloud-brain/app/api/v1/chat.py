@@ -578,6 +578,11 @@ async def websocket_chat(
         last_revalidation = time.time()
         messages_since_revalidation = 0
 
+        # Server-side write confirmation gate state.
+        _pending_write_token: str | None = None
+        _pending_write_tool: str | None = None
+        _pending_write_params: dict | None = None
+
         while True:
             try:
                 raw = await asyncio.wait_for(websocket.receive_text(), timeout=300.0)
@@ -593,6 +598,18 @@ async def websocket_chat(
                 await websocket.send_json({"type": "error", "content": "Invalid message format"})
                 continue
             message_text: str = data.get("message", "")
+
+            # Server-side write confirmation gate: detect write_confirm frames.
+            is_write_confirm = data.get("type") == "write_confirm"
+            confirmed_write_token: str | None = None
+            if is_write_confirm:
+                incoming_token = str(data.get("token", ""))
+                if incoming_token and incoming_token == _pending_write_token:
+                    confirmed_write_token = incoming_token
+                    message_text = f"[confirmed write: {_pending_write_tool}]"
+                else:
+                    await websocket.send_json({"type": "error", "content": "Invalid or expired confirmation token."})
+                    continue
 
             # S2: Periodic JWT re-validation (every 15 minutes or 50 messages)
             messages_since_revalidation += 1
@@ -613,7 +630,7 @@ async def websocket_chat(
             raw_attachments: list[dict] | None = data.get("attachments")
             is_regenerate: bool = bool(data.get("regenerate", False))
 
-            if not message_text and not raw_attachments:
+            if not message_text and not raw_attachments and not is_write_confirm:
                 await websocket.send_json({"type": "error", "content": "Empty message"})
                 continue
 
@@ -803,6 +820,7 @@ async def websocket_chat(
                         memory_enabled=memory_enabled,
                         model=routed_model,
                         model_tier=routed_model_tier,
+                        write_confirm_token=confirmed_write_token,
                     ):
                         etype = event.get("type")
 
@@ -813,7 +831,16 @@ async def websocket_chat(
                             full_content += event["content"]
                             await websocket.send_json(event)
 
+                        elif etype == "write_pending":
+                            _pending_write_token = event["token"]
+                            _pending_write_tool = event["tool_name"]
+                            _pending_write_params = event["params"]
+                            await websocket.send_json(event)
+
                         elif etype == "stream_end":
+                            _pending_write_token = None
+                            _pending_write_tool = None
+                            _pending_write_params = None
                             full_content = event.get("content", full_content)
                             client_action = event.get("client_action")
                             if rate_limiter and routed_model_tier and not _usage_incremented:
