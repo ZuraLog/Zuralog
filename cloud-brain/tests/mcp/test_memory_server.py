@@ -213,6 +213,7 @@ class TestSave:
             "u1",
         )
         assert r.success is True
+        assert len(fake_store.add_calls) == 1
 
 
 class TestQuery:

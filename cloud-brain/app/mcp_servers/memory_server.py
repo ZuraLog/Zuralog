@@ -28,6 +28,10 @@ VALID_CATEGORIES: frozenset[str] = frozenset({
     "program",
 })
 
+# Maximum number of characters allowed in a single memory entry.
+# Guards against database bloat from oversized AI-generated or user-supplied content.
+_MAX_MEMORY_LENGTH: int = 500
+
 
 class MemoryMCPServer(BaseMCPServer):
     """MCP server exposing save_memory and query_memory to the LLM agent.
@@ -183,7 +187,6 @@ class MemoryMCPServer(BaseMCPServer):
         if not content.strip():
             return ToolResult(success=False, error="content must not be empty.")
 
-        _MAX_MEMORY_LENGTH = 500
         if len(content) > _MAX_MEMORY_LENGTH:
             return ToolResult(
                 success=False,
