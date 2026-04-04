@@ -123,7 +123,7 @@ async def extract_and_store_memories(
             existing = await memory_store.query(user_id, content, limit=1)
             if existing and existing[0].score > _DEDUP_THRESHOLD:
                 # Delete the near-duplicate and replace with the updated fact.
-                await memory_store.delete(existing[0].id)
+                await memory_store.delete(existing[0].id, user_id=user_id)
                 logger.debug(
                     "Updating near-duplicate memory (score %.2f) for user %s",
                     existing[0].score,

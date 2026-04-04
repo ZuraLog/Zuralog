@@ -108,7 +108,28 @@ class TestPgVectorMemoryStore:
             mock_db = AsyncMock()
             mock_session_factory.return_value.__aenter__.return_value = mock_db
 
-            await store.delete("memory-123")
+            await store.delete("memory-123", user_id="user-abc")
 
             mock_db.execute.assert_called_once()
             mock_db.commit.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_delete_scopes_by_user_id(self):
+        """delete() must include user_id in the WHERE clause."""
+        store = PgVectorMemoryStore()
+        captured_params = {}
+
+        async def _capture_execute(query, params):
+            captured_params.update(params)
+            return MagicMock()
+
+        with patch("app.agent.context_manager.pgvector_memory_store.async_session") as mock_sf:
+            mock_db = AsyncMock()
+            mock_db.execute.side_effect = _capture_execute
+            mock_db.commit = AsyncMock()
+            mock_sf.return_value.__aenter__.return_value = mock_db
+            await store.delete("mem-123", user_id="user-abc")
+
+        assert "user_id" in captured_params
+        assert captured_params["user_id"] == "user-abc"
+        assert captured_params["id"] == "mem-123"

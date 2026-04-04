@@ -183,6 +183,13 @@ class MemoryMCPServer(BaseMCPServer):
         if not content.strip():
             return ToolResult(success=False, error="content must not be empty.")
 
+        _MAX_MEMORY_LENGTH = 500
+        if len(content) > _MAX_MEMORY_LENGTH:
+            return ToolResult(
+                success=False,
+                error=f"Memory content too long (max {_MAX_MEMORY_LENGTH} characters).",
+            )
+
         if category not in VALID_CATEGORIES:
             return ToolResult(
                 success=False,

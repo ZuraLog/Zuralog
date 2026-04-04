@@ -65,8 +65,8 @@ class MemoryStore(Protocol):
         """
         ...
 
-    async def delete(self, memory_id: str) -> None:
-        """Hard-delete a memory by ID."""
+    async def delete(self, memory_id: str, user_id: str) -> None:
+        """Hard-delete a memory by ID, scoped to the owning user."""
         ...
 
 
@@ -116,6 +116,6 @@ class InMemoryStore:
             ]
         return results
 
-    async def delete(self, memory_id: str) -> None:
-        for uid in list(self._store.keys()):
-            self._store[uid] = [i for i in self._store[uid] if i.id != memory_id]
+    async def delete(self, memory_id: str, user_id: str) -> None:
+        if user_id in self._store:
+            self._store[user_id] = [i for i in self._store[user_id] if i.id != memory_id]
