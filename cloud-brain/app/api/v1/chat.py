@@ -285,9 +285,16 @@ async def _load_conversation_history(
     # Prepend the summary as a system message so the LLM has context
     # about earlier parts of the conversation.
     if summary:
-        return [
-            {"role": "system", "content": f"## Conversation Summary\n{summary}"}
-        ] + result_messages
+        from app.utils.sanitize import is_memory_injection_attempt
+        if is_memory_injection_attempt(summary):
+            logger.warning(
+                "Conversation summary for conv %s failed injection filter — skipping injection",
+                conversation_id,
+            )
+        else:
+            return [
+                {"role": "system", "content": f"## Conversation Summary\n{summary}"}
+            ] + result_messages
     return result_messages
 
 
