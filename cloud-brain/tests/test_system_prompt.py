@@ -17,10 +17,11 @@ def test_system_prompt_contains_persona():
 
 
 def test_system_prompt_contains_capabilities():
-    """System prompt must mention key data sources and the integrations tool."""
+    """System prompt must mention key data sources, the integrations tool, and web search."""
     assert "Apple Health" in SYSTEM_PROMPT or "apple_health" in SYSTEM_PROMPT
     assert "Health Connect" in SYSTEM_PROMPT or "health_connect" in SYSTEM_PROMPT
     assert "get_integrations" in SYSTEM_PROMPT
+    assert "web search" in SYSTEM_PROMPT.lower()
 
 
 def test_system_prompt_contains_safety():
