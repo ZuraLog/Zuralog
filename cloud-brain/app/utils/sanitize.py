@@ -52,12 +52,15 @@ _HIGH_SIGNAL_PHRASES = re.compile(
     # "skip all …" — require a safety/rule target so "skip all processed foods"
     # is not flagged
     r'|skip\s+all\s+(?:safety|rules?|guidelines?|restrictions?|warnings?|disclaimers?|checks?|filters?)\b'
-    # Preference-bypass phrases — used to plant write-confirmation bypass via memory
-    r'|pre.?approv\w*\b'
+    # Preference-bypass phrases — used to plant write-confirmation bypass via memory.
+    # Each pattern requires an action-specific qualifier to avoid false positives
+    # on normal health language (e.g. "pre-approved by insurance", "without asking
+    # your nutritionist").
+    r'|pre.?approv\w*\s+(?:all\s+)?(?:requests?|actions?|changes?|writes?|operations?)\b'
     r'|blanket\s+consent\b'
     r'|skip\s+(?:the\s+)?confirm(?:ation)?\b'
     r'|bypass\s+confirm(?:ation)?\b'
-    r'|without\s+(?:asking|confirm(?:ing|ation)?)\b'
+    r'|without\s+(?:asking\s+for\s+(?:confirmation|approval|permission)|confirm(?:ation))\b'
     r'|execute\s+(?:requests?|actions?|changes?)\s+(?:directly|immediately|without)\b'
     r'|treat\s+(?:my\s+)?request\s+as\s+(?:confirm|approv)\w*\b'
     r')',
