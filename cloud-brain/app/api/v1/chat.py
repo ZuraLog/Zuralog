@@ -66,7 +66,7 @@ from app.services.auth_service import AuthService
 from app.services.rate_limiter import RateLimiter
 from app.services.storage_service import StorageService
 from app.services.usage_tracker import UsageTracker
-from app.utils.sanitize import sanitize_for_llm
+from app.utils.sanitize import is_memory_injection_attempt, sanitize_for_llm
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +91,8 @@ _VALID_RESPONSE_LENGTHS = {"concise", "detailed"}
 MAX_HISTORY_TOKENS = 8_192
 # Per-message content cap: truncate any single message exceeding this.
 _MSG_TOKEN_CAP = 2_048
+# Maximum number of oversized messages allowed per session before disconnecting.
+_MAX_OVERSIZED = 5
 
 
 async def _set_sentry_module() -> None:
@@ -285,7 +287,6 @@ async def _load_conversation_history(
     # Prepend the summary as a system message so the LLM has context
     # about earlier parts of the conversation.
     if summary:
-        from app.utils.sanitize import is_memory_injection_attempt
         if is_memory_injection_attempt(summary):
             logger.warning(
                 "Conversation summary for conv %s failed injection filter — skipping injection",
@@ -592,7 +593,6 @@ async def websocket_chat(
 
         # Oversized-message abuse guard (Task 9 / L3).
         _oversized_message_count = 0
-        _MAX_OVERSIZED = 5
 
         while True:
             try:
