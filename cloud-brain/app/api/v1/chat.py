@@ -63,7 +63,7 @@ from app.models.user import User
 from app.models.user_device import UserDevice
 from app.models.user_preferences import UserPreferences
 from app.services.auth_service import AuthService
-from app.services.rate_limiter import RateLimiter
+from app.services.rate_limiter import _INCR_EXPIRE_SCRIPT, RateLimiter
 from app.services.storage_service import StorageService
 from app.services.usage_tracker import UsageTracker
 from app.utils.sanitize import is_memory_injection_attempt, sanitize_for_llm
@@ -488,17 +488,16 @@ async def websocket_chat(
 
     # Fix 6.8 (H-4): Track per-user WebSocket connection count
     # _counter_incremented tracks whether we successfully incremented the Redis
-    # counter WITHOUT immediately decrementing it (i.e. the >3 branch was NOT
+    # counter WITHOUT immediately decrementing it (i.e. the >2 branch was NOT
     # taken).  The finally block below uses this flag to avoid a double-decr on
-    # the >3 early-return path and to guarantee a decr on all other exit paths
+    # the >2 early-return path and to guarantee a decr on all other exit paths
     # that occur after the incr (fix for WS connection counter leak).
     _counter_incremented = False
     if redis_client and user_id:
         conn_key = f"ws_connections:{user_id}"
         try:
-            conn_count = await redis_client.incr(conn_key)
-            await redis_client.expire(conn_key, 3600)
-            if conn_count > 3:
+            conn_count = int(await redis_client.eval(_INCR_EXPIRE_SCRIPT, 1, conn_key, "3600"))  # type: ignore[misc]
+            if conn_count > 2:
                 await redis_client.decr(conn_key)
                 await websocket.send_json({"type": "error", "content": "Too many active connections"})
                 await websocket.close(code=1008)
