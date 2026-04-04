@@ -150,16 +150,16 @@ class TestCheckModelLimits:
         assert result.zura_remaining == PRO_ZURA_WEEKLY - 30
 
     @pytest.mark.asyncio
-    async def test_redis_failure_fails_open(self):
-        """Redis error causes fail-open: all models allowed."""
+    async def test_redis_failure_fails_closed(self):
+        """Redis error causes fail-closed: all models denied."""
         limiter, mock_redis = self._make_limiter()
         import redis.asyncio as aioredis
         mock_redis.eval = AsyncMock(side_effect=aioredis.RedisError("connection failed"))
         result = await limiter.check_model_limits("user1", "free")
-        assert result.flash_allowed is True
-        assert result.zura_allowed is True
-        assert result.burst_allowed is True
-        assert result.flash_remaining == -1
+        assert result.flash_allowed is False
+        assert result.zura_allowed is False
+        assert result.burst_allowed is False
+        assert result.flash_remaining == 0
 
     @pytest.mark.asyncio
     async def test_increment_flash_calls_pipeline(self):

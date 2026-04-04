@@ -190,13 +190,12 @@ class RateLimiter:
                 reset_seconds=reset_seconds,
             )
         except redis.RedisError as exc:
-            logger.error("Redis error in rate limiter: %s", exc)
-            # Fail-open: a Redis outage should not block all users
+            logger.error("Redis unavailable in rate limiter — failing closed: %s", exc)
             return RateLimitResult(
-                allowed=True,
+                allowed=False,
                 limit=limit,
-                remaining=-1,
-                reset_seconds=reset_seconds,
+                remaining=0,
+                reset_seconds=60,
             )
 
     async def check_burst_limit(self, user_id: str, tier: str = "free") -> RateLimitResult:
@@ -224,13 +223,12 @@ class RateLimiter:
                 reset_seconds=reset_seconds,
             )
         except redis.RedisError as exc:
-            logger.error("Redis error in burst limiter: %s", exc)
-            # Fail-open: a Redis outage should not block all users
+            logger.error("Redis unavailable in burst limiter — failing closed: %s", exc)
             return RateLimitResult(
-                allowed=True,
+                allowed=False,
                 limit=limit,
-                remaining=-1,
-                reset_seconds=reset_seconds,
+                remaining=0,
+                reset_seconds=60,
             )
 
     @staticmethod
@@ -301,12 +299,12 @@ class RateLimiter:
             zr = max(raw_ttls[1], 0)
             br = max(raw_ttls[2], 0)
         except Exception as exc:
-            logger.error("Redis error in check_model_limits: %s", exc)
+            logger.error("Redis unavailable in check_model_limits — failing closed: %s", exc)
             return ModelLimitResult(
-                flash_allowed=True, zura_allowed=True, burst_allowed=True,
-                flash_remaining=-1, zura_remaining=-1, burst_remaining=-1,
+                flash_allowed=False, zura_allowed=False, burst_allowed=False,
+                flash_remaining=0, zura_remaining=0, burst_remaining=0,
                 flash_limit=fl, zura_limit=zl, burst_limit=bl,
-                flash_reset_seconds=0, zura_reset_seconds=0, burst_reset_seconds=0)
+                flash_reset_seconds=60, zura_reset_seconds=60, burst_reset_seconds=60)
         frem = max(0, fl - fu)
         zrem = max(0, zl - zu)
         brem = max(0, bl - bu)
