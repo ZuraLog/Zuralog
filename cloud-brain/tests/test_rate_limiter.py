@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.services.rate_limiter import RateLimiter, ModelLimitResult
+from app.services.rate_limiter import RateLimiter
 from app.config import FREE_FLASH_DAILY, FREE_ZURA_DAILY, PRO_FLASH_WEEKLY, PRO_ZURA_WEEKLY
 
 

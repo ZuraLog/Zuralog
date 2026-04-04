@@ -169,7 +169,7 @@ class RateLimiter:
         reset_seconds = 86400 - int(time.time() % 86400)
 
         try:
-            current = await self._redis.eval(_INCR_EXPIRE_SCRIPT, 1, redis_key, "86400")
+            current = int(await self._redis.eval(_INCR_EXPIRE_SCRIPT, 1, redis_key, "86400"))  # type: ignore[misc]
 
             allowed = current <= limit
             remaining = max(0, limit - current)
@@ -214,7 +214,7 @@ class RateLimiter:
         reset_seconds = 60 - int(time.time() % 60)
 
         try:
-            current = await self._redis.eval(_INCR_EXPIRE_SCRIPT, 1, redis_key, "60")
+            current = int(await self._redis.eval(_INCR_EXPIRE_SCRIPT, 1, redis_key, "60"))  # type: ignore[misc]
 
             return RateLimitResult(
                 allowed=current <= limit,
