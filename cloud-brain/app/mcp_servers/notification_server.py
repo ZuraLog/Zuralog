@@ -10,14 +10,23 @@ server is always-on — no OAuth integration required.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
+from datetime import date
 from typing import TYPE_CHECKING, Any
+
+import redis.asyncio as aioredis
 
 from app.mcp_servers.base_server import BaseMCPServer
 from app.mcp_servers.models import Resource, ToolDefinition, ToolResult
 
 if TYPE_CHECKING:
     from app.services.push_service import PushService
+
+logger = logging.getLogger(__name__)
+
+_DAILY_LIMIT = 10
+_EXPIRE_SECONDS = 86400  # 24 hours
 
 
 class NotificationServer(BaseMCPServer):
@@ -32,6 +41,11 @@ class NotificationServer(BaseMCPServer):
     no-ops when FCM is not configured (e.g. in local development), so
     the tool always returns ``success=True`` as long as validation passes.
 
+    A Redis-backed daily rate limit (10 per user per calendar day) is
+    enforced when ``redis_client`` is provided. On Redis failure the check
+    fails open so coaching nudges are never silenced by an infrastructure
+    outage.
+
     Args:
         db_factory: Callable that returns an async context manager yielding
             an ``AsyncSession`` (e.g. ``async_session`` from
@@ -39,12 +53,16 @@ class NotificationServer(BaseMCPServer):
             ``send_and_persist``.
         push_service: ``PushService`` instance responsible for FCM fan-out
             and notification logging.
+        redis_client: Optional Redis connection used for rate limiting.
+            Pass ``None`` (or omit) in dev/test environments to skip the
+            check entirely.
     """
 
     def __init__(
         self,
         db_factory: Callable[[], Any],
-        push_service: PushService,
+        push_service: "PushService",
+        redis_client: "aioredis.Redis | None" = None,
     ) -> None:
         """Initialise the server.
 
@@ -53,9 +71,11 @@ class NotificationServer(BaseMCPServer):
                 is executed to obtain a short-lived DB session.
             push_service: Injected push service that delivers FCM messages
                 and persists ``NotificationLog`` rows.
+            redis_client: Optional Redis instance for daily rate limiting.
         """
         self._db_factory = db_factory
         self._push_service = push_service
+        self._redis = redis_client
 
     # ------------------------------------------------------------------
     # BaseMCPServer properties
@@ -168,6 +188,32 @@ class NotificationServer(BaseMCPServer):
                 success=False,
                 error=f"body exceeds 250 characters (got {len(body)}).",
             )
+
+        # ------------------------------------------------------------------
+        # Daily rate limit: 10 notifications per user per calendar day.
+        # The check is skipped when no Redis client is available (dev/test).
+        # On Redis failure we fail open — an outage must not silence nudges.
+        # ------------------------------------------------------------------
+        if self._redis is not None:
+            rate_key = f"notif:daily:{user_id}:{date.today().isoformat()}"
+            try:
+                count = await self._redis.incr(rate_key)
+                if count == 1:
+                    await self._redis.expire(rate_key, _EXPIRE_SECONDS)
+                if count > _DAILY_LIMIT:
+                    return ToolResult(
+                        success=False,
+                        error=(
+                            "Daily notification limit reached (10/day). "
+                            "Try again tomorrow."
+                        ),
+                    )
+            except aioredis.RedisError:
+                logger.warning(
+                    "Redis error during notification rate-limit check for "
+                    "user %s — failing open.",
+                    user_id,
+                )
 
         async with self._db_factory() as db:
             sent = await self._push_service.send_and_persist(
