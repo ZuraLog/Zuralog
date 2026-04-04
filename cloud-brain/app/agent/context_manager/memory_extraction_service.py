@@ -114,7 +114,7 @@ async def extract_and_store_memories(
             logger.warning(
                 "Blocking extracted memory with injection/bypass content for user %s: %.60s",
                 user_id[:8],
-                content[:60],
+                content,
             )
             continue
 
