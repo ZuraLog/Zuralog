@@ -62,7 +62,7 @@ class NotificationServer(BaseMCPServer):
         self,
         db_factory: Callable[[], Any],
         push_service: "PushService",
-        redis_client: "aioredis.Redis | None" = None,
+        redis_client: aioredis.Redis | None = None,
     ) -> None:
         """Initialise the server.
 
