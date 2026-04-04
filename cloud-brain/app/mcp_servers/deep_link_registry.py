@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from typing import Union
+from urllib.parse import quote
 
 # ---------------------------------------------------------------------------
 # Module-level lookup tables
@@ -26,7 +27,7 @@ _REGISTRY: dict[str, dict[str, Union[str, Callable[..., str]]]] = {
     },
     "calai": {
         "camera": "calai://camera",
-        "search": lambda query="": f"calai://search?q={query}",
+        "search": lambda query="": f"calai://search?q={quote(str(query), safe='')}",
     },
 }
 """Maps app_name -> {action -> URL or callable(query=...) -> URL}."""
