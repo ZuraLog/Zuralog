@@ -3,7 +3,7 @@ import re
 import unicodedata
 
 _DANGEROUS_PATTERN = re.compile(
-    r'(ignore\s+(?:previous|above|all|everything)|system\s*:|assistant\s*:|forget\s+(?:all|everything|previous)|<\|im_start\|>|<\|im_end\|>|<\|endoftext\|>|<\|system\|>|\[INST\]|<<SYS>>|###\s*(?:instruction|system|prompt)\s*:|\[/INST\]|</s>|<\|user\|>|<\|assistant\|>|<\|end\|>|Human:|Assistant:)',
+    r'(ignore\s+(?:previous|above|all|everything)|system\s*:|assistant\s*:|forget\s+(?:all|everything|previous)|<\|im_start\|>|<\|im_end\|>|<\|endoftext\|>|<\|system\|>|\[INST\]|<<SYS>>|###\s*(?:instruction|system|prompt)\s*:|\[/INST\]|</s>|<\|user\|>|<\|assistant\|>|<\|end\|>|Human:|Assistant:|==\s*SYSTEM\s*==|<SYSTEM>|<\|role\|>|\[CONTEXT\]\s*:)',
     re.IGNORECASE,
 )
 
@@ -52,6 +52,14 @@ _HIGH_SIGNAL_PHRASES = re.compile(
     # "skip all …" — require a safety/rule target so "skip all processed foods"
     # is not flagged
     r'|skip\s+all\s+(?:safety|rules?|guidelines?|restrictions?|warnings?|disclaimers?|checks?|filters?)\b'
+    # Preference-bypass phrases — used to plant write-confirmation bypass via memory
+    r'|pre.?approv\w*\b'
+    r'|blanket\s+consent\b'
+    r'|skip\s+(?:the\s+)?confirm(?:ation)?\b'
+    r'|bypass\s+confirm(?:ation)?\b'
+    r'|without\s+(?:asking|confirm(?:ing|ation)?)\b'
+    r'|execute\s+(?:requests?|actions?|changes?)\s+(?:directly|immediately|without)\b'
+    r'|treat\s+(?:my\s+)?request\s+as\s+(?:confirm|approv)\w*\b'
     r')',
     re.IGNORECASE,
 )

@@ -192,6 +192,20 @@ class MemoryMCPServer(BaseMCPServer):
                 ),
             )
 
+        # Guard: reject content that looks like a prompt injection attempt
+        # or a preference-bypass phrase that could undermine write confirmation.
+        from app.utils.sanitize import is_memory_injection_attempt
+        if is_memory_injection_attempt(content):
+            logger.warning(
+                "Blocked save_memory with injection/bypass content for user '%s': %.60s",
+                user_id[:8],
+                content[:60],
+            )
+            return ToolResult(
+                success=False,
+                error="Memory content not allowed.",
+            )
+
         try:
             await self._store.add(user_id=user_id, content=content, category=category)
             return ToolResult(success=True, data={"message": "Memory saved."})
