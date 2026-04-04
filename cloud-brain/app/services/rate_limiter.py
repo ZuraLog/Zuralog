@@ -191,6 +191,7 @@ class RateLimiter:
             )
         except redis.RedisError as exc:
             logger.error("Redis unavailable in rate limiter — failing closed: %s", exc)
+            # reset_seconds=60: conservative retry hint; real TTL is unavailable during Redis failure
             return RateLimitResult(
                 allowed=False,
                 limit=limit,
@@ -224,6 +225,7 @@ class RateLimiter:
             )
         except redis.RedisError as exc:
             logger.error("Redis unavailable in burst limiter — failing closed: %s", exc)
+            # reset_seconds=60: conservative retry hint; real TTL is unavailable during Redis failure
             return RateLimitResult(
                 allowed=False,
                 limit=limit,
@@ -298,8 +300,9 @@ class RateLimiter:
             fr = max(raw_ttls[0], 0)
             zr = max(raw_ttls[1], 0)
             br = max(raw_ttls[2], 0)
-        except Exception as exc:
+        except redis.RedisError as exc:
             logger.error("Redis unavailable in check_model_limits — failing closed: %s", exc)
+            # reset_seconds=60: conservative retry hint; real TTL is unavailable during Redis failure
             return ModelLimitResult(
                 flash_allowed=False, zura_allowed=False, burst_allowed=False,
                 flash_remaining=0, zura_remaining=0, burst_remaining=0,
