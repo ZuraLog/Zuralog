@@ -14,6 +14,7 @@ from app.agent.mcp_client import MCPClient
 from app.mcp_servers.apple_health_server import AppleHealthServer
 from app.mcp_servers.deep_link_server import DeepLinkServer
 from app.mcp_servers.health_connect_server import HealthConnectServer
+from app.mcp_servers.integrations_server import IntegrationsMCPServer
 from app.mcp_servers.registry import MCPServerRegistry
 from app.mcp_servers.strava_server import StravaServer
 
@@ -29,19 +30,20 @@ class TestMCPIntegration:
     # ------------------------------------------------------------------
 
     def test_registry_discovers_all_servers(self):
-        """Register 4 servers; list_all returns >= 4 entries.
+        """Register 5 servers; list_all returns >= 5 entries.
 
-        Confirms all four server types (AppleHealth, HealthConnect,
-        Strava, DeepLink) can be registered and discovered.
+        Confirms all server types (AppleHealth, HealthConnect, Strava,
+        DeepLink, Integrations) can be registered and discovered.
         """
         registry = MCPServerRegistry()
         registry.register(AppleHealthServer())
         registry.register(HealthConnectServer())
         registry.register(StravaServer())
         registry.register(DeepLinkServer())
+        registry.register(IntegrationsMCPServer(db_factory=None))
 
         servers = registry.list_all()
-        assert len(servers) >= 4
+        assert len(servers) >= 5
 
         # Verify server names are correct.
         names = {s.name for s in servers}
@@ -49,24 +51,27 @@ class TestMCPIntegration:
         assert "health_connect" in names
         assert "strava" in names
         assert "deep_link" in names
+        assert "integrations" in names
 
     def test_registry_lists_all_tools(self):
-        """Register AppleHealth + Strava; get_all_tools returns > 0.
+        """Register AppleHealth + Strava + Integrations; get_all_tools returns > 0.
 
         Each server exposes at least one tool. The aggregated list
-        must contain tools from both servers.
+        must contain tools from all registered servers.
         """
         registry = MCPServerRegistry()
         registry.register(AppleHealthServer())
         registry.register(StravaServer())
+        registry.register(IntegrationsMCPServer(db_factory=None))
 
         tools = registry.get_all_tools()
         assert len(tools) > 0
 
         tool_names = {t.name for t in tools}
-        # AppleHealth exposes read + write; Strava exposes get + create.
+        # AppleHealth exposes read + write; Strava exposes get + create; Integrations exposes get_integrations.
         assert "apple_health_read_metrics" in tool_names
         assert "strava_get_activities" in tool_names
+        assert "get_integrations" in tool_names
 
     # ------------------------------------------------------------------
     # MCP Client

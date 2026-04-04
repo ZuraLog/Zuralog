@@ -121,6 +121,31 @@ class StubDeepLinkServer(BaseMCPServer):
         return []
 
 
+class StubIntegrationsServer(BaseMCPServer):
+    @property
+    def name(self) -> str:
+        return "integrations"
+
+    @property
+    def description(self) -> str:
+        return "Integrations catalog"
+
+    def get_tools(self) -> list[ToolDefinition]:
+        return [
+            ToolDefinition(
+                name="get_integrations",
+                description="List all available integrations and connection status",
+                input_schema={"type": "object", "properties": {}},
+            ),
+        ]
+
+    async def execute_tool(self, tool_name: str, params: dict, user_id: str) -> ToolResult:
+        return ToolResult(success=True, data={"integrations": []})
+
+    async def get_resources(self, user_id: str) -> list:
+        return []
+
+
 class StubHealthConnectServer(BaseMCPServer):
     @property
     def name(self) -> str:
@@ -174,6 +199,7 @@ def full_stack():
     registry.register(StubStravaServer())
     registry.register(StubFitbitServer())
     registry.register(StubDeepLinkServer())
+    registry.register(StubIntegrationsServer())
 
     resolver = UserToolResolver(registry=registry)
     client = MCPClient(registry=registry, tool_resolver=resolver)
@@ -213,7 +239,7 @@ class TestDynamicToolInjectionE2E:
 
     @pytest.mark.asyncio
     async def test_strava_only_user_sees_strava_plus_always_on(self, full_stack):
-        """User with only Strava connected sees 4 tools: strava + 3 always-on."""
+        """User with only Strava connected sees strava + 4 always-on tools."""
         db = _mock_db(["strava"])
         full_stack["llm"].chat.return_value = _make_llm_response("Your activities look great!")
 
@@ -221,7 +247,6 @@ class TestDynamicToolInjectionE2E:
             "user-strava", "Show my runs", db=db,
         )
 
-        # Verify only 4 tools sent to LLM
         call_args = full_stack["llm"].chat.call_args
         tools = call_args.kwargs.get("tools")
         tool_names = {t["function"]["name"] for t in tools}
@@ -230,13 +255,14 @@ class TestDynamicToolInjectionE2E:
             "apple_health_read_metrics",
             "health_connect_read_metrics",
             "open_external_app",
+            "get_integrations",
         }
         assert "fitbit_get_activity" not in tool_names
         assert result.message == "Your activities look great!"
 
     @pytest.mark.asyncio
     async def test_no_integrations_user_sees_only_always_on(self, full_stack):
-        """User with zero integrations sees only 3 always-on tools."""
+        """User with zero integrations sees only 4 always-on tools."""
         db = _mock_db([])
         full_stack["llm"].chat.return_value = _make_llm_response("Connect an integration first!")
 
@@ -251,11 +277,12 @@ class TestDynamicToolInjectionE2E:
             "apple_health_read_metrics",
             "health_connect_read_metrics",
             "open_external_app",
+            "get_integrations",
         }
 
     @pytest.mark.asyncio
     async def test_strava_and_fitbit_user_sees_all_registered_tools(self, full_stack):
-        """User with Strava and Fitbit connected sees all 5 registered tools (both providers + 3 always-on)."""
+        """User with Strava and Fitbit connected sees all 6 registered tools (both providers + 4 always-on)."""
         db = _mock_db(["strava", "fitbit"])
         full_stack["llm"].chat.return_value = _make_llm_response("Here's everything!")
 
@@ -272,4 +299,5 @@ class TestDynamicToolInjectionE2E:
             "apple_health_read_metrics",
             "health_connect_read_metrics",
             "open_external_app",
+            "get_integrations",
         }

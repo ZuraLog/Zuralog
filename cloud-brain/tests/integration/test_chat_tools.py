@@ -747,3 +747,137 @@ async def test_training_plan_request_routes_to_zura(jwt_token: str, _run: int) -
         f"Got: {result.model_used!r} (classifier_result={result.classifier_result!r})\n"
         f"Response: {result.response[:200]}"
     )
+
+
+# ===========================================================================
+# GROUP 6 — Integrations tool
+#
+# get_integrations is always-on: every user sees it regardless of what
+# they have connected. When a user asks about available or connected apps,
+# Zura must call it rather than guessing from the system prompt.
+# ===========================================================================
+
+@REPEAT
+async def test_integrations_query_fires_get_integrations(jwt_token: str, _run: int) -> None:
+    """
+    "What apps do I have connected?"
+    Tool required: get_integrations
+    Verification: query integrations table for connected apps.
+    """
+    sql = f"""
+        SELECT provider, sync_status, is_active
+        FROM integrations
+        WHERE user_id = '{_DEMO_USER_ID}'
+          AND is_active = true
+        ORDER BY provider;
+    """
+    result = await _chat(jwt_token, "What apps do I have connected?")
+    db_rows = await _db_query(sql)
+    _print_comparison(
+        f"CONNECTED INTEGRATIONS  [run {_run}]",
+        result.response,
+        sql,
+        db_rows,
+    )
+
+    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert "get_integrations" in result.tools_fired, (
+        f"[run {_run}] get_integrations did not fire.\nTools fired: {result.tools_fired}"
+    )
+    assert len(result.response) > 20
+
+
+@REPEAT
+async def test_available_integrations_query_fires_get_integrations(jwt_token: str, _run: int) -> None:
+    """
+    "What apps can I connect to ZuraLog?"
+    Zura must call get_integrations to list the catalog — not invent app names.
+    """
+    result = await _chat(jwt_token, "What apps can I connect to ZuraLog?")
+
+    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert "get_integrations" in result.tools_fired, (
+        f"[run {_run}] get_integrations did not fire for an integrations catalog question.\n"
+        f"Tools fired: {result.tools_fired}"
+    )
+    assert len(result.response) > 20
+
+
+# ===========================================================================
+# GROUP 7 — App navigation skill
+#
+# When a user asks where to find something in the app, Zura must load
+# the app_navigation coach skill via get_coach_skill before answering.
+# Asserting on the tool name only — the response content varies by question.
+# ===========================================================================
+
+@REPEAT
+async def test_navigation_question_loads_app_navigation_skill(jwt_token: str, _run: int) -> None:
+    """
+    "Where do I find my streaks?"
+    Zura must call get_coach_skill to load the app_navigation reference
+    before answering — not guess from the system prompt.
+    """
+    result = await _chat(jwt_token, "Where do I find my streaks in the app?")
+
+    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert "get_coach_skill" in result.tools_fired, (
+        f"[run {_run}] get_coach_skill did not fire for a navigation question.\n"
+        f"Tools fired: {result.tools_fired}\n"
+        f"Response: {result.response[:300]}"
+    )
+    assert len(result.response) > 20
+
+
+@REPEAT
+async def test_navigation_question_mentions_correct_tab(jwt_token: str, _run: int) -> None:
+    """
+    "Where is the journal?" — journal lives in the Progress tab.
+    After loading the skill, the response must mention Progress.
+    """
+    result = await _chat(jwt_token, "Where is the journal in the app?")
+
+    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert len(result.response) > 20
+    assert "progress" in result.response.lower(), (
+        f"[run {_run}] Response doesn't mention Progress tab for a journal question.\n"
+        f"Response: {result.response[:300]}"
+    )
+
+
+# ===========================================================================
+# GROUP 8 — Write tool confirmation (health data)
+#
+# apple_health_write_entry and health_connect_write_entry send a write
+# command to the user's device via FCM. Like all writes, they require
+# explicit user confirmation before firing.
+# ===========================================================================
+
+@REPEAT
+async def test_log_calories_requires_confirmation(jwt_token: str, _run: int) -> None:
+    """
+    "Log 500 calories for lunch."
+    Turn 1 — write tool must NOT fire. AI asks confirmation.
+    Turn 2 — "Yes, log it." — write tool MUST fire.
+    """
+    turn1, turn2 = await _chat_two_turns(
+        jwt_token,
+        turn1_message="Log 500 calories for my lunch today.",
+        turn2_message="Yes, log it.",
+    )
+
+    write_tools = {"apple_health_write_entry", "health_connect_write_entry"}
+
+    assert not any(t in write_tools for t in turn1.tools_fired), (
+        f"[run {_run}] FAIL — write tool fired on turn 1 without confirmation.\n"
+        f"Tools fired: {turn1.tools_fired}"
+    )
+    assert any(w in turn1.response.lower() for w in
+               ["confirm", "log", "500", "calories", "sure", "want me to", "shall i"]), (
+        f"[run {_run}] Turn 1 doesn't look like a confirmation request.\n"
+        f"Response: {turn1.response[:300]}"
+    )
+    assert any(t in write_tools for t in turn2.tools_fired), (
+        f"[run {_run}] FAIL — write tool did not fire after confirmation.\n"
+        f"Tools on turn 2: {turn2.tools_fired}\nResponse: {turn2.response[:300]}"
+    )

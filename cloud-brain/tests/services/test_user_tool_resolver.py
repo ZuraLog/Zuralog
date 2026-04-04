@@ -31,6 +31,7 @@ def mock_registry():
             "apple_health": [_make_tool("apple_health_read_metrics")],
             "health_connect": [_make_tool("health_connect_read_metrics")],
             "deep_link": [_make_tool("open_external_app")],
+            "integrations": [_make_tool("get_integrations")],
             "strava": [_make_tool("get_activities"), _make_tool("get_athlete_stats")],
             "fitbit": [_make_tool("fitbit_get_activity")],
             "oura": [_make_tool("oura_get_sleep")],
@@ -79,13 +80,14 @@ class TestUserToolResolver:
 
     @pytest.mark.asyncio
     async def test_always_on_servers_included_even_with_no_integrations(self, resolver):
-        """A user with zero integrations still gets apple_health, health_connect, deep_link."""
+        """A user with zero integrations still gets apple_health, health_connect, deep_link, integrations."""
         db = _mock_db_session([])
         tools = await resolver.resolve_tools(db, "user-123")
         tool_names = [t.name for t in tools]
         assert "apple_health_read_metrics" in tool_names
         assert "health_connect_read_metrics" in tool_names
         assert "open_external_app" in tool_names
+        assert "get_integrations" in tool_names
         # OAuth-dependent tools must NOT be present
         assert "get_activities" not in tool_names
         assert "fitbit_get_activity" not in tool_names
@@ -144,8 +146,12 @@ class TestUserToolResolver:
         db = _mock_db_session(["unknown_provider"])
         tools = await resolver.resolve_tools(db, "user-123")
         tool_names = [t.name for t in tools]
-        # Only always-on tools
-        assert len(tool_names) == 3  # apple_health, health_connect, deep_link
+        # Only always-on tools (apple_health, health_connect, deep_link, integrations)
+        assert "apple_health_read_metrics" in tool_names
+        assert "health_connect_read_metrics" in tool_names
+        assert "open_external_app" in tool_names
+        assert "get_integrations" in tool_names
+        assert "get_activities" not in tool_names
 
     @pytest.mark.asyncio
     async def test_registry_called_with_correct_server_names(self, resolver, mock_registry):
@@ -160,6 +166,7 @@ class TestUserToolResolver:
         assert "apple_health" in server_names
         assert "health_connect" in server_names
         assert "deep_link" in server_names
+        assert "integrations" in server_names
         # NOT connected
         assert "fitbit" not in server_names
 

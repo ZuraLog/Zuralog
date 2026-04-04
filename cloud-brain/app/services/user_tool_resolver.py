@@ -30,6 +30,7 @@ ALWAYS_ON_SERVERS: frozenset[str] = frozenset({
     "coach_skills",
     "deep_link",
     "health_connect",
+    "integrations",
     "memory",
     "notification",
     "user_progress",
