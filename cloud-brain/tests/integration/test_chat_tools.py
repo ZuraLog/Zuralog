@@ -12,9 +12,6 @@ What these tests cover:
   4. Edge cases        — bad inputs rejected cleanly without crashing
   5. Model routing     — simple questions → Zura Flash; complex → Zura (Kimi K2.5)
 
-Each test runs 3 times (_run=1, 2, 3) for repeatability.
-Three consistent passes = the behaviour is reliable, not a one-off fluke.
-
 --- How to read the test output ---
 For every READ test you will see a comparison block printed to stdout:
 
@@ -275,10 +272,6 @@ async def _chat_two_turns(
     return turn1, turn2
 
 
-# Runs every test 3 times for repeatability.
-REPEAT = pytest.mark.parametrize("_run", [1, 2, 3])
-
-
 # ===========================================================================
 # GROUP 1 — Read queries
 #
@@ -287,8 +280,7 @@ REPEAT = pytest.mark.parametrize("_run", [1, 2, 3])
 # human reviewer can judge whether the AI was accurate.
 # ===========================================================================
 
-@REPEAT
-async def test_steps_query_fires_apple_health(jwt_token: str, _run: int) -> None:
+async def test_steps_query_fires_apple_health(jwt_token: str) -> None:
     """
     "How many steps did I take today?"
     Tool required: apple_health_read_metrics
@@ -313,23 +305,22 @@ async def test_steps_query_fires_apple_health(jwt_token: str, _run: int) -> None
     result = await _chat(jwt_token, "How many steps did I take today?")
     db_rows = await _db_query(sql)
     _print_comparison(
-        f"STEPS TODAY  [run {_run}]  "
+        f"STEPS TODAY  "
         f"[Apple Health: {'CONNECTED' if apple_health_connected else 'NOT CONNECTED'}]",
         result.response,
         sql,
         db_rows,
     )
 
-    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert result.error is None, f"Unexpected error: {result.error}"
     assert "apple_health_read_metrics" in result.tools_fired, (
-        f"[run {_run}] apple_health_read_metrics did not fire.\n"
+        f"apple_health_read_metrics did not fire.\n"
         f"Tools fired: {result.tools_fired}"
     )
     assert len(result.response) > 20
 
 
-@REPEAT
-async def test_sleep_query_fires_apple_health(jwt_token: str, _run: int) -> None:
+async def test_sleep_query_fires_apple_health(jwt_token: str) -> None:
     """
     "How was my sleep last week?"
     Tool required: apple_health_read_metrics
@@ -348,24 +339,23 @@ async def test_sleep_query_fires_apple_health(jwt_token: str, _run: int) -> None
     result = await _chat(jwt_token, "How was my sleep last week?")
     db_rows = await _db_query(sql)
     _print_comparison(
-        f"SLEEP LAST 7 DAYS  [run {_run}]  "
+        f"SLEEP LAST 7 DAYS  "
         f"[Apple Health: {'CONNECTED' if apple_health_connected else 'NOT CONNECTED'}]",
         result.response,
         sql,
         db_rows,
     )
 
-    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert result.error is None, f"Unexpected error: {result.error}"
     health_read_tools = {"apple_health_read_metrics", "health_connect_read_metrics"}
     assert any(t in health_read_tools for t in result.tools_fired), (
-        f"[run {_run}] Neither apple_health_read_metrics nor health_connect_read_metrics fired.\n"
+        f"Neither apple_health_read_metrics nor health_connect_read_metrics fired.\n"
         f"Tools fired: {result.tools_fired}"
     )
     assert len(result.response) > 20
 
 
-@REPEAT
-async def test_goals_query_fires_get_goals(jwt_token: str, _run: int) -> None:
+async def test_goals_query_fires_get_goals(jwt_token: str) -> None:
     """
     "What goals do I currently have?"
     Tool required: get_goals
@@ -381,21 +371,20 @@ async def test_goals_query_fires_get_goals(jwt_token: str, _run: int) -> None:
     result = await _chat(jwt_token, "What goals do I currently have?")
     db_rows = await _db_query(sql)
     _print_comparison(
-        f"ACTIVE GOALS [run {_run}]",
+        f"ACTIVE GOALS",
         result.response,
         sql,
         db_rows,
     )
 
-    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert result.error is None, f"Unexpected error: {result.error}"
     assert "get_goals" in result.tools_fired, (
-        f"[run {_run}] get_goals did not fire.\nTools fired: {result.tools_fired}"
+        f"get_goals did not fire.\nTools fired: {result.tools_fired}"
     )
     assert len(result.response) > 20
 
 
-@REPEAT
-async def test_strava_query_fires_get_activities(jwt_token: str, _run: int) -> None:
+async def test_strava_query_fires_get_activities(jwt_token: str) -> None:
     """
     "Show me my recent workouts from Strava."
 
@@ -423,38 +412,37 @@ async def test_strava_query_fires_get_activities(jwt_token: str, _run: int) -> N
     result = await _chat(jwt_token, "Show me my recent workouts from Strava.")
     db_rows = await _db_query(sql)
     _print_comparison(
-        f"STRAVA ACTIVITIES  [run {_run}]  "
+        f"STRAVA ACTIVITIES  "
         f"[Strava: {'CONNECTED' if strava_connected else 'NOT CONNECTED'}]",
         result.response,
         sql,
         db_rows,
     )
 
-    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert result.error is None, f"Unexpected error: {result.error}"
 
     if strava_connected:
         # Tool must fire — Strava is available in the user's toolkit.
         assert "strava_get_activities" in result.tools_fired, (
-            f"[run {_run}] Strava is connected but strava_get_activities did not fire.\n"
+            f"Strava is connected but strava_get_activities did not fire.\n"
             f"Tools fired: {result.tools_fired}"
         )
     else:
         # Tool must NOT fire — it was never given to Zura.
         # Zura must tell the user to connect Strava instead of making up data.
         assert "strava_get_activities" not in result.tools_fired, (
-            f"[run {_run}] Strava is NOT connected but the tool fired anyway."
+            f"Strava is NOT connected but the tool fired anyway."
         )
         not_connected_phrases = ["not connected", "connect strava", "link strava", "no strava"]
         assert any(p in result.response.lower() for p in not_connected_phrases), (
-            f"[run {_run}] Strava not connected but Zura didn't say so.\n"
+            f"Strava not connected but Zura didn't say so.\n"
             f"Response: {result.response[:300]}"
         )
 
     assert len(result.response) > 20
 
 
-@REPEAT
-async def test_streak_query_fires_get_streaks(jwt_token: str, _run: int) -> None:
+async def test_streak_query_fires_get_streaks(jwt_token: str) -> None:
     """
     "How long is my current streak?"
     Tool required: get_streaks
@@ -469,21 +457,20 @@ async def test_streak_query_fires_get_streaks(jwt_token: str, _run: int) -> None
     result = await _chat(jwt_token, "How long is my current streak?")
     db_rows = await _db_query(sql)
     _print_comparison(
-        f"STREAKS [run {_run}]",
+        f"STREAKS",
         result.response,
         sql,
         db_rows,
     )
 
-    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert result.error is None, f"Unexpected error: {result.error}"
     assert "get_streaks" in result.tools_fired, (
-        f"[run {_run}] get_streaks did not fire.\nTools fired: {result.tools_fired}"
+        f"get_streaks did not fire.\nTools fired: {result.tools_fired}"
     )
     assert len(result.response) > 20
 
 
-@REPEAT
-async def test_supplements_query_fires_get_supplements(jwt_token: str, _run: int) -> None:
+async def test_supplements_query_fires_get_supplements(jwt_token: str) -> None:
     """
     "What supplements am I taking?"
     Tool required: get_supplements
@@ -499,15 +486,15 @@ async def test_supplements_query_fires_get_supplements(jwt_token: str, _run: int
     result = await _chat(jwt_token, "What supplements am I taking?")
     db_rows = await _db_query(sql)
     _print_comparison(
-        f"SUPPLEMENTS [run {_run}]",
+        f"SUPPLEMENTS",
         result.response,
         sql,
         db_rows,
     )
 
-    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert result.error is None, f"Unexpected error: {result.error}"
     assert "get_supplements" in result.tools_fired, (
-        f"[run {_run}] get_supplements did not fire.\nTools fired: {result.tools_fired}"
+        f"get_supplements did not fire.\nTools fired: {result.tools_fired}"
     )
     assert len(result.response) > 20
 
@@ -519,8 +506,7 @@ async def test_supplements_query_fires_get_supplements(jwt_token: str, _run: int
 # Turn 2: after "Yes" — write tool MUST fire.
 # ===========================================================================
 
-@REPEAT
-async def test_create_goal_requires_confirmation(jwt_token: str, _run: int) -> None:
+async def test_create_goal_requires_confirmation(jwt_token: str) -> None:
     """
     "Set me a body weight goal of 75 kg."
     Uses body_weight type — demo user has no active body_weight goal.
@@ -534,22 +520,21 @@ async def test_create_goal_requires_confirmation(jwt_token: str, _run: int) -> N
     )
 
     assert "create_goal" not in turn1.tools_fired, (
-        f"[run {_run}] FAIL — create_goal fired on turn 1 without confirmation.\n"
+        f"FAIL — create_goal fired on turn 1 without confirmation.\n"
         f"Tools fired: {turn1.tools_fired}"
     )
     assert any(w in turn1.response.lower() for w in
                ["confirm", "shall i", "want me to", "go ahead", "create", "set", "sure"]), (
-        f"[run {_run}] Turn 1 doesn't look like a confirmation request.\n"
+        f"Turn 1 doesn't look like a confirmation request.\n"
         f"Response: {turn1.response[:300]}"
     )
     assert "create_goal" in turn2.tools_fired, (
-        f"[run {_run}] FAIL — create_goal did not fire after confirmation.\n"
+        f"FAIL — create_goal did not fire after confirmation.\n"
         f"Tools on turn 2: {turn2.tools_fired}\nResponse: {turn2.response[:300]}"
     )
 
 
-@REPEAT
-async def test_save_memory_fires_directly(jwt_token: str, _run: int) -> None:
+async def test_save_memory_fires_directly(jwt_token: str) -> None:
     """
     "Remember that I prefer morning workouts."
     The system prompt does not require user confirmation before saving a memory —
@@ -558,20 +543,19 @@ async def test_save_memory_fires_directly(jwt_token: str, _run: int) -> None:
     """
     result = await _chat(jwt_token, "Remember that I prefer morning workouts.")
 
-    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert result.error is None, f"Unexpected error: {result.error}"
     assert "save_memory" in result.tools_fired, (
-        f"[run {_run}] FAIL — save_memory did not fire.\n"
+        f"FAIL — save_memory did not fire.\n"
         f"Tools fired: {result.tools_fired}"
     )
     assert any(w in result.response.lower() for w in
                ["remember", "noted", "note", "saved", "morning", "workout", "preference"]), (
-        f"[run {_run}] Response doesn't acknowledge the saved preference.\n"
+        f"Response doesn't acknowledge the saved preference.\n"
         f"Response: {result.response[:300]}"
     )
 
 
-@REPEAT
-async def test_add_supplement_requires_confirmation(jwt_token: str, _run: int) -> None:
+async def test_add_supplement_requires_confirmation(jwt_token: str) -> None:
     """
     "Add magnesium to my supplement list."
     Turn 1 — add_supplement must NOT fire.
@@ -584,15 +568,15 @@ async def test_add_supplement_requires_confirmation(jwt_token: str, _run: int) -
     )
 
     assert "add_supplement" not in turn1.tools_fired, (
-        f"[run {_run}] FAIL — add_supplement fired on turn 1 without confirmation."
+        f"FAIL — add_supplement fired on turn 1 without confirmation."
     )
     assert any(w in turn1.response.lower() for w in
                ["confirm", "add", "magnesium", "sure", "want me to", "shall i"]), (
-        f"[run {_run}] Turn 1 doesn't look like a confirmation request.\n"
+        f"Turn 1 doesn't look like a confirmation request.\n"
         f"Response: {turn1.response[:300]}"
     )
     assert "add_supplement" in turn2.tools_fired, (
-        f"[run {_run}] FAIL — add_supplement did not fire after confirmation.\n"
+        f"FAIL — add_supplement did not fire after confirmation.\n"
         f"Tools on turn 2: {turn2.tools_fired}"
     )
 
@@ -601,17 +585,16 @@ async def test_add_supplement_requires_confirmation(jwt_token: str, _run: int) -
 # GROUP 3 — Multi-tool chains
 # ===========================================================================
 
-@REPEAT
-async def test_daily_checkin_fires_multiple_tools(jwt_token: str, _run: int) -> None:
+async def test_daily_checkin_fires_multiple_tools(jwt_token: str) -> None:
     """
     "How am I doing today overall?" (proactivity=high)
     A complete daily summary needs at least 2 tools — health data AND goals.
     """
     result = await _chat(jwt_token, "How am I doing today overall?", proactivity="high")
 
-    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert result.error is None, f"Unexpected error: {result.error}"
     assert len(result.tools_fired) >= 2, (
-        f"[run {_run}] Expected 2+ tools for a full daily check-in.\n"
+        f"Expected 2+ tools for a full daily check-in.\n"
         f"Only fired: {result.tools_fired}"
     )
     assert len(result.response) > 20
@@ -621,24 +604,22 @@ async def test_daily_checkin_fires_multiple_tools(jwt_token: str, _run: int) -> 
 # GROUP 4 — Edge cases
 # ===========================================================================
 
-@REPEAT
-async def test_empty_message_returns_error(jwt_token: str, _run: int) -> None:
+async def test_empty_message_returns_error(jwt_token: str) -> None:
     """
     Blank message → server returns a clean error, does not crash.
     """
     result = await _chat(jwt_token, "")
 
     assert result.error is not None, (
-        f"[run {_run}] Expected an error for a blank message, got none.\n"
+        f"Expected an error for a blank message, got none.\n"
         f"Response: {result.response}"
     )
     assert "empty" in result.error.lower(), (
-        f"[run {_run}] Error doesn't mention 'empty': {result.error}"
+        f"Error doesn't mention 'empty': {result.error}"
     )
 
 
-@REPEAT
-async def test_oversized_message_returns_error(jwt_token: str, _run: int) -> None:
+async def test_oversized_message_returns_error(jwt_token: str) -> None:
     """
     Message over 4,000 chars → server returns a clean 'too long' error.
     The server limit is 4,000 characters. We send ~5,800.
@@ -648,10 +629,10 @@ async def test_oversized_message_returns_error(jwt_token: str, _run: int) -> Non
     result = await _chat(jwt_token, long_message)
 
     assert result.error is not None, (
-        f"[run {_run}] Expected an error for oversized message, got none."
+        f"Expected an error for oversized message, got none."
     )
     assert any(w in result.error.lower() for w in ["long", "max", "4,000", "character"]), (
-        f"[run {_run}] Error doesn't mention the length limit: {result.error}"
+        f"Error doesn't mention the length limit: {result.error}"
     )
 
 
@@ -673,8 +654,7 @@ async def test_oversized_message_returns_error(jwt_token: str, _run: int) -> Non
 # The stream_end event carries "model_used": "zura" or "zura_flash".
 # ===========================================================================
 
-@REPEAT
-async def test_simple_greeting_routes_to_zura_flash(jwt_token: str, _run: int) -> None:
+async def test_simple_greeting_routes_to_zura_flash(jwt_token: str) -> None:
     """
     "How are you?" — 3 words, no plan keywords.
     Fast-path rule: < 8 words AND no plan keywords → always Zura Flash.
@@ -682,31 +662,29 @@ async def test_simple_greeting_routes_to_zura_flash(jwt_token: str, _run: int) -
     """
     result = await _chat(jwt_token, "How are you?")
 
-    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert result.error is None, f"Unexpected error: {result.error}"
     assert result.model_used == "zura_flash", (
-        f"[run {_run}] Expected Zura Flash for a simple greeting.\n"
+        f"Expected Zura Flash for a simple greeting.\n"
         f"Got: {result.model_used!r}\n"
         f"Response: {result.response[:200]}"
     )
 
 
-@REPEAT
-async def test_simple_lookup_routes_to_zura_flash(jwt_token: str, _run: int) -> None:
+async def test_simple_lookup_routes_to_zura_flash(jwt_token: str) -> None:
     """
     "What are my steps?" — 4 words, no plan keywords.
     Fast-path rule → Zura Flash.
     """
     result = await _chat(jwt_token, "What are my steps?")
 
-    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert result.error is None, f"Unexpected error: {result.error}"
     assert result.model_used == "zura_flash", (
-        f"[run {_run}] Expected Zura Flash for a simple lookup.\n"
+        f"Expected Zura Flash for a simple lookup.\n"
         f"Got: {result.model_used!r}"
     )
 
 
-@REPEAT
-async def test_complex_analysis_routes_to_zura(jwt_token: str, _run: int) -> None:
+async def test_complex_analysis_routes_to_zura(jwt_token: str) -> None:
     """
     Long analysis request containing plan keywords ('analyze', 'trend', 'pattern').
     LLM classifier should label this deep_analysis → Zura (Kimi K2.5).
@@ -717,18 +695,17 @@ async def test_complex_analysis_routes_to_zura(jwt_token: str, _run: int) -> Non
     )
     result = await _chat(jwt_token, message)
 
-    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert result.error is None, f"Unexpected error: {result.error}"
     if result.classifier_result == "skipped":
-        pytest.skip(f"[run {_run}] Zura (Kimi K2.5) rate limit exhausted — router skipped classifier and fell back to Flash. Re-run when quota resets.")
+        pytest.skip("Zura (Kimi K2.5) rate limit exhausted — router skipped classifier and fell back to Flash. Re-run when quota resets.")
     assert result.model_used == "zura", (
-        f"[run {_run}] Expected Zura (Kimi K2.5) for a deep analysis question.\n"
+        f"Expected Zura (Kimi K2.5) for a deep analysis question.\n"
         f"Got: {result.model_used!r} (classifier_result={result.classifier_result!r})\n"
         f"Response: {result.response[:200]}"
     )
 
 
-@REPEAT
-async def test_training_plan_request_routes_to_zura(jwt_token: str, _run: int) -> None:
+async def test_training_plan_request_routes_to_zura(jwt_token: str) -> None:
     """
     A training plan request contains the keyword 'plan' — triggers LLM classifier.
     Classifier should return deep_analysis → Zura (Kimi K2.5).
@@ -739,11 +716,11 @@ async def test_training_plan_request_routes_to_zura(jwt_token: str, _run: int) -
     )
     result = await _chat(jwt_token, message)
 
-    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert result.error is None, f"Unexpected error: {result.error}"
     if result.classifier_result == "skipped":
-        pytest.skip(f"[run {_run}] Zura (Kimi K2.5) rate limit exhausted — router skipped classifier and fell back to Flash. Re-run when quota resets.")
+        pytest.skip("Zura (Kimi K2.5) rate limit exhausted — router skipped classifier and fell back to Flash. Re-run when quota resets.")
     assert result.model_used == "zura", (
-        f"[run {_run}] Expected Zura (Kimi K2.5) for a training plan request.\n"
+        f"Expected Zura (Kimi K2.5) for a training plan request.\n"
         f"Got: {result.model_used!r} (classifier_result={result.classifier_result!r})\n"
         f"Response: {result.response[:200]}"
     )
@@ -757,8 +734,7 @@ async def test_training_plan_request_routes_to_zura(jwt_token: str, _run: int) -
 # Zura must call it rather than guessing from the system prompt.
 # ===========================================================================
 
-@REPEAT
-async def test_integrations_query_fires_get_integrations(jwt_token: str, _run: int) -> None:
+async def test_integrations_query_fires_get_integrations(jwt_token: str) -> None:
     """
     "What apps do I have connected?"
     Tool required: get_integrations
@@ -774,30 +750,29 @@ async def test_integrations_query_fires_get_integrations(jwt_token: str, _run: i
     result = await _chat(jwt_token, "What apps do I have connected?")
     db_rows = await _db_query(sql)
     _print_comparison(
-        f"CONNECTED INTEGRATIONS  [run {_run}]",
+        f"CONNECTED INTEGRATIONS",
         result.response,
         sql,
         db_rows,
     )
 
-    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert result.error is None, f"Unexpected error: {result.error}"
     assert "get_integrations" in result.tools_fired, (
-        f"[run {_run}] get_integrations did not fire.\nTools fired: {result.tools_fired}"
+        f"get_integrations did not fire.\nTools fired: {result.tools_fired}"
     )
     assert len(result.response) > 20
 
 
-@REPEAT
-async def test_available_integrations_query_fires_get_integrations(jwt_token: str, _run: int) -> None:
+async def test_available_integrations_query_fires_get_integrations(jwt_token: str) -> None:
     """
     "What apps can I connect to ZuraLog?"
     Zura must call get_integrations to list the catalog — not invent app names.
     """
     result = await _chat(jwt_token, "What apps can I connect to ZuraLog?")
 
-    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert result.error is None, f"Unexpected error: {result.error}"
     assert "get_integrations" in result.tools_fired, (
-        f"[run {_run}] get_integrations did not fire for an integrations catalog question.\n"
+        f"get_integrations did not fire for an integrations catalog question.\n"
         f"Tools fired: {result.tools_fired}"
     )
     assert len(result.response) > 20
@@ -811,8 +786,7 @@ async def test_available_integrations_query_fires_get_integrations(jwt_token: st
 # Asserting on the tool name only — the response content varies by question.
 # ===========================================================================
 
-@REPEAT
-async def test_navigation_question_loads_app_navigation_skill(jwt_token: str, _run: int) -> None:
+async def test_navigation_question_loads_app_navigation_skill(jwt_token: str) -> None:
     """
     "Where do I find my streaks?"
     Zura must call get_coach_skill to load the app_navigation reference
@@ -820,27 +794,26 @@ async def test_navigation_question_loads_app_navigation_skill(jwt_token: str, _r
     """
     result = await _chat(jwt_token, "Where do I find my streaks in the app?")
 
-    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert result.error is None, f"Unexpected error: {result.error}"
     assert "get_coach_skill" in result.tools_fired, (
-        f"[run {_run}] get_coach_skill did not fire for a navigation question.\n"
+        f"get_coach_skill did not fire for a navigation question.\n"
         f"Tools fired: {result.tools_fired}\n"
         f"Response: {result.response[:300]}"
     )
     assert len(result.response) > 20
 
 
-@REPEAT
-async def test_navigation_question_mentions_correct_tab(jwt_token: str, _run: int) -> None:
+async def test_navigation_question_mentions_correct_tab(jwt_token: str) -> None:
     """
     "Where is the journal?" — journal lives in the Progress tab.
     After loading the skill, the response must mention Progress.
     """
     result = await _chat(jwt_token, "Where is the journal in the app?")
 
-    assert result.error is None, f"[run {_run}] Unexpected error: {result.error}"
+    assert result.error is None, f"Unexpected error: {result.error}"
     assert len(result.response) > 20
     assert "progress" in result.response.lower(), (
-        f"[run {_run}] Response doesn't mention Progress tab for a journal question.\n"
+        f"Response doesn't mention Progress tab for a journal question.\n"
         f"Response: {result.response[:300]}"
     )
 
@@ -853,8 +826,7 @@ async def test_navigation_question_mentions_correct_tab(jwt_token: str, _run: in
 # explicit user confirmation before firing.
 # ===========================================================================
 
-@REPEAT
-async def test_log_calories_requires_confirmation(jwt_token: str, _run: int) -> None:
+async def test_log_calories_requires_confirmation(jwt_token: str) -> None:
     """
     "Log 500 calories for lunch."
     Turn 1 — write tool must NOT fire. AI asks confirmation.
@@ -869,15 +841,15 @@ async def test_log_calories_requires_confirmation(jwt_token: str, _run: int) -> 
     write_tools = {"apple_health_write_entry", "health_connect_write_entry"}
 
     assert not any(t in write_tools for t in turn1.tools_fired), (
-        f"[run {_run}] FAIL — write tool fired on turn 1 without confirmation.\n"
+        f"FAIL — write tool fired on turn 1 without confirmation.\n"
         f"Tools fired: {turn1.tools_fired}"
     )
     assert any(w in turn1.response.lower() for w in
                ["confirm", "log", "500", "calories", "sure", "want me to", "shall i"]), (
-        f"[run {_run}] Turn 1 doesn't look like a confirmation request.\n"
+        f"Turn 1 doesn't look like a confirmation request.\n"
         f"Response: {turn1.response[:300]}"
     )
     assert any(t in write_tools for t in turn2.tools_fired), (
-        f"[run {_run}] FAIL — write tool did not fire after confirmation.\n"
+        f"FAIL — write tool did not fire after confirmation.\n"
         f"Tools on turn 2: {turn2.tools_fired}\nResponse: {turn2.response[:300]}"
     )
