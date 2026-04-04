@@ -1,8 +1,41 @@
-# Implementation Status
+## 2026-04-04 — Coach Tab Security Hardening (Full Audit)
 
-A running record of completed work — what was built, when, and at what scope.
+**Branch:** `fix/security-hardening`
+
+A comprehensive security audit of the Coach Tab (WebSocket AI chat) followed by fixes for all 14 findings across severity levels H1–H4, M1–M5, and L1–L4.
+
+**What was built:**
+
+- **Push notification daily rate limit** (`app/mcp_servers/notification_server.py`, Task 1 / H1): Redis-backed per-user daily cap of 10 notifications. Uses atomic `incr`+`expire` to avoid race conditions. Fails open when Redis is unavailable. 13 new tests.
+
+- **Server-side write confirmation gate** (`app/agent/orchestrator.py`, `app/api/v1/chat.py`, Task 7 / H2): 9 write tools now require explicit user confirmation before execution. Server generates a one-time token bound to the specific tool name (`write_confirm_tool`). Client sends token back via `{"type": "write_confirm", "token": str}`. Token is consumed on use and cannot authorize a different tool.
+
+- **Redis fail-closed for rate limiting** (`app/services/rate_limiter.py`, Task 2 / H3): All three rate-limit check methods now deny rather than allow on `RedisError`. Narrowed broad `except Exception` to `except redis.RedisError`. Returns `remaining=0, reset_seconds=60` on failure. 4 new tests.
+
+- **Memory preference-injection guard** (`app/mcp_servers/memory_server.py`, `app/utils/sanitize.py`, Tasks 3, 5 / H4+L4): `save_memory` tool now blocks content over 500 chars and content matching `is_memory_injection_attempt()`. 7 new high-signal bypass phrases added to the sanitize filter (tightened to require action-specific qualifiers). `_DANGEROUS_PATTERN` extended with `==SYSTEM==`, `<SYSTEM>`, `<|role|>`, `[CONTEXT]:` patterns.
+
+- **Extraction injection filter** (`app/agent/context_manager/memory_extraction_service.py`, Task 4 / M1): Auto-extracted memories from conversation also run through `is_memory_injection_attempt()` before being stored.
+
+- **Per-turn tool call cap** (`app/agent/orchestrator.py`, Task 6 / M2): `MAX_TOOLS_PER_TURN = 6` constant added. ReAct loop enforces this per turn in addition to the existing `MAX_TOOL_TURNS = 5` total.
+
+- **Memory length limit + user-scoped delete** (`app/mcp_servers/memory_server.py`, `app/agent/context_manager/pgvector_memory_store.py`, `app/agent/context_manager/memory_store.py`, Task 5 / M3+L2): `_MAX_MEMORY_LENGTH = 500`. `delete()` now requires `user_id` parameter and scopes the SQL `WHERE` clause to both `id` and `user_id` — prevents cross-user deletion.
+
+- **Deep link URL encoding** (`app/mcp_servers/deep_link_registry.py`, Task 10 / M4): Search query in deep link now URL-encoded via `urllib.parse.quote` to prevent injection via crafted queries.
+
+- **WebSocket concurrent connection limit** (`app/api/v1/chat.py`, Task 11 / M5): Limit reduced from 3→2 per user. Two-call `incr`+`expire` replaced with atomic `_INCR_EXPIRE_SCRIPT` Lua evaluation — eliminates TTL race condition.
+
+- **Conversation summary injection filter** (`app/api/v1/chat.py`, `tests/api/v1/test_chat_history.py`, Task 8 / L1): Summaries loaded from the database are now checked with `is_memory_injection_attempt()` before being injected as a system message. Poisoned summaries are dropped with a warning log.
+
+- **Oversized message disconnect** (`app/api/v1/chat.py`, Task 9 / L3): WebSocket sessions disconnect (code 1008) after 5 consecutive oversized messages (`_MAX_OVERSIZED = 5`, promoted to module level).
+
+- **WebSocket message field coercion** (`app/api/v1/chat.py`, Task 12 / L1b): `message` field from WebSocket payload coerced to `str` before processing to prevent type-confusion attacks.
+
+**Files modified:** `cloud-brain/app/api/v1/chat.py`, `cloud-brain/app/agent/orchestrator.py`, `cloud-brain/app/agent/context_manager/memory_extraction_service.py`, `cloud-brain/app/agent/context_manager/memory_store.py`, `cloud-brain/app/agent/context_manager/pgvector_memory_store.py`, `cloud-brain/app/mcp_servers/memory_server.py`, `cloud-brain/app/mcp_servers/notification_server.py`, `cloud-brain/app/mcp_servers/deep_link_registry.py`, `cloud-brain/app/services/rate_limiter.py`, `cloud-brain/app/utils/sanitize.py`, `cloud-brain/app/main.py`
+
+**Files created:** `cloud-brain/tests/mcp/test_notification_server.py`, `cloud-brain/tests/services/test_rate_limiter.py`, `cloud-brain/tests/api/v1/test_chat_history.py`
 
 ---
+
 
 ## 2026-04-03 — AI Security Hardening Round 2
 
