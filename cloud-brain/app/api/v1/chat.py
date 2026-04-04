@@ -618,7 +618,7 @@ async def websocket_chat(
             except json.JSONDecodeError:
                 await websocket.send_json({"type": "error", "content": "Invalid message format"})
                 continue
-            message_text: str = data.get("message", "")
+            message_text: str = str(data.get("message") or "")
 
             # Server-side write confirmation gate: detect write_confirm frames.
             is_write_confirm = data.get("type") == "write_confirm"
