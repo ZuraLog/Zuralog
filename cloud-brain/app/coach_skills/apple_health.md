@@ -18,8 +18,7 @@ Always call the tool before speaking. If records come back empty, say so — do 
 ## What this tool returns
 
 **Tool name:** `apple_health_read_metrics`
-**Required parameters:** `data_type`
-**Optional parameters:** `start_date` (YYYY-MM-DD), `end_date` (YYYY-MM-DD)
+**Required parameters:** `data_type`, `start_date` (YYYY-MM-DD), `end_date` (YYYY-MM-DD)
 
 Data comes from Apple HealthKit — aggregated from Apple Watch, iPhone sensors, and connected apps (Strava, MyFitnessPal, CalAI). As current as the user's last sync.
 

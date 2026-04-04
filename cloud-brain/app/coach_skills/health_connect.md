@@ -18,8 +18,7 @@ Always call the tool before speaking. If records come back empty, say so — do 
 ## What this tool returns
 
 **Tool name:** `health_connect_read_metrics`
-**Required parameters:** `data_type`
-**Optional parameters:** `start_date` (YYYY-MM-DD), `end_date` (YYYY-MM-DD)
+**Required parameters:** `data_type`, `start_date` (YYYY-MM-DD), `end_date` (YYYY-MM-DD)
 
 Data comes from Google Health Connect — a privacy-first, on-device data hub that aggregates from any apps the user has connected: Samsung Health, Fitbit, Garmin Connect, MyFitnessPal, and others. As current as the user's last sync.
 
