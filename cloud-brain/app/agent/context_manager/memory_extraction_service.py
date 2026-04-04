@@ -20,6 +20,7 @@ from app.agent.context_manager.memory_store import MemoryStore
 from app.agent.llm_client import LLMClient
 from app.database import async_session
 from app.models.conversation import Message
+from app.utils.sanitize import is_memory_injection_attempt
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +107,15 @@ async def extract_and_store_memories(
         content = str(fact.get("content", "")).strip()
         category = str(fact.get("category", "context")).strip()
         if not content:
+            continue
+
+        # Guard against adversarial memories extracted from crafted conversations.
+        if is_memory_injection_attempt(content):
+            logger.warning(
+                "Blocking extracted memory with injection/bypass content for user %s: %.60s",
+                user_id[:8],
+                content[:60],
+            )
             continue
 
         try:
