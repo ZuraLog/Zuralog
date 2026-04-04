@@ -50,6 +50,15 @@ Prevents infinite loops if the model continuously requests tools
 without generating a final text response.
 """
 
+MAX_TOOLS_PER_TURN = 6
+"""Maximum tool calls the LLM may request in a single turn.
+
+Prevents a single user message from triggering an unbounded number of
+parallel MCP tool executions. Extra tool calls beyond this limit are
+dropped — the model gets results for the first MAX_TOOLS_PER_TURN and
+continues from there.
+"""
+
 # OpenRouter server-side tools that are handled transparently by OpenRouter before
 # the response reaches us. We never route these through MCPClient — they have no
 # local handler. This is a defensive guard in case a model exposes them as tool_calls.
@@ -399,7 +408,17 @@ class Orchestrator:
                         }
                     )
 
-                    for tool_call in assistant_message.tool_calls:
+                    # Apply per-turn tool call cap before iterating.
+                    tool_calls = assistant_message.tool_calls[:MAX_TOOLS_PER_TURN]
+                    if len(assistant_message.tool_calls) > MAX_TOOLS_PER_TURN:
+                        logger.warning(
+                            "Turn %d: capping tool calls from %d to %d for user '%s'",
+                            turn + 1,
+                            len(assistant_message.tool_calls),
+                            MAX_TOOLS_PER_TURN,
+                            user_id[:8],
+                        )
+                    for tool_call in tool_calls:
                         func_name = tool_call.function.name
 
                         # OpenRouter server tools are handled server-side before the
@@ -629,6 +648,16 @@ class Orchestrator:
                             }
                         )
 
+                        # Apply per-turn tool call cap.
+                        if len(assembled_tool_calls) > MAX_TOOLS_PER_TURN:
+                            logger.warning(
+                                "Stream turn %d: capping tool calls from %d to %d for user '%s'",
+                                turn + 1,
+                                len(assembled_tool_calls),
+                                MAX_TOOLS_PER_TURN,
+                                user_id[:8],
+                            )
+                            assembled_tool_calls = assembled_tool_calls[:MAX_TOOLS_PER_TURN]
                         for tc in assembled_tool_calls:
                             func_name = tc["function"]["name"]
 
