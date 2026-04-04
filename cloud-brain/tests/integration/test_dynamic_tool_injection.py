@@ -249,7 +249,8 @@ class TestDynamicToolInjectionE2E:
 
         call_args = full_stack["llm"].chat.call_args
         tools = call_args.kwargs.get("tools")
-        tool_names = {t["function"]["name"] for t in tools}
+        # Filter to only function-type tools (excludes openrouter:web_search)
+        tool_names = {t["function"]["name"] for t in tools if "function" in t}
         assert tool_names == {
             "get_activities",
             "apple_health_read_metrics",
@@ -272,7 +273,7 @@ class TestDynamicToolInjectionE2E:
 
         call_args = full_stack["llm"].chat.call_args
         tools = call_args.kwargs.get("tools")
-        tool_names = {t["function"]["name"] for t in tools}
+        tool_names = {t["function"]["name"] for t in tools if "function" in t}
         assert tool_names == {
             "apple_health_read_metrics",
             "health_connect_read_metrics",
@@ -292,7 +293,7 @@ class TestDynamicToolInjectionE2E:
 
         call_args = full_stack["llm"].chat.call_args
         tools = call_args.kwargs.get("tools")
-        tool_names = {t["function"]["name"] for t in tools}
+        tool_names = {t["function"]["name"] for t in tools if "function" in t}
         assert tool_names == {
             "get_activities",
             "fitbit_get_activity",
