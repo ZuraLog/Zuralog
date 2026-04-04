@@ -84,3 +84,19 @@ class TestDeepLinkRegistry:
     def test_get_supported_actions_unknown_app(self) -> None:
         actions = DeepLinkRegistry.get_supported_actions("unknown")
         assert actions == []
+
+    # ------------------------------------------------------------------
+    # URL encoding for search query parameter (Task 10 / M4)
+    # ------------------------------------------------------------------
+
+    def test_calai_search_url_encodes_ampersand(self) -> None:
+        result = DeepLinkRegistry.get_deep_link("calai", "search", query="protein&fat=10")
+        assert "&fat=10" not in result
+
+    def test_calai_search_url_encodes_equals(self) -> None:
+        result = DeepLinkRegistry.get_deep_link("calai", "search", query="a=b")
+        assert "?q=a=b" not in result
+
+    def test_calai_search_plain_query_still_works(self) -> None:
+        result = DeepLinkRegistry.get_deep_link("calai", "search", query="coffee")
+        assert result == "calai://search?q=coffee"

@@ -104,12 +104,12 @@ class PgVectorMemoryStore:
             for row in rows
         ]
 
-    async def delete(self, memory_id: str) -> None:
-        """Hard-delete a memory by ID (no user scope — internal use only)."""
+    async def delete(self, memory_id: str, user_id: str) -> None:
+        """Hard-delete a memory by ID, scoped to the owning user."""
         async with async_session() as db:
             await db.execute(
-                text("DELETE FROM user_memories WHERE id = :id"),
-                {"id": memory_id},
+                text("DELETE FROM user_memories WHERE id = :id AND user_id = :user_id"),
+                {"id": memory_id, "user_id": user_id},
             )
             await db.commit()
 

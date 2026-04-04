@@ -28,6 +28,10 @@ VALID_CATEGORIES: frozenset[str] = frozenset({
     "program",
 })
 
+# Maximum number of characters allowed in a single memory entry.
+# Guards against database bloat from oversized AI-generated or user-supplied content.
+_MAX_MEMORY_LENGTH: int = 500
+
 
 class MemoryMCPServer(BaseMCPServer):
     """MCP server exposing save_memory and query_memory to the LLM agent.
@@ -183,6 +187,12 @@ class MemoryMCPServer(BaseMCPServer):
         if not content.strip():
             return ToolResult(success=False, error="content must not be empty.")
 
+        if len(content) > _MAX_MEMORY_LENGTH:
+            return ToolResult(
+                success=False,
+                error=f"Memory content too long (max {_MAX_MEMORY_LENGTH} characters).",
+            )
+
         if category not in VALID_CATEGORIES:
             return ToolResult(
                 success=False,
@@ -190,6 +200,20 @@ class MemoryMCPServer(BaseMCPServer):
                     f"Invalid category: '{category}'. "
                     f"Must be one of: {sorted(VALID_CATEGORIES)}"
                 ),
+            )
+
+        # Guard: reject content that looks like a prompt injection attempt
+        # or a preference-bypass phrase that could undermine write confirmation.
+        from app.utils.sanitize import is_memory_injection_attempt
+        if is_memory_injection_attempt(content):
+            logger.warning(
+                "Blocked save_memory with injection/bypass content for user '%s': %.60s",
+                user_id[:8],
+                content[:60],
+            )
+            return ToolResult(
+                success=False,
+                error="Memory content not allowed.",
             )
 
         try:

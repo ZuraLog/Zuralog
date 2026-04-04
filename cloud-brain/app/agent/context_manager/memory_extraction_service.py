@@ -20,6 +20,7 @@ from app.agent.context_manager.memory_store import MemoryStore
 from app.agent.llm_client import LLMClient
 from app.database import async_session
 from app.models.conversation import Message
+from app.utils.sanitize import is_memory_injection_attempt
 
 logger = logging.getLogger(__name__)
 
@@ -108,12 +109,21 @@ async def extract_and_store_memories(
         if not content:
             continue
 
+        # Guard against adversarial memories extracted from crafted conversations.
+        if is_memory_injection_attempt(content):
+            logger.warning(
+                "Blocking extracted memory with injection/bypass content for user %s: %.60s",
+                user_id[:8],
+                content,
+            )
+            continue
+
         try:
             # Deduplication: check for a semantically similar existing memory.
             existing = await memory_store.query(user_id, content, limit=1)
             if existing and existing[0].score > _DEDUP_THRESHOLD:
                 # Delete the near-duplicate and replace with the updated fact.
-                await memory_store.delete(existing[0].id)
+                await memory_store.delete(existing[0].id, user_id=user_id)
                 logger.debug(
                     "Updating near-duplicate memory (score %.2f) for user %s",
                     existing[0].score,

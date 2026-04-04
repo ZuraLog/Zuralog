@@ -249,7 +249,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     registry.register(UserProgressServer(db_factory=async_session))
     registry.register(UserWellbeingServer(db_factory=async_session))
     registry.register(
-        NotificationServer(db_factory=async_session, push_service=push_svc)
+        NotificationServer(
+            db_factory=async_session,
+            push_service=push_svc,
+            redis_client=getattr(app.state, "redis", None),
+        )
     )
     registry.register(CoachSkillMCPServer())
     app.state.mcp_registry = registry

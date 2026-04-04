@@ -63,10 +63,10 @@ from app.models.user import User
 from app.models.user_device import UserDevice
 from app.models.user_preferences import UserPreferences
 from app.services.auth_service import AuthService
-from app.services.rate_limiter import RateLimiter
+from app.services.rate_limiter import _INCR_EXPIRE_SCRIPT, RateLimiter
 from app.services.storage_service import StorageService
 from app.services.usage_tracker import UsageTracker
-from app.utils.sanitize import sanitize_for_llm
+from app.utils.sanitize import is_memory_injection_attempt, sanitize_for_llm
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +91,8 @@ _VALID_RESPONSE_LENGTHS = {"concise", "detailed"}
 MAX_HISTORY_TOKENS = 8_192
 # Per-message content cap: truncate any single message exceeding this.
 _MSG_TOKEN_CAP = 2_048
+# Maximum number of oversized messages allowed per session before disconnecting.
+_MAX_OVERSIZED = 5
 
 
 async def _set_sentry_module() -> None:
@@ -285,9 +287,15 @@ async def _load_conversation_history(
     # Prepend the summary as a system message so the LLM has context
     # about earlier parts of the conversation.
     if summary:
-        return [
-            {"role": "system", "content": f"## Conversation Summary\n{summary}"}
-        ] + result_messages
+        if is_memory_injection_attempt(summary):
+            logger.warning(
+                "Conversation summary for conv %s failed injection filter — skipping injection",
+                conversation_id,
+            )
+        else:
+            return [
+                {"role": "system", "content": f"## Conversation Summary\n{summary}"}
+            ] + result_messages
     return result_messages
 
 
@@ -480,17 +488,16 @@ async def websocket_chat(
 
     # Fix 6.8 (H-4): Track per-user WebSocket connection count
     # _counter_incremented tracks whether we successfully incremented the Redis
-    # counter WITHOUT immediately decrementing it (i.e. the >3 branch was NOT
+    # counter WITHOUT immediately decrementing it (i.e. the >2 branch was NOT
     # taken).  The finally block below uses this flag to avoid a double-decr on
-    # the >3 early-return path and to guarantee a decr on all other exit paths
+    # the >2 early-return path and to guarantee a decr on all other exit paths
     # that occur after the incr (fix for WS connection counter leak).
     _counter_incremented = False
     if redis_client and user_id:
         conn_key = f"ws_connections:{user_id}"
         try:
-            conn_count = await redis_client.incr(conn_key)
-            await redis_client.expire(conn_key, 3600)
-            if conn_count > 3:
+            conn_count = int(await redis_client.eval(_INCR_EXPIRE_SCRIPT, 1, conn_key, "3600"))  # type: ignore[misc]
+            if conn_count > 2:
                 await redis_client.decr(conn_key)
                 await websocket.send_json({"type": "error", "content": "Too many active connections"})
                 await websocket.close(code=1008)
@@ -578,6 +585,14 @@ async def websocket_chat(
         last_revalidation = time.time()
         messages_since_revalidation = 0
 
+        # Server-side write confirmation gate state.
+        _pending_write_token: str | None = None
+        _pending_write_tool: str | None = None
+        _pending_write_params: dict | None = None
+
+        # Oversized-message abuse guard (Task 9 / L3).
+        _oversized_message_count = 0
+
         while True:
             try:
                 raw = await asyncio.wait_for(websocket.receive_text(), timeout=300.0)
@@ -585,14 +600,36 @@ async def websocket_chat(
                 await websocket.close(code=1001)
                 break
             if len(raw.encode("utf-8")) > 65536:
+                _oversized_message_count += 1
                 await websocket.send_json({"type": "error", "content": "Message payload too large"})
+                if _oversized_message_count >= _MAX_OVERSIZED:
+                    logger.warning(
+                        "Disconnecting user '%s' after %d consecutive oversized messages",
+                        user_id[:8] if user_id else "?",
+                        _oversized_message_count,
+                    )
+                    await websocket.close(code=1008)
+                    return
                 continue
+            _oversized_message_count = 0  # Reset on valid message
             try:
                 data = json.loads(raw)
             except json.JSONDecodeError:
                 await websocket.send_json({"type": "error", "content": "Invalid message format"})
                 continue
-            message_text: str = data.get("message", "")
+            message_text: str = str(data.get("message") or "")
+
+            # Server-side write confirmation gate: detect write_confirm frames.
+            is_write_confirm = data.get("type") == "write_confirm"
+            confirmed_write_token: str | None = None
+            if is_write_confirm:
+                incoming_token = str(data.get("token", ""))
+                if incoming_token and incoming_token == _pending_write_token:
+                    confirmed_write_token = incoming_token
+                    message_text = f"[confirmed write: {_pending_write_tool}]"
+                else:
+                    await websocket.send_json({"type": "error", "content": "Invalid or expired confirmation token."})
+                    continue
 
             # S2: Periodic JWT re-validation (every 15 minutes or 50 messages)
             messages_since_revalidation += 1
@@ -613,7 +650,7 @@ async def websocket_chat(
             raw_attachments: list[dict] | None = data.get("attachments")
             is_regenerate: bool = bool(data.get("regenerate", False))
 
-            if not message_text and not raw_attachments:
+            if not message_text and not raw_attachments and not is_write_confirm:
                 await websocket.send_json({"type": "error", "content": "Empty message"})
                 continue
 
@@ -803,6 +840,8 @@ async def websocket_chat(
                         memory_enabled=memory_enabled,
                         model=routed_model,
                         model_tier=routed_model_tier,
+                        write_confirm_token=confirmed_write_token,
+                        write_confirm_tool=_pending_write_tool if confirmed_write_token else None,
                     ):
                         etype = event.get("type")
 
@@ -813,7 +852,23 @@ async def websocket_chat(
                             full_content += event["content"]
                             await websocket.send_json(event)
 
+                        elif etype == "write_pending":
+                            if _pending_write_token is not None:
+                                logger.warning(
+                                    "write_pending: overwriting stale pending token for tool '%s' "
+                                    "(new tool: '%s') — prior confirmation opportunity lost",
+                                    _pending_write_tool,
+                                    event["tool_name"],
+                                )
+                            _pending_write_token = event["token"]
+                            _pending_write_tool = event["tool_name"]
+                            _pending_write_params = event["params"]
+                            await websocket.send_json(event)
+
                         elif etype == "stream_end":
+                            _pending_write_token = None
+                            _pending_write_tool = None
+                            _pending_write_params = None
                             full_content = event.get("content", full_content)
                             client_action = event.get("client_action")
                             if rate_limiter and routed_model_tier and not _usage_incremented:

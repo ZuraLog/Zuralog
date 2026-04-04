@@ -22,6 +22,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import secrets
 from typing import TYPE_CHECKING, Any, AsyncGenerator
 
 import sentry_sdk
@@ -50,10 +51,32 @@ Prevents infinite loops if the model continuously requests tools
 without generating a final text response.
 """
 
+MAX_TOOLS_PER_TURN = 6
+"""Maximum tool calls the LLM may request in a single turn.
+
+Prevents a single user message from triggering an unbounded number of
+parallel MCP tool executions. Extra tool calls beyond this limit are
+dropped — the model gets results for the first MAX_TOOLS_PER_TURN and
+continues from there.
+"""
+
 # OpenRouter server-side tools that are handled transparently by OpenRouter before
 # the response reaches us. We never route these through MCPClient — they have no
 # local handler. This is a defensive guard in case a model exposes them as tool_calls.
 _OPENROUTER_SERVER_TOOLS: frozenset[str] = frozenset({"web_search"})
+
+# Tools that modify user data — require server-side confirmation before executing.
+_WRITE_TOOLS: frozenset[str] = frozenset({
+    "add_supplement",
+    "remove_supplement",
+    "create_goal",
+    "update_goal",
+    "complete_goal",
+    "delete_goal",
+    "send_notification",
+    "apple_health_write_entry",
+    "health_connect_write_entry",
+})
 
 # Lightweight model used only for auto-generating conversation titles.
 # A small, cheap model is preferred since this is a one-shot, low-stakes call.
@@ -399,7 +422,17 @@ class Orchestrator:
                         }
                     )
 
-                    for tool_call in assistant_message.tool_calls:
+                    # Apply per-turn tool call cap before iterating.
+                    tool_calls = assistant_message.tool_calls[:MAX_TOOLS_PER_TURN]
+                    if len(assistant_message.tool_calls) > MAX_TOOLS_PER_TURN:
+                        logger.warning(
+                            "Turn %d: capping tool calls from %d to %d for user '%s'",
+                            turn + 1,
+                            len(assistant_message.tool_calls),
+                            MAX_TOOLS_PER_TURN,
+                            user_id[:8],
+                        )
+                    for tool_call in tool_calls:
                         func_name = tool_call.function.name
 
                         # OpenRouter server tools are handled server-side before the
@@ -507,6 +540,8 @@ class Orchestrator:
         memory_enabled: bool = True,
         model: str | None = None,
         model_tier: str | None = None,
+        write_confirm_token: str | None = None,
+        write_confirm_tool: str | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """Process a user message and stream the final response token-by-token.
 
@@ -629,6 +664,16 @@ class Orchestrator:
                             }
                         )
 
+                        # Apply per-turn tool call cap.
+                        if len(assembled_tool_calls) > MAX_TOOLS_PER_TURN:
+                            logger.warning(
+                                "Stream turn %d: capping tool calls from %d to %d for user '%s'",
+                                turn + 1,
+                                len(assembled_tool_calls),
+                                MAX_TOOLS_PER_TURN,
+                                user_id[:8],
+                            )
+                            assembled_tool_calls = assembled_tool_calls[:MAX_TOOLS_PER_TURN]
                         for tc in assembled_tool_calls:
                             func_name = tc["function"]["name"]
 
@@ -641,6 +686,31 @@ class Orchestrator:
                                 arguments = json.loads(tc["function"]["arguments"])
                             except json.JSONDecodeError:
                                 arguments = {}
+
+                            if func_name in _WRITE_TOOLS:
+                                token_valid = (
+                                    write_confirm_token is not None
+                                    and write_confirm_tool == func_name
+                                )
+                                if not token_valid:
+                                    # No valid token for this specific tool — gate the write.
+                                    yield {
+                                        "type": "write_pending",
+                                        "tool_name": func_name,
+                                        "params": arguments,
+                                        "token": secrets.token_hex(16),
+                                    }
+                                    messages.append({
+                                        "role": "tool",
+                                        "tool_call_id": tc["id"],
+                                        "content": '{"status": "pending_confirmation", "message": "Awaiting user confirmation before executing."}',
+                                    })
+                                    # Stop processing further tools this turn — at most one
+                                    # write_pending event per turn prevents token overwrites.
+                                    break
+                                # Token confirmed for this tool — proceed and clear.
+                                write_confirm_token = None
+                                write_confirm_tool = None
 
                             yield {"type": "tool_start", "tool_name": func_name}
 
