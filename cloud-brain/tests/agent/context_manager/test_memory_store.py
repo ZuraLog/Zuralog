@@ -51,7 +51,7 @@ class TestInMemoryStore:
         await store.add("user1", "fact to delete", "context")
         items = await store.query("user1")
         memory_id = items[0].id
-        await store.delete(memory_id)
+        await store.delete(memory_id, user_id="user1")
         after = await store.query("user1")
         assert len(after) == 0
 

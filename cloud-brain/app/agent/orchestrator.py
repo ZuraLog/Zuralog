@@ -541,6 +541,7 @@ class Orchestrator:
         model: str | None = None,
         model_tier: str | None = None,
         write_confirm_token: str | None = None,
+        write_confirm_tool: str | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """Process a user message and stream the final response token-by-token.
 
@@ -687,8 +688,12 @@ class Orchestrator:
                                 arguments = {}
 
                             if func_name in _WRITE_TOOLS:
-                                if write_confirm_token is None:
-                                    # No confirmed token — emit write_pending and skip execution.
+                                token_valid = (
+                                    write_confirm_token is not None
+                                    and write_confirm_tool == func_name
+                                )
+                                if not token_valid:
+                                    # No valid token for this specific tool — gate the write.
                                     yield {
                                         "type": "write_pending",
                                         "tool_name": func_name,
@@ -700,9 +705,12 @@ class Orchestrator:
                                         "tool_call_id": tc["id"],
                                         "content": '{"status": "pending_confirmation", "message": "Awaiting user confirmation before executing."}',
                                     })
-                                    continue
-                                # Token was confirmed — proceed with execution and clear it.
+                                    # Stop processing further tools this turn — at most one
+                                    # write_pending event per turn prevents token overwrites.
+                                    break
+                                # Token confirmed for this tool — proceed and clear.
                                 write_confirm_token = None
+                                write_confirm_tool = None
 
                             yield {"type": "tool_start", "tool_name": func_name}
 

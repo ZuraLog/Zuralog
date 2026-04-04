@@ -821,6 +821,7 @@ async def websocket_chat(
                         model=routed_model,
                         model_tier=routed_model_tier,
                         write_confirm_token=confirmed_write_token,
+                        write_confirm_tool=_pending_write_tool if confirmed_write_token else None,
                     ):
                         etype = event.get("type")
 
@@ -832,6 +833,13 @@ async def websocket_chat(
                             await websocket.send_json(event)
 
                         elif etype == "write_pending":
+                            if _pending_write_token is not None:
+                                logger.warning(
+                                    "write_pending: overwriting stale pending token for tool '%s' "
+                                    "(new tool: '%s') — prior confirmation opportunity lost",
+                                    _pending_write_tool,
+                                    event["tool_name"],
+                                )
                             _pending_write_token = event["token"]
                             _pending_write_tool = event["tool_name"]
                             _pending_write_params = event["params"]
