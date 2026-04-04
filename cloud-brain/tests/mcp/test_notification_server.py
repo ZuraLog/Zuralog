@@ -208,6 +208,18 @@ async def test_title_over_100_chars_rejected() -> None:
 
 
 @pytest.mark.asyncio
+async def test_body_over_250_chars_rejected() -> None:
+    server, _, mock_push = _make_server()
+    result = await server.execute_tool(
+        tool_name="send_notification",
+        params={"title": "Hello", "body": "x" * 251},
+        user_id=USER_ID,
+    )
+    assert result.success is False
+    mock_push.send_and_persist.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_unknown_tool_rejected() -> None:
     server, _, mock_push = _make_server()
     result = await server.execute_tool(
@@ -217,3 +229,33 @@ async def test_unknown_tool_rejected() -> None:
     )
     assert result.success is False
     mock_push.send_and_persist.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# No-Redis path (redis_client=None)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_no_redis_client_skips_rate_check() -> None:
+    """When no Redis client is provided, the rate check is skipped entirely."""
+    mock_push = AsyncMock()
+    mock_push.send_and_persist = AsyncMock(return_value=True)
+    mock_db = AsyncMock()
+
+    @asynccontextmanager
+    async def _db_factory():
+        yield mock_db
+
+    server = NotificationServer(
+        db_factory=MagicMock(side_effect=_db_factory),
+        push_service=mock_push,
+        redis_client=None,
+    )
+    result = await server.execute_tool(
+        tool_name="send_notification",
+        params={"title": "Hello", "body": "World"},
+        user_id=USER_ID,
+    )
+    assert result.success is True
+    mock_push.send_and_persist.assert_called_once()
