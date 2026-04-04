@@ -590,6 +590,10 @@ async def websocket_chat(
         _pending_write_tool: str | None = None
         _pending_write_params: dict | None = None
 
+        # Oversized-message abuse guard (Task 9 / L3).
+        _oversized_message_count = 0
+        _MAX_OVERSIZED = 5
+
         while True:
             try:
                 raw = await asyncio.wait_for(websocket.receive_text(), timeout=300.0)
@@ -597,8 +601,18 @@ async def websocket_chat(
                 await websocket.close(code=1001)
                 break
             if len(raw.encode("utf-8")) > 65536:
+                _oversized_message_count += 1
                 await websocket.send_json({"type": "error", "content": "Message payload too large"})
+                if _oversized_message_count >= _MAX_OVERSIZED:
+                    logger.warning(
+                        "Disconnecting user '%s' after %d consecutive oversized messages",
+                        user_id[:8] if user_id else "?",
+                        _oversized_message_count,
+                    )
+                    await websocket.close(code=1008)
+                    return
                 continue
+            _oversized_message_count = 0  # Reset on valid message
             try:
                 data = json.loads(raw)
             except json.JSONDecodeError:
