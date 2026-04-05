@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
+import { DSButton } from '@/components/design-system';
 
 export function HeroText() {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -48,12 +49,12 @@ export function HeroText() {
                     <span className="text-sm font-medium text-black/70">The future of wellbeing</span>
                 </div>
 
-                <h1 className="text-center text-dark-charcoal font-sans pointer-events-auto max-w-[900px] px-4 md:px-0">
+                <h1 className="text-center text-dark-charcoal font-jakarta pointer-events-auto max-w-[900px] px-4 md:px-0">
                     <div className="hero-line text-4xl sm:text-5xl md:text-7xl lg:text-8xl tracking-tight mb-2">
-                        Unified <span className="text-[#CFE1B9]">Health.</span>
+                        Unified <span className="ds-pattern-text" style={{ backgroundImage: 'var(--ds-pattern-sage)' }}>Health.</span>
                     </div>
                     <div className="hero-line text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight">
-                        Made <span className="text-[#CFE1B9]">Smart.</span>
+                        Made <span className="ds-pattern-text" style={{ backgroundImage: 'var(--ds-pattern-sage)' }}>Smart.</span>
                     </div>
                 </h1>
 
@@ -61,12 +62,14 @@ export function HeroText() {
                     Bring all your fitness data into one brilliant interface.
                 </p>
 
-                <button
-                    className="hero-cta pointer-events-auto mt-8 md:mt-12 btn-pattern-light bg-[#CFE1B9] text-[#141E18] px-6 py-3 md:px-8 md:py-4 rounded-full text-base md:text-lg font-semibold transition-all duration-300 shadow-[0_4px_20px_rgba(207,225,185,0.45)] hover:scale-[1.04] hover:shadow-[0_6px_35px_rgba(207,225,185,0.6)] active:scale-[0.97]"
+                <DSButton
+                    intent="primary"
+                    size="lg"
+                    className="hero-cta pointer-events-auto mt-8 md:mt-12"
                     onClick={() => document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" })}
                 >
-                    <span className="relative z-2">Waitlist Now</span>
-                </button>
+                    Waitlist Now
+                </DSButton>
             </div>
         </div>
     );

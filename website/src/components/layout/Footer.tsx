@@ -76,7 +76,7 @@ export function Footer() {
     <footer
       aria-label="Site footer"
       className="relative"
-      style={{ backgroundColor: "#FAFAF5" }}
+      style={{ backgroundColor: "#F0EEE9" }}
     >
       {/* Top accent line */}
       <div
