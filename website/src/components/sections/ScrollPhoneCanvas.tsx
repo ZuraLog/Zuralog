@@ -288,24 +288,13 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
             ease: 'none',
         });
 
-        // ProgressSection: phone rotates to landscape, centered, slightly larger than
-        // the Integrations pose (scale 0.8 → 0.85).
-        //
-        // IMPORTANT: This trigger fires WITHIN the progress section's scroll range
-        // (start: 'top top', end: 'top top+=800') rather than during the approach
-        // (top bottom → top top). The approach-based trigger was unreliable because
-        // CoachSection registers its GSAP pin asynchronously — before that spacer
-        // exists, ProgressSection's scroll position is miscalculated, causing the
-        // phone to start rotating inside the coach section.
-        //
-        // By anchoring to 'top top' (the moment the section's sticky element hits
-        // the viewport) we sidestep the async ordering problem entirely: at that
-        // point the section is definitively on screen, coach is definitively gone.
+        // ProgressSection: rotate phone to landscape, center it.
+        // Fires as the section scrolls into view (top bottom → top top).
         gsap.timeline({
             scrollTrigger: {
                 trigger: '#progress-section',
-                start: 'top top',
-                end: 'top top+=800',
+                start: 'top bottom',
+                end: 'top top',
                 scrub: true,
             },
         }).to(anim, {
