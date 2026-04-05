@@ -288,6 +288,27 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
             ease: 'none',
         });
 
+        // ProgressSection: phone rotates to landscape, centers, scales up slightly
+        // from the coach section's small portrait (scale 0.35) to a bold landscape.
+        // rotZ: Math.PI / 2 mirrors the IntegrationsSection landscape pose.
+        // scale: 0.85 — a touch larger than Integrations (0.8) per design intent.
+        gsap.timeline({
+            scrollTrigger: {
+                trigger: '#progress-section',
+                start: 'top bottom',
+                end: 'top top',
+                scrub: true,
+            },
+        }).to(anim, {
+            posX: 0,
+            posY: 0,
+            scale: 0.85,
+            rotX: 0,
+            rotY: 0,
+            rotZ: Math.PI / 2,
+            ease: 'none',
+        });
+
         // -- Coach section mouse tracking --
         let coachIdleTimer: ReturnType<typeof setTimeout> | null = null;
 
