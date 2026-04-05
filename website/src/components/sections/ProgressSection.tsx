@@ -20,9 +20,19 @@ const PHASES = [
     { key: 'achievements', label: 'Achievements',  color: '#FFF3B0' },
 ];
 
-// Total pinned scroll distance in px.
-// 1 000 px per phase — 4 phases — gives a comfortable hold before each transition.
-const TOTAL_SCROLL = 4000;
+// Section is 500vh tall. CSS sticky keeps the visual at 100vh.
+// Effective scroll range = 500vh − 100vh = 400vh (from top-top to bottom-bottom).
+// With a timeline of 5 units → each unit ≈ 80vh of scroll.
+//
+//   0   → 1.0  Streak  (orange) — hold   (~80vh)
+//   1.0 → 1.5  → Goals (sage)   — cross  (~40vh)
+//   1.5 → 2.5  Goals   (sage)   — hold   (~80vh)
+//   2.5 → 3.0  → Journal (purple)— cross (~40vh)
+//   3.0 → 4.0  Journal (purple) — hold   (~80vh)
+//   4.0 → 4.5  → Achievements   — cross  (~40vh)
+//   4.5 → 5.0  Achievements     — hold   (~40vh)
+//
+const SECTION_HEIGHT = '500vh';
 
 export function ProgressSection() {
     const sectionRef  = useRef<HTMLElement>(null);
@@ -41,23 +51,15 @@ export function ProgressSection() {
             if (el) gsap.set(el, { opacity: i === 0 ? 1 : 0 });
         });
 
-        // ── Master timeline — drives both bg color and label swaps ──────────
-        // Timeline has 5 units of duration → each maps to 800 px of scroll.
-        //
-        //   0.0 → 1.0  Streak  (orange)   — hold
-        //   1.0 → 1.5  transition → Goals (sage)
-        //   1.5 → 2.5  Goals   (sage)     — hold
-        //   2.5 → 3.0  transition → Journal (purple)
-        //   3.0 → 4.0  Journal (purple)   — hold
-        //   4.0 → 4.5  transition → Achievements (yellow)
-        //   4.5 → 5.0  Achievements (yellow) — hold
-        //
+        // ── Master timeline ─────────────────────────────────────────────────
+        // NOTE: No GSAP pin here. The 100vh visible area is held by CSS
+        // `position: sticky` on the inner div. This avoids conflicts with
+        // CoachSection's asynchronous GSAP pin registration.
         const tl = gsap.timeline({
             scrollTrigger: {
                 trigger: section,
-                pin: true,
                 start: 'top top',
-                end: `+=${TOTAL_SCROLL}`,
+                end: 'bottom bottom',
                 scrub: 1,
             },
         });
@@ -66,7 +68,7 @@ export function ProgressSection() {
         tl.to(bg, { backgroundColor: PHASES[1].color, duration: 0.5, ease: 'none' }, 1.0)
           .to(bg, { backgroundColor: PHASES[2].color, duration: 0.5, ease: 'none' }, 2.5)
           .to(bg, { backgroundColor: PHASES[3].color, duration: 0.5, ease: 'none' }, 4.0)
-          .to({}, { duration: 0.5 }, 4.5); // hold yellow before unpin
+          .to({}, { duration: 0.5 }, 4.5); // hold yellow before section ends
 
         // Label fade — each old label fades out just before the colour crosses,
         // the next fades in just after.
@@ -89,60 +91,69 @@ export function ProgressSection() {
         <section
             ref={sectionRef}
             id="progress-section"
-            className="relative w-full overflow-hidden"
-            style={{ height: '100vh' }}
+            className="relative w-full"
+            style={{ height: SECTION_HEIGHT }}
+            // NOTE: Do NOT add overflow:hidden here — it breaks position:sticky.
         >
-            {/* ── Colour background ── */}
+            {/* ── Sticky visible panel (stays at viewport top while section scrolls) ── */}
             <div
-                ref={bgRef}
-                className="absolute inset-0"
-                style={{ backgroundColor: PHASES[0].color, transition: 'none' }}
-            />
-
-            {/* ── Section identifier — top left ── */}
-            <div
-                className="absolute flex items-center gap-3"
-                style={{ top: '64px', left: '96px', zIndex: 10 }}
+                className="sticky top-0 w-full overflow-hidden"
+                style={{ height: '100vh' }}
             >
-                <span
-                    className="block"
-                    style={{ width: '28px', height: '1px', backgroundColor: '#344E41', opacity: 0.5 }}
+                {/* ── Colour background ── */}
+                <div
+                    ref={bgRef}
+                    className="absolute inset-0"
+                    style={{ backgroundColor: PHASES[0].color }}
                 />
-                <span
-                    className="font-jakarta font-semibold"
-                    style={{
-                        fontSize: '11px',
-                        letterSpacing: '0.13em',
-                        textTransform: 'uppercase',
-                        color: '#6B6864',
-                    }}
-                >
-                    Progress Tab
-                </span>
-            </div>
 
-            {/* ── Phase labels — bottom centre ── */}
-            {/* Positioned below the landscape phone, which sits in the vertical middle */}
-            <div
-                className="absolute left-0 right-0 flex justify-center"
-                style={{ bottom: '52px', zIndex: 10 }}
-            >
-                {PHASES.map((phase, i) => (
-                    <div
-                        key={phase.key}
-                        ref={(el: HTMLDivElement | null) => { labelRefs.current[i] = el; }}
-                        className="absolute font-jakarta font-extrabold"
+                {/* ── Section identifier — top left ── */}
+                <div
+                    className="absolute flex items-center gap-3"
+                    style={{ top: '64px', left: '96px', zIndex: 10 }}
+                >
+                    <span
+                        className="block"
+                        style={{ width: '28px', height: '1px', backgroundColor: '#344E41', opacity: 0.5 }}
+                    />
+                    <span
+                        className="font-jakarta font-semibold"
                         style={{
-                            fontSize: 'clamp(40px, 5vw, 76px)',
-                            letterSpacing: '-0.04em',
-                            color: '#1A2E22',
-                            opacity: i === 0 ? 1 : 0,
-                            whiteSpace: 'nowrap',
+                            fontSize: '11px',
+                            letterSpacing: '0.13em',
+                            textTransform: 'uppercase',
+                            color: '#6B6864',
                         }}
                     >
-                        {phase.label}
-                    </div>
-                ))}
+                        Progress Tab
+                    </span>
+                </div>
+
+                {/* ── Phase labels — bottom centre ── */}
+                {/* All 4 labels occupy the same position; only one is visible at a time. */}
+                <div
+                    className="absolute"
+                    style={{ bottom: '52px', left: 0, right: 0, zIndex: 10 }}
+                >
+                    {PHASES.map((phase, i) => (
+                        <div
+                            key={phase.key}
+                            ref={(el: HTMLDivElement | null) => { labelRefs.current[i] = el; }}
+                            className="absolute font-jakarta font-extrabold"
+                            style={{
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                fontSize: 'clamp(40px, 5vw, 76px)',
+                                letterSpacing: '-0.04em',
+                                color: '#1A2E22',
+                                opacity: i === 0 ? 1 : 0,
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            {phase.label}
+                        </div>
+                    ))}
+                </div>
             </div>
         </section>
     );
