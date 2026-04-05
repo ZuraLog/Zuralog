@@ -288,14 +288,17 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
             ease: 'none',
         });
 
-        // ProgressSection: rotate phone to landscape, center it.
-        // Fires as the section scrolls into view (top bottom → top top).
+        // ProgressSection: rotate phone to landscape as the section enters view.
+        // refreshPriority: -1 — same reason as ProgressSection's own trigger.
+        // CoachSection's async pin spacer must be in place before this trigger
+        // calculates where #progress-section actually sits on the page.
         gsap.timeline({
             scrollTrigger: {
                 trigger: '#progress-section',
                 start: 'top bottom',
                 end: 'top top',
                 scrub: true,
+                refreshPriority: -1,
             },
         }).to(anim, {
             posX: 0,

@@ -8,23 +8,26 @@ if (typeof window !== 'undefined') {
     gsap.registerPlugin(ScrollTrigger);
 }
 
-// Soft vertical fade — the colour block bleeds into the surrounding dark canvas
-// at the top and bottom (~18% feather on each edge), matching the reference image.
+// Soft vertical fade — colour block feathers into the cream background at the
+// top and bottom edges (~18 % on each side), matching the reference design.
 const MASK =
     'linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%)';
 
+// Cream — matches CoachSection and the surrounding page background.
+// The overlay starts here (invisible against background) before the first colour fires.
+const CREAM = '#F0EEE9';
+
 // 6 timeline units × 800 px per unit = 4 800 px of pinned scroll.
-// Each colour holds for ~1 unit (800 px / ~1 viewport height) before crossing.
 //
-//   0   → 0.5   canvas hold        (starts dark, nothing visible)
-//   0.5 → 1.0   → orange
+//   0   → 0.5   cream hold       (overlay invisible against background)
+//   0.5 → 1.0   cream → orange
 //   1.0 → 2.0   orange hold
-//   2.0 → 2.5   → sage
+//   2.0 → 2.5   orange → sage
 //   2.5 → 3.5   sage hold
-//   3.5 → 4.0   → purple
+//   3.5 → 4.0   sage → purple
 //   4.0 → 5.0   purple hold
-//   5.0 → 5.5   → yellow
-//   5.5 → 6.0   yellow hold (unpin after)
+//   5.0 → 5.5   purple → yellow
+//   5.5 → 6.0   yellow hold  (unpin after)
 //
 const TOTAL_SCROLL = 4800;
 
@@ -38,9 +41,9 @@ export function ProgressSection() {
         if (!section || !color) return;
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-        // Start at canvas dark — identical to the section background, so the
-        // colour layer is invisible until the first transition fires.
-        gsap.set(color, { backgroundColor: '#161618' });
+        // Start at cream — same as the section background, so the overlay is
+        // invisible until the first transition fires.
+        gsap.set(color, { backgroundColor: CREAM });
 
         const tl = gsap.timeline({
             scrollTrigger: {
@@ -49,6 +52,24 @@ export function ProgressSection() {
                 start: 'top top',
                 end: `+=${TOTAL_SCROLL}`,
                 scrub: 1,
+                // ─── WHY refreshPriority: -1 ─────────────────────────────────
+                // CoachSection (the section just before this one) registers its
+                // GSAP pin asynchronously — it awaits the @chenglou/pretext
+                // library before calling ScrollTrigger.  ProgressSection
+                // registers synchronously, so without this flag its trigger
+                // position is calculated before CoachSection's ~2 700 px pin
+                // spacer exists, causing both sections to pin at wrong offsets.
+                //
+                // refreshPriority: -1 tells GSAP to refresh this trigger LAST
+                // on every ScrollTrigger.refresh() call.  CoachSection keeps its
+                // default priority (0), so it always settles first and its spacer
+                // is in place when ProgressSection measures its own position.
+                //
+                // Source: https://gsap.com/resources/st-mistakes
+                // "utilize the refreshPriority property to dictate the order of
+                //  position calculation for specific ScrollTriggers"
+                // ─────────────────────────────────────────────────────────────
+                refreshPriority: -1,
             },
         });
 
@@ -68,15 +89,15 @@ export function ProgressSection() {
         <section
             ref={sectionRef}
             id="progress-section"
-            className="relative w-full bg-ds-canvas"
-            style={{ height: '100vh' }}
+            className="relative w-full"
+            style={{ height: '100vh', backgroundColor: CREAM }}
         >
-            {/* Colour overlay with soft top/bottom fade */}
+            {/* Colour overlay with soft top/bottom fade via CSS mask */}
             <div
                 ref={colorRef}
                 className="absolute inset-0"
                 style={{
-                    backgroundColor: '#161618',
+                    backgroundColor: CREAM,
                     maskImage: MASK,
                     WebkitMaskImage: MASK,
                 }}
