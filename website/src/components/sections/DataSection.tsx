@@ -162,7 +162,7 @@ export function DataSection() {
             <div className="h-full" />
 
             {/* Right column: max-width container so charts don't sprawl at 4K */}
-            <div className="h-full flex flex-col justify-center">
+            <div className="h-full flex flex-col">
                 <div
                     className="w-full h-full px-6 py-[clamp(32px,5vh,80px)] gap-4"
                     style={{
@@ -170,6 +170,7 @@ export function DataSection() {
                         gridTemplateColumns: "1fr 1fr 1fr",
                         gridTemplateRows: "1fr 1fr 1fr",
                         maxWidth: "1008px",
+                        margin: "0 auto",
                     }}
                 >
                 {/* GREEN 2×1 — Weekly Steps Area Chart */}
