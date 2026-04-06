@@ -22,13 +22,14 @@ export function WaitlistSection() {
   return (
     <section
       id="waitlist"
-      className="relative min-h-screen py-16 md:py-24 lg:py-32 overflow-hidden"
+      className="relative min-h-screen py-16 md:py-24 lg:py-32 overflow-hidden font-jakarta"
+      style={{ backgroundColor: '#F0EEE9' }}
     >
       <Toaster position="top-center" richColors />
 
       {/* Subtle lime glow + particles */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary-lime/10 blur-[140px]" />
+        <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#344E41]/10 blur-[140px]" />
         <WaitlistParticles />
       </div>
 
@@ -47,9 +48,9 @@ export function WaitlistSection() {
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary-lime/40 bg-primary-lime/15 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-dark-charcoal/70"
+            className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#344E41]/30 bg-[#344E41]/8 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-dark-charcoal/70"
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-accent-lime animate-pulse" />
+            <span className="h-1.5 w-1.5 rounded-full bg-[#344E41] animate-pulse" />
             Early Access
           </motion.span>
 
@@ -75,7 +76,9 @@ export function WaitlistSection() {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="w-full lg:max-w-xl"
           >
-            <QuizContainer onEmailChange={handleEmailChange} />
+            <div className="w-full rounded-[24px] border border-[rgba(52,78,65,0.08)] bg-[#E8E6E1] p-6 shadow-sm lg:p-8">
+              <QuizContainer onEmailChange={handleEmailChange} />
+            </div>
           </motion.div>
 
           {/* Leaderboard (right) */}

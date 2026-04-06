@@ -15,6 +15,9 @@ import { Analytics } from "@vercel/analytics/next";
 import { LenisProvider } from "@/components/layout/LenisProvider";
 import { OverlayDismisser } from "@/components/OverlayDismisser";
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
+import { ScrollProgress } from "@/components/design-system/interactions/scroll-progress";
+import { CustomCursor } from "@/components/design-system/interactions/custom-cursor";
+import { SpotlightFollow } from "@/components/design-system/interactions/spotlight-follow";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -72,8 +75,8 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: [{ url: "/logo/ZuraLog-Logo-Sage.png", type: "image/png" }],
-    apple: [{ url: "/logo/ZuraLog-Logo-Sage.png", type: "image/png" }],
+    icon: [{ url: "/logo/ZuraLog-Sage.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/logo/ZuraLog-Sage.svg", type: "image/svg+xml" }],
   },
   manifest: "/site.webmanifest",
 };
@@ -85,7 +88,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${plusJakartaSans.variable}`}>
-      <body className="font-sans antialiased">
+      <body className="font-jakarta antialiased" data-theme="light">
         {/* OverlayDismisser: layout-level safety net. Ensures the loading
             overlay is dismissed on EVERY page — not just the home page.
             On non-home pages it dismisses quickly; on the home page it acts
@@ -114,7 +117,7 @@ export default function RootLayout({
               #ssr-loader::after {
                 content: "";
                 grid-area: 1/1;
-                --c: no-repeat radial-gradient(farthest-side, #CFE1B9 92%, #0000);
+                --c: no-repeat radial-gradient(farthest-side, #344E41 92%, #0000);
                 background:
                   var(--c) 50%  0,
                   var(--c) 50%  100%,
@@ -125,7 +128,7 @@ export default function RootLayout({
               }
               #ssr-loader::before {
                 margin: 4px;
-                --c: no-repeat radial-gradient(farthest-side, #E8F5A8 92%, #0000);
+                --c: no-repeat radial-gradient(farthest-side, #CFE1B9 92%, #0000);
                 background-size: 8px 8px;
                 animation-timing-function: linear;
               }
@@ -142,7 +145,7 @@ export default function RootLayout({
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "#FAFAF5",
+            backgroundColor: "#F0EEE9",
             zIndex: 9999,
             transition: "opacity 0.6s ease",
           }}
@@ -150,15 +153,16 @@ export default function RootLayout({
         >
           <span
             style={{
+              fontFamily: "var(--font-jakarta), 'Plus Jakarta Sans', sans-serif",
               fontSize: "1.5rem",
-              fontWeight: 300,
+              fontWeight: 500,
               letterSpacing: "0.3em",
               color: "#2D2D2D",
               textTransform: "uppercase" as const,
               opacity: 0.85,
             }}
           >
-            Zuralog
+            ZuraLog
           </span>
           {/* Pure-CSS spinner — animates without JS */}
           <div id="ssr-loader" />
@@ -183,6 +187,9 @@ export default function RootLayout({
           }}
         />
         <PostHogProvider>
+          <ScrollProgress />
+          <CustomCursor />
+          <SpotlightFollow />
           <LenisProvider>
             {children}
           </LenisProvider>

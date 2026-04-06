@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Today Section — Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#FAFAF5; font-family:'Plus Jakarta Sans',sans-serif; color:#2D2D2D; }
+
+.beat {
+  width:100%; height:100vh;
+  display:grid; grid-template-columns:55% 45%;
+  position:relative;
+  border-bottom:1px solid rgba(0,0,0,0.06);
+}
+
+.left {
+  display:flex; flex-direction:column; justify-content:center;
+  padding:80px 64px 80px 96px; gap:28px;
+}
+
+.right {
+  display:flex; align-items:center; justify-content:center;
+  padding:40px 60px 40px 0;
+}
+
+.beat-label {
+  display:flex; align-items:center; gap:10px;
+  font-size:11px; font-weight:600; letter-spacing:0.12em;
+  text-transform:uppercase; color:#7A8D6E;
+}
+.beat-label span {
+  display:inline-block; width:24px; height:2px;
+  background:#CFE1B9; border-radius:2px;
+}
+
+.intro-headline {
+  font-size:70px; font-weight:800; line-height:1.02;
+  letter-spacing:-0.03em; color:#141E18; max-width:520px;
+}
+.intro-headline em { font-style:normal; color:#4A7C59; }
+
+.headline {
+  font-size:60px; font-weight:800; line-height:1.05;
+  letter-spacing:-0.025em; color:#141E18;
+}
+.headline em { font-style:normal; color:#4A7C59; }
+
+.sub {
+  font-size:17px; font-weight:400; line-height:1.65;
+  color:#5A6B56; max-width:430px;
+}
+
+.chips-row { display:flex; flex-wrap:wrap; gap:9px; max-width:500px; }
+.chip {
+  display:inline-flex; align-items:center; gap:7px;
+  padding:8px 15px; border-radius:100px;
+  font-size:13px; font-weight:600;
+  background:rgba(207,225,185,0.18); color:#344E41;
+  border:1px solid rgba(207,225,185,0.5);
+}
+.chip .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+
+.insight-cards { display:flex; flex-direction:column; gap:12px; max-width:460px; }
+.insight-card {
+  background:#1E1E20; border-radius:20px; padding:20px 22px;
+  position:relative; overflow:hidden;
+}
+.insight-card::after {
+  content:''; position:absolute;
+  top:-40px; right:-40px;
+  width:160px; height:160px;
+  border-radius:50%;
+  border:1px solid rgba(207,225,185,0.1);
+  pointer-events:none;
+}
+.insight-tag {
+  display:flex; align-items:center; gap:6px;
+  font-size:10px; font-weight:600; letter-spacing:0.09em;
+  text-transform:uppercase; color:#9B9894; margin-bottom:10px;
+}
+.tag-dot { width:6px; height:6px; border-radius:50%; }
+.insight-text {
+  font-size:15px; font-weight:500; line-height:1.55; color:#F0EEE9;
+}
+.insight-footer { margin-top:12px; display:flex; align-items:center; gap:8px; }
+.delta { font-size:12px; font-weight:600; padding:4px 10px; border-radius:100px; }
+.delta-up { background:rgba(48,209,88,0.15); color:#30D158; }
+.delta-down { background:rgba(255,55,95,0.15); color:#FF375F; }
+.meta { font-size:12px; color:#9B9894; }
+
+.phone-wrap { perspective:1100px; }
+.phone {
+  width:272px; height:572px;
+  background:#141E18;
+  border-radius:44px;
+  border:1px solid rgba(255,255,255,0.07);
+  transform:rotateY(-13deg) rotateX(3deg);
+  box-shadow:
+    -28px 28px 64px rgba(10,20,14,0.4),
+    -6px 6px 16px rgba(0,0,0,0.25),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+  overflow:hidden;
+  display:flex; flex-direction:column;
+}
+.phone-notch {
+  width:100px; height:28px;
+  background:#0A0F0C;
+  border-radius:0 0 18px 18px;
+  margin:0 auto; flex-shrink:0;
+}
+.phone-body {
+  flex:1; padding:14px 14px 18px;
+  display:flex; flex-direction:column; gap:9px;
+  overflow:hidden;
+}
+.p-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:2px; }
+.p-title { font-size:16px; font-weight:700; color:#F0EEE9; }
+.p-avatar { width:26px; height:26px; border-radius:50%; background:#272729; }
+.p-section { font-size:9px; font-weight:600; color:#9B9894; letter-spacing:0.08em; text-transform:uppercase; margin-top:2px; }
+
+.metric-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+.m-tile { background:#1E1E20; border-radius:13px; padding:11px; }
+.m-label { font-size:8px; color:#9B9894; font-weight:500; text-transform:uppercase; letter-spacing:0.06em; display:flex; align-items:center; gap:4px; }
+.m-dot { width:5px; height:5px; border-radius:50%; }
+.m-val { font-size:18px; font-weight:700; color:#F0EEE9; margin:3px 0 1px; }
+.m-unit { font-size:8px; color:#9B9894; }
+
+.log-list { display:flex; flex-direction:column; gap:6px; }
+.log-row {
+  background:#1E1E20; border-radius:11px;
+  padding:9px 11px; display:flex; align-items:center; gap:9px;
+}
+.log-icon {
+  width:26px; height:26px; border-radius:7px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; background:#272729; flex-shrink:0;
+}
+.log-name { font-size:11px; font-weight:600; color:#F0EEE9; }
+.log-val { font-size:9px; color:#9B9894; margin-top:1px; }
+.log-plus {
+  margin-left:auto; width:20px; height:20px; border-radius:50%;
+  background:rgba(207,225,185,0.14); color:#CFE1B9;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; font-weight:300; flex-shrink:0;
+}
+
+.p-insight {
+  background:#1E1E20; border-radius:14px; padding:12px;
+  position:relative; overflow:hidden;
+}
+.p-insight::before {
+  content:''; position:absolute; inset:0;
+  background:radial-gradient(circle at 85% 15%, rgba(207,225,185,0.07) 0%, transparent 65%);
+  pointer-events:none;
+}
+.p-i-tag { font-size:8px; color:#CFE1B9; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:5px; }
+.p-i-text { font-size:10.5px; color:#F0EEE9; line-height:1.5; font-weight:500; }
+.p-i-badge {
+  display:inline-block; margin-top:7px; font-size:9px; font-weight:600;
+  padding:3px 8px; border-radius:100px;
+}
+
+.beat-num {
+  position:absolute; bottom:32px; left:96px;
+  font-size:11px; color:rgba(0,0,0,0.18); font-weight:500; letter-spacing:0.1em;
+}
+</style>
+</head>
+<body>
+
+<!-- BEAT 1 — INTRODUCTION -->
+<div class="beat">
+  <div class="left">
+    <div class="beat-label"><span></span>Today Tab</div>
+    <h1 class="intro-headline">See everything<br/>about your<br/><em>day.</em></h1>
+    <p class="sub">One place for every health metric — from the moment you wake up to the moment you sleep.</p>
+  </div>
+  <div class="right">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-body">
+          <div class="p-header">
+            <span class="p-title">Today</span>
+            <div class="p-avatar"></div>
+          </div>
+          <div class="metric-grid">
+            <div class="m-tile">
+              <div class="m-label"><span class="m-dot" style="background:#30D158"></span>Steps</div>
+              <div class="m-val">8,432</div>
+              <div class="m-unit">of 10,000 goal</div>
+            </div>
+            <div class="m-tile">
+              <div class="m-label"><span class="m-dot" style="background:#5E5CE6"></span>Sleep</div>
+              <div class="m-val">7h 24m</div>
+              <div class="m-unit">last night</div>
+            </div>
+          </div>
+          <div class="metric-grid">
+            <div class="m-tile">
+              <div class="m-label"><span class="m-dot" style="background:#FF375F"></span>Heart</div>
+              <div class="m-val">62</div>
+              <div class="m-unit">bpm resting</div>
+            </div>
+            <div class="m-tile">
+              <div class="m-label"><span class="m-dot" style="background:#FF9F0A"></span>Calories</div>
+              <div class="m-val">1,840</div>
+              <div class="m-unit">kcal burned</div>
+            </div>
+          </div>
+          <div class="p-insight">
+            <div class="p-i-tag">✦ AI Insight</div>
+            <div class="p-i-text">Your sleep improved 12% compared to last week.</div>
+            <div class="p-i-badge" style="background:rgba(48,209,88,0.15);color:#30D158;">+12% sleep quality</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="beat-num">01 / 03</div>
+</div>
+
+<!-- BEAT 2 — QUICK LOG -->
+<div class="beat">
+  <div class="left">
+    <div class="beat-label"><span></span>Quick Log</div>
+    <h2 class="headline">Log <em>anything.</em><br/>In seconds.</h2>
+    <p class="sub">Calories, workouts, mood — just tap and it's tracked. No forms, no friction.</p>
+    <div class="chips-row">
+      <div class="chip"><span class="dot" style="background:#64D2FF"></span>Water Intake</div>
+      <div class="chip"><span class="dot" style="background:#FF9F0A"></span>Calories</div>
+      <div class="chip"><span class="dot" style="background:#30D158"></span>Workout</div>
+      <div class="chip"><span class="dot" style="background:#30D158"></span>Walk</div>
+      <div class="chip"><span class="dot" style="background:#5E5CE6"></span>Sleep</div>
+      <div class="chip"><span class="dot" style="background:#64D2FF"></span>Body Weight</div>
+      <div class="chip"><span class="dot" style="background:#BF5AF2"></span>Mood</div>
+      <div class="chip"><span class="dot" style="background:#FFD60A"></span>Stress Level</div>
+      <div class="chip"><span class="dot" style="background:#63E6BE"></span>Medication</div>
+      <div class="chip"><span class="dot" style="background:#FF375F"></span>Blood Pressure</div>
+      <div class="chip"><span class="dot" style="background:#FF9F0A"></span>Meal</div>
+      <div class="chip"><span class="dot" style="background:#FFD60A"></span>Energy Level</div>
+    </div>
+  </div>
+  <div class="right">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-body">
+          <div class="p-header">
+            <span class="p-title">Today</span>
+            <div class="p-avatar"></div>
+          </div>
+          <div class="p-section">Quick Log</div>
+          <div class="log-list">
+            <div class="log-row">
+              <div class="log-icon">💧</div>
+              <div><div class="log-name">Water Intake</div><div class="log-val">6 / 8 glasses</div></div>
+              <div class="log-plus">+</div>
+            </div>
+            <div class="log-row">
+              <div class="log-icon">🔥</div>
+              <div><div class="log-name">Calories</div><div class="log-val">1,240 kcal logged</div></div>
+              <div class="log-plus">+</div>
+            </div>
+            <div class="log-row">
+              <div class="log-icon">🏃</div>
+              <div><div class="log-name">Workout</div><div class="log-val">Tap to log</div></div>
+              <div class="log-plus">+</div>
+            </div>
+            <div class="log-row">
+              <div class="log-icon">😊</div>
+              <div><div class="log-name">Mood</div><div class="log-val">Feeling good</div></div>
+              <div class="log-plus">+</div>
+            </div>
+            <div class="log-row">
+              <div class="log-icon">⚖️</div>
+              <div><div class="log-name">Body Weight</div><div class="log-val">72.4 kg</div></div>
+              <div class="log-plus">+</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="beat-num">02 / 03</div>
+</div>
+
+<!-- BEAT 3 — AI INSIGHTS -->
+<div class="beat">
+  <div class="left">
+    <div class="beat-label"><span></span>AI Insights</div>
+    <h2 class="headline">Your AI coach<br/><em>reads your day.</em></h2>
+    <p class="sub">It spots patterns behind your data and tells you exactly what's working — and what isn't.</p>
+    <div class="insight-cards">
+      <div class="insight-card">
+        <div class="insight-tag"><span class="tag-dot" style="background:#30D158"></span>Activity &amp; Heart</div>
+        <div class="insight-text">Your resting heart rate dropped 4 bpm this week — likely from the three evening walks you added.</div>
+        <div class="insight-footer">
+          <span class="delta delta-up">&#8722;4 bpm</span>
+          <span class="meta">vs. last week</span>
+        </div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-tag"><span class="tag-dot" style="background:#5E5CE6"></span>Sleep &amp; Nutrition</div>
+        <div class="insight-text">Sleep quality fell 18% on days you logged meals after 9pm. Try eating 2 hours earlier.</div>
+        <div class="insight-footer">
+          <span class="delta delta-down">&#8722;18% quality</span>
+          <span class="meta">on late-meal days</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="right">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-body">
+          <div class="p-header">
+            <span class="p-title">Today</span>
+            <div class="p-avatar"></div>
+          </div>
+          <div class="p-section">AI Insights</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+            <div class="p-insight">
+              <div class="p-i-tag">✦ Activity · Heart</div>
+              <div class="p-i-text">Your resting heart rate dropped 4 bpm from your 3 evening walks this week.</div>
+              <div class="p-i-badge" style="background:rgba(48,209,88,0.15);color:#30D158;">&#8722;4 bpm this week</div>
+            </div>
+            <div class="p-insight">
+              <div class="p-i-tag">✦ Sleep · Nutrition</div>
+              <div class="p-i-text">Sleep quality fell 18% on days you ate after 9pm. Try shifting dinner earlier.</div>
+              <div class="p-i-badge" style="background:rgba(255,55,95,0.15);color:#FF375F;">&#8722;18% sleep quality</div>
+            </div>
+            <div class="p-insight">
+              <div class="p-i-tag">✦ Hydration</div>
+              <div class="p-i-text">You drank half as much water on days you skipped breakfast.</div>
+              <div class="p-i-badge" style="background:rgba(100,210,255,0.15);color:#64D2FF;">Tip from your data</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="beat-num">03 / 03</div>
+</div>
+
+</body>
+</html>

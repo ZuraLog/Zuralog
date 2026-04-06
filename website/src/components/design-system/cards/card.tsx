@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import gsap from "gsap";
@@ -85,7 +85,17 @@ export function Card({
       : "original";
 
   const themeCtx = useBrandBibleThemeOptional();
-  const blend = themeCtx?.isLight ? "color-burn" as const : "screen" as const;
+
+  // DOM-based fallback: detect data-theme="light" on an ancestor when Card is
+  // used outside BrandBibleThemeProvider (e.g. main marketing page).
+  const [domIsLight, setDomIsLight] = useState(false);
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    setDomIsLight(!!el.closest('[data-theme="light"]'));
+  }, []);
+
+  const blend = (themeCtx?.isLight ?? domIsLight) ? "color-burn" as const : "screen" as const;
 
   // 3D tilt effect — applied to all cards unless noTilt is set
   useEffect(() => {

@@ -13,9 +13,8 @@
  *   - Top 10 Funder Leaderboard (non-anonymous only)
  */
 import type { Metadata } from 'next';
-import { Navbar } from '@/components/layout/Navbar';
+import { FloatingNav } from '@/components/layout/FloatingNav';
 import { Footer } from '@/components/layout/Footer';
-import { PageBackground } from '@/components/PageBackground';
 import { SupportSection } from '@/components/sections/SupportSection';
 
 export const metadata: Metadata = {
@@ -31,15 +30,12 @@ export const metadata: Metadata = {
 
 export default function SupportPage() {
   return (
-    <>
-      <PageBackground />
-      <div className="relative flex min-h-screen flex-col">
-        <Navbar />
-        <main className="flex-1">
-          <SupportSection />
-        </main>
-        <Footer />
-      </div>
-    </>
+    <div className="relative flex min-h-screen flex-col bg-[#F0EEE9] font-jakarta" data-theme="light">
+      <FloatingNav />
+      <main className="flex-1">
+        <SupportSection />
+      </main>
+      <Footer />
+    </div>
   );
 }

@@ -108,15 +108,15 @@ export function HowItWorksSection() {
                   onClick={() => handleTabClick(i)}
                   onMouseEnter={handleTabHover}
                   className="relative flex items-center gap-2 rounded-full px-5 md:px-6 py-3 text-xs md:text-sm font-semibold transition-all duration-300"
-                  style={{ color: isActive ? "#141E18" : "rgba(52, 78, 65, 0.45)" }}
+                  style={{ color: isActive ? "#F0EEE9" : "rgba(52, 78, 65, 0.45)" }}
                 >
                   {isActive && (
                     <motion.div
                       layoutId="activeTab"
                       className="absolute inset-0 rounded-full"
                       style={{
-                        backgroundColor: "#CFE1B9",
-                        boxShadow: "0 2px 16px rgba(207, 225, 185, 0.45)",
+                        backgroundColor: "#344E41",
+                        boxShadow: "0 2px 16px rgba(52, 78, 65, 0.3)",
                       }}
                       transition={{ type: "spring", stiffness: 400, damping: 30 }}
                     />

@@ -10,10 +10,10 @@ import { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FaLinkedinIn } from 'react-icons/fa6';
-import { Navbar } from '@/components/layout/Navbar';
+import { FloatingNav } from '@/components/layout/FloatingNav';
 import { Footer } from '@/components/layout/Footer';
-import { PageBackground } from '@/components/PageBackground';
 import { FounderPhoto } from '@/components/ui/FounderPhoto';
+import { DSButton } from '@/components/design-system';
 
 export const metadata: Metadata = {
   title: 'About Us | ZuraLog',
@@ -91,10 +91,8 @@ const FOUNDERS = [
 
 export default function AboutPage() {
   return (
-    <>
-      <PageBackground />
-      <div className="relative flex min-h-screen flex-col">
-        <Navbar />
+      <div className="relative flex min-h-screen flex-col bg-[#F0EEE9] font-jakarta" data-theme="light">
+        <FloatingNav />
 
         <main className="flex-1">
           {/* ── Hero ─────────────────────────────────────────────────── */}
@@ -102,7 +100,7 @@ export default function AboutPage() {
             {/* Back link */}
             <Link
               href="/"
-              className="mb-12 inline-flex items-center gap-1.5 text-xs font-medium text-black/40 transition-colors hover:text-[#2D2D2D]"
+              className="mb-12 inline-flex items-center gap-1.5 text-xs font-medium text-black/40 transition-colors hover:text-[#344E41]"
             >
               <svg
                 aria-hidden="true"
@@ -120,10 +118,10 @@ export default function AboutPage() {
             <div className="flex flex-col items-start gap-16 lg:flex-row lg:items-center lg:gap-20">
               {/* Left: text */}
               <div className="flex-1">
-                <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#E8F5A8]/60 bg-[#E8F5A8]/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#2D2D2D]/60">
+                <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#344E41]/20 bg-[#344E41]/8 px-3 py-1 text-[11px] font-medium uppercase tracking-widest text-[#344E41]/70">
                   Our Story
                 </span>
-                <h1 className="mt-3 text-4xl font-bold tracking-tight text-[#1A1A1A] sm:text-5xl lg:text-[72px] lg:leading-[1.05]">
+                <h1 className="mt-3 text-[34px] font-bold tracking-tight text-[#161618] sm:text-5xl lg:text-[72px] lg:leading-[1.05]">
                   Health data shouldn&apos;t be this hard.
                 </h1>
                 <p className="mt-6 max-w-lg text-lg leading-relaxed text-black/50">
@@ -135,13 +133,14 @@ export default function AboutPage() {
                 <div className="mt-8 flex flex-col gap-4 sm:flex-row">
                   <Link
                     href="/#waitlist"
-                    className="btn-pattern-light inline-flex items-center justify-center rounded-full bg-[#CFE1B9] px-6 py-2.5 text-sm font-semibold text-[#141E18] shadow-[0_2px_16px_rgba(207,225,185,0.35)] transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_4px_30px_rgba(207,225,185,0.55)] active:scale-[0.97]"
+                    className="relative isolate overflow-hidden inline-flex items-center justify-center gap-2 font-jakarta rounded-ds-pill h-[44px] px-6 text-[15px] font-semibold text-ds-text-on-sage ds-pattern-drift transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
+                    style={{ backgroundImage: 'var(--ds-pattern-sage)' }}
                   >
                     Join the waitlist
                   </Link>
                   <a
                     href="mailto:support@zuralog.com"
-                    className="inline-flex items-center justify-center rounded-full border border-black/10 px-6 py-2.5 text-sm font-medium text-black/60 transition-colors hover:border-[#CFE1B9] hover:text-[#2D2D2D]"
+                    className="relative isolate overflow-hidden inline-flex items-center justify-center gap-2 font-jakarta rounded-ds-pill h-[44px] px-6 text-[15px] font-semibold bg-transparent border-[1.5px] border-[var(--color-ds-secondary-border)] text-ds-text-primary transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
                   >
                     Get in touch
                   </a>
@@ -150,16 +149,16 @@ export default function AboutPage() {
 
               {/* Right: logo lockup */}
               <div className="flex items-center justify-center lg:w-64">
-                <div className="flex flex-col items-center gap-5 rounded-3xl border border-black/[0.06] bg-white/60 p-10 shadow-sm">
+                <div className="flex flex-col items-center gap-5 rounded-3xl border border-black/[0.06] bg-[#E8E6E1] p-10 shadow-sm">
                   <Image
-                    src="/logo/ZuraLog-Logo-Main.png"
+                    src="/logo/ZuraLog-Forest-Green.svg"
                     alt="ZuraLog logo"
                     width={64}
                     height={64}
                     className="rounded-2xl object-contain"
                   />
                   <div className="text-center">
-                    <p className="text-base font-semibold tracking-tight" style={{ color: '#CFE1B9' }}>
+                    <p className="text-[17px] font-semibold tracking-tight" style={{ color: '#344E41' }}>
                       ZuraLog
                     </p>
                     <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-black/30">
@@ -194,7 +193,7 @@ export default function AboutPage() {
                   <p className="text-[12px] font-semibold uppercase tracking-[0.22em] text-black/30">
                     The People Behind It
                   </p>
-                  <h2 className="text-[36px] font-bold leading-[1.2] tracking-tight text-[#1A1A1A]">
+                  <h2 className="text-[34px] font-bold leading-[1.2] tracking-tight text-[#161618]">
                     TWO BUILDERS.
                     <br />
                     ONE SHARED
@@ -211,10 +210,7 @@ export default function AboutPage() {
                     A team of builders, operators and health enthusiasts. The people who lived
                     the problem, building the solution.
                   </p>
-                  <button className="group relative inline-flex items-center justify-center overflow-hidden border border-black/20 px-8 py-3.5 text-[13px] font-semibold uppercase tracking-[0.15em] text-[#1A1A1A] transition-all duration-500 hover:border-[#CFE1B9] hover:bg-[#CFE1B9] hover:text-[#141E18] hover:shadow-[0_2px_16px_rgba(207,225,185,0.35)] active:scale-[0.97]">
-                    <span className="pointer-events-none absolute inset-[-50%] h-[200%] w-[200%] opacity-0 transition-opacity duration-500 group-hover:opacity-[0.08]" style={{ backgroundImage: 'url(/pattern-sm.jpg)', backgroundSize: '300px auto', backgroundRepeat: 'repeat', mixBlendMode: 'multiply', animation: 'patternDrift 25s linear infinite' }} />
-                    <span className="relative z-[2]">Meet the Team</span>
-                  </button>
+                  <DSButton intent="secondary" size="md">Meet the Team</DSButton>
                 </div>
 
                 {/* Hyowon photo */}
@@ -233,7 +229,7 @@ export default function AboutPage() {
                 {/* Hyowon info */}
                 <div className="flex flex-col gap-2.5 pt-6">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-[15px] font-semibold uppercase tracking-[0.12em] text-[#1A1A1A]">
+                    <h3 className="text-[15px] font-semibold uppercase tracking-[0.12em] text-[#161618]">
                       {FOUNDERS[0].name}
                     </h3>
                   </div>
@@ -241,19 +237,19 @@ export default function AboutPage() {
                   <p className="text-[13px] leading-[1.6] tracking-[0.02em] text-black/40">
                     {FOUNDERS[0].bio}
                   </p>
-                  <div className="mt-1 flex gap-4">
+                  <div className="mt-1 flex gap-3">
                     <a
                       href={FOUNDERS[0].linkedin}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={`${FOUNDERS[0].name} on LinkedIn`}
-                      className="flex items-center justify-center border border-black/10 px-5 py-3 text-[14px] font-bold text-[#1A1A1A] transition-colors hover:border-[#CFE1B9] hover:bg-[#CFE1B9]/10"
+                      className="relative isolate overflow-hidden inline-flex items-center justify-center gap-2 font-jakarta rounded-ds-pill h-[32px] px-[18px] text-[13px] font-medium bg-transparent border-[1.5px] border-[var(--color-ds-secondary-border)] text-ds-text-primary transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
                     >
-                      in
+                      <FaLinkedinIn className="h-3.5 w-3.5" />
                     </a>
                     <a
                       href={`mailto:${FOUNDERS[0].email}`}
-                      className="flex items-center justify-center border border-black/10 px-6 py-3 text-[12px] font-semibold uppercase tracking-[0.15em] text-[#1A1A1A] transition-colors hover:border-[#CFE1B9] hover:bg-[#CFE1B9]/10"
+                      className="relative isolate overflow-hidden inline-flex items-center justify-center gap-2 font-jakarta rounded-ds-pill h-[32px] px-[18px] text-[13px] font-medium bg-transparent border-[1.5px] border-[var(--color-ds-secondary-border)] text-ds-text-primary transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
                     >
                       Connect
                     </a>
@@ -264,7 +260,7 @@ export default function AboutPage() {
               {/* ── Right Column: Fernando + Supporters ──────────── */}
               <div className="flex flex-1 flex-col">
                 {/* Fernando photo */}
-                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-[20px] bg-gradient-to-b from-[#CFE1B9]/[0.08] to-[#CFE1B9]/[0.02]">
+                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-[20px] bg-gradient-to-b from-[#344E41]/[0.06] to-[#344E41]/[0.02]">
                   <Image
                     src={FOUNDERS[1].photoPath}
                     alt={`Photo of ${FOUNDERS[1].name}`}
@@ -275,9 +271,9 @@ export default function AboutPage() {
                     className="object-cover"
                   />
                   {/* CO-FOUNDER badge */}
-                  <div className="absolute bottom-6 right-6 flex items-center gap-2 rounded bg-white px-3.5 py-1.5">
+                  <div className="absolute bottom-6 right-6 flex items-center gap-2 rounded bg-[#E8E6E1] px-3.5 py-1.5">
                     <span className="h-2 w-2 rounded-full bg-black/30" />
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#1A1A1A]">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#161618]">
                       Co-Founder
                     </span>
                   </div>
@@ -286,7 +282,7 @@ export default function AboutPage() {
                 {/* Fernando info */}
                 <div className="flex flex-col gap-2.5 pt-6">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-[15px] font-semibold uppercase tracking-[0.12em] text-[#1A1A1A]">
+                    <h3 className="text-[15px] font-semibold uppercase tracking-[0.12em] text-[#161618]">
                       {FOUNDERS[1].name}
                     </h3>
                     <span className="text-[13px] font-medium text-black/40">{FOUNDERS[1].role}</span>
@@ -294,19 +290,19 @@ export default function AboutPage() {
                   <p className="text-[13px] leading-[1.6] tracking-[0.02em] text-black/40">
                     {FOUNDERS[1].bio}
                   </p>
-                  <div className="mt-1 flex gap-4">
+                  <div className="mt-1 flex gap-3">
                     <a
                       href={FOUNDERS[1].linkedin}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={`${FOUNDERS[1].name} on LinkedIn`}
-                      className="flex items-center justify-center border border-black/10 px-5 py-3 text-[14px] font-bold text-[#1A1A1A] transition-colors hover:border-[#CFE1B9] hover:bg-[#CFE1B9]/10"
+                      className="relative isolate overflow-hidden inline-flex items-center justify-center gap-2 font-jakarta rounded-ds-pill h-[32px] px-[18px] text-[13px] font-medium bg-transparent border-[1.5px] border-[var(--color-ds-secondary-border)] text-ds-text-primary transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
                     >
-                      in
+                      <FaLinkedinIn className="h-3.5 w-3.5" />
                     </a>
                     <a
                       href={`mailto:${FOUNDERS[1].email}`}
-                      className="flex items-center justify-center border border-black/10 px-6 py-3 text-[12px] font-semibold uppercase tracking-[0.15em] text-[#1A1A1A] transition-colors hover:border-[#CFE1B9] hover:bg-[#CFE1B9]/10"
+                      className="relative isolate overflow-hidden inline-flex items-center justify-center gap-2 font-jakarta rounded-ds-pill h-[32px] px-[18px] text-[13px] font-medium bg-transparent border-[1.5px] border-[var(--color-ds-secondary-border)] text-ds-text-primary transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
                     >
                       Connect
                     </a>
@@ -322,7 +318,7 @@ export default function AboutPage() {
                   <p className="text-[14px] font-semibold uppercase tracking-[0.2em] text-black/40">
                     Supporters
                   </p>
-                  <h3 className="text-[36px] font-bold leading-[1.15] tracking-tight text-[#1A1A1A]">
+                  <h3 className="text-[36px] font-bold leading-[1.15] tracking-tight text-[#161618]">
                     SUPPORT THE FUTURE
                     <br />
                     OF UNIFIED HEALTH.
@@ -338,7 +334,8 @@ export default function AboutPage() {
                       href="https://buymeacoffee.com/zuralog"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="btn-pattern-light inline-flex items-center justify-center rounded-full bg-[#CFE1B9] px-7 py-3.5 text-[14px] font-semibold uppercase tracking-[0.15em] text-[#141E18] shadow-[0_2px_16px_rgba(207,225,185,0.35)] transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_4px_30px_rgba(207,225,185,0.55)] active:scale-[0.97]"
+                      className="relative isolate overflow-hidden inline-flex items-center justify-center gap-2 font-jakarta rounded-ds-pill h-[52px] px-7 text-[15px] font-semibold text-ds-text-on-sage ds-pattern-drift transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
+                      style={{ backgroundImage: 'var(--ds-pattern-sage)' }}
                     >
                       Support Us
                     </a>
@@ -349,7 +346,7 @@ export default function AboutPage() {
           </section>
 
           {/* ── Values ───────────────────────────────────────────────── */}
-          <section className="border-t border-black/[0.06] bg-[#FAFAF5] px-6 py-20 lg:px-12">
+          <section className="border-t border-black/[0.06] bg-[#E8E6E1] px-6 py-20 lg:px-12">
             <div className="mx-auto max-w-[1280px]">
               <h2 className="mb-10 text-[12px] font-semibold uppercase tracking-[0.22em] text-black/30">
                 What We Stand For
@@ -358,12 +355,12 @@ export default function AboutPage() {
                 {VALUES.map((v) => (
                   <div
                     key={v.title}
-                    className="rounded-2xl border border-black/[0.06] bg-white/60 p-7"
+                    className="rounded-2xl border border-black/[0.06] bg-[#DEDAD4] p-7"
                   >
-                    <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#CFE1B9]/20 text-[#344E41]">
+                    <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#344E41]/8 text-[#344E41]">
                       {v.icon}
                     </div>
-                    <h3 className="mb-3 text-[17px] font-semibold text-[#1A1A1A]">{v.title}</h3>
+                    <h3 className="mb-3 text-[17px] font-semibold text-[#161618]">{v.title}</h3>
                     <p className="text-[14px] leading-relaxed text-black/45">{v.body}</p>
                   </div>
                 ))}
@@ -375,7 +372,7 @@ export default function AboutPage() {
           <section className="border-t border-black/[0.06] py-20">
             <div className="mx-auto flex max-w-[1280px] flex-col items-center gap-6 px-6 text-center lg:px-12">
               <div className="h-0.5 w-10 bg-black/[0.12]" />
-              <h2 className="text-[40px] font-bold tracking-tight text-[#1A1A1A]">
+              <h2 className="text-[40px] font-bold tracking-tight text-[#161618]">
                 Say hello
               </h2>
               <p className="text-base text-black/40">
@@ -383,7 +380,8 @@ export default function AboutPage() {
               </p>
               <a
                 href="mailto:support@zuralog.com"
-                className="btn-pattern-light inline-flex items-center gap-2.5 rounded-full bg-[#CFE1B9] px-9 py-4 text-[15px] font-semibold text-[#141E18] shadow-[0_2px_16px_rgba(207,225,185,0.35)] transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_4px_30px_rgba(207,225,185,0.55)] active:scale-[0.97]"
+                className="relative isolate overflow-hidden inline-flex items-center justify-center gap-2.5 font-jakarta rounded-ds-pill h-[52px] px-9 text-[15px] font-semibold text-ds-text-on-sage ds-pattern-drift transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
+                style={{ backgroundImage: 'var(--ds-pattern-sage)' }}
               >
                 <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
@@ -396,6 +394,5 @@ export default function AboutPage() {
 
         <Footer />
       </div>
-    </>
   );
 }

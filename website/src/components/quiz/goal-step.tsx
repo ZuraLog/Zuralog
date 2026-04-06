@@ -5,7 +5,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
+import { DSButton } from '@/components/design-system';
 import { cn } from '@/lib/utils';
 
 const GOALS = [
@@ -31,7 +31,7 @@ export function GoalStep({ selected, onSelect, onNext, onBack, canProceed }: Goa
         <h2 className="text-2xl font-bold text-dark-charcoal md:text-3xl">
           What&apos;s your main goal?
         </h2>
-        <p className="mt-2 text-black/50">
+        <p className="mt-2 text-[#6B6864]">
           ZuraLog will personalise your experience around this.
         </p>
       </div>
@@ -49,17 +49,17 @@ export function GoalStep({ selected, onSelect, onNext, onBack, canProceed }: Goa
               className={cn(
                 'flex items-center gap-4 rounded-2xl border p-4 text-left transition-all',
                 active
-                  ? 'border-peach/50 bg-peach/10 text-dark-charcoal shadow-[0_0_20px_rgba(207,225,185,0.35)]'
-                  : 'border-black/8 bg-white text-black/50 hover:border-black/20 hover:bg-black/4 hover:text-dark-charcoal shadow-sm',
+                  ? 'border-[#344E41]/40 bg-[#344E41]/8 text-dark-charcoal shadow-[0_0_20px_rgba(52,78,65,0.20)]'
+                  : 'border-[rgba(22,22,24,0.08)] bg-[#DEDAD4] text-[#6B6864] hover:border-black/20 hover:bg-black/4 hover:text-dark-charcoal shadow-sm',
               )}
             >
               <span className="text-2xl">{goal.emoji}</span>
               <div className="flex flex-col">
                 <span className="font-medium">{goal.label}</span>
-                <span className="text-xs text-black/30">{goal.desc}</span>
+                <span className="text-xs text-[#6B6864]/70">{goal.desc}</span>
               </div>
               {active && (
-                <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-peach text-xs font-bold text-white">
+                <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-[#344E41] text-xs font-bold text-white">
                   ✓
                 </span>
               )}
@@ -69,20 +69,8 @@ export function GoalStep({ selected, onSelect, onNext, onBack, canProceed }: Goa
       </div>
 
       <div className="flex gap-3">
-        <Button
-          variant="ghost"
-          onClick={onBack}
-          className="rounded-full border border-black/10 text-black/50 hover:text-dark-charcoal"
-        >
-          Back
-        </Button>
-        <Button
-          disabled={!canProceed}
-          onClick={onNext}
-          className="flex-1 rounded-full py-4 text-base font-semibold disabled:opacity-30"
-        >
-          Get my spot
-        </Button>
+        <DSButton intent="secondary" size="md" onClick={onBack}>Back</DSButton>
+        <DSButton intent="primary" size="lg" disabled={!canProceed} onClick={onNext} className="flex-1">Get my spot</DSButton>
       </div>
     </div>
   );

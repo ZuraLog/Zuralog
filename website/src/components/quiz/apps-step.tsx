@@ -13,7 +13,7 @@ import {
   SiPeloton,
   SiGoogle,
 } from '@icons-pack/react-simple-icons';
-import { Button } from '@/components/ui/button';
+import { DSButton } from '@/components/design-system';
 import { cn } from '@/lib/utils';
 
 const BRAND_COLORS: Record<string, string> = {
@@ -85,7 +85,7 @@ export function AppsStep({ selected, onToggle, onNext, canProceed }: AppsStepPro
         <h2 className="text-2xl font-bold text-dark-charcoal md:text-3xl">
           Which fitness apps do you use?
         </h2>
-        <p className="mt-2 text-black/50">Select all that apply.</p>
+        <p className="mt-2 text-[#6B6864]">Select all that apply.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -101,14 +101,14 @@ export function AppsStep({ selected, onToggle, onNext, canProceed }: AppsStepPro
               className={cn(
                 'flex items-center gap-3 rounded-2xl border p-4 text-left transition-all',
                 active
-                  ? 'border-peach/50 bg-peach/10 text-dark-charcoal shadow-[0_0_16px_rgba(207,225,185,0.35)]'
-                  : 'border-black/8 bg-white text-black/50 hover:border-black/20 hover:bg-black/4 hover:text-dark-charcoal shadow-sm',
+                  ? 'border-[#344E41]/40 bg-[#344E41]/8 text-dark-charcoal shadow-[0_0_16px_rgba(52,78,65,0.20)]'
+                  : 'border-[rgba(22,22,24,0.08)] bg-[#DEDAD4] text-[#6B6864] hover:border-black/20 hover:bg-black/4 hover:text-dark-charcoal shadow-sm',
               )}
             >
               <span className="shrink-0"><AppIcon id={app.id} /></span>
               <span className="text-sm font-medium leading-tight">{app.label}</span>
               {active && (
-                <span className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-peach text-xs font-bold text-white">
+                <span className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#344E41] text-xs font-bold text-white">
                   ✓
                 </span>
               )}
@@ -117,13 +117,9 @@ export function AppsStep({ selected, onToggle, onNext, canProceed }: AppsStepPro
         })}
       </div>
 
-      <Button
-        disabled={!canProceed}
-        onClick={onNext}
-        className="w-full rounded-full py-4 text-base font-semibold disabled:opacity-30"
-      >
+      <DSButton intent="primary" size="lg" disabled={!canProceed} onClick={onNext} className="w-full">
         Continue
-      </Button>
+      </DSButton>
     </div>
   );
 }

@@ -224,7 +224,7 @@ export function SupportSection() {
         {/* Back link */}
         <Link
           href="/"
-          className="mb-12 inline-flex items-center gap-1.5 text-xs font-medium text-black/40 transition-colors hover:text-[#2D2D2D]"
+          className="mb-12 inline-flex items-center gap-1.5 text-xs font-medium text-black/40 transition-colors hover:text-[#344E41]"
         >
           <svg
             aria-hidden="true"
@@ -246,12 +246,12 @@ export function SupportSection() {
           transition={{ duration: 0.6 }}
           className="mb-16 text-center"
         >
-          <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#E8F5A8]/60 bg-[#E8F5A8]/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#2D2D2D]/60">
+          <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#344E41]/20 bg-[#344E41]/8 px-3 py-1 text-[11px] font-medium uppercase tracking-widest text-[#344E41]/70">
             Support Us
           </span>
           <h1
-            className="mb-4 mt-3 text-4xl font-bold tracking-tight sm:text-5xl"
-            style={{ color: '#2D2D2D' }}
+            className="mb-4 mt-3 text-[34px] font-bold tracking-tight"
+            style={{ color: '#161618' }}
           >
             Help Us Build the Future
           </h1>
@@ -265,7 +265,7 @@ export function SupportSection() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="mx-auto mt-8 inline-flex flex-col items-center rounded-2xl border border-black/[0.06] bg-white px-8 py-6 shadow-sm"
+            className="mx-auto mt-8 inline-flex flex-col items-center rounded-2xl border border-black/[0.06] bg-[#E8E6E1] px-8 py-6 shadow-sm"
           >
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-black/35">
               Total Funds Raised
@@ -278,7 +278,7 @@ export function SupportSection() {
                 prefix="$"
               />
             ) : (
-              <div className="h-12 w-32 animate-pulse rounded-lg bg-black/5" />
+              <div className="h-12 w-32 animate-pulse rounded-lg bg-[#DEDAD4]" />
             )}
             <p className="mt-2 text-xs text-black/30">
               from {stats?.totalSupporters ?? '—'} supporters
@@ -297,32 +297,24 @@ export function SupportSection() {
           transition={{ duration: 0.5 }}
           className="mb-12"
         >
-          <a
-            href="https://buymeacoffee.com/zuralog"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group relative block overflow-hidden rounded-2xl border border-black/[0.06] bg-white p-8 shadow-sm transition-all hover:shadow-md"
-          >
+          <div className="group relative overflow-hidden rounded-2xl border border-black/[0.06] bg-[#E8E6E1] p-8 shadow-sm transition-all hover:shadow-md">
             {/* Gradient accent bar */}
             <div
               className="pointer-events-none absolute inset-x-0 top-0 h-1 opacity-60"
               style={{
-                background: 'linear-gradient(90deg, #CFE1B9, #D4F291, #E8F5A8)',
+                background: 'linear-gradient(90deg, #344E41, #6B9F74, #9EC98F)',
               }}
             />
 
             <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
               {/* Coffee icon */}
-              <div
-                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl"
-                style={{ background: '#E8F5A8' }}
-              >
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#DEDAD4]">
                 <svg
                   width="32"
                   height="32"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="#2D2D2D"
+                  stroke="#344E41"
                   strokeWidth="1.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -336,7 +328,7 @@ export function SupportSection() {
               </div>
 
               <div className="text-center sm:text-left">
-                <h2 className="mb-2 text-xl font-bold text-[#2D2D2D]">
+                <h2 className="mb-2 text-xl font-bold text-[#161618]">
                   Buy Us a Coffee
                 </h2>
                 <p className="mb-4 text-sm leading-relaxed text-black/50">
@@ -344,9 +336,12 @@ export function SupportSection() {
                   coding sessions, server costs, and our mission to unify health data.
                   Pick any amount — $1, $5, $25 — it all adds up.
                 </p>
-                <span
-                  className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-opacity group-hover:opacity-90"
-                  style={{ background: '#E8F5A8', color: '#2D2D2D' }}
+                <a
+                  href="https://buymeacoffee.com/zuralog"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative isolate overflow-hidden inline-flex items-center justify-center gap-2 font-jakarta rounded-ds-pill h-[44px] px-6 text-[15px] font-semibold text-ds-text-on-sage ds-pattern-drift transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
+                  style={{ backgroundImage: 'var(--ds-pattern-sage)' }}
                 >
                   Support on Buy Me a Coffee
                   <svg
@@ -361,10 +356,10 @@ export function SupportSection() {
                   >
                     <path d="M7 17L17 7M17 7H7M17 7v10" />
                   </svg>
-                </span>
+                </a>
               </div>
             </div>
-          </a>
+          </div>
         </motion.div>
 
         {/* ── Other ways to support ────────────────────────────────── */}
@@ -381,10 +376,12 @@ export function SupportSection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: i * 0.08 }}
-                className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-sm"
+                className="rounded-2xl border border-black/[0.06] bg-[#E8E6E1] p-6 shadow-sm"
               >
-                <div className="mb-3 text-black/30">{method.icon}</div>
-                <h3 className="mb-2 text-base font-semibold text-[#2D2D2D]">
+                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[#DEDAD4] text-[#344E41]">
+                  {method.icon}
+                </div>
+                <h3 className="mb-2 text-base font-semibold text-[#161618]">
                   {method.title}
                 </h3>
                 <p className="mb-4 text-sm leading-relaxed text-black/45">
@@ -401,7 +398,7 @@ export function SupportSection() {
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label={label}
-                        className="flex h-9 w-9 items-center justify-center rounded-full border border-black/[0.08] bg-white text-black/40 transition-all hover:border-[#CFE1B9] hover:bg-[#CFE1B9]/20 hover:text-[#2D2D2D]"
+                        className="flex h-9 w-9 items-center justify-center rounded-full border border-black/[0.08] bg-[#DEDAD4] text-black/40 transition-all hover:border-[#344E41]/30 hover:bg-[#344E41]/8 hover:text-[#344E41]"
                       >
                         <Icon className="h-3.5 w-3.5" />
                       </a>
@@ -413,7 +410,7 @@ export function SupportSection() {
                 {method.cta && (
                   <a
                     href={method.cta.href}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-black/[0.08] px-4 py-1.5 text-xs font-semibold text-black/50 transition-all hover:border-[#CFE1B9] hover:bg-[#CFE1B9]/10 hover:text-[#2D2D2D]"
+                    className="relative isolate overflow-hidden inline-flex items-center justify-center gap-1.5 font-jakarta rounded-ds-pill h-[32px] px-[18px] text-[13px] font-medium bg-transparent border-[1.5px] border-[var(--color-ds-secondary-border)] text-ds-text-primary transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
                   >
                     {method.cta.label}
                     <ArrowRightIcon />

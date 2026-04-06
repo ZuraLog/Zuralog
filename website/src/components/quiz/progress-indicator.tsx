@@ -16,14 +16,14 @@ export function ProgressIndicator({ current, total, pct }: ProgressIndicatorProp
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-black/40">
+        <span className="text-xs font-medium text-[#6B6864]">
           Step {current + 1} of {total}
         </span>
-        <span className="text-xs font-medium text-black/40">{pct}%</span>
+        <span className="text-xs font-medium text-[#6B6864]">{pct}%</span>
       </div>
       <div className="h-1 w-full overflow-hidden rounded-full bg-black/8">
         <motion.div
-          className="h-full rounded-full bg-peach"
+          className="h-full rounded-full bg-[#344E41]"
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
           transition={{ duration: 0.4, ease: 'easeOut' }}

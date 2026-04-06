@@ -940,8 +940,7 @@ export function BentoSection() {
 
                             {/* Waitlist CTA */}
                             <button
-                                className="btn-pattern-light mt-auto w-full text-xs font-bold py-2.5 rounded-xl active:scale-95 transition-all duration-300 hover:scale-[1.02]"
-                                style={{ backgroundColor: "#CFE1B9", color: "#141E18", boxShadow: "0 2px 12px rgba(207, 225, 185, 0.25)" }}
+                                className="btn-pattern-light mt-auto w-full bg-[#344E41] text-[#F0EEE9] text-xs font-semibold py-2.5 rounded-full shadow-[0_2px_12px_rgba(52,78,65,0.25)] active:scale-[0.97] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_4px_20px_rgba(52,78,65,0.4)]"
                                 onClick={() => document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" })}
                             >
                                 <span className="relative z-2">Join the Waitlist →</span>
