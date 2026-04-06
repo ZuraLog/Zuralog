@@ -305,7 +305,11 @@ export function CoachSection() {
             layoutNextLineRef.current = layoutNextLine;
 
             const sectionWidth = sectionRef.current?.offsetWidth ?? window.innerWidth;
-            const vw = sectionWidth;  // font sizes scale with section width, consistent with column geometry
+            // vw drives resolveFontSize() in TYPE_CONFIG. Uses sectionWidth so font
+            // sizes and column geometry share the same measurement source.
+            // Note: TYPE_CONFIG's per-type Math.min() upper bounds also cap font sizes
+            // at design maxima, so fonts won't grow beyond intent even at ultrawide widths.
+            const vw = sectionWidth;
             // Cap at MAX_CONTENT_W so columns stay readable at ultrawide widths.
             const contentW = Math.min(sectionWidth, MAX_CONTENT_W);
             // Horizontal offset from the section's left edge to the content container's left edge.

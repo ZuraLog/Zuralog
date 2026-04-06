@@ -398,17 +398,23 @@ export function TodaySection() {
             ════════════════════════════════════════ */}
             <div
                 id="beat3"
-                ref={beat3Ref}
                 style={{
                     height: '100vh',
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr 1fr',
                     backgroundColor: '#F0EEE9',
-                    maxWidth: '1440px',
-                    margin: '0 auto',
                 }}
-                className="z-10 relative p-6 gap-4"
+                className="z-10 relative"
             >
+                <div
+                    ref={beat3Ref}
+                    style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr 1fr',
+                        maxWidth: '1440px',
+                        margin: '0 auto',
+                        height: '100%',
+                    }}
+                    className="p-6 gap-4"
+                >
                 {/* Left Column (Area 1, 3, 5) */}
                 <div className="flex flex-col justify-center gap-4 h-full">
                     
@@ -504,6 +510,7 @@ export function TodaySection() {
                         </Card>
                     </div>
 
+                </div>
                 </div>
             </div>
 
