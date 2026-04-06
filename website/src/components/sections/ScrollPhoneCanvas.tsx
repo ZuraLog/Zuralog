@@ -36,6 +36,25 @@ let trendsActive = false;
 const CAM_Z = 5;
 const CAM_FOV = 45; // degrees
 
+// ── Viewport-aware world-space helpers ─────────────────────────────────────
+// halfH = tan(fov/2 in radians) × CAM_Z  ← fixed; depends only on FOV + z
+// halfW = halfH × (window.innerWidth / window.innerHeight)  ← scales with aspect
+function computeHalfH(): number {
+    return Math.tan((CAM_FOV / 2) * (Math.PI / 180)) * CAM_Z;
+}
+function computeHalfW(): number {
+    return computeHalfH() * (window.innerWidth / window.innerHeight);
+}
+
+// Named fractions derived from the original 1080p calibration values.
+// Keeping these as named constants means any future visual re-tuning only
+// requires changing the fraction here, not hunting down inline numbers.
+//   Original halfW at 1920×1080 = tan(22.5°)×5×(1920/1080) ≈ 3.682 world units
+const TODAY_RIGHT_FRAC  = 0.679;  // right ~30% column centre  (was posX: 2.5)
+const DATA_LEFT_FRAC    = 0.706;  // left  ~30% column centre  (was posX: -2.6)
+const TRENDS_RIGHT_FRAC = 0.217;  // slightly right of centre  (was posX: 0.8)
+const WAITLIST_Y_EXIT   = 3.5;    // × halfH — clears top of viewport at any resolution
+
 const _q1 = new THREE.Quaternion();
 const _q2 = new THREE.Quaternion();
 const _q3 = new THREE.Quaternion();
@@ -237,6 +256,7 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
                 start: 'top bottom',
                 end: 'top top',
                 scrub: true,
+                invalidateOnRefresh: true,
             },
         }).to(anim, {
             posX: 0.1,
@@ -258,9 +278,10 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
                 start: 'top bottom',
                 end: 'top top',
                 scrub: true,
+                invalidateOnRefresh: true,
             },
         }).to(anim, {
-            posX: 2.5,
+            posX: () => computeHalfW() * TODAY_RIGHT_FRAC,
             posY: 0,
             scale: 0.6,
             rotX: 0,
@@ -277,6 +298,7 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
                 start: 'top bottom',
                 end: 'top top',
                 scrub: true,
+                invalidateOnRefresh: true,
             },
         }).to(anim, {
             texSlide: 3,
@@ -290,6 +312,7 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
                 start: 'top bottom',
                 end: 'top top',
                 scrub: true,
+                invalidateOnRefresh: true,
             },
         }).to(anim, {
             posX: 0,
@@ -309,9 +332,10 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
                 start: 'top bottom',
                 end: 'top top',
                 scrub: true,
+                invalidateOnRefresh: true,
             },
         }).to(anim, {
-            posX: -2.6,
+            posX: () => -computeHalfW() * DATA_LEFT_FRAC,
             posY: 0,
             scale: 0.65,
             rotX: 0,
@@ -328,6 +352,7 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
                 start: 'top bottom',
                 end: 'top top',
                 scrub: true,
+                invalidateOnRefresh: true,
             },
         }).to(anim, {
             posX: 0,
@@ -351,6 +376,7 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
                 end: 'top top',
                 scrub: true,
                 refreshPriority: -1,
+                invalidateOnRefresh: true,
             },
         }).to(anim, {
             posX: 0,
@@ -381,6 +407,7 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
                 end: '+=4800',
                 scrub: true,
                 refreshPriority: -1,
+                invalidateOnRefresh: true,
             },
         })
         .to(anim, { texSlide: 7,  duration: 2, ease: 'none' })   // hold  Streak
@@ -408,9 +435,10 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
                 refreshPriority: -3,
                 onEnter: () => { trendsActive = true; },
                 onLeaveBack: () => { trendsActive = false; },
+                invalidateOnRefresh: true,
             },
         }).to(anim, {
-            posX: 0.8,
+            posX: () => computeHalfW() * TRENDS_RIGHT_FRAC,
             posY: 0,
             scale: 0.7,
             rotX: 0,
@@ -432,9 +460,10 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
                 end: 'top top',
                 scrub: true,
                 refreshPriority: -4,
+                invalidateOnRefresh: true,
             },
         }).to(anim, {
-            posY: 6,
+            posY: () => computeHalfH() * WAITLIST_Y_EXIT,
             ease: 'none',
         });
 
@@ -485,9 +514,16 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
         window.addEventListener('zuralog:coach:mouse', handleCoachMouse);
         window.addEventListener('zuralog:coach:idle', handleCoachIdle);
 
+        // Ensure ScrollTrigger recomputes trigger positions AND re-evaluates
+        // function-based tween values (posX/posY) when the viewport is resized.
+        // GSAP auto-refreshes on resize by default; this is belt-and-suspenders.
+        const onResize = () => { ScrollTrigger.refresh(); };
+        window.addEventListener('resize', onResize);
+
         return () => {
             window.removeEventListener('zuralog:coach:mouse', handleCoachMouse);
             window.removeEventListener('zuralog:coach:idle', handleCoachIdle);
+            window.removeEventListener('resize', onResize);
             if (coachIdleTimer) clearTimeout(coachIdleTimer);
         };
     }, { dependencies: [] });
