@@ -7,7 +7,11 @@ if (typeof window !== 'undefined') {
     gsap.registerPlugin(ScrollTrigger);
 }
 
+// 3.5 timeline units × ~857 px per unit ≈ 3 000 px of pinned scroll.
+// Last animation starts at 2.5, runs 0.4, plus 0.6 hold = 3.5 units total.
 const TOTAL_SCROLL = 3000;
+
+const CREAM = '#F0EEE9';
 
 interface LineConfig {
     text: string;
@@ -95,7 +99,7 @@ export function TrendsSection() {
             ref={sectionRef}
             id="trends-section"
             className="relative w-full"
-            style={{ height: '100vh', backgroundColor: '#F0EEE9' }}
+            style={{ height: '100vh', backgroundColor: CREAM }}
         >
             <div
                 style={{
@@ -106,11 +110,12 @@ export function TrendsSection() {
                 }}
             >
                 {/* Left column: right-aligned text */}
-                <div style={{ paddingRight: '3vw' }}>
+                <div style={{ paddingRight: '3vw', overflow: 'hidden' }}>
                     {LINES.map((line, i) => (
                         <span
                             key={line.text}
                             ref={(el) => { lineRefs.current[i] = el; }}
+                            className={line.isPatterned ? 'ds-pattern-text' : undefined}
                             style={{
                                 display: 'block',
                                 textAlign: 'right',
@@ -121,15 +126,7 @@ export function TrendsSection() {
                                 letterSpacing: '-0.045em',
                                 whiteSpace: 'nowrap',
                                 ...(line.isPatterned
-                                    ? {
-                                        backgroundImage: 'var(--ds-pattern-sage)',
-                                        backgroundSize: '300px auto',
-                                        backgroundRepeat: 'repeat',
-                                        backgroundClip: 'text',
-                                        WebkitBackgroundClip: 'text',
-                                        color: 'transparent',
-                                        animation: 'dsPatternDrift 45s linear infinite',
-                                    } as React.CSSProperties
+                                    ? { backgroundImage: 'var(--ds-pattern-sage)' }
                                     : { color: '#141E18' }),
                             }}
                         >
