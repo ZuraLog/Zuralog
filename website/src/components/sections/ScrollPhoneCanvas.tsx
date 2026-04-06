@@ -27,6 +27,11 @@ const anim = {
 // so the phone stays pixel-aligned to the cursor.
 let coachTracking = false;
 
+// Set to true once the user reaches TrendsSection.
+// Blocks the coach-idle handler from snapping posX back to 0 after the phone
+// has been handed off to TrendsSection's fixed right-column position.
+let trendsActive = false;
+
 // Camera constants — must match the <Canvas camera> props below.
 const CAM_Z   = 5;
 const CAM_FOV = 45; // degrees
@@ -316,15 +321,20 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
         // TrendsSection: phone moves to right 25%, returns to portrait.
         // posX: 1.7 — camera z=5, fov=45 → half-width ≈ 2.07 world units,
         // so 1.7 sits the phone centred in the right 50% column.
-        // refreshPriority: -2 — recalculates after both CoachSection (async, priority 0)
-        // and ProgressSection (priority -1) have settled their pin spacers.
+        // refreshPriority: -3 — must fire AFTER TrendsSection's own pin spacer
+        // (refreshPriority -2) is settled, so this trigger reads the correct
+        // scroll position for #trends-section.
+        // onEnter/onLeaveBack — set trendsActive so the coach-idle handler
+        // cannot snap posX back to 0 while the phone belongs to TrendsSection.
         gsap.timeline({
             scrollTrigger: {
                 trigger: '#trends-section',
                 start: 'top bottom',
                 end: 'top top',
                 scrub: true,
-                refreshPriority: -2,
+                refreshPriority: -3,
+                onEnter:     () => { trendsActive = true;  },
+                onLeaveBack: () => { trendsActive = false; },
             },
         }).to(anim, {
             posX: 1.7,
@@ -365,6 +375,9 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
 
         const handleCoachIdle = () => {
             coachTracking = false;
+
+            // TrendsSection (or later) owns the phone — do not reset posX to 0.
+            if (trendsActive) return;
 
             // Idle position: dead center (posX:0, posY:0 = camera look-at origin).
             gsap.to(anim, {
