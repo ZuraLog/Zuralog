@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { usePostHog } from 'posthog-js/react';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { DSButton, TextField } from '@/components/design-system';
+import { useSoundContext } from "@/components/design-system/interactions/sound-provider";
 import type { SuccessData } from '@/hooks/use-quiz';
 
 const schema = z.object({
@@ -27,6 +28,7 @@ interface WaitlistFormProps {
 }
 
 export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormProps) {
+  const { playSound } = useSoundContext();
   const [loading, setLoading] = useState(false);
   const [urlRef, setUrlRef] = useState('');
   const recaptchaRef = useRef<ReCAPTCHA>(null);
@@ -51,6 +53,7 @@ export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormPro
   }, [emailValue, onEmailChange]);
 
   async function onSubmit(data: FormData) {
+    playSound("click");
     setLoading(true);
     try {
       const res = await fetch('/api/waitlist/join', {
@@ -81,6 +84,7 @@ export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormPro
         });
       }
 
+      playSound("success");
       onSignupSuccess({
         position: json.position,
         referralCode: json.referralCode,

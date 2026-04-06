@@ -3,9 +3,11 @@
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { DSButton } from '@/components/design-system';
+import { useSoundContext } from "@/components/design-system/interactions/sound-provider";
 
 export function HeroText() {
     const containerRef = useRef<HTMLDivElement>(null);
+    const { playSound } = useSoundContext();
 
     useEffect(() => {
         let handleMouseMove: (e: MouseEvent) => void;
@@ -66,7 +68,10 @@ export function HeroText() {
                     intent="primary"
                     size="lg"
                     className="hero-cta pointer-events-auto mt-8 md:mt-12"
-                    onClick={() => document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" })}
+                    onClick={() => {
+                        playSound("click");
+                        document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" });
+                    }}
                 >
                     Waitlist Now
                 </DSButton>
