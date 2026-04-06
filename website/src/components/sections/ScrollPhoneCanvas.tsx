@@ -153,10 +153,13 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
     );
 
     // Fade the canvas in once assets are ready.
+    // gsap.set() claims ownership of opacity before gsap.to() runs,
+    // so React re-renders cannot reset it back to the CSS initial value.
     useEffect(() => {
         if (!scene) return;
         const wrapper = wrapperRef.current;
         if (!wrapper) return;
+        gsap.set(wrapper, { opacity: 0 });
         gsap.to(wrapper, { opacity: 1, duration: 2.4, delay: 0.2, ease: 'power1.inOut' });
     }, [scene, wrapperRef]);
 
@@ -429,7 +432,7 @@ export function ScrollPhoneCanvas() {
         <div
             ref={wrapperRef}
             aria-hidden="true"
-            className="pointer-events-none"
+            className="pointer-events-none opacity-0"
             style={{
                 position: 'fixed',
                 top: 0,
@@ -437,7 +440,6 @@ export function ScrollPhoneCanvas() {
                 width: '100%',
                 height: '100vh',
                 zIndex: 40,
-                opacity: 0,
             }}
         >
             <Canvas
