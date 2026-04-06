@@ -33,7 +33,7 @@ export default function SupportPage() {
   return (
     <>
       <PageBackground />
-      <div className="relative flex min-h-screen flex-col">
+      <div className="relative flex min-h-screen flex-col font-jakarta">
         <FloatingNav />
         <main className="flex-1">
           <SupportSection />
