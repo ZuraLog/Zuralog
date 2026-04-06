@@ -14,6 +14,7 @@ import { WaitlistStatsBar } from '@/components/waitlist-stats-bar';
 import { WaitlistParticles } from '@/components/waitlist-particles';
 import { WaitlistLeaderboard } from '@/components/waitlist-leaderboard';
 import { Toaster } from 'sonner';
+import { Card } from '@/components/design-system';
 
 export function WaitlistSection() {
   const [emailValue, setEmailValue] = useState('');
@@ -22,7 +23,8 @@ export function WaitlistSection() {
   return (
     <section
       id="waitlist"
-      className="relative min-h-screen py-16 md:py-24 lg:py-32 overflow-hidden"
+      className="relative min-h-screen py-16 md:py-24 lg:py-32 overflow-hidden font-jakarta"
+      style={{ backgroundColor: '#F0EEE9' }}
     >
       <Toaster position="top-center" richColors />
 
@@ -75,7 +77,9 @@ export function WaitlistSection() {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="w-full lg:max-w-xl"
           >
-            <QuizContainer onEmailChange={handleEmailChange} />
+            <Card elevation="standard" noTilt className="w-full">
+              <QuizContainer onEmailChange={handleEmailChange} />
+            </Card>
           </motion.div>
 
           {/* Leaderboard (right) */}

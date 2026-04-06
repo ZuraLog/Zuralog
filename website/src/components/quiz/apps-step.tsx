@@ -13,7 +13,7 @@ import {
   SiPeloton,
   SiGoogle,
 } from '@icons-pack/react-simple-icons';
-import { Button } from '@/components/ui/button';
+import { DSButton } from '@/components/design-system';
 import { cn } from '@/lib/utils';
 
 const BRAND_COLORS: Record<string, string> = {
@@ -117,13 +117,9 @@ export function AppsStep({ selected, onToggle, onNext, canProceed }: AppsStepPro
         })}
       </div>
 
-      <Button
-        disabled={!canProceed}
-        onClick={onNext}
-        className="w-full rounded-full py-4 text-base font-semibold disabled:opacity-30"
-      >
+      <DSButton intent="primary" size="lg" disabled={!canProceed} onClick={onNext} className="w-full">
         Continue
-      </Button>
+      </DSButton>
     </div>
   );
 }

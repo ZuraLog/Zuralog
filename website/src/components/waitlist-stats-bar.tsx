@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { WaitlistCounter } from '@/components/waitlist-counter';
 import { createClient } from '@/lib/supabase/client';
+import { Card, DSSkeleton } from '@/components/design-system';
 
 interface Stats {
   totalSignups: number;
@@ -119,10 +120,7 @@ export function WaitlistStatsBar() {
     return (
       <div className="mb-12 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            className="h-[120px] animate-pulse rounded-2xl bg-[#DEDAD4]/50 border border-[rgba(22,22,24,0.08)]"
-          />
+          <DSSkeleton key={i} className="h-[120px]" />
         ))}
       </div>
     );
@@ -205,43 +203,48 @@ export function WaitlistStatsBar() {
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: i * 0.12, ease: 'easeOut' }}
-          className={`group relative overflow-hidden rounded-2xl border border-[rgba(22,22,24,0.08)] bg-[#DEDAD4] p-5 text-center shadow-sm ${card.urgent ? 'waitlist-urgent' : ''}`}
         >
-          {/* Ambient glow behind icon */}
-          <div
-            className="pointer-events-none absolute left-1/2 top-0 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-30 blur-2xl transition-opacity group-hover:opacity-50"
-            style={{ backgroundColor: card.color }}
-          />
+          <Card
+            elevation="data"
+            noTilt
+            className={`group relative text-center ${card.urgent ? 'waitlist-urgent' : ''}`}
+          >
+            {/* Ambient glow behind icon */}
+            <div
+              className="pointer-events-none absolute left-1/2 top-0 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-30 blur-2xl transition-opacity group-hover:opacity-50"
+              style={{ backgroundColor: card.color }}
+            />
 
-          {/* Icon */}
-          <div className="mb-3 transition-colors" style={{ color: card.color }}>
-            {card.icon}
-          </div>
+            {/* Icon */}
+            <div className="mb-3 transition-colors" style={{ color: card.color }}>
+              {card.icon}
+            </div>
 
-          {/* Counter */}
-          <WaitlistCounter value={card.value} delay={card.delay} sizeClass="text-3xl sm:text-2xl" prefix={card.prefix} />
+            {/* Counter */}
+            <WaitlistCounter value={card.value} delay={card.delay} sizeClass="text-3xl sm:text-2xl" prefix={card.prefix} />
 
-          {/* Label */}
-          <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#6B6864]">
-            {card.label}
-          </p>
+            {/* Label */}
+            <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#6B6864]">
+              {card.label}
+            </p>
 
-          {/* Support Us button — only shown when founding spots sold out */}
-          {'showSupportButton' in card && card.showSupportButton && (
-            <a
-              href="/support"
-              className="mt-3 inline-flex items-center justify-center rounded-full px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider transition-all hover:opacity-90"
-              style={{ background: '#344E41', color: '#F0EEE9' }}
-            >
-              Support Us
-            </a>
-          )}
+            {/* Support Us button — only shown when founding spots sold out */}
+            {'showSupportButton' in card && card.showSupportButton && (
+              <a
+                href="/support"
+                className="mt-3 inline-flex items-center justify-center rounded-full px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider transition-all hover:opacity-90"
+                style={{ background: '#344E41', color: '#F0EEE9' }}
+              >
+                Support Us
+              </a>
+            )}
 
-          {/* Bottom accent line */}
-          <div
-            className="absolute bottom-0 left-1/2 h-[2px] w-12 -translate-x-1/2 opacity-40 rounded-full"
-            style={{ background: `linear-gradient(90deg, transparent, ${card.color}, transparent)` }}
-          />
+            {/* Bottom accent line */}
+            <div
+              className="absolute bottom-0 left-1/2 h-[2px] w-12 -translate-x-1/2 opacity-40 rounded-full"
+              style={{ background: `linear-gradient(90deg, transparent, ${card.color}, transparent)` }}
+            />
+          </Card>
         </motion.div>
       ))}
     </div>

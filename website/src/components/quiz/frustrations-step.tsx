@@ -5,7 +5,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
+import { DSButton } from '@/components/design-system';
 import { cn } from '@/lib/utils';
 
 const FRUSTRATIONS = [
@@ -65,20 +65,8 @@ export function FrustrationsStep({ selected, onToggle, onNext, onBack, canProcee
       </div>
 
       <div className="flex gap-3">
-        <Button
-          variant="ghost"
-          onClick={onBack}
-          className="rounded-full border border-[rgba(22,22,24,0.15)] text-[#6B6864] hover:text-dark-charcoal"
-        >
-          Back
-        </Button>
-        <Button
-          disabled={!canProceed}
-          onClick={onNext}
-          className="flex-1 rounded-full py-4 text-base font-semibold disabled:opacity-30"
-        >
-          Continue
-        </Button>
+        <DSButton intent="secondary" size="md" onClick={onBack}>Back</DSButton>
+        <DSButton intent="primary" size="lg" disabled={!canProceed} onClick={onNext} className="flex-1">Continue</DSButton>
       </div>
     </div>
   );

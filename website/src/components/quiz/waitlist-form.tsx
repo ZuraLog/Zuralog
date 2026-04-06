@@ -12,8 +12,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { usePostHog } from 'posthog-js/react';
 import ReCAPTCHA from 'react-google-recaptcha';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { DSButton, TextField } from '@/components/design-system';
 import type { SuccessData } from '@/hooks/use-quiz';
 
 const schema = z.object({
@@ -115,28 +114,24 @@ export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormPro
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Input
-            type="email"
-            placeholder="your@email.com"
-            autoComplete="email"
-            className="h-14 rounded-2xl border-[rgba(22,22,24,0.10)] bg-[#DEDAD4] px-5 text-base placeholder:text-black/30 focus:border-[#344E41]/40 focus:ring-2 focus:ring-[#344E41]/15 shadow-sm"
-            {...register('email')}
-          />
-          {errors.email && (
-            <p className="text-sm text-red-500">{errors.email.message}</p>
-          )}
-        </div>
+        <TextField
+          type="email"
+          placeholder="your@email.com"
+          autoComplete="email"
+          fullWidth
+          className="h-14"
+          error={errors.email?.message}
+          {...register('email')}
+        />
 
-        <div className="flex flex-col gap-1.5">
-          <Input
-            type="text"
-            placeholder="Referral code (optional)"
-            defaultValue={urlRef}
-            className="h-12 rounded-2xl border-[rgba(22,22,24,0.10)] bg-[#DEDAD4] px-5 text-sm placeholder:text-black/30 shadow-sm"
-            {...register('referralCode')}
-          />
-        </div>
+        <TextField
+          type="text"
+          placeholder="Referral code (optional)"
+          defaultValue={urlRef}
+          fullWidth
+          className="h-12"
+          {...register('referralCode')}
+        />
 
         <div className="flex justify-center">
           <ReCAPTCHA
@@ -150,17 +145,16 @@ export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormPro
           />
         </div>
 
-        <Button
+        <DSButton
           type="submit"
-          disabled={loading || !captchaToken}
-          className={`h-14 w-full rounded-full text-base font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 ${
-            loading
-              ? 'animate-pulse shadow-[0_0_30px_rgba(52,78,65,0.25)]'
-              : 'shadow-[0_0_20px_rgba(52,78,65,0.15)]'
-          }`}
+          intent="primary"
+          size="lg"
+          disabled={!captchaToken}
+          loading={loading}
+          className="w-full"
         >
-          {loading ? 'Joining…' : 'Join & Tell Us About Yourself →'}
-        </Button>
+          Join & Tell Us About Yourself →
+        </DSButton>
       </form>
 
       <p className="text-center text-xs text-[#6B6864]">

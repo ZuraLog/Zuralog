@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { Card } from '@/components/design-system';
 
 interface LeaderboardEntry {
   rank: number;
@@ -78,7 +79,7 @@ export function WaitlistLeaderboard() {
       </div>
 
       {/* Leaderboard card */}
-      <div className="overflow-hidden rounded-2xl border border-[rgba(22,22,24,0.08)] bg-[#DEDAD4] shadow-sm">
+      <Card elevation="standard" noTilt className="overflow-hidden">
         {entries.map((entry, i) => {
           const isTop3 = entry.rank <= 3;
           const accentColor = RANK_COLORS[entry.rank] ?? '#E8F5A8';
@@ -137,7 +138,7 @@ export function WaitlistLeaderboard() {
             </motion.div>
           );
         })}
-      </div>
+      </Card>
 
       {/* CTA text */}
       <p className="mt-3 text-center text-[11px] text-[#6B6864]">
