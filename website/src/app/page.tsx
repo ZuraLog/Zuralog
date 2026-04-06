@@ -1,6 +1,5 @@
 import { FloatingNav } from "@/components/layout/FloatingNav";
 import { Footer } from "@/components/layout/Footer";
-import { ScrollProgress } from "@/components/layout/ScrollProgress";
 import { HeroSection } from "@/components/sections/HeroSection";
 import { IntegrationsSection } from "@/components/sections/IntegrationsSection";
 import { TodaySection } from "@/components/sections/TodaySection";
@@ -21,7 +20,6 @@ export default function Home() {
                 <PageBackground />
                 <HashScrollHandler />
                 <main className="relative min-h-screen">
-                    <ScrollProgress />
                     <FloatingNav />
                     <HeroSection />
                     <IntegrationsSection />
