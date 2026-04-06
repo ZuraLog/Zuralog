@@ -656,7 +656,7 @@ export function LegalPageLayout({
         </div>
       </div>
 
-      <div className="relative flex min-h-screen flex-col">
+      <div className="relative flex min-h-screen flex-col font-jakarta">
         <FloatingNav />
 
         <main ref={mainRef} className="flex-1 pt-28 pb-24">
