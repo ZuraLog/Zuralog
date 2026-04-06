@@ -109,7 +109,7 @@ export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormPro
         <h2 className="text-2xl font-bold text-dark-charcoal md:text-3xl">
           Secure your spot
         </h2>
-        <p className="mt-2 text-black/50">
+        <p className="mt-2 text-[#6B6864]">
           Enter your email to join — then answer 3 quick questions so we can personalise your experience.
         </p>
       </div>
@@ -120,7 +120,7 @@ export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormPro
             type="email"
             placeholder="your@email.com"
             autoComplete="email"
-            className="h-14 rounded-2xl border-black/10 bg-white px-5 text-base placeholder:text-black/30 focus:border-peach/50 focus:ring-2 focus:ring-peach/20 shadow-sm"
+            className="h-14 rounded-2xl border-[rgba(22,22,24,0.10)] bg-[#DEDAD4] px-5 text-base placeholder:text-black/30 focus:border-[#344E41]/40 focus:ring-2 focus:ring-[#344E41]/15 shadow-sm"
             {...register('email')}
           />
           {errors.email && (
@@ -133,7 +133,7 @@ export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormPro
             type="text"
             placeholder="Referral code (optional)"
             defaultValue={urlRef}
-            className="h-12 rounded-2xl border-black/10 bg-white px-5 text-sm placeholder:text-black/30 shadow-sm"
+            className="h-12 rounded-2xl border-[rgba(22,22,24,0.10)] bg-[#DEDAD4] px-5 text-sm placeholder:text-black/30 shadow-sm"
             {...register('referralCode')}
           />
         </div>
@@ -155,15 +155,15 @@ export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormPro
           disabled={loading || !captchaToken}
           className={`h-14 w-full rounded-full text-base font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 ${
             loading
-              ? 'animate-pulse shadow-[0_0_30px_rgba(207,225,185,0.45)]'
-              : 'shadow-[0_0_20px_rgba(207,225,185,0.30)]'
+              ? 'animate-pulse shadow-[0_0_30px_rgba(52,78,65,0.25)]'
+              : 'shadow-[0_0_20px_rgba(52,78,65,0.15)]'
           }`}
         >
           {loading ? 'Joining…' : 'Join & Tell Us About Yourself →'}
         </Button>
       </form>
 
-      <p className="text-center text-xs text-black/30">
+      <p className="text-center text-xs text-[#6B6864]">
         No spam. Unsubscribe anytime. 30 seconds to complete.
       </p>
 
@@ -172,7 +172,7 @@ export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormPro
         initial={{ opacity: 0 }}
         animate={{ opacity: [0, 0.7, 0, 0.5, 0, 0.8, 0] }}
         transition={{ delay: 3, duration: 2.5, repeat: Infinity, repeatDelay: 2.5 }}
-        className="text-center font-mono text-[11px] tracking-widest text-peach/60 select-none"
+        className="text-center font-mono text-[11px] tracking-widest text-[#344E41]/60 select-none"
       >
         psst... try connect4
       </motion.p>

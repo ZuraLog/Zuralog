@@ -69,11 +69,11 @@ export function CompletionStep({ data }: CompletionStepProps) {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.15, ease: 'easeOut' }}
-          className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-peach/20 bg-gradient-to-b from-white to-cream p-6 sm:p-8 shadow-[0_8px_40px_rgba(207,225,185,0.30)]"
+          className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-[#344E41]/15 bg-gradient-to-b from-[#DEDAD4] to-[#F0EEE9] p-6 sm:p-8 shadow-[0_8px_40px_rgba(52,78,65,0.12)]"
         >
           {/* Ambient peach glow */}
-          <div className="pointer-events-none absolute -top-20 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full bg-peach/20 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-16 left-1/2 h-32 w-32 -translate-x-1/2 rounded-full bg-peach/10 blur-3xl" />
+          <div className="pointer-events-none absolute -top-20 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full bg-[#344E41]/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-16 left-1/2 h-32 w-32 -translate-x-1/2 rounded-full bg-[#344E41]/5 blur-3xl" />
 
           {/* Logo + branding */}
           <div className="relative mb-6 flex items-center justify-center gap-2">
@@ -90,11 +90,11 @@ export function CompletionStep({ data }: CompletionStepProps) {
               transition={{ delay: 0.3 }}
               className="relative mb-4 flex justify-center"
             >
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-peach/30 bg-peach/10 px-3 py-1">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="text-peach">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#344E41]/25 bg-[#344E41]/8 px-3 py-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="text-[#344E41]">
                   <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6L12 2z" fill="currentColor" />
                 </svg>
-                <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-peach-dim">
+                <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#344E41]">
                   Founding Member
                 </span>
               </span>
@@ -107,7 +107,7 @@ export function CompletionStep({ data }: CompletionStepProps) {
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}
-              className="text-6xl font-black tracking-tight text-peach sm:text-7xl"
+              className="text-6xl font-black tracking-tight text-[#344E41] sm:text-7xl"
             >
               #{data.position}
             </motion.p>
@@ -117,7 +117,7 @@ export function CompletionStep({ data }: CompletionStepProps) {
           {/* Divider */}
           <div className="my-5 flex items-center gap-3">
             <div className="h-px flex-1 bg-gradient-to-r from-transparent via-black/10 to-transparent" />
-            <div className="h-1 w-1 rounded-full bg-peach/40" />
+            <div className="h-1 w-1 rounded-full bg-[#344E41]/30" />
             <div className="h-px flex-1 bg-gradient-to-r from-transparent via-black/10 to-transparent" />
           </div>
 
@@ -138,11 +138,11 @@ export function CompletionStep({ data }: CompletionStepProps) {
 
           {/* Watermark */}
           <div className="mt-6 flex items-center justify-center gap-1.5 opacity-30">
-            <div className="h-px w-6 bg-peach/50" />
-            <span className="text-[9px] font-medium uppercase tracking-[0.2em] text-peach-dim">
+            <div className="h-px w-6 bg-[#344E41]/30" />
+            <span className="text-[9px] font-medium uppercase tracking-[0.2em] text-[#344E41]">
               zuralog.com
             </span>
-            <div className="h-px w-6 bg-peach/50" />
+            <div className="h-px w-6 bg-[#344E41]/30" />
           </div>
         </motion.div>
 
@@ -179,7 +179,7 @@ export function CompletionStep({ data }: CompletionStepProps) {
 
           <Button
             onClick={copyLink}
-            className="group w-full rounded-xl bg-black/4 py-5 font-medium text-black/60 transition-all hover:bg-peach/10 hover:text-peach-dim"
+            className="group w-full rounded-xl bg-black/4 py-5 font-medium text-black/60 transition-all hover:bg-[#344E41]/10 hover:text-[#344E41]"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="mr-2.5 opacity-60 group-hover:opacity-100">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
@@ -191,7 +191,7 @@ export function CompletionStep({ data }: CompletionStepProps) {
           {'share' in (typeof navigator !== 'undefined' ? navigator : {}) && (
             <Button
               onClick={shareNative}
-              className="group w-full rounded-xl bg-peach/10 py-5 font-semibold text-peach-dim transition-all hover:bg-peach/20"
+              className="group w-full rounded-xl bg-[#344E41]/8 py-5 font-semibold text-[#344E41] transition-all hover:bg-[#344E41]/15"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2.5">
                 <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
