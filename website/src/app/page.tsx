@@ -8,6 +8,7 @@ import { DataSection } from "@/components/sections/DataSection";
 import { CoachSection } from "@/components/sections/CoachSection";
 import { ProgressSection } from "@/components/sections/ProgressSection";
 import { TrendsSection } from "@/components/sections/TrendsSection";
+import { WaitlistSection } from "@/components/sections/WaitlistSection";
 import { ClientShellGate } from "@/components/ClientShellGate";
 import { PageBackground } from "@/components/PageBackground";
 import { HashScrollHandler } from "@/components/HashScrollHandler";
@@ -27,6 +28,7 @@ export default function Home() {
                 <CoachSection />
                 <ProgressSection />
                 <TrendsSection />
+                <WaitlistSection />
             </main>
             <Footer />
             {/* ClientShellGate skips the 3D phone on mobile (<768px) to avoid
