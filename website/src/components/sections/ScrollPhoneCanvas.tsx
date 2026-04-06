@@ -346,6 +346,24 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
             ease: 'none',
         });
 
+        // WaitlistSection: phone slides off the top as the section enters.
+        // Camera half-height ≈ 2.07 world units — posY 6 clears the phone fully.
+        // scrub reverses naturally when the user scrolls back up into TrendsSection.
+        // refreshPriority: -4 — after all pin spacers (CoachSection 0,
+        // ProgressSection -1, TrendsSection -2, TrendsSection phone trigger -3).
+        gsap.timeline({
+            scrollTrigger: {
+                trigger: '#waitlist',
+                start: 'top bottom',
+                end: 'top top',
+                scrub: true,
+                refreshPriority: -4,
+            },
+        }).to(anim, {
+            posY: 6,
+            ease: 'none',
+        });
+
         // -- Coach section mouse tracking --
         let coachIdleTimer: ReturnType<typeof setTimeout> | null = null;
 
