@@ -173,7 +173,7 @@ export function SiteFooter() {
                                     aria-label="Zuralog home"
                                 >
                                     <Image
-                                        src="/logo/ZuraLog-Sage.svg"
+                                        src="/logo/ZuraLog-Forest-Green.svg"
                                         alt="Zuralog logo"
                                         width={26}
                                         height={26}

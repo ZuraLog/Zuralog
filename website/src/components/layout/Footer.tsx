@@ -110,7 +110,7 @@ export function Footer() {
               aria-label="ZuraLog home"
               onMouseEnter={handleHover}
             >
-              <img src="/logo/ZuraLog-Logo-Main.png" alt="ZuraLog logo" width={28} height={28} className="object-contain" />
+              <img src="/logo/ZuraLog-Forest-Green.svg" alt="ZuraLog logo" width={28} height={28} className="object-contain" />
               <span className="text-sm font-semibold tracking-tight" style={{ color: "#344E41" }}>
                 ZuraLog
               </span>

@@ -167,7 +167,7 @@ export function FloatingNav() {
                     aria-label="ZuraLog home"
                 >
                     <Image
-                        src="/logo/ZuraLog-Logo-Main.png"
+                        src="/logo/ZuraLog-Forest-Green.svg"
                         alt="ZuraLog"
                         width={20}
                         height={20}

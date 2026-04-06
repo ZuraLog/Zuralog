@@ -95,7 +95,7 @@ export function Navbar() {
             aria-label="ZuraLog home"
             onMouseEnter={handleLinkHover}
           >
-            <img src="/logo/ZuraLog-Sage.svg" alt="ZuraLog" width={22} height={22} className="object-contain" />
+            <img src="/logo/ZuraLog-Forest-Green.svg" alt="ZuraLog" width={22} height={22} className="object-contain" />
             <span className="font-semibold tracking-tight" style={{ color: "#344E41", fontSize: "13px" }}>
               ZuraLog
             </span>
