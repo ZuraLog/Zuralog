@@ -119,7 +119,7 @@ export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormPro
           placeholder="your@email.com"
           autoComplete="email"
           fullWidth
-          className="h-14"
+          className="bg-[#F0EEE9] h-14 w-full rounded-[14px]"
           error={errors.email?.message}
           {...register('email')}
         />
@@ -129,7 +129,7 @@ export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormPro
           placeholder="Referral code (optional)"
           defaultValue={urlRef}
           fullWidth
-          className="h-12"
+          className="bg-[#F0EEE9] h-12 w-full rounded-[14px]"
           {...register('referralCode')}
         />
 

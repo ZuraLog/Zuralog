@@ -4,18 +4,12 @@
  */
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import dynamic from 'next/dynamic';
-import { Card, DSButton } from '@/components/design-system';
+import { DSButton, sageConfetti } from '@/components/design-system';
 import { getReferralUrl, buildShareText } from '@/lib/referral';
 import type { SuccessData } from '@/hooks/use-quiz';
-
-const ConfettiBurst = dynamic(
-  () => import('@/components/confetti-burst').then((m) => m.ConfettiBurst),
-  { ssr: false },
-);
 
 interface CompletionStepProps {
   data: SuccessData;
@@ -26,6 +20,10 @@ export function CompletionStep({ data }: CompletionStepProps) {
   const { twitter, generic } = buildShareText(data.position, referralUrl);
   const isFoundingMember = data.tier === 'founding_30' || data.tier === 'founding';
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    sageConfetti();
+  }, []);
 
   function copyLink() {
     navigator.clipboard.writeText(referralUrl).then(() => {
@@ -57,7 +55,6 @@ export function CompletionStep({ data }: CompletionStepProps) {
 
   return (
     <>
-      <ConfettiBurst trigger={true} />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -71,7 +68,7 @@ export function CompletionStep({ data }: CompletionStepProps) {
           transition={{ duration: 0.6, delay: 0.15, ease: 'easeOut' }}
           className="w-full max-w-sm"
         >
-          <Card elevation="standard" noTilt>
+          <div className="relative overflow-hidden rounded-[24px] border border-[rgba(52,78,65,0.08)] bg-[#E8E6E1] p-6 shadow-sm sm:p-8">
 
           {/* Logo + branding */}
           <div className="relative mb-6 flex items-center justify-center gap-2">
@@ -142,7 +139,7 @@ export function CompletionStep({ data }: CompletionStepProps) {
             </span>
             <div className="h-px w-6 bg-[#344E41]/30" />
           </div>
-          </Card>
+          </div>
         </motion.div>
 
         {/* Share Actions */}

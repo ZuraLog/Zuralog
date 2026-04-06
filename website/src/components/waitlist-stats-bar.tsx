@@ -13,7 +13,6 @@ import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { WaitlistCounter } from '@/components/waitlist-counter';
 import { createClient } from '@/lib/supabase/client';
-import { Card, DSSkeleton } from '@/components/design-system';
 
 interface Stats {
   totalSignups: number;
@@ -120,7 +119,7 @@ export function WaitlistStatsBar() {
     return (
       <div className="mb-12 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         {[0, 1, 2].map((i) => (
-          <DSSkeleton key={i} className="h-[120px]" />
+          <div key={i} className="h-[120px] animate-pulse rounded-[20px] bg-[#E8E6E1] border border-[rgba(52,78,65,0.06)]" />
         ))}
       </div>
     );
@@ -204,11 +203,7 @@ export function WaitlistStatsBar() {
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: i * 0.12, ease: 'easeOut' }}
         >
-          <Card
-            elevation="data"
-            noTilt
-            className={`group relative text-center ${card.urgent ? 'waitlist-urgent' : ''}`}
-          >
+          <div className={`relative overflow-visible rounded-[20px] border border-[rgba(52,78,65,0.08)] bg-[#E8E6E1] p-5 text-center shadow-sm group ${card.urgent ? 'waitlist-urgent' : ''}`}>
             {/* Ambient glow behind icon */}
             <div
               className="pointer-events-none absolute left-1/2 top-0 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-30 blur-2xl transition-opacity group-hover:opacity-50"
@@ -244,7 +239,7 @@ export function WaitlistStatsBar() {
               className="absolute bottom-0 left-1/2 h-[2px] w-12 -translate-x-1/2 opacity-40 rounded-full"
               style={{ background: `linear-gradient(90deg, transparent, ${card.color}, transparent)` }}
             />
-          </Card>
+          </div>
         </motion.div>
       ))}
     </div>

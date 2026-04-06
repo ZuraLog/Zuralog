@@ -43,7 +43,7 @@ const EXPO_OUT: [number, number, number, number] = [0.16, 1, 0.3, 1];
 ───────────────────────────────────────────────────────────── */
 
 interface DropdownItem {
-    icon: React.ElementType;
+    icon: React.ComponentType<{ size?: number; className?: string }>;
     label: string;
     description: string;
 }
@@ -167,7 +167,7 @@ export function FloatingNav() {
                     aria-label="ZuraLog home"
                 >
                     <Image
-                        src="/logo/ZuraLog-Sage.svg"
+                        src="/logo/ZuraLog-Logo-Main.png"
                         alt="ZuraLog"
                         width={20}
                         height={20}

@@ -14,7 +14,6 @@ import { WaitlistStatsBar } from '@/components/waitlist-stats-bar';
 import { WaitlistParticles } from '@/components/waitlist-particles';
 import { WaitlistLeaderboard } from '@/components/waitlist-leaderboard';
 import { Toaster } from 'sonner';
-import { Card } from '@/components/design-system';
 
 export function WaitlistSection() {
   const [emailValue, setEmailValue] = useState('');
@@ -77,9 +76,9 @@ export function WaitlistSection() {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="w-full lg:max-w-xl"
           >
-            <Card elevation="standard" noTilt className="w-full">
+            <div className="w-full rounded-[24px] border border-[rgba(52,78,65,0.08)] bg-[#E8E6E1] p-6 shadow-sm lg:p-8">
               <QuizContainer onEmailChange={handleEmailChange} />
-            </Card>
+            </div>
           </motion.div>
 
           {/* Leaderboard (right) */}
