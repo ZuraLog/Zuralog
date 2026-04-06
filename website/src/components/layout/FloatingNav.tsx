@@ -18,6 +18,8 @@ import {
     Shield,
     FileText,
     BookOpen,
+    Volume2,
+    VolumeX,
 } from "lucide-react";
 import { DSButton } from "@/components/design-system";
 import { useSoundContext } from "@/components/design-system/interactions/sound-provider";
@@ -192,7 +194,7 @@ function NavTrigger({ label, href, items }: NavTriggerProps) {
 ───────────────────────────────────────────────────────────── */
 
 export function FloatingNav() {
-    const { playSound } = useSoundContext();
+    const { playSound, muted, toggleMute } = useSoundContext();
     const router = useRouter();
 
     return (
@@ -238,6 +240,18 @@ export function FloatingNav() {
 
                 {/* Divider */}
                 <span className="h-4 w-px bg-ds-border-strong shrink-0" aria-hidden />
+
+                {/* Sound toggle */}
+                <button
+                    onClick={() => {
+                        toggleMute();
+                        if (muted) playSound("pop");
+                    }}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-ds-text-secondary transition-colors duration-150 hover:text-ds-sage hover:bg-ds-sage-tint"
+                    aria-label={muted ? "Unmute sounds" : "Mute sounds"}
+                >
+                    {muted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                </button>
 
                 {/* CTA */}
                 <DSButton
