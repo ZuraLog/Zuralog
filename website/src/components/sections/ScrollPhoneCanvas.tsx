@@ -310,6 +310,29 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
             ease: 'none',
         });
 
+        // TrendsSection: phone moves to right 25%, returns to portrait.
+        // posX: 1.7 — camera z=5, fov=45 → half-width ≈ 2.07 world units,
+        // so 1.7 sits the phone centred in the right 50% column.
+        // refreshPriority: -2 — recalculates after both CoachSection (async, priority 0)
+        // and ProgressSection (priority -1) have settled their pin spacers.
+        gsap.timeline({
+            scrollTrigger: {
+                trigger: '#trends-section',
+                start: 'top bottom',
+                end: 'top top',
+                scrub: true,
+                refreshPriority: -2,
+            },
+        }).to(anim, {
+            posX: 1.7,
+            posY: 0,
+            scale: 0.7,
+            rotX: 0,
+            rotY: 0,
+            rotZ: 0,
+            ease: 'none',
+        });
+
         // -- Coach section mouse tracking --
         let coachIdleTimer: ReturnType<typeof setTimeout> | null = null;
 
