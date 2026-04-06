@@ -350,7 +350,7 @@ export function TodaySection() {
                                             top: '40px', 
                                             bottom: '40px', 
                                             left: '88px', 
-                                            width: 'calc(30vw - 120px)',
+                                            width: 'min(calc(30vw - 120px), 456px)',
                                             boxShadow: '0 12px 48px rgba(40, 50, 40, 0.05)'
                                         }}
                                     >
