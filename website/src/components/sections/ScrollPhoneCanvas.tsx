@@ -364,7 +364,16 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
         });
 
         // ProgressSection internal: cycle through streak → goals → journal → achievements
-        // as the section's 4800px pin scrolls through each color panel.
+        // Segmented timeline synced to ProgressSection's color layer timing (4800px, FADE=600px, HOLD=600px).
+        // Each color fades in/out over 600px; textures crossfade during the same 600px overlap window.
+        // Timeline uses 8 units where 1 unit = 600px of scroll.
+        //   0–2 units (0–1200px):   hold Streak  (tex 7)
+        //   2–3 units (1200–1800px): crossfade → Goals  (tex 7→8)  — Streak fading out, Goals fading in
+        //   3–4 units (1800–2400px): hold Goals  (tex 8)
+        //   4–5 units (2400–3000px): crossfade → Journal (tex 8→9) — Goals fading out, Journal fading in
+        //   5–6 units (3000–3600px): hold Journal (tex 9)
+        //   6–7 units (3600–4200px): crossfade → Achievements (tex 9→10) — Journal fading out, Achievements fading in
+        //   7–8 units (4200–4800px): hold Achievements (tex 10)
         gsap.timeline({
             scrollTrigger: {
                 trigger: '#progress-section',
@@ -373,10 +382,14 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
                 scrub: true,
                 refreshPriority: -1,
             },
-        }).to(anim, {
-            texSlide: 10,
-            ease: 'none',
-        });
+        })
+        .to(anim, { texSlide: 7,  duration: 2, ease: 'none' })   // hold  Streak
+        .to(anim, { texSlide: 8,  duration: 1, ease: 'none' })   // fade  Streak → Goals
+        .to(anim, { texSlide: 8,  duration: 1, ease: 'none' })   // hold  Goals
+        .to(anim, { texSlide: 9,  duration: 1, ease: 'none' })   // fade  Goals → Journal
+        .to(anim, { texSlide: 9,  duration: 1, ease: 'none' })   // hold  Journal
+        .to(anim, { texSlide: 10, duration: 1, ease: 'none' })   // fade  Journal → Achievements
+        .to(anim, { texSlide: 10, duration: 1, ease: 'none' });  // hold  Achievements
 
         // TrendsSection: phone moves to right 25%, returns to portrait, texture swaps to trends.
         // posX: 1.7 — camera z=5, fov=45 → half-width ≈ 2.07 world units,
