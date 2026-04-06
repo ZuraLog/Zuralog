@@ -85,7 +85,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${plusJakartaSans.variable}`}>
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased" data-theme="light">
         {/* OverlayDismisser: layout-level safety net. Ensures the loading
             overlay is dismissed on EVERY page — not just the home page.
             On non-home pages it dismisses quickly; on the home page it acts
