@@ -53,7 +53,7 @@ function computeHalfW(): number {
 const TODAY_RIGHT_FRAC  = 0.679;  // right ~30% column centre  (was posX: 2.5)
 const DATA_LEFT_FRAC    = 0.706;  // left  ~30% column centre  (was posX: -2.6)
 const TRENDS_RIGHT_FRAC = 0.217;  // slightly right of centre  (was posX: 0.8)
-const WAITLIST_Y_EXIT   = 3.5;    // × halfH — clears top of viewport at any resolution
+const WAITLIST_Y_EXIT   = 2.9;    // × halfH — faithful translation of original posY:6 exit
 
 const _q1 = new THREE.Quaternion();
 const _q2 = new THREE.Quaternion();
@@ -514,16 +514,9 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
         window.addEventListener('zuralog:coach:mouse', handleCoachMouse);
         window.addEventListener('zuralog:coach:idle', handleCoachIdle);
 
-        // Ensure ScrollTrigger recomputes trigger positions AND re-evaluates
-        // function-based tween values (posX/posY) when the viewport is resized.
-        // GSAP auto-refreshes on resize by default; this is belt-and-suspenders.
-        const onResize = () => { ScrollTrigger.refresh(); };
-        window.addEventListener('resize', onResize);
-
         return () => {
             window.removeEventListener('zuralog:coach:mouse', handleCoachMouse);
             window.removeEventListener('zuralog:coach:idle', handleCoachIdle);
-            window.removeEventListener('resize', onResize);
             if (coachIdleTimer) clearTimeout(coachIdleTimer);
         };
     }, { dependencies: [] });
