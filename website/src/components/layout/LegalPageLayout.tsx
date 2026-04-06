@@ -584,7 +584,7 @@ export function LegalPageLayout({
       onClick={onClick}
       title={btnTitle}
       disabled={disabled}
-      className="flex items-center justify-center h-8 w-8 rounded-lg border border-black/[0.06] bg-white/60 text-black/35 transition-all hover:bg-[#344E41]/8 hover:text-[#344E41] hover:border-[#344E41]/20 disabled:opacity-30 disabled:pointer-events-none"
+      className="flex items-center justify-center h-8 w-8 rounded-lg border border-black/[0.06] bg-[#E8E6E1] text-black/35 transition-all hover:bg-[#344E41]/8 hover:text-[#344E41] hover:border-[#344E41]/20 disabled:opacity-30 disabled:pointer-events-none"
     >
       {btnChildren}
     </button>
@@ -617,14 +617,14 @@ export function LegalPageLayout({
       <div
         aria-hidden="true"
         className="legal-bg fixed inset-0 -z-10 pointer-events-none"
-        style={{ backgroundColor: "#FAFAF5" }}
+        style={{ backgroundColor: "#F0EEE9" }}
       />
 
       {/* ── Mobile sticky section indicator ─────────────────────── */}
       <div
         className={`
           legal-mobile-sticky xl:hidden fixed top-0 inset-x-0 z-[9998]
-          border-b border-black/[0.04] bg-white/80 backdrop-blur-xl
+          border-b border-black/[0.04] bg-[#F0EEE9]/95 backdrop-blur-xl
           transition-all duration-300
           ${showMobileStickyToc && activeSectionText ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"}
         `}
@@ -666,8 +666,8 @@ export function LegalPageLayout({
               {tocItems.length > 0 && (
                 <aside className="hidden xl:block w-56 shrink-0 legal-toc-sidebar">
                   <nav className="sticky top-28">
-                    <div className="rounded-2xl border border-black/[0.04] bg-white/50 backdrop-blur-xl p-5 shadow-sm">
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-black/30 mb-3">
+                    <div className="rounded-2xl border border-black/[0.04] bg-[#E8E6E1] p-5 shadow-sm">
+                      <p className="text-[11px] font-medium uppercase tracking-widest text-black/30 mb-3">
                         On this page
                       </p>
 
@@ -687,7 +687,7 @@ export function LegalPageLayout({
                           value={tocSearch}
                           onChange={(e) => setTocSearch(e.target.value)}
                           placeholder="Search sections..."
-                          className="w-full rounded-lg border border-black/[0.04] bg-white/60 py-1.5 pl-8 pr-3 text-[11px] text-black/60 placeholder:text-black/25 outline-none transition-all focus:border-[#344E41]/40 focus:ring-1 focus:ring-[#344E41]/20"
+                          className="w-full rounded-lg border border-black/[0.04] bg-[#DEDAD4] py-1.5 pl-8 pr-3 text-[11px] text-black/60 placeholder:text-black/25 outline-none transition-all focus:border-[#344E41]/40 focus:ring-1 focus:ring-[#344E41]/20"
                         />
                       </div>
 
@@ -733,7 +733,7 @@ export function LegalPageLayout({
                       <li>
                         <Link
                           href="/"
-                          className="transition-colors hover:text-[#2D2D2D]"
+                          className="transition-colors hover:text-[#344E41]"
                         >
                           Home
                         </Link>
@@ -784,7 +784,7 @@ export function LegalPageLayout({
                     <span className="h-1.5 w-1.5 rounded-full bg-[#344E41] animate-pulse" />
                     Legal
                   </span>
-                  <h1 className="mt-4 text-3xl font-bold tracking-tight text-[#1A1A1A] sm:text-4xl opacity-0">
+                  <h1 className="mt-4 text-[34px] font-bold tracking-tight text-[#161618] opacity-0">
                     {title}
                   </h1>
                   <p className="legal-date mt-3 text-sm text-black/40 opacity-0">
@@ -835,7 +835,7 @@ export function LegalPageLayout({
                   {/* ── Toolbar: text size + share + print ─────── */}
                   <div className="legal-toolbar mt-4 flex items-center gap-2 opacity-0">
                     {/* Text size */}
-                    <div className="flex items-center gap-1 rounded-lg border border-black/[0.04] bg-white/40 p-0.5">
+                    <div className="flex items-center gap-1 rounded-lg border border-black/[0.04] bg-[#E8E6E1] p-0.5">
                       <ToolbarBtn
                         onClick={decreaseFontSize}
                         title="Decrease text size"
@@ -875,7 +875,7 @@ export function LegalPageLayout({
                         </svg>
                       </ToolbarBtn>
                       {shareTooltip && (
-                        <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#2D2D2D] px-2.5 py-1 text-[10px] text-white shadow-lg">
+                        <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#161618] px-2.5 py-1 text-[10px] text-[#F0EEE9] shadow-lg">
                           Link copied!
                         </span>
                       )}
@@ -917,7 +917,7 @@ export function LegalPageLayout({
                   <div className="xl:hidden mb-6 legal-toc-mobile">
                     <button
                       onClick={() => setMobileTocOpen(!mobileTocOpen)}
-                      className="w-full flex items-center justify-between rounded-2xl border border-black/[0.04] bg-white/50 backdrop-blur-xl px-5 py-3.5 shadow-sm transition-colors hover:bg-white/70"
+                      className="w-full flex items-center justify-between rounded-2xl border border-black/[0.04] bg-[#E8E6E1] px-5 py-3.5 shadow-sm transition-colors hover:bg-[#DEDAD4]"
                     >
                       <span className="text-[12px] font-semibold uppercase tracking-widest text-black/30">
                         On this page ({visitedIds.size}/{tocItems.length})
@@ -940,7 +940,7 @@ export function LegalPageLayout({
                     </button>
 
                     {mobileTocOpen && (
-                      <div className="mt-2 rounded-2xl border border-black/[0.04] bg-white/50 backdrop-blur-xl p-4 shadow-sm">
+                      <div className="mt-2 rounded-2xl border border-black/[0.04] bg-[#E8E6E1] p-4 shadow-sm">
                         <div className="relative mb-3">
                           <svg
                             viewBox="0 0 16 16"
@@ -960,7 +960,7 @@ export function LegalPageLayout({
                             value={tocSearch}
                             onChange={(e) => setTocSearch(e.target.value)}
                             placeholder="Search sections..."
-                            className="w-full rounded-lg border border-black/[0.04] bg-white/60 py-1.5 pl-8 pr-3 text-[12px] text-black/60 placeholder:text-black/25 outline-none transition-all focus:border-[#344E41]/40 focus:ring-1 focus:ring-[#344E41]/20"
+                            className="w-full rounded-lg border border-black/[0.04] bg-[#DEDAD4] py-1.5 pl-8 pr-3 text-[12px] text-black/60 placeholder:text-black/25 outline-none transition-all focus:border-[#344E41]/40 focus:ring-1 focus:ring-[#344E41]/20"
                           />
                         </div>
                         <div className="max-h-64 overflow-y-auto">
@@ -978,7 +978,7 @@ export function LegalPageLayout({
                 )}
 
                 {/* ── Prose container ──────────────────────────── */}
-                <div className="legal-card rounded-3xl border border-black/[0.04] bg-white/50 backdrop-blur-xl p-8 sm:p-10 shadow-sm">
+                <div className="legal-card rounded-3xl border border-black/[0.04] bg-[#E8E6E1] p-8 sm:p-10 shadow-sm">
                   <div
                     ref={proseRef}
                     className="prose-legal"
@@ -989,7 +989,7 @@ export function LegalPageLayout({
                 </div>
 
                 {/* ── Feedback ─────────────────────────────────── */}
-                <div className="legal-feedback mt-6 flex items-center justify-center gap-4 rounded-2xl border border-black/[0.04] bg-white/50 backdrop-blur-xl px-6 py-4 shadow-sm">
+                <div className="legal-feedback mt-6 flex items-center justify-center gap-4 rounded-2xl border border-black/[0.04] bg-[#E8E6E1] px-6 py-4 shadow-sm">
                   {feedback === null ? (
                     <>
                       <span className="text-[13px] text-black/40">
@@ -998,7 +998,7 @@ export function LegalPageLayout({
                       <div className="flex gap-2">
                         <button
                           onClick={() => setFeedback("up")}
-                          className="flex items-center gap-1.5 rounded-lg border border-black/[0.06] bg-white/60 px-3 py-1.5 text-[12px] text-black/40 transition-all hover:border-[#344E41]/20 hover:bg-[#344E41]/8 hover:text-[#344E41]"
+                          className="flex items-center gap-1.5 rounded-lg border border-black/[0.06] bg-[#DEDAD4] px-3 py-1.5 text-[12px] text-black/40 transition-all hover:border-[#344E41]/20 hover:bg-[#344E41]/8 hover:text-[#344E41]"
                         >
                           <svg
                             viewBox="0 0 16 16"
@@ -1017,7 +1017,7 @@ export function LegalPageLayout({
                         </button>
                         <button
                           onClick={() => setFeedback("down")}
-                          className="flex items-center gap-1.5 rounded-lg border border-black/[0.06] bg-white/60 px-3 py-1.5 text-[12px] text-black/40 transition-all hover:border-black/[0.1] hover:bg-black/[0.02] hover:text-black/60"
+                          className="flex items-center gap-1.5 rounded-lg border border-black/[0.06] bg-[#DEDAD4] px-3 py-1.5 text-[12px] text-black/40 transition-all hover:border-black/[0.1] hover:bg-black/[0.02] hover:text-black/60"
                         >
                           <svg
                             viewBox="0 0 16 16"
@@ -1051,12 +1051,12 @@ export function LegalPageLayout({
                     {prevPage ? (
                       <Link
                         href={prevPage.href}
-                        className="group flex flex-col rounded-2xl border border-black/[0.04] bg-white/50 backdrop-blur-xl px-5 py-4 shadow-sm transition-all hover:bg-white/70 hover:shadow-md"
+                        className="group flex flex-col rounded-2xl border border-black/[0.04] bg-[#E8E6E1] px-5 py-4 shadow-sm transition-all hover:bg-[#DEDAD4] hover:shadow-md"
                       >
-                        <span className="text-[10px] font-semibold uppercase tracking-widest text-black/25 mb-1">
+                        <span className="text-[11px] font-medium uppercase tracking-widest text-black/25 mb-1">
                           Previous
                         </span>
-                        <span className="flex items-center gap-2 text-[13px] font-medium text-black/50 group-hover:text-[#1A1A1A] transition-colors">
+                        <span className="flex items-center gap-2 text-[13px] font-medium text-black/50 group-hover:text-[#161618] transition-colors">
                           <svg
                             viewBox="0 0 16 16"
                             fill="none"
@@ -1079,12 +1079,12 @@ export function LegalPageLayout({
                     {nextPage ? (
                       <Link
                         href={nextPage.href}
-                        className="group flex flex-col items-end rounded-2xl border border-black/[0.04] bg-white/50 backdrop-blur-xl px-5 py-4 shadow-sm transition-all hover:bg-white/70 hover:shadow-md"
+                        className="group flex flex-col items-end rounded-2xl border border-black/[0.04] bg-[#E8E6E1] px-5 py-4 shadow-sm transition-all hover:bg-[#DEDAD4] hover:shadow-md"
                       >
-                        <span className="text-[10px] font-semibold uppercase tracking-widest text-black/25 mb-1">
+                        <span className="text-[11px] font-medium uppercase tracking-widest text-black/25 mb-1">
                           Next
                         </span>
-                        <span className="flex items-center gap-2 text-[13px] font-medium text-black/50 group-hover:text-[#1A1A1A] transition-colors">
+                        <span className="flex items-center gap-2 text-[13px] font-medium text-black/50 group-hover:text-[#161618] transition-colors">
                           {nextPage.title}
                           <svg
                             viewBox="0 0 16 16"
@@ -1121,7 +1121,7 @@ export function LegalPageLayout({
         className={`
           legal-back-to-top
           fixed bottom-8 right-8 z-50 flex h-10 w-10 items-center justify-center
-          rounded-full border border-black/[0.06] bg-white/70 backdrop-blur-xl
+          rounded-full border border-black/[0.06] bg-[#E8E6E1]
           shadow-lg transition-all duration-300
           hover:bg-[#344E41]/8 hover:shadow-xl hover:scale-110
           ${showBackToTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}
@@ -1132,7 +1132,7 @@ export function LegalPageLayout({
           fill="none"
           stroke="currentColor"
           strokeWidth="1.5"
-          className="h-4 w-4 text-[#2D2D2D]"
+          className="h-4 w-4 text-[#344E41]"
         >
           <path
             d="M4 10l4-4 4 4"
