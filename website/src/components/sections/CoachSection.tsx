@@ -86,12 +86,9 @@ const MIN_SLOT_WIDTH = 80;
 const MAX_CONTENT_W = 1440;
 
 // ── Default / idle position ────────────────────────────────────────────────────
-// Dead-center of the content area — respects MAX_CONTENT_W at ultrawide sizes.
 function getIdlePhonePos(sectionWidth: number) {
-    const contentW = Math.min(sectionWidth, MAX_CONTENT_W);
-    const contentLeft = (sectionWidth - contentW) / 2;
     return {
-        x: contentLeft + (contentW - PHONE_W) / 2,
+        x: (sectionWidth - PHONE_W) / 2,
         y: (window.innerHeight - PHONE_H) / 2,
     };
 }
@@ -305,19 +302,13 @@ export function CoachSection() {
             layoutNextLineRef.current = layoutNextLine;
 
             const sectionWidth = sectionRef.current?.offsetWidth ?? window.innerWidth;
-            // vw drives resolveFontSize() in TYPE_CONFIG. Uses sectionWidth so font
-            // sizes and column geometry share the same measurement source.
-            // Note: TYPE_CONFIG's per-type Math.min() upper bounds also cap font sizes
-            // at design maxima, so fonts won't grow beyond intent even at ultrawide widths.
+            // vw drives resolveFontSize() in TYPE_CONFIG. Font sizes are already
+            // capped via Math.min() in TYPE_CONFIG so they won't grow beyond intent.
             const vw = sectionWidth;
-            // Cap at MAX_CONTENT_W so columns stay readable at ultrawide widths.
-            const contentW = Math.min(sectionWidth, MAX_CONTENT_W);
-            // Horizontal offset from the section's left edge to the content container's left edge.
-            const contentLeft = (sectionWidth - contentW) / 2;
-            const colWidth = (contentW - SIDE_PADDING * 2 - COL_GAP * (NUM_COLS - 1)) / NUM_COLS;
+            const colWidth = (sectionWidth - SIDE_PADDING * 2 - COL_GAP * (NUM_COLS - 1)) / NUM_COLS;
 
             colGeomRef.current = Array.from({ length: NUM_COLS }, (_, i) => ({
-                left: contentLeft + SIDE_PADDING + i * (colWidth + COL_GAP),
+                left: SIDE_PADDING + i * (colWidth + COL_GAP),
                 width: colWidth,
             }));
 
@@ -515,13 +506,10 @@ export function CoachSection() {
             }
 
             const sectionW = rect.width;
-            const contentW = Math.min(sectionW, MAX_CONTENT_W);
-            const contentLeft = (sectionW - contentW) / 2;
 
             const rawX = e.clientX - rect.left - PHONE_W / 2;
             const rawY = e.clientY - rect.top  - PHONE_H / 2;
-            // Clamp phone obstacle within content bounds (not full section width at ultrawide).
-            const targetX = Math.max(contentLeft, Math.min(contentLeft + contentW - PHONE_W, rawX));
+            const targetX = Math.max(0, Math.min(sectionW - PHONE_W, rawX));
             const targetY = Math.max(0, Math.min(rect.height - PHONE_H, rawY));
 
             gsap.to(phonePosRef.current, {
@@ -590,8 +578,6 @@ export function CoachSection() {
                         height: "100%",
                         overflow: "hidden",
                         boxSizing: "border-box",
-                        maxWidth: `${MAX_CONTENT_W}px`,
-                        margin: "0 auto",
                     }}
                 >
                     {[0, 1, 2].map(ci => (
