@@ -11,26 +11,32 @@ if (typeof window !== 'undefined') {
     gsap.registerPlugin(SplitText, ScrollTrigger);
 }
 
-const BASE_LOG_ITEMS = [
-    { emoji: '💧', name: 'Water Intake',    color: '#64D2FF' },
-    { emoji: '🔥', name: 'Calories',        color: '#FF9F0A' },
-    { emoji: '🏃', name: 'Workout',         color: '#30D158' },
-    { emoji: '🚶', name: 'Walk',            color: '#30D158' },
-    { emoji: '😴', name: 'Sleep',           color: '#5E5CE6' },
-    { emoji: '⚖️', name: 'Body Weight',     color: '#64D2FF' },
-    { emoji: '😊', name: 'Mood',            color: '#BF5AF2' },
-    { emoji: '🧘', name: 'Stress Level',    color: '#FFD60A' },
-    { emoji: '💊', name: 'Medication',      color: '#63E6BE' },
-    { emoji: '🩸', name: 'Blood Pressure',  color: '#FF375F' },
-    { emoji: '🥗', name: 'Meal',            color: '#FF9F0A' },
-    { emoji: '☀️', name: 'Energy Level',    color: '#FFD60A' },
-];
-
-// Condense the layout by tripling the items
 const LOG_ITEMS = [
-    ...BASE_LOG_ITEMS, 
-    ...BASE_LOG_ITEMS, 
-    ...BASE_LOG_ITEMS,
+    { emoji: '👟', name: 'Steps',              color: '#30D158', image: '/images/quick-log/steps.jpg' },
+    { emoji: '📍', name: 'Distance',           color: '#30D158', image: '/images/quick-log/distance.jpg' },
+    { emoji: '🔥', name: 'Active Calories',    color: '#FF9F0A', image: '/images/quick-log/active-calories.jpg' },
+    { emoji: '🏢', name: 'Floors Climbed',     color: '#64D2FF', image: '/images/quick-log/floors-climbed.jpg' },
+    { emoji: '🏋️', name: 'Workout',            color: '#30D158', image: '/images/quick-log/workout.jpg' },
+    { emoji: '🚶', name: 'Walking Speed',      color: '#30D158', image: '/images/quick-log/walking-speed.jpg' },
+    { emoji: '🏃', name: 'Running Pace',       color: '#FF9F0A', image: '/images/quick-log/running-pace.jpg' },
+    { emoji: '😴', name: 'Sleep Duration',     color: '#5E5CE6', image: '/images/quick-log/sleep-duration.jpg' },
+    { emoji: '🌙', name: 'Sleep Quality',      color: '#5E5CE6', image: '/images/quick-log/sleep-quality.jpg' },
+    { emoji: '❤️', name: 'Resting Heart Rate', color: '#FF375F', image: '/images/quick-log/resting-heart-rate.jpg' },
+    { emoji: '📉', name: 'HRV',                color: '#FF375F', image: '/images/quick-log/hrv.jpg' },
+    { emoji: '🩸', name: 'Blood Pressure',     color: '#FF375F', image: '/images/quick-log/blood-pressure.jpg' },
+    { emoji: '🫁', name: 'VO2 Max',            color: '#64D2FF', image: '/images/quick-log/vo2-max.jpg' },
+    { emoji: '⚖️', name: 'Body Weight',        color: '#64D2FF', image: '/images/quick-log/body-weight.jpg' },
+    { emoji: '📊', name: 'Body Fat',           color: '#64D2FF', image: '/images/quick-log/body-fat.jpg' },
+    { emoji: '🌡️', name: 'Body Temperature',   color: '#FF9F0A', image: '/images/quick-log/body-temperature.jpg' },
+    { emoji: '🫧', name: 'Blood Oxygen',       color: '#64D2FF', image: '/images/quick-log/blood-oxygen.jpg' },
+    { emoji: '💨', name: 'Respiratory Rate',   color: '#64D2FF', image: '/images/quick-log/respiratory-rate.jpg' },
+    { emoji: '💧', name: 'Water Intake',       color: '#64D2FF', image: '/images/quick-log/water-intake.jpg' },
+    { emoji: '🍽️', name: 'Calories Consumed',  color: '#FF9F0A', image: '/images/quick-log/calories-consumed.jpg' },
+    { emoji: '🥩', name: 'Macros',             color: '#FF9F0A', image: '/images/quick-log/macros.jpg' },
+    { emoji: '😊', name: 'Mood',               color: '#BF5AF2', image: '/images/quick-log/mood.jpg' },
+    { emoji: '☀️', name: 'Energy Level',       color: '#FFD60A', image: '/images/quick-log/energy-level.jpg' },
+    { emoji: '🧘', name: 'Stress Level',       color: '#FFD60A', image: '/images/quick-log/stress-level.jpg' },
+    { emoji: '🌸', name: 'Cycle Tracking',     color: '#BF5AF2', image: '/images/quick-log/cycle-tracking.jpg' },
 ].map((item, i) => ({ ...item, uniqueId: `${item.name}-${i}` }));
 
 export function TodaySection() {
@@ -38,9 +44,9 @@ export function TodaySection() {
 
     // Typography refs (Beat 1)
     const beat1Ref      = useRef<HTMLDivElement>(null);
-    const labelRef      = useRef<HTMLDivElement>(null);
     const headlineRef   = useRef<HTMLHeadingElement>(null);
     const botGroupRef   = useRef<HTMLDivElement>(null);
+    const decoLineRef   = useRef<HTMLDivElement>(null);
 
     // Accordion refs (Beat 2)
     const beat2Ref = useRef<HTMLDivElement>(null);
@@ -58,9 +64,10 @@ export function TodaySection() {
 
     useEffect(() => {
         const section   = sectionRef.current;
-        const labelEl   = labelRef.current;
         const headEl    = headlineRef.current;
         const botGroup  = botGroupRef.current;
+        const beat1El   = beat1Ref.current;
+        const decoLine  = decoLineRef.current;
         const beat2El   = beat2Ref.current;
         const row       = accordionRowRef.current;
         const beat3El   = beat3Ref.current;
@@ -71,43 +78,49 @@ export function TodaySection() {
         const c5 = card5Ref.current;
         const c6 = card6Ref.current;
 
-        if (!section || !labelEl || !headEl || !botGroup || !beat2El || !row) return;
+        if (!section || !headEl || !botGroup || !beat1El || !decoLine || !beat2El || !row) return;
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-        // ── Beat 1: masked headline reveal (fires once as section enters view) ──
-        const split = SplitText.create(headEl, { type: 'lines', linesClass: 'split-line' });
-        const lines = headEl.querySelectorAll<HTMLElement>('.split-line');
+        // ── Beat 1: scroll-pinned cinematic entrance ──
+        const split = SplitText.create(headEl, { type: 'lines', mask: 'lines' });
+        const lines = split.lines as HTMLElement[];
 
-        lines.forEach((line) => {
-            const mask = document.createElement('div');
-            mask.style.cssText = 'overflow:hidden;display:block;line-height:inherit;';
-            line.parentNode!.insertBefore(mask, line);
-            mask.appendChild(line);
+        gsap.set(lines, { yPercent: 110, rotateX: 8 });
+        gsap.set(headEl, { transformPerspective: 900 });
+
+        const beat1Tl = gsap.timeline({
+            scrollTrigger: {
+                trigger: beat1El,
+                pin: true,
+                start: 'top top',
+                end: '+=800',
+                scrub: 1,
+            },
         });
 
-        gsap.set(lines, { yPercent: 108 });
-
-        const entryTl = gsap.timeline({
-            scrollTrigger: { trigger: section, start: 'top 75%', once: true },
-        });
-
-        entryTl
-            .fromTo(labelEl,
-                { opacity: 0, y: 12 },
-                { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' },
+        beat1Tl
+            // Phase 0: decorative line draws in
+            .fromTo(decoLine,
+                { width: '0px', opacity: 0 },
+                { width: '120px', opacity: 1, duration: 0.2, ease: 'power2.out' },
                 0,
             )
+            // Phase 1: headline lines tip up from below their masks, staggered
             .to(lines, {
                 yPercent: 0,
-                duration: 1.05,
-                stagger: 0.1,
-                ease: 'power3.out',
-            }, 0.12)
+                rotateX: 0,
+                duration: 0.5,
+                stagger: 0.08,
+                ease: 'power4.out',
+            }, 0.1)
+            // Phase 2: subtext blurs and fades in
             .fromTo(botGroup,
-                { opacity: 0, y: 20 },
-                { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' },
-                0.6,
-            );
+                { opacity: 0, y: 28, filter: 'blur(6px)' },
+                { opacity: 1, y: 0,  filter: 'blur(0px)', duration: 0.3, ease: 'power3.out' },
+                0.55,
+            )
+            // Hold fully-revealed state before unpin
+            .to({}, { duration: 0.15 });
 
         // ── Beat 2 Accordion Flipbook Timeline ──
         const STRIP_WIDTH = 64;
@@ -203,10 +216,14 @@ export function TodaySection() {
         }
 
         return () => {
-            entryTl.scrollTrigger?.kill();
-            entryTl.kill();
+            beat1Tl.scrollTrigger?.kill();
+            beat1Tl.kill();
             accordionTl.scrollTrigger?.kill();
             accordionTl.kill();
+            if (beat3Tl) {
+                beat3Tl.scrollTrigger?.kill();
+                beat3Tl.kill();
+            }
             split.revert();
         };
     }, []);
@@ -227,40 +244,31 @@ export function TodaySection() {
                     height: '100vh',
                     position: 'relative',
                     display: 'grid',
-                    gridTemplateColumns: '80% 20%',
+                    gridTemplateColumns: '70% 30%',
                 }}
             >
+                {/* LEFT — content, vertically centered */}
                 <div
                     style={{
-                        height: '100%',
                         display: 'flex',
                         flexDirection: 'column',
-                        justifyContent: 'space-between',
+                        justifyContent: 'center',
+                        gap: '40px',
                         padding: '64px 32px 64px 96px',
                     }}
                 >
-                    {/* TOP */}
-                    <div ref={labelRef} className="flex flex-col gap-4" style={{ opacity: 0 }}>
-                        <div className="flex items-center gap-3">
-                            <span className="block bg-ds-sage opacity-60" style={{ width: '28px', height: '1px' }} />
-                            <span
-                                className="font-jakarta font-semibold"
-                                style={{ fontSize: '11px', letterSpacing: '0.13em', textTransform: 'uppercase', color: '#6B6864' }}
-                            >
-                                Today Tab
-                            </span>
-                        </div>
-                        <p
-                            className="font-jakarta"
-                            style={{ fontSize: '20px', fontWeight: 500, lineHeight: 1.45, maxWidth: '380px', letterSpacing: '-0.01em', color: '#344E41' }}
-                        >
-                            Your daily health home screen.
-                            <br />
-                            Open it every morning.
-                        </p>
-                    </div>
+                    {/* DECORATIVE LINE */}
+                    <div
+                        ref={decoLineRef}
+                        style={{
+                            width: '0px',
+                            height: '1px',
+                            backgroundColor: '#344E41',
+                            opacity: 0,
+                        }}
+                    />
 
-                    {/* MIDDLE — headline */}
+                    {/* HEADLINE */}
                     <h2
                         ref={headlineRef}
                         className="font-jakarta font-extrabold"
@@ -272,8 +280,8 @@ export function TodaySection() {
                         <em className="not-italic ds-pattern-text" style={{ backgroundImage: 'var(--ds-pattern-sage)' }}>all at a glance.</em>
                     </h2>
 
-                    {/* BOTTOM */}
-                    <div ref={botGroupRef} className="flex flex-col gap-5" style={{ opacity: 0 }}>
+                    {/* SUBTEXT */}
+                    <div ref={botGroupRef} style={{ opacity: 0 }}>
                         <p
                             className="font-jakarta"
                             style={{ fontSize: '18px', fontWeight: 400, lineHeight: 1.65, maxWidth: '480px', color: '#6B6864' }}
@@ -281,25 +289,10 @@ export function TodaySection() {
                             Every metric you care about — steps, sleep, heart rate, calories —
                             pulled from all your apps and unified in one glanceable view.
                         </p>
-                        <div className="flex flex-wrap gap-2">
-                            {['Quick Log', 'AI Insights', 'Daily Overview', 'All Sources'].map((tag) => (
-                                <span
-                                    key={tag}
-                                    className="font-jakarta font-semibold"
-                                    style={{
-                                        fontSize: '12px', letterSpacing: '0.07em', textTransform: 'uppercase',
-                                        padding: '7px 16px',
-                                        border: '1px solid rgba(52,78,65,0.25)', // deep-forest border
-                                        borderRadius: '100px',
-                                        color: '#344E41',
-                                    }}
-                                >
-                                    {tag}
-                                </span>
-                            ))}
-                        </div>
                     </div>
                 </div>
+
+                {/* RIGHT — 30% reserved for the phone */}
                 <div />
             </div>
 
@@ -309,6 +302,7 @@ export function TodaySection() {
                 BEAT 2 — Full Bleed Accordion Columns
             ════════════════════════════════════════ */}
             <div
+                id="beat2"
                 ref={beat2Ref}
                 style={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'transparent' }}
                 className="z-10 relative"
@@ -357,10 +351,10 @@ export function TodaySection() {
                                         }}
                                     >
                                         <div className="w-full h-full overflow-hidden relative bg-[#DEDAD4]">
-                                            <img 
-                                                src="https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=800" 
-                                                alt={item.name} 
-                                                className="w-full h-full object-cover" 
+                                            <img
+                                                src={item.image}
+                                                alt={item.name}
+                                                className="w-full h-full object-cover"
                                                 style={{
                                                     transform: isFirst ? 'scale(1)' : 'scale(1.15)',
                                                     filter: isFirst ? 'grayscale(0%)' : 'grayscale(100%)',

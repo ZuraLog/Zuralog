@@ -278,7 +278,7 @@ export function SupportSection() {
                 prefix="$"
               />
             ) : (
-              <div className="h-12 w-32 animate-pulse rounded-lg bg-black/5" />
+              <div className="h-12 w-32 animate-pulse rounded-lg bg-[#DEDAD4]" />
             )}
             <p className="mt-2 text-xs text-black/30">
               from {stats?.totalSupporters ?? '—'} supporters
@@ -297,12 +297,7 @@ export function SupportSection() {
           transition={{ duration: 0.5 }}
           className="mb-12"
         >
-          <a
-            href="https://buymeacoffee.com/zuralog"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group relative block overflow-hidden rounded-2xl border border-black/[0.06] bg-[#E8E6E1] p-8 shadow-sm transition-all hover:shadow-md"
-          >
+          <div className="group relative overflow-hidden rounded-2xl border border-black/[0.06] bg-[#E8E6E1] p-8 shadow-sm transition-all hover:shadow-md">
             {/* Gradient accent bar */}
             <div
               className="pointer-events-none absolute inset-x-0 top-0 h-1 opacity-60"
@@ -313,9 +308,7 @@ export function SupportSection() {
 
             <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
               {/* Coffee icon */}
-              <div
-                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#344E41]/8"
-              >
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#DEDAD4]">
                 <svg
                   width="32"
                   height="32"
@@ -343,8 +336,12 @@ export function SupportSection() {
                   coding sessions, server costs, and our mission to unify health data.
                   Pick any amount — $1, $5, $25 — it all adds up.
                 </p>
-                <span
-                  className="btn-pattern-light inline-flex items-center gap-2 rounded-full bg-[#344E41] px-5 py-2 text-sm font-semibold text-[#F0EEE9] shadow-[0_2px_16px_rgba(52,78,65,0.2)] transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-[0_4px_24px_rgba(52,78,65,0.35)]"
+                <a
+                  href="https://buymeacoffee.com/zuralog"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative isolate overflow-hidden inline-flex items-center justify-center gap-2 font-jakarta rounded-ds-pill h-[44px] px-6 text-[15px] font-semibold text-ds-text-on-sage ds-pattern-drift transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
+                  style={{ backgroundImage: 'var(--ds-pattern-sage)' }}
                 >
                   Support on Buy Me a Coffee
                   <svg
@@ -359,10 +356,10 @@ export function SupportSection() {
                   >
                     <path d="M7 17L17 7M17 7H7M17 7v10" />
                   </svg>
-                </span>
+                </a>
               </div>
             </div>
-          </a>
+          </div>
         </motion.div>
 
         {/* ── Other ways to support ────────────────────────────────── */}
@@ -381,7 +378,9 @@ export function SupportSection() {
                 transition={{ duration: 0.4, delay: i * 0.08 }}
                 className="rounded-2xl border border-black/[0.06] bg-[#E8E6E1] p-6 shadow-sm"
               >
-                <div className="mb-3 text-black/30">{method.icon}</div>
+                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[#DEDAD4] text-[#344E41]">
+                  {method.icon}
+                </div>
                 <h3 className="mb-2 text-base font-semibold text-[#161618]">
                   {method.title}
                 </h3>
@@ -411,7 +410,7 @@ export function SupportSection() {
                 {method.cta && (
                   <a
                     href={method.cta.href}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-black/[0.08] px-4 py-1.5 text-xs font-semibold text-black/50 transition-all hover:border-[#344E41]/30 hover:bg-[#344E41]/8 hover:text-[#344E41]"
+                    className="relative isolate overflow-hidden inline-flex items-center justify-center gap-1.5 font-jakarta rounded-ds-pill h-[32px] px-[18px] text-[13px] font-medium bg-transparent border-[1.5px] border-[var(--color-ds-secondary-border)] text-ds-text-primary transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
                   >
                     {method.cta.label}
                     <ArrowRightIcon />

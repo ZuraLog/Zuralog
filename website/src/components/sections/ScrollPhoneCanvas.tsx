@@ -20,7 +20,7 @@ const anim = {
     rotX: 0,
     rotY: 0,
     rotZ: 0,
-    texProgress: 0,
+    texSlide: 0,
 };
 
 // Suppresses the idle float bob while the coach mouse is actively tracking,
@@ -33,7 +33,7 @@ let coachTracking = false;
 let trendsActive = false;
 
 // Camera constants — must match the <Canvas camera> props below.
-const CAM_Z   = 5;
+const CAM_Z = 5;
 const CAM_FOV = 45; // degrees
 
 const _q1 = new THREE.Quaternion();
@@ -61,18 +61,35 @@ const SlideTransitionShader = {
         uniform float progress;
         varying vec2 vUv;
 
+        vec4 gaussianBlur(sampler2D tex, vec2 uv, float r) {
+            // 3x3 Gaussian kernel: weights sum to 1.0
+            // [ 0.0625  0.125  0.0625 ]
+            // [ 0.125   0.25   0.125  ]
+            // [ 0.0625  0.125  0.0625 ]
+            vec2 o = vec2(r);
+            return
+                texture2D(tex, clamp(uv + vec2(-o.x, -o.y), 0.0, 1.0)) * 0.0625 +
+                texture2D(tex, clamp(uv + vec2( 0.0, -o.y), 0.0, 1.0)) * 0.125  +
+                texture2D(tex, clamp(uv + vec2( o.x, -o.y), 0.0, 1.0)) * 0.0625 +
+                texture2D(tex, clamp(uv + vec2(-o.x,  0.0), 0.0, 1.0)) * 0.125  +
+                texture2D(tex, uv)                                       * 0.25   +
+                texture2D(tex, clamp(uv + vec2( o.x,  0.0), 0.0, 1.0)) * 0.125  +
+                texture2D(tex, clamp(uv + vec2(-o.x,  o.y), 0.0, 1.0)) * 0.0625 +
+                texture2D(tex, clamp(uv + vec2( 0.0,  o.y), 0.0, 1.0)) * 0.125  +
+                texture2D(tex, clamp(uv + vec2( o.x,  o.y), 0.0, 1.0)) * 0.0625;
+        }
+
         void main() {
             float p = clamp(progress, 0.0, 1.0);
 
-            // Slide wipe: current exits left, next enters from right.
-            // Wipe line at vUv.x = (1.0 - p), sweeping leftward as p → 1.
-            vec2 uvCur = vec2(vUv.x + p,       vUv.y);
-            vec2 uvNxt = vec2(vUv.x + p - 1.0, vUv.y);
+            // Blur radius peaks at mid-transition (p = 0.5), zero at both ends.
+            float r = sin(p * 3.14159265) * 0.018;
 
-            vec4 colCur = texture2D(texCurrent, uvCur);
-            vec4 colNxt = texture2D(texNext,    uvNxt);
+            vec4 colCur = gaussianBlur(texCurrent, vUv, r);
+            vec4 colNxt = gaussianBlur(texNext,    vUv, r);
 
-            gl_FragColor = vUv.x > (1.0 - p) ? colNxt : colCur;
+            // Smooth cross-fade
+            gl_FragColor = mix(colCur, colNxt, smoothstep(0.0, 1.0, p));
         }
     `,
 };
@@ -144,8 +161,18 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
 
     const textures = useTexture(
         [
-            '/model/phone/textures/brand-forest-green.jpg',  // hero section screen
-            '/model/phone/textures/unified.jpeg',             // next section screen
+            '/model/phone/textures/brand-forest-green.jpg',  // 0  — hero
+            '/model/phone/textures/unified.jpeg',             // 1  — integrations
+            '/model/phone/textures/today-morning.jpg',        // 2  — today beat 1
+            '/model/phone/textures/quick-log-poster.jpg',     // 3  — today beat 2 (quick log)
+            '/model/phone/textures/ai-insight-poster.jpg',    // 4  — today beat 3 (ai insights)
+            '/model/phone/textures/data-poster.jpg',          // 5  — data section
+            '/model/phone/textures/brand-forest-green.jpg',   // 6  — coach section
+            '/model/phone/textures/streak.jpg',               // 7  — progress: streak
+            '/model/phone/textures/goals.jpg',                // 8  — progress: goals
+            '/model/phone/textures/journal.jpg',              // 9  — progress: journal
+            '/model/phone/textures/awards.jpg',               // 10 — progress: achievements
+            '/model/phone/textures/trends.jpg',               // 11 — trends section
         ],
         (loaded) => {
             const arr = Array.isArray(loaded) ? loaded : [loaded];
@@ -218,11 +245,11 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
             rotX: 0,
             rotY: 0,
             rotZ: Math.PI / 2,
-            texProgress: 1,
+            texSlide: 1,
             ease: 'none',
         });
 
-        // IntegrationsSection → TodaySection: phone returns to portrait, docks right 30%.
+        // IntegrationsSection → TodaySection Beat 1: phone returns to portrait, docks right 30%.
         // Camera fov=45 at z=5 → viewport half-width ≈ 2.071 units.
         // Right 30% centre ≈ x = 1.45 world units.
         gsap.timeline({
@@ -233,16 +260,30 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
                 scrub: true,
             },
         }).to(anim, {
-            posX: 3,
+            posX: 2.5,
             posY: 0,
             scale: 0.6,
             rotX: 0,
-            rotY: 0,
+            rotY: -0.3,
             rotZ: 0,
+            texSlide: 2,
             ease: 'none',
         });
 
-        // TodaySection (Beat 3): phone returns exactly to the center of the viewport
+        // TodaySection Beat 1 → Beat 2 (Quick Log): texture swaps to quick-log-poster.
+        gsap.timeline({
+            scrollTrigger: {
+                trigger: '#beat2',
+                start: 'top bottom',
+                end: 'top top',
+                scrub: true,
+            },
+        }).to(anim, {
+            texSlide: 3,
+            ease: 'none',
+        });
+
+        // TodaySection Beat 2 → Beat 3 (AI Insights): phone returns to center, texture swaps.
         gsap.timeline({
             scrollTrigger: {
                 trigger: '#beat3',
@@ -257,10 +298,11 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
             rotX: 0,
             rotY: 0,
             rotZ: 0,
+            texSlide: 4,
             ease: 'none',
         });
 
-        // DataSection: phone slides to the left 20% column
+        // DataSection: phone slides to the left 20% column, texture swaps to data-poster.
         gsap.timeline({
             scrollTrigger: {
                 trigger: '#data-section',
@@ -269,16 +311,17 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
                 scrub: true,
             },
         }).to(anim, {
-            posX: -2.8,
+            posX: -2.6,
             posY: 0,
-            scale: 0.55,
+            scale: 0.65,
             rotX: 0,
-            rotY: 8,
+            rotY: 0.25,
             rotZ: 0,
+            texSlide: 5,
             ease: 'none',
         });
 
-        // CoachSection: phone transitions to center, scaled to fit inside the text-warp rectangle
+        // CoachSection: phone transitions to center, texture swaps to brand-forest-green.
         gsap.timeline({
             scrollTrigger: {
                 trigger: '#coach-section',
@@ -293,10 +336,11 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
             rotX: 0,
             rotY: 0,
             rotZ: 0,
+            texSlide: 6,
             ease: 'none',
         });
 
-        // ProgressSection: rotate phone to landscape as the section enters view.
+        // ProgressSection enter: rotate phone to landscape, texture arrives at streak.
         // refreshPriority: -1 — same reason as ProgressSection's own trigger.
         // CoachSection's async pin spacer must be in place before this trigger
         // calculates where #progress-section actually sits on the page.
@@ -315,10 +359,26 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
             rotX: 0,
             rotY: 0,
             rotZ: Math.PI / 2,
+            texSlide: 7,
             ease: 'none',
         });
 
-        // TrendsSection: phone moves to right 25%, returns to portrait.
+        // ProgressSection internal: cycle through streak → goals → journal → achievements
+        // as the section's 4800px pin scrolls through each color panel.
+        gsap.timeline({
+            scrollTrigger: {
+                trigger: '#progress-section',
+                start: 'top top',
+                end: '+=4800',
+                scrub: true,
+                refreshPriority: -1,
+            },
+        }).to(anim, {
+            texSlide: 10,
+            ease: 'none',
+        });
+
+        // TrendsSection: phone moves to right 25%, returns to portrait, texture swaps to trends.
         // posX: 1.7 — camera z=5, fov=45 → half-width ≈ 2.07 world units,
         // so 1.7 sits the phone centred in the right 50% column.
         // refreshPriority: -3 — must fire AFTER TrendsSection's own pin spacer
@@ -333,16 +393,17 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
                 end: 'top top',
                 scrub: true,
                 refreshPriority: -3,
-                onEnter:     () => { trendsActive = true;  },
+                onEnter: () => { trendsActive = true; },
                 onLeaveBack: () => { trendsActive = false; },
             },
         }).to(anim, {
-            posX: 1.7,
+            posX: 0.8,
             posY: 0,
             scale: 0.7,
             rotX: 0,
-            rotY: 0,
+            rotY: -0.1,
             rotZ: 0,
+            texSlide: 11,
             ease: 'none',
         });
 
@@ -377,13 +438,14 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
             const halfH = Math.tan((CAM_FOV / 2) * (Math.PI / 180)) * CAM_Z;
             const halfW = halfH * (window.innerWidth / window.innerHeight);
 
-            const normalX =  (clientX / window.innerWidth  - 0.5) * 2; // -1 … +1
+            const normalX = (clientX / window.innerWidth - 0.5) * 2; // -1 … +1
             const normalY = -(clientY / window.innerHeight - 0.5) * 2; // flipped Y
 
             coachTracking = true;
             gsap.to(anim, {
                 posX: normalX * halfW,
                 posY: normalY * halfH,
+                rotY: -normalX * 0.6,  // tilt inward: left cursor → face right, right cursor → face left
                 duration: 0.45,
                 ease: 'power2.out',
                 overwrite: 'auto',
@@ -408,11 +470,11 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
         };
 
         window.addEventListener('zuralog:coach:mouse', handleCoachMouse);
-        window.addEventListener('zuralog:coach:idle',  handleCoachIdle);
+        window.addEventListener('zuralog:coach:idle', handleCoachIdle);
 
         return () => {
             window.removeEventListener('zuralog:coach:mouse', handleCoachMouse);
-            window.removeEventListener('zuralog:coach:idle',  handleCoachIdle);
+            window.removeEventListener('zuralog:coach:idle', handleCoachIdle);
             if (coachIdleTimer) clearTimeout(coachIdleTimer);
         };
     }, { dependencies: [] });
@@ -433,8 +495,8 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
         const floatY = coachTracking ? 0 : Math.sin(state.clock.elapsedTime) * 0.06;
         const nudgeX = coachTracking ? 0 : tx * 0.4;
 
-        _q1.setFromAxisAngle(_AY, anim.rotY + tx * 0.3);
-        _q2.setFromAxisAngle(_AX, anim.rotX - ty * 0.3);
+        _q1.setFromAxisAngle(_AY, anim.rotY - tx * 0.3);
+        _q2.setFromAxisAngle(_AX, anim.rotX + ty * 0.3);
         _q3.setFromAxisAngle(_AZ, anim.rotZ);
         groupRef.current.quaternion.copy(_q3).multiply(_q2).multiply(_q1);
 
@@ -445,7 +507,11 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
         groupRef.current.scale.setScalar(anim.scale);
 
         if (shaderMatRef.current) {
-            shaderMatRef.current.uniforms.progress.value = anim.texProgress;
+            const fromIdx = Math.min(Math.floor(anim.texSlide), textures.length - 1);
+            const toIdx = Math.min(Math.floor(anim.texSlide) + 1, textures.length - 1);
+            shaderMatRef.current.uniforms.texCurrent.value = textures[fromIdx];
+            shaderMatRef.current.uniforms.texNext.value = textures[toIdx];
+            shaderMatRef.current.uniforms.progress.value = anim.texSlide - Math.floor(anim.texSlide);
         }
     });
 

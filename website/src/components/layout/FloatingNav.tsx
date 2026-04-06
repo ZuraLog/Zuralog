@@ -1,19 +1,23 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import {
     ChevronDown,
-    LayoutDashboard,
-    Sparkles,
-    Smartphone,
-    Activity,
-    BookOpen,
-    Rss,
-    Users,
+    Sun,
+    BarChart2,
+    MessageSquare,
+    Trophy,
+    TrendingUp,
+    Info,
+    Mail,
     LifeBuoy,
+    Shield,
+    FileText,
+    BookOpen,
 } from "lucide-react";
 import { DSButton } from "@/components/design-system";
 import { useSoundContext } from "@/components/design-system/interactions/sound-provider";
@@ -23,17 +27,45 @@ import { useSoundContext } from "@/components/design-system/interactions/sound-p
 ───────────────────────────────────────────────────────────── */
 
 const FEATURES = [
-    { icon: LayoutDashboard, label: "Health Dashboard",  description: "All your metrics in one place" },
-    { icon: Sparkles,        label: "AI Insights",       description: "Smart patterns from your data" },
-    { icon: Smartphone,      label: "Device Sync",       description: "Apple Health, Strava & more" },
-    { icon: Activity,        label: "Activity Tracking", description: "Steps, workouts, sleep" },
+    {
+        icon: Sun,
+        label: "Today",
+        description: "Quick logs & AI insight",
+        href: "/#today-section",
+    },
+    {
+        icon: BarChart2,
+        label: "Data",
+        description: "All your health data, one place",
+        href: "/#data-section",
+    },
+    {
+        icon: MessageSquare,
+        label: "Coach",
+        description: "Smart AI assistant",
+        href: "/#coach-section",
+    },
+    {
+        icon: Trophy,
+        label: "Progress",
+        description: "Goals, achievements & journal",
+        href: "/#progress-section",
+    },
+    {
+        icon: TrendingUp,
+        label: "Trends",
+        description: "Discover data correlations",
+        href: "/#trends-section",
+    },
 ];
 
 const RESOURCES = [
-    { icon: BookOpen, label: "Documentation", description: "Guides and API reference" },
-    { icon: Rss,      label: "Blog",          description: "Health & product updates" },
-    { icon: Users,    label: "Community",     description: "Connect with other users" },
-    { icon: LifeBuoy, label: "Support",       description: "Get help from our team" },
+    { icon: Info,     label: "About Us",            description: "Our story and mission",         href: "/about" },
+    { icon: Mail,     label: "Contact",             description: "Get in touch with us",          href: "/contact" },
+    { icon: LifeBuoy, label: "Support",             description: "Get help from our team",        href: "/support" },
+    { icon: Shield,   label: "Privacy Policy",      description: "How we handle your data",       href: "/privacy-policy" },
+    { icon: FileText, label: "Terms of Service",    description: "Usage terms and conditions",    href: "/terms-of-service" },
+    { icon: BookOpen, label: "Community Guidelines",description: "Our community standards",        href: "/community-guidelines" },
 ];
 
 const EXPO_OUT: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -46,6 +78,7 @@ interface DropdownItem {
     icon: React.ComponentType<{ size?: number; className?: string }>;
     label: string;
     description: string;
+    href: string;
 }
 
 function DropdownPanel({ items }: { items: DropdownItem[] }) {
@@ -60,9 +93,10 @@ function DropdownPanel({ items }: { items: DropdownItem[] }) {
             className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-64 rounded-ds-xl border border-ds-border-strong bg-ds-surface-raised backdrop-blur-xl shadow-lg overflow-hidden z-50"
         >
             <div className="p-2 flex flex-col gap-0.5">
-                {items.map(({ icon: Icon, label, description }) => (
-                    <button
+                {items.map(({ icon: Icon, label, description, href }) => (
+                    <Link
                         key={label}
+                        href={href}
                         onMouseEnter={() => playSound("tick")}
                         onClick={() => playSound("pop")}
                         className="group flex items-center gap-3 rounded-ds-md px-3 py-2.5 text-left transition-colors duration-150 hover:bg-ds-sage-tint w-full"
@@ -78,7 +112,7 @@ function DropdownPanel({ items }: { items: DropdownItem[] }) {
                                 {description}
                             </span>
                         </span>
-                    </button>
+                    </Link>
                 ))}
             </div>
         </motion.div>
@@ -91,10 +125,11 @@ function DropdownPanel({ items }: { items: DropdownItem[] }) {
 
 interface NavTriggerProps {
     label: string;
+    href?: string;
     items?: DropdownItem[];
 }
 
-function NavTrigger({ label, items }: NavTriggerProps) {
+function NavTrigger({ label, href, items }: NavTriggerProps) {
     const [open, setOpen]   = useState(false);
     const closeTimer        = useRef<ReturnType<typeof setTimeout> | null>(null);
     const { playSound }     = useSoundContext();
@@ -110,28 +145,40 @@ function NavTrigger({ label, items }: NavTriggerProps) {
         closeTimer.current = setTimeout(() => setOpen(false), 120);
     }, [items]);
 
+    const buttonClass = "flex items-center gap-1 font-jakarta text-[0.8125rem] font-medium text-ds-text-secondary transition-colors duration-150 hover:text-ds-text-primary py-1 px-1";
+
     return (
         <div
             className="relative"
             onMouseEnter={handleEnter}
             onMouseLeave={handleLeave}
         >
-            <button
-                className="flex items-center gap-1 font-jakarta text-[0.8125rem] font-medium text-ds-text-secondary transition-colors duration-150 hover:text-ds-text-primary py-1 px-1"
-                aria-expanded={open}
-                onClick={() => { items && setOpen((o) => !o); playSound("click"); }}
-            >
-                {label}
-                {items && (
-                    <motion.span
-                        animate={{ rotate: open ? 180 : 0 }}
-                        transition={{ duration: 0.2, ease: EXPO_OUT }}
-                        className="inline-flex"
-                    >
-                        <ChevronDown size={13} className="text-ds-text-secondary" />
-                    </motion.span>
-                )}
-            </button>
+            {href ? (
+                <Link
+                    href={href}
+                    className={buttonClass}
+                    onClick={() => playSound("click")}
+                >
+                    {label}
+                </Link>
+            ) : (
+                <button
+                    className={buttonClass}
+                    aria-expanded={open}
+                    onClick={() => { items && setOpen((o) => !o); playSound("click"); }}
+                >
+                    {label}
+                    {items && (
+                        <motion.span
+                            animate={{ rotate: open ? 180 : 0 }}
+                            transition={{ duration: 0.2, ease: EXPO_OUT }}
+                            className="inline-flex"
+                        >
+                            <ChevronDown size={13} className="text-ds-text-secondary" />
+                        </motion.span>
+                    )}
+                </button>
+            )}
 
             <AnimatePresence>
                 {open && items && <DropdownPanel items={items} />}
@@ -146,6 +193,7 @@ function NavTrigger({ label, items }: NavTriggerProps) {
 
 export function FloatingNav() {
     const { playSound } = useSoundContext();
+    const router = useRouter();
 
     return (
         <motion.header
@@ -184,7 +232,7 @@ export function FloatingNav() {
                 {/* Center links */}
                 <div className="flex items-center gap-0.5">
                     <NavTrigger label="Features"  items={FEATURES} />
-                    <NavTrigger label="Pricing" />
+                    <NavTrigger label="Pricing"   href="/pricing" />
                     <NavTrigger label="Resources" items={RESOURCES} />
                 </div>
 
@@ -196,7 +244,7 @@ export function FloatingNav() {
                     intent="primary"
                     size="sm"
                     onMouseEnter={() => playSound("tick")}
-                    onClick={() => playSound("click")}
+                    onClick={() => { playSound("click"); router.push("/#waitlist"); }}
                 >
                     Join Waitlist
                 </DSButton>

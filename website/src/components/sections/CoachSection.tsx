@@ -104,6 +104,7 @@ interface BlockInfo {
 // ── Component ─────────────────────────────────────────────────────────────────
 export function CoachSection() {
     const sectionRef = useRef<HTMLElement>(null);
+    const contentWrapRef = useRef<HTMLDivElement>(null);
     const phoneElRef = useRef<HTMLDivElement>(null);
     const colRefs = useRef<(HTMLDivElement | null)[]>([null, null, null]);
 
@@ -118,7 +119,6 @@ export function CoachSection() {
     const rafRef = useRef(0);
     const readyRef = useRef(false);
     const inSectionRef = useRef(false);
-    const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const layoutNextLineRef = useRef<
         ((p: PreparedTextWithSegments, c: LayoutCursor, w: number) => LayoutLine | null) | null
@@ -151,6 +151,7 @@ export function CoachSection() {
         span.style.fontSize = `${bInfo.fontSize}px`;
         span.style.lineHeight = `${lh}px`;
         span.style.letterSpacing = LETTER_SPACING[bInfo.type];
+        span.dataset.blockType = bInfo.type;
 
         if (types[idx] !== bInfo.type) {
             if (isPattern) {
@@ -357,27 +358,60 @@ export function CoachSection() {
 
             if (cancelled) return;
 
-            // Animate ALL pool spans, not just the initial active set.
-            //
-            // When the phone appears it creates two spans per row (left + right slot)
-            // instead of one, so spans that were display:none at init can become
-            // active later. If we only capture the initial active set, those new
-            // spans are never added to the GSAP timeline and stay at opacity:0
-            // forever — producing the "bottom not loading" blank-out.
-            //
-            // Animating all 1800 spans is fine: display:none spans get opacity:1
-            // from GSAP but remain invisible, and the SCROLL_BUDGET keeps travel short.
+            // All 1800 pool spans — display:none spans get opacity:1 from GSAP
+            // but stay invisible, so it is safe to animate the whole flat pool.
             const liveSpans = pools.flat();
-
-            // Start every span hidden — the timeline will reveal them.
             liveSpans.forEach(s => { s.style.opacity = "0"; });
 
             const section = sectionRef.current;
             if (!section) return;
 
-            // Pin duration: ~2.5 viewport heights so the whole text reveals
-            // without requiring marathon scrolling.
-            const SCROLL_BUDGET = Math.max(window.innerHeight * 2.5, 2200);
+            // ── Pre-compute layout with phone at idle to get span groups ─────────
+            // Run doLayout with phone visible so we can read which spans are active
+            // and tag them by block type before the section ever enters view.
+            const idlePos = getIdlePhonePos();
+            phonePosRef.current.x = idlePos.x;
+            phonePosRef.current.y = idlePos.y;
+            doLayout(idlePos.x, idlePos.y);
+
+            // Collect all visible spans and sort top-to-bottom for the burst reveal.
+            const allSpans: HTMLSpanElement[] = liveSpans
+                .filter(s => s.style.display !== "none")
+                .sort((a, b) => parseFloat(a.style.top || "0") - parseFloat(b.style.top || "0"));
+
+            // Reset phone off-screen — onEnter brings it back.
+            phonePosRef.current.x = -9999;
+            phonePosRef.current.y = -9999;
+            doLayout(-9999, -9999);
+            liveSpans.forEach(s => { s.style.opacity = "0"; });
+
+            // ── Pre-pin entrance: content fades + deblurs as section scrolls into view ─
+            // The section background (#F0EEE9) is always solid — only the content animates.
+            const contentWrap = contentWrapRef.current;
+            if (!contentWrap) return;
+
+            const entranceST = ScrollTrigger.create({
+                trigger: section,
+                start: "top 90%",
+                end: "top top",
+                scrub: 1,
+                onUpdate: (self) => {
+                    gsap.set(contentWrap, {
+                        opacity: self.progress,
+                        filter: `blur(${(1 - self.progress) * 10}px)`,
+                    });
+                },
+                onLeave:     () => gsap.set(contentWrap, { opacity: 1, filter: "blur(0px)" }),
+                onEnterBack: () => gsap.set(contentWrap, { opacity: 1, filter: "blur(0px)" }),
+                onLeaveBack: () => gsap.set(contentWrap, { opacity: 0, filter: "blur(10px)" }),
+            });
+
+            // ── Phone initial state — timeline scales it in ───────────────────────
+            const phoneEl = phoneElRef.current;
+            if (phoneEl) gsap.set(phoneEl, { scale: 0, filter: "blur(8px)", opacity: 0 });
+
+            // ── Main pinned timeline ──────────────────────────────────────────────
+            const SCROLL_BUDGET = Math.max(window.innerHeight * 3, 3000);
 
             const tl = gsap.timeline({
                 scrollTrigger: {
@@ -387,38 +421,52 @@ export function CoachSection() {
                     end: `+=${SCROLL_BUDGET}`,
                     scrub: 1,
                     onEnter: () => {
+                        inSectionRef.current = true;
                         const pos = getIdlePhonePos();
                         phonePosRef.current.x = pos.x;
                         phonePosRef.current.y = pos.y;
                         doLayout(pos.x, pos.y);
                     },
                     onEnterBack: () => {
+                        inSectionRef.current = true;
                         const pos = getIdlePhonePos();
                         phonePosRef.current.x = pos.x;
                         phonePosRef.current.y = pos.y;
                         doLayout(pos.x, pos.y);
                     },
                     onLeave: () => {
+                        inSectionRef.current = false;
                         gsap.killTweensOf(phonePosRef.current);
                         doLayout(-9999, -9999);
                     },
                     onLeaveBack: () => {
+                        inSectionRef.current = false;
                         gsap.killTweensOf(phonePosRef.current);
                         doLayout(-9999, -9999);
                     },
                 },
             });
 
-            // Fade spans in with a gentle wave.
-            // duration:0.5 creates soft overlap between neighbours (factor = 0.5/0.08 = 6
-            // spans fading simultaneously), power2.out eases each line in softly.
-            tl.fromTo(liveSpans,
-                { opacity: 0, y: 6 },
-                { opacity: 1, y: 0, duration: 0.5, stagger: { each: 0.08, from: "start" }, ease: "power2.out", clearProps: "y" },
-                0,
-            );
+            // Phase 0 — Phone materialises from nothing (0 → 1.2s)
+            if (phoneEl) {
+                tl.fromTo(phoneEl,
+                    { scale: 0, filter: "blur(8px)", opacity: 0 },
+                    { scale: 1, filter: "blur(0px)", opacity: 1, duration: 1.2, ease: "power2.out" },
+                    0,
+                );
+            }
+
+            // Phase 1 — All spans burst in top-to-bottom simultaneously (0.6s → end)
+            if (allSpans.length > 0) {
+                tl.fromTo(allSpans,
+                    { opacity: 0, y: 8 },
+                    { opacity: 1, y: 0, duration: 0.4, stagger: { each: 0.005, from: "start" }, ease: "power2.out" },
+                    0.6,
+                );
+            }
 
             section.addEventListener("destroy-coach-tl", () => {
+                entranceST.kill();
                 tl.scrollTrigger?.kill();
                 tl.kill();
             }, { once: true });
@@ -437,22 +485,6 @@ export function CoachSection() {
         const section = sectionRef.current;
         if (!section) return;
 
-        const returnToDefault = () => {
-            // Tell the 3D model to return to its idle position.
-            window.dispatchEvent(new CustomEvent("zuralog:coach:idle"));
-            // Ease the text-obstacle back to the idle position — same timing as
-            // the 3D model's idle animation so they arrive together.
-            const pos = getIdlePhonePos();
-            gsap.to(phonePosRef.current, {
-                x: pos.x,
-                y: pos.y,
-                duration: 1.4,
-                ease: "power3.inOut",
-                overwrite: "auto",
-                onUpdate: () => doLayout(phonePosRef.current.x, phonePosRef.current.y),
-            });
-        };
-
         const handleMouseMove = (e: MouseEvent) => {
             const rect = section.getBoundingClientRect();
             const vh = window.innerHeight;
@@ -464,8 +496,6 @@ export function CoachSection() {
                         detail: { clientX: e.clientX, clientY: e.clientY },
                     }),
                 );
-                if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-                idleTimerRef.current = setTimeout(returnToDefault, 2000);
             }
 
             const rawX = e.clientX - rect.left - PHONE_W / 2;
@@ -473,9 +503,6 @@ export function CoachSection() {
             const targetX = Math.max(0, Math.min(rect.width  - PHONE_W, rawX));
             const targetY = Math.max(0, Math.min(rect.height - PHONE_H, rawY));
 
-            // Ease the obstacle toward the cursor — lags slightly at low speed,
-            // catches up fast at high speed (power2.out).  Matches the 3D model's
-            // duration so they visually stay in sync during quick movements.
             gsap.to(phonePosRef.current, {
                 x: targetX,
                 y: targetY,
@@ -490,7 +517,6 @@ export function CoachSection() {
 
         return () => {
             window.removeEventListener("mousemove", handleMouseMove);
-            if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
             cancelAnimationFrame(rafRef.current);
             gsap.killTweensOf(phonePosRef.current);
         };
@@ -509,44 +535,50 @@ export function CoachSection() {
                 position: "relative",
             }}
         >
-            {/* Phone obstacle */}
+            {/* Content wrapper — entrance animation targets this, not the section */}
             <div
-                ref={phoneElRef}
-                aria-hidden
-                style={{
-                    position: "absolute",
-                    left: "-9999px",
-                    top: "-9999px",
-                    width: `${PHONE_W}px`,
-                    height: `${PHONE_H}px`,
-                    borderRadius: "16px",
-                    background: "transparent",
-                    border: "none",
-                    pointerEvents: "none",
-                    opacity: 0,
-                    zIndex: 20,
-                }}
-            />
-
-            {/* Three column containers — spans appended imperatively */}
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr",
-                    gap: `${COL_GAP}px`,
-                    padding: `${TOP_PADDING}px ${SIDE_PADDING}px`,
-                    height: "100%",
-                    overflow: "hidden",
-                    boxSizing: "border-box",
-                }}
+                ref={contentWrapRef}
+                style={{ position: "relative", height: "100%", opacity: 0 }}
             >
-                {[0, 1, 2].map(ci => (
-                    <div
-                        key={ci}
-                        ref={el => { colRefs.current[ci] = el; }}
-                        style={{ position: "relative", overflow: "hidden" }}
-                    />
-                ))}
+                {/* Phone obstacle */}
+                <div
+                    ref={phoneElRef}
+                    aria-hidden
+                    style={{
+                        position: "absolute",
+                        left: "-9999px",
+                        top: "-9999px",
+                        width: `${PHONE_W}px`,
+                        height: `${PHONE_H}px`,
+                        borderRadius: "16px",
+                        background: "transparent",
+                        border: "none",
+                        pointerEvents: "none",
+                        opacity: 0,
+                        zIndex: 20,
+                    }}
+                />
+
+                {/* Three column containers — spans appended imperatively */}
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr 1fr",
+                        gap: `${COL_GAP}px`,
+                        padding: `${TOP_PADDING}px ${SIDE_PADDING}px`,
+                        height: "100%",
+                        overflow: "hidden",
+                        boxSizing: "border-box",
+                    }}
+                >
+                    {[0, 1, 2].map(ci => (
+                        <div
+                            key={ci}
+                            ref={el => { colRefs.current[ci] = el; }}
+                            style={{ position: "relative", overflow: "hidden" }}
+                        />
+                    ))}
+                </div>
             </div>
         </section>
     );

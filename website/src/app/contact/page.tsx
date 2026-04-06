@@ -14,8 +14,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { FloatingNav } from '@/components/layout/FloatingNav';
 import { Footer } from '@/components/layout/Footer';
-import { PageBackground } from '@/components/PageBackground';
 import { FaXTwitter, FaInstagram, FaLinkedinIn, FaTiktok } from 'react-icons/fa6';
+import { DSButton } from '@/components/design-system';
 
 // ---------------------------------------------------------------------------
 // Data
@@ -96,8 +96,7 @@ export default function ContactPage() {
 
   return (
     <>
-      <PageBackground />
-      <div className="relative flex min-h-screen flex-col font-jakarta">
+      <div className="relative flex min-h-screen flex-col bg-[#F0EEE9] font-jakarta" data-theme="light">
         <FloatingNav />
 
         <main className="mx-auto w-full max-w-[1280px] flex-1 px-6 pb-24 pt-32 lg:px-12">
@@ -137,19 +136,21 @@ export default function ContactPage() {
 
               {/* Success state */}
               {status === 'success' ? (
-                <div className="mt-10 rounded-3xl border border-[#344E41]/20 bg-[#344E41]/5 p-8">
+                <div className="mt-10 rounded-3xl border border-black/[0.06] bg-[#E8E6E1] p-8">
                   <p className="text-sm font-semibold text-[#161618]">Message sent.</p>
                   <p className="mt-1 text-sm text-black/50">
                     Thanks for reaching out. We will be in touch soon. Check your inbox for
                     a confirmation email.
                   </p>
-                  <button
+                  <DSButton
                     type="button"
+                    intent="text"
+                    size="sm"
                     onClick={() => setStatus('idle')}
-                    className="mt-5 text-xs font-medium text-black/40 underline underline-offset-2 transition-colors hover:text-[#344E41]"
+                    className="mt-5"
                   >
                     Send another message
-                  </button>
+                  </DSButton>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} noValidate className="mt-10 flex flex-col gap-5">
@@ -229,20 +230,14 @@ export default function ContactPage() {
 
                   {/* Submit */}
                   <div>
-                    <button
+                    <DSButton
                       type="submit"
-                      disabled={status === 'loading'}
-                      className="btn-pattern-light inline-flex items-center justify-center gap-2 rounded-full bg-[#344E41] px-8 py-2.5 text-sm font-semibold text-[#F0EEE9] shadow-[0_2px_16px_rgba(52,78,65,0.25)] transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_4px_30px_rgba(52,78,65,0.45)] active:scale-[0.97] disabled:opacity-50"
+                      intent="primary"
+                      size="md"
+                      loading={status === 'loading'}
                     >
-                      {status === 'loading' ? (
-                        <>
-                          <span className="relative z-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#F0EEE9]/30 border-t-[#F0EEE9]" />
-                          Sending...
-                        </>
-                      ) : (
-                        'Send message'
-                      )}
-                    </button>
+                      Send message
+                    </DSButton>
                   </div>
 
                 </form>

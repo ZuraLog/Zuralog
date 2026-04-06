@@ -85,7 +85,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${plusJakartaSans.variable}`}>
-      <body className="font-sans antialiased" data-theme="light">
+      <body className="font-jakarta antialiased" data-theme="light">
         {/* OverlayDismisser: layout-level safety net. Ensures the loading
             overlay is dismissed on EVERY page — not just the home page.
             On non-home pages it dismisses quickly; on the home page it acts
@@ -142,7 +142,7 @@ export default function RootLayout({
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "#FAFAF5",
+            backgroundColor: "#F0EEE9",
             zIndex: 9999,
             transition: "opacity 0.6s ease",
           }}
@@ -150,8 +150,9 @@ export default function RootLayout({
         >
           <span
             style={{
+              fontFamily: "var(--font-jakarta), 'Plus Jakarta Sans', sans-serif",
               fontSize: "1.5rem",
-              fontWeight: 300,
+              fontWeight: 500,
               letterSpacing: "0.3em",
               color: "#2D2D2D",
               textTransform: "uppercase" as const,

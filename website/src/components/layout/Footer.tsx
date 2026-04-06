@@ -22,27 +22,30 @@ import { useRef, useEffect } from "react";
 
 const NAV_COLUMNS = [
   {
-    heading: "Product",
+    heading: "Features",
     links: [
-      { label: "Features", href: "/#features" },
-      { label: "How It Works", href: "/#how-it-works" },
-      { label: "Join Waitlist", href: "/#waitlist" },
+      { label: "Today",    href: "/#today-section" },
+      { label: "Data",     href: "/#data-section" },
+      { label: "Coach",    href: "/#coach-section" },
+      { label: "Progress", href: "/#progress-section" },
+      { label: "Trends",   href: "/#trends-section" },
+      { label: "Pricing",  href: "/pricing" },
     ],
   },
   {
     heading: "Legal",
     links: [
-      { label: "Privacy Policy", href: "/privacy-policy" },
-      { label: "Terms of Service", href: "/terms-of-service" },
-      { label: "Cookie Policy", href: "/cookie-policy" },
+      { label: "Privacy Policy",       href: "/privacy-policy" },
+      { label: "Terms of Service",     href: "/terms-of-service" },
+      { label: "Cookie Policy",        href: "/cookie-policy" },
       { label: "Community Guidelines", href: "/community-guidelines" },
     ],
   },
   {
     heading: "Company",
     links: [
-      { label: "About Us", href: "/about" },
-      { label: "Contact", href: "/contact" },
+      { label: "About Us",   href: "/about" },
+      { label: "Contact",    href: "/contact" },
       { label: "Support Us", href: "/support" },
     ],
   },
