@@ -26,6 +26,10 @@ const COLOR_LAYERS = [
 // 6 timeline units × 800 px per unit = 4 800 px of pinned scroll.
 const TOTAL_SCROLL = 4800;
 
+const PHASE_DURATION = 1.0; // scroll units between each layer's start
+const FADE = 0.5;
+const HOLD = 0.5;
+
 export function ProgressSection() {
     const sectionRef = useRef<HTMLElement>(null);
     const layerRefs  = useRef<(HTMLDivElement | null)[]>([]);
@@ -34,10 +38,6 @@ export function ProgressSection() {
         const section = sectionRef.current;
         if (!section) return;
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-        const PHASE_DURATION = 1.0; // scroll units between each layer's start
-        const FADE = 0.5;
-        const HOLD = 0.5;
 
         const tl = gsap.timeline({
             scrollTrigger: {
@@ -67,16 +67,24 @@ export function ProgressSection() {
             },
         });
 
+        // Per-layer rhythm (units):  fade-in 0.5 → hold 0.5 → fade-out 0.5 (skipped on last)
+        // Layer 0 (orange):  0.0 – 1.5    Layer 1 (sage): 1.0 – 2.5
+        // Layer 2 (purple):  2.0 – 3.5    Layer 3 (yellow): 3.0 – 3.5 (no fade-out)
         COLOR_LAYERS.forEach((_, i) => {
             const el = layerRefs.current[i];
             if (!el) return;
             const start = i * PHASE_DURATION;
             tl.to(el, { opacity: 1, duration: FADE, ease: 'none' }, start);
-            tl.to(el, { opacity: 0, duration: FADE, ease: 'none' }, start + FADE + HOLD);
+            if (i < COLOR_LAYERS.length - 1) {
+                tl.to(el, { opacity: 0, duration: FADE, ease: 'none' }, start + FADE + HOLD);
+            }
         });
 
-        // End spacer so the timeline fills the full pinned scroll distance
-        tl.to({}, { duration: 0.5 }, COLOR_LAYERS.length * PHASE_DURATION);
+        // End spacer — derived explicitly so it stays correct if constants change.
+        // Last layer: fade-in ends at start + FADE + HOLD (it has no fade-out).
+        const lastStart = (COLOR_LAYERS.length - 1) * PHASE_DURATION;
+        const timelineEnd = lastStart + FADE + HOLD;
+        tl.to({}, { duration: FADE }, timelineEnd);
 
         return () => {
             tl.scrollTrigger?.kill();
@@ -93,7 +101,7 @@ export function ProgressSection() {
         >
             {COLOR_LAYERS.map((color, i) => (
                 <div
-                    key={color}
+                    key={i}
                     ref={el => { layerRefs.current[i] = el; }}
                     className="absolute inset-0"
                     style={{
