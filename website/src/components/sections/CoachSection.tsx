@@ -91,7 +91,7 @@ function getIdlePhonePos(sectionWidth: number) {
     const contentW = Math.min(sectionWidth, MAX_CONTENT_W);
     const contentLeft = (sectionWidth - contentW) / 2;
     return {
-        x: contentLeft + (contentW  - PHONE_W) / 2,
+        x: contentLeft + (contentW - PHONE_W) / 2,
         y: (window.innerHeight - PHONE_H) / 2,
     };
 }
@@ -304,8 +304,8 @@ export function CoachSection() {
 
             layoutNextLineRef.current = layoutNextLine;
 
-            const vw = window.innerWidth;
             const sectionWidth = sectionRef.current?.offsetWidth ?? window.innerWidth;
+            const vw = sectionWidth;  // font sizes scale with section width, consistent with column geometry
             // Cap at MAX_CONTENT_W so columns stay readable at ultrawide widths.
             const contentW = Math.min(sectionWidth, MAX_CONTENT_W);
             // Horizontal offset from the section's left edge to the content container's left edge.
@@ -379,8 +379,7 @@ export function CoachSection() {
             // ── Pre-compute layout with phone at idle to get span groups ─────────
             // Run doLayout with phone visible so we can read which spans are active
             // and tag them by block type before the section ever enters view.
-            const sw = sectionRef.current?.offsetWidth ?? window.innerWidth;
-            const idlePos = getIdlePhonePos(sw);
+            const idlePos = getIdlePhonePos(sectionWidth);
             phonePosRef.current.x = idlePos.x;
             phonePosRef.current.y = idlePos.y;
             doLayout(idlePos.x, idlePos.y);
