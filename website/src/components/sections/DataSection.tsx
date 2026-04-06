@@ -105,7 +105,7 @@ function BentoCell({
 }
 
 /* ── mergeRefs helper ------------------------------------------------------ */
-function mergeRefs<T>(...refs: Array<React.MutableRefObject<T | null> | null>) {
+function mergeRefs<T>(...refs: Array<React.MutableRefObject<T | null> | React.RefObject<T | null> | null>) {
     return (node: T | null) => {
         refs.forEach((ref) => {
             if (ref) ref.current = node;
@@ -157,7 +157,7 @@ export function DataSection() {
           .to(cYel,   { opacity: 1, y: 0, duration: 1, ease: 'power2.out' }, 2.0)
           .to({}, { duration: 0.8 }); // hold at end before unpinning
 
-        return () => { ScrollTrigger.getAll().forEach(t => t.kill()); };
+        return () => { tl.scrollTrigger?.kill(); tl.kill(); };
     }, []);
     return (
         <section

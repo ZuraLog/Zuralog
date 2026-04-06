@@ -250,8 +250,9 @@ export function FloatingNav() {
                         // on the muted→unmuted transition, giving audio confirmation.
                         if (muted) playSound("pop");
                     }}
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-ds-text-secondary transition-colors duration-150 hover:text-ds-sage hover:bg-ds-sage-tint"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-ds-text-secondary transition-colors duration-150 hover:text-ds-sage hover:bg-ds-sage-tint focus-visible:ring-2 focus-visible:ring-ds-sage focus-visible:ring-offset-1 focus-visible:outline-none"
                     aria-label={muted ? "Unmute sounds" : "Mute sounds"}
+                    aria-pressed={!muted}
                 >
                     {muted ? <VolumeX size={15} /> : <Volume2 size={15} />}
                 </button>
