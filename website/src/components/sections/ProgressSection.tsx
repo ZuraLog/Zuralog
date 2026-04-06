@@ -14,36 +14,30 @@ const MASK =
     'linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%)';
 
 // Cream — matches CoachSection and the surrounding page background.
-// The overlay starts here (invisible against background) before the first colour fires.
 const CREAM = '#F0EEE9';
 
+const COLOR_LAYERS = [
+    '#FFD6A5', // orange  (Streak)
+    '#CFE1B9', // sage    (Goals)
+    '#E8D5F5', // purple  (Journal)
+    '#FFF3B0', // yellow  (Achievements)
+] as const;
+
 // 6 timeline units × 800 px per unit = 4 800 px of pinned scroll.
-//
-//   0   → 0.5   cream hold       (overlay invisible against background)
-//   0.5 → 1.0   cream → orange
-//   1.0 → 2.0   orange hold
-//   2.0 → 2.5   orange → sage
-//   2.5 → 3.5   sage hold
-//   3.5 → 4.0   sage → purple
-//   4.0 → 5.0   purple hold
-//   5.0 → 5.5   purple → yellow
-//   5.5 → 6.0   yellow hold  (unpin after)
-//
 const TOTAL_SCROLL = 4800;
 
 export function ProgressSection() {
     const sectionRef = useRef<HTMLElement>(null);
-    const colorRef   = useRef<HTMLDivElement>(null);
+    const layerRefs  = useRef<(HTMLDivElement | null)[]>([]);
 
     useEffect(() => {
         const section = sectionRef.current;
-        const color   = colorRef.current;
-        if (!section || !color) return;
+        if (!section) return;
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-        // Start at cream — same as the section background, so the overlay is
-        // invisible until the first transition fires.
-        gsap.set(color, { backgroundColor: CREAM });
+        const PHASE_DURATION = 1.0; // scroll units between each layer's start
+        const FADE = 0.5;
+        const HOLD = 0.5;
 
         const tl = gsap.timeline({
             scrollTrigger: {
@@ -73,11 +67,16 @@ export function ProgressSection() {
             },
         });
 
-        tl.to(color, { backgroundColor: '#FFD6A5', duration: 0.5, ease: 'none' }, 0.5) // → orange
-          .to(color, { backgroundColor: '#CFE1B9', duration: 0.5, ease: 'none' }, 2.0) // → sage
-          .to(color, { backgroundColor: '#E8D5F5', duration: 0.5, ease: 'none' }, 3.5) // → purple
-          .to(color, { backgroundColor: '#FFF3B0', duration: 0.5, ease: 'none' }, 5.0) // → yellow
-          .to({}, { duration: 0.5 }, 5.5);                                              // hold yellow
+        COLOR_LAYERS.forEach((_, i) => {
+            const el = layerRefs.current[i];
+            if (!el) return;
+            const start = i * PHASE_DURATION;
+            tl.to(el, { opacity: 1, duration: FADE, ease: 'none' }, start);
+            tl.to(el, { opacity: 0, duration: FADE, ease: 'none' }, start + FADE + HOLD);
+        });
+
+        // End spacer so the timeline fills the full pinned scroll distance
+        tl.to({}, { duration: 0.5 }, COLOR_LAYERS.length * PHASE_DURATION);
 
         return () => {
             tl.scrollTrigger?.kill();
@@ -92,16 +91,19 @@ export function ProgressSection() {
             className="relative w-full"
             style={{ height: '100vh', backgroundColor: CREAM }}
         >
-            {/* Colour overlay with soft top/bottom fade via CSS mask */}
-            <div
-                ref={colorRef}
-                className="absolute inset-0"
-                style={{
-                    backgroundColor: CREAM,
-                    maskImage: MASK,
-                    WebkitMaskImage: MASK,
-                }}
-            />
+            {COLOR_LAYERS.map((color, i) => (
+                <div
+                    key={color}
+                    ref={el => { layerRefs.current[i] = el; }}
+                    className="absolute inset-0"
+                    style={{
+                        backgroundColor: color,
+                        opacity: 0,
+                        maskImage: MASK,
+                        WebkitMaskImage: MASK,
+                    }}
+                />
+            ))}
         </section>
     );
 }
