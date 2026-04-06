@@ -161,18 +161,15 @@ export function DataSection() {
             {/* Left 20%: empty — phone is rendered by ScrollPhoneCanvas */}
             <div className="h-full" />
 
-            {/* Right column: max-width container so charts don't sprawl at 4K */}
-            <div className="h-full flex flex-col">
-                <div
-                    className="w-full h-full px-6 py-[clamp(32px,5vh,80px)] gap-4"
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr 1fr",
-                        gridTemplateRows: "1fr 1fr 1fr",
-                        maxWidth: "1008px",
-                        margin: "0 auto",
-                    }}
-                >
+            {/* Right column: bento grid fills the full 70% column */}
+            <div
+                className="h-full px-6 py-[clamp(32px,5vh,80px)] gap-4"
+                style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 1fr",
+                    gridTemplateRows: "1fr 1fr 1fr",
+                }}
+            >
                 {/* GREEN 2×1 — Weekly Steps Area Chart */}
                 <div ref={cellGreenRef} style={{ gridColumn: "1 / 3", gridRow: "1 / 2" }} className="h-full">
                     <BentoCell pattern="green" className="h-full">
@@ -250,7 +247,6 @@ export function DataSection() {
                             </ResponsiveContainer>
                         </div>
                     </BentoCell>
-                </div>
                 </div>
             </div>
         </section>
