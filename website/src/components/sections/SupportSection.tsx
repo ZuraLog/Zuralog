@@ -344,8 +344,7 @@ export function SupportSection() {
                   Pick any amount — $1, $5, $25 — it all adds up.
                 </p>
                 <span
-                  className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-opacity group-hover:opacity-90"
-                  style={{ background: '#344E41', color: '#F0EEE9' }}
+                  className="btn-pattern-light inline-flex items-center gap-2 rounded-full bg-[#344E41] px-5 py-2 text-sm font-semibold text-[#F0EEE9] shadow-[0_2px_16px_rgba(52,78,65,0.2)] transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-[0_4px_24px_rgba(52,78,65,0.35)]"
                 >
                   Support on Buy Me a Coffee
                   <svg

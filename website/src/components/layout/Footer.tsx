@@ -182,7 +182,7 @@ export function Footer() {
                   aria-label={label}
                   onMouseEnter={handleHover}
                   onClick={handleClick}
-                  className="flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300 hover:border-[#CFE1B9] hover:bg-[#CFE1B9]/20 hover:text-[#344E41]"
+                  className="flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300 hover:border-[#344E41]/30 hover:bg-[#344E41]/8 hover:text-[#344E41]"
                   style={{
                     border: "1px solid rgba(52, 78, 65, 0.10)",
                     backgroundColor: "rgba(52, 78, 65, 0.03)",
