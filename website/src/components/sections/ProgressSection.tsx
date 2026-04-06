@@ -81,10 +81,10 @@ export function ProgressSection() {
         });
 
         // End spacer — derived explicitly so it stays correct if constants change.
-        // Last layer: fade-in ends at start + FADE + HOLD (it has no fade-out).
+        // Last layer: hold ends at lastStart + FADE + HOLD (no fade-out follows).
         const lastStart = (COLOR_LAYERS.length - 1) * PHASE_DURATION;
-        const timelineEnd = lastStart + FADE + HOLD;
-        tl.to({}, { duration: FADE }, timelineEnd);
+        const spacerStart = lastStart + FADE + HOLD;
+        tl.to({}, { duration: FADE }, spacerStart);
 
         return () => {
             tl.scrollTrigger?.kill();
