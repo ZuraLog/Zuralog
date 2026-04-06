@@ -333,21 +333,6 @@ function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | nul
             ease: 'none',
         });
 
-        // End of phone journey: fade the entire canvas out as WaitlistSection enters.
-        // The phone must not appear over the waitlist or footer — TrendsSection is the
-        // last stop. Using #waitlist as the trigger avoids depending on the pinned
-        // TrendsSection's spacer geometry, which is less predictable.
-        gsap.to(wrapperRef.current, {
-            opacity: 0,
-            scrollTrigger: {
-                trigger: '#waitlist',
-                start: 'top 80%',
-                end: 'top 30%',
-                scrub: 1,
-                refreshPriority: -2,
-            },
-        });
-
         // -- Coach section mouse tracking --
         let coachIdleTimer: ReturnType<typeof setTimeout> | null = null;
 
