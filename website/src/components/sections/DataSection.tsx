@@ -3,7 +3,7 @@
 import { useRef, useEffect } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
-import { Text, CHART_COLORS, DS_CHART_THEME, DSChartTooltip, PatternOverlay } from "@/components/design-system";
+import { Text, CHART_COLORS, DS_CHART_THEME, DSChartTooltip, PatternOverlay, useTilt } from "@/components/design-system";
 import {
     AreaChart,
     Area,
@@ -104,6 +104,15 @@ function BentoCell({
     );
 }
 
+/* ── mergeRefs helper ------------------------------------------------------ */
+function mergeRefs<T>(...refs: Array<React.MutableRefObject<T | null> | null>) {
+    return (node: T | null) => {
+        refs.forEach((ref) => {
+            if (ref) ref.current = node;
+        });
+    };
+}
+
 /* ── Component ------------------------------------------------------------- */
 export function DataSection() {
     const sectionRef   = useRef<HTMLElement>(null);
@@ -111,6 +120,11 @@ export function DataSection() {
     const cellBlueRef  = useRef<HTMLDivElement>(null);
     const cellMagRef   = useRef<HTMLDivElement>(null);
     const cellYelRef   = useRef<HTMLDivElement>(null);
+
+    const tiltGreenRef = useTilt<HTMLDivElement>({ maxTilt: 2, scale: 1.01 });
+    const tiltBlueRef  = useTilt<HTMLDivElement>({ maxTilt: 2, scale: 1.01 });
+    const tiltMagRef   = useTilt<HTMLDivElement>({ maxTilt: 2, scale: 1.01 });
+    const tiltYelRef   = useTilt<HTMLDivElement>({ maxTilt: 2, scale: 1.01 });
 
     useEffect(() => {
         const section = sectionRef.current;
@@ -171,7 +185,7 @@ export function DataSection() {
                 }}
             >
                 {/* GREEN 2×1 — Weekly Steps Area Chart */}
-                <div ref={cellGreenRef} style={{ gridColumn: "1 / 3", gridRow: "1 / 2" }} className="h-full">
+                <div ref={mergeRefs(cellGreenRef, tiltGreenRef)} style={{ gridColumn: "1 / 3", gridRow: "1 / 2" }} className="h-full">
                     <BentoCell pattern="green" className="h-full">
                         <Text variant="label-md" color="secondary" className="mb-3 shrink-0">Weekly Steps</Text>
                         <div className="flex-1 min-h-0">
@@ -195,7 +209,7 @@ export function DataSection() {
                 </div>
 
                 {/* BLUE 1×1 — Sleep Score + Sparkbar */}
-                <div ref={cellBlueRef} style={{ gridColumn: "3 / 4", gridRow: "1 / 2" }} className="h-full">
+                <div ref={mergeRefs(cellBlueRef, tiltBlueRef)} style={{ gridColumn: "3 / 4", gridRow: "1 / 2" }} className="h-full">
                     <BentoCell pattern="periwinkle" className="h-full">
                         <Text variant="label-md" color="secondary" className="shrink-0">Sleep Score</Text>
                         <p className="mt-1 font-jakarta shrink-0" style={{ fontSize: "2.75rem", lineHeight: 1, color: chartTheme.sleep, letterSpacing: "-0.03em" }}>84</p>
@@ -211,7 +225,7 @@ export function DataSection() {
                 </div>
 
                 {/* MAGENTA 2×2 — Heart Rate & HRV Multi-line Chart */}
-                <div ref={cellMagRef} style={{ gridColumn: "1 / 3", gridRow: "2 / 4" }} className="h-full">
+                <div ref={mergeRefs(cellMagRef, tiltMagRef)} style={{ gridColumn: "1 / 3", gridRow: "2 / 4" }} className="h-full">
                     <BentoCell pattern="rose" className="h-full">
                         <Text variant="label-md" color="secondary" className="mb-3 shrink-0">Heart Rate &amp; HRV — 7 Day Trend</Text>
                         <div className="flex-1 min-h-0">
@@ -231,7 +245,7 @@ export function DataSection() {
                 </div>
 
                 {/* YELLOW 1×2 — Horizontal Stacked Calories Bar Chart */}
-                <div ref={cellYelRef} style={{ gridColumn: "3 / 4", gridRow: "2 / 4" }} className="h-full">
+                <div ref={mergeRefs(cellYelRef, tiltYelRef)} style={{ gridColumn: "3 / 4", gridRow: "2 / 4" }} className="h-full">
                     <BentoCell pattern="amber" className="h-full">
                         <Text variant="label-md" color="secondary" className="mb-3 shrink-0">Calories Burned</Text>
                         <div className="flex-1 min-h-0">
