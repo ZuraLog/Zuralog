@@ -15,6 +15,8 @@ import { Analytics } from "@vercel/analytics/next";
 import { LenisProvider } from "@/components/layout/LenisProvider";
 import { OverlayDismisser } from "@/components/OverlayDismisser";
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
+import { ScrollProgress } from "@/components/design-system/interactions/scroll-progress";
+import { CustomCursor } from "@/components/design-system/interactions/custom-cursor";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -184,6 +186,8 @@ export default function RootLayout({
           }}
         />
         <PostHogProvider>
+          <ScrollProgress />
+          <CustomCursor />
           <LenisProvider>
             {children}
           </LenisProvider>
