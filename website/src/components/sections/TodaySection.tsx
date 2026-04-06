@@ -124,9 +124,12 @@ export function TodaySection() {
 
         // ── Beat 2 Accordion Flipbook Timeline ──
         const STRIP_WIDTH = 64;
-        const EXPANDED_WIDTH = window.innerWidth * 0.30; // 30vw for portrait column
+        // Cap at the 1080p design reference (1920 × 0.30 = 576px) so cards never
+        // grow beyond their designed proportions on ultrawide screens.
+        const EXPANDED_WIDTH = Math.min(window.innerWidth * 0.30, 576);
         const totalItems = cardsRef.current.length;
-        const containerWidth = window.innerWidth * 0.65; // User's red box boundary
+        // Cap container to match the expanded-width cap (1920 × 0.65 = 1248px).
+        const containerWidth = Math.min(window.innerWidth * 0.65, 1248);
         
         const virtualTotalWidth = (totalItems * STRIP_WIDTH) - STRIP_WIDTH + EXPANDED_WIDTH;
         // The distance we need to drag the container leftwards to see the final card
@@ -253,8 +256,9 @@ export function TodaySection() {
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'center',
-                        gap: '40px',
-                        padding: '64px 32px 64px 96px',
+                        gap: 'clamp(24px, 3vw, 40px)',
+                        padding: 'clamp(40px, 5vh, 80px) clamp(24px, 2.5vw, 48px) clamp(40px, 5vh, 80px) clamp(48px, 5vw, 96px)',
+                        maxWidth: '840px',
                     }}
                 >
                     {/* DECORATIVE LINE */}
@@ -308,7 +312,7 @@ export function TodaySection() {
                 className="z-10 relative"
             >
                 {/* Accordion Row (Full Height) */}
-                <div style={{ flex: 1, overflow: 'hidden', width: '65vw' }}>
+                <div style={{ flex: 1, overflow: 'hidden', width: 'min(65vw, 1248px)' }}>
                     <div
                         ref={accordionRowRef}
                         style={{ display: 'flex', height: '100%', alignItems: 'stretch', width: 'max-content' }}
@@ -324,7 +328,7 @@ export function TodaySection() {
                                     }}
                                     className="relative shrink-0 flex items-center justify-start overflow-hidden"
                                     style={{
-                                        width: isFirst ? '30vw' : '64px',
+                                        width: isFirst ? 'min(30vw, 576px)' : '64px',
                                         height: '100%',
                                         backgroundColor: '#F0EEE9', // Canvas Light
                                     }}
@@ -395,7 +399,14 @@ export function TodaySection() {
             <div
                 id="beat3"
                 ref={beat3Ref}
-                style={{ height: '100vh', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', backgroundColor: '#F0EEE9' }}
+                style={{
+                    height: '100vh',
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr 1fr',
+                    backgroundColor: '#F0EEE9',
+                    maxWidth: '1440px',
+                    margin: '0 auto',
+                }}
                 className="z-10 relative p-6 gap-4"
             >
                 {/* Left Column (Area 1, 3, 5) */}
