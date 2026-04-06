@@ -243,8 +243,11 @@ export function FloatingNav() {
 
                 {/* Sound toggle */}
                 <button
+                    type="button"
                     onClick={() => {
                         toggleMute();
+                        // `muted` is still the OLD value here — so this fires only
+                        // on the muted→unmuted transition, giving audio confirmation.
                         if (muted) playSound("pop");
                     }}
                     className="flex h-8 w-8 items-center justify-center rounded-full text-ds-text-secondary transition-colors duration-150 hover:text-ds-sage hover:bg-ds-sage-tint"
