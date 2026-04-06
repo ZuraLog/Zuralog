@@ -4,9 +4,11 @@ import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { DSButton } from '@/components/design-system';
 import { useSoundContext } from "@/components/design-system/interactions/sound-provider";
+import { useMagnetic } from "@/hooks/use-magnetic";
 
 export function HeroText() {
     const containerRef = useRef<HTMLDivElement>(null);
+    const magnetRef = useMagnetic<HTMLDivElement>();
     const { playSound } = useSoundContext();
 
     useEffect(() => {
@@ -64,17 +66,18 @@ export function HeroText() {
                     Bring all your fitness data into one brilliant interface.
                 </p>
 
-                <DSButton
-                    intent="primary"
-                    size="lg"
-                    className="hero-cta pointer-events-auto mt-8 md:mt-12"
-                    onClick={() => {
-                        playSound("click");
-                        document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" });
-                    }}
-                >
-                    Waitlist Now
-                </DSButton>
+                <div ref={magnetRef} className="hero-cta pointer-events-auto mt-8 md:mt-12">
+                    <DSButton
+                        intent="primary"
+                        size="lg"
+                        onClick={() => {
+                            playSound("click");
+                            document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" });
+                        }}
+                    >
+                        Waitlist Now
+                    </DSButton>
+                </div>
             </div>
         </div>
     );

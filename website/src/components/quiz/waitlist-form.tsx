@@ -14,6 +14,7 @@ import { usePostHog } from 'posthog-js/react';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { DSButton, TextField } from '@/components/design-system';
 import { useSoundContext } from "@/components/design-system/interactions/sound-provider";
+import { useMagnetic } from "@/hooks/use-magnetic";
 import type { SuccessData } from '@/hooks/use-quiz';
 
 const schema = z.object({
@@ -29,6 +30,7 @@ interface WaitlistFormProps {
 
 export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormProps) {
   const { playSound } = useSoundContext();
+  const magnetRef = useMagnetic<HTMLDivElement>();
   const [loading, setLoading] = useState(false);
   const [urlRef, setUrlRef] = useState('');
   const recaptchaRef = useRef<ReCAPTCHA>(null);
@@ -149,16 +151,18 @@ export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormPro
           />
         </div>
 
-        <DSButton
-          type="submit"
-          intent="primary"
-          size="lg"
-          disabled={!captchaToken}
-          loading={loading}
-          className="w-full"
-        >
-          Join & Tell Us About Yourself →
-        </DSButton>
+        <div ref={magnetRef}>
+          <DSButton
+            type="submit"
+            intent="primary"
+            size="lg"
+            disabled={!captchaToken}
+            loading={loading}
+            className="w-full"
+          >
+            Join & Tell Us About Yourself →
+          </DSButton>
+        </div>
       </form>
 
       <p className="text-center text-xs text-[#6B6864]">
