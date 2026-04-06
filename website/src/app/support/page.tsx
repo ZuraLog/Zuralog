@@ -13,7 +13,7 @@
  *   - Top 10 Funder Leaderboard (non-anonymous only)
  */
 import type { Metadata } from 'next';
-import { Navbar } from '@/components/layout/Navbar';
+import { FloatingNav } from '@/components/layout/FloatingNav';
 import { Footer } from '@/components/layout/Footer';
 import { PageBackground } from '@/components/PageBackground';
 import { SupportSection } from '@/components/sections/SupportSection';
@@ -34,7 +34,7 @@ export default function SupportPage() {
     <>
       <PageBackground />
       <div className="relative flex min-h-screen flex-col">
-        <Navbar />
+        <FloatingNav />
         <main className="flex-1">
           <SupportSection />
         </main>

@@ -34,7 +34,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
-import { Navbar } from "@/components/layout/Navbar";
+import { FloatingNav } from "@/components/layout/FloatingNav";
 import { Footer } from "@/components/layout/Footer";
 
 if (typeof window !== "undefined") {
@@ -657,7 +657,7 @@ export function LegalPageLayout({
       </div>
 
       <div className="relative flex min-h-screen flex-col">
-        <Navbar />
+        <FloatingNav />
 
         <main ref={mainRef} className="flex-1 pt-28 pb-24">
           <div className="mx-auto max-w-6xl px-6 lg:px-8">

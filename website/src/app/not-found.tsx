@@ -6,7 +6,7 @@
  */
 
 import Link from 'next/link';
-import { Navbar } from '@/components/layout/Navbar';
+import { FloatingNav } from '@/components/layout/FloatingNav';
 import { Footer } from '@/components/layout/Footer';
 import { PageBackground } from '@/components/PageBackground';
 
@@ -20,7 +20,7 @@ export default function NotFound() {
     <>
       <PageBackground />
       <div className="relative flex min-h-screen flex-col">
-        <Navbar />
+        <FloatingNav />
 
         <main className="flex flex-1 items-center justify-center px-6 py-32">
           <div className="flex max-w-md flex-col items-center text-center">
@@ -29,7 +29,7 @@ export default function NotFound() {
             <p
               className="text-[120px] font-bold leading-none tracking-tighter"
               style={{
-                background: 'linear-gradient(135deg, #CFE1B9 0%, #D4F291 50%, #E8F5A8 100%)',
+                background: 'linear-gradient(135deg, #344E41 0%, #CFE1B9 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
@@ -39,8 +39,8 @@ export default function NotFound() {
             </p>
 
             {/* Eyebrow */}
-            <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#E8F5A8]/60 bg-[#E8F5A8]/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#2D2D2D]/60">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#D4F291]" />
+            <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#344E41]/20 bg-[#344E41]/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#344E41]/70">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#344E41]" />
               Page not found
             </span>
 
@@ -60,7 +60,7 @@ export default function NotFound() {
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
               <Link
                 href="/"
-                className="inline-flex items-center justify-center rounded-full bg-[#E8F5A8] px-6 py-2.5 text-sm font-semibold text-[#2D2D2D] transition-opacity hover:opacity-80"
+                className="inline-flex items-center justify-center rounded-full bg-[#344E41] px-6 py-2.5 text-sm font-semibold text-[#F0EEE9] transition-opacity hover:opacity-80"
               >
                 Back to home
               </Link>

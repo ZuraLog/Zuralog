@@ -10,7 +10,7 @@ import { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FaLinkedinIn } from 'react-icons/fa6';
-import { Navbar } from '@/components/layout/Navbar';
+import { FloatingNav } from '@/components/layout/FloatingNav';
 import { Footer } from '@/components/layout/Footer';
 import { PageBackground } from '@/components/PageBackground';
 import { FounderPhoto } from '@/components/ui/FounderPhoto';
@@ -94,7 +94,7 @@ export default function AboutPage() {
     <>
       <PageBackground />
       <div className="relative flex min-h-screen flex-col">
-        <Navbar />
+        <FloatingNav />
 
         <main className="flex-1">
           {/* ── Hero ─────────────────────────────────────────────────── */}

@@ -12,7 +12,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Navbar } from '@/components/layout/Navbar';
+import { FloatingNav } from '@/components/layout/FloatingNav';
 import { Footer } from '@/components/layout/Footer';
 import { PageBackground } from '@/components/PageBackground';
 import { FaXTwitter, FaInstagram, FaLinkedinIn, FaTiktok } from 'react-icons/fa6';
@@ -98,7 +98,7 @@ export default function ContactPage() {
     <>
       <PageBackground />
       <div className="relative flex min-h-screen flex-col">
-        <Navbar />
+        <FloatingNav />
 
         <main className="mx-auto w-full max-w-[1280px] flex-1 px-6 pb-24 pt-32 lg:px-12">
           {/* Back link */}

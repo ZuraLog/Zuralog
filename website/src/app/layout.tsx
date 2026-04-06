@@ -114,7 +114,7 @@ export default function RootLayout({
               #ssr-loader::after {
                 content: "";
                 grid-area: 1/1;
-                --c: no-repeat radial-gradient(farthest-side, #CFE1B9 92%, #0000);
+                --c: no-repeat radial-gradient(farthest-side, #344E41 92%, #0000);
                 background:
                   var(--c) 50%  0,
                   var(--c) 50%  100%,
@@ -125,7 +125,7 @@ export default function RootLayout({
               }
               #ssr-loader::before {
                 margin: 4px;
-                --c: no-repeat radial-gradient(farthest-side, #E8F5A8 92%, #0000);
+                --c: no-repeat radial-gradient(farthest-side, #CFE1B9 92%, #0000);
                 background-size: 8px 8px;
                 animation-timing-function: linear;
               }
@@ -158,7 +158,7 @@ export default function RootLayout({
               opacity: 0.85,
             }}
           >
-            Zuralog
+            ZuraLog
           </span>
           {/* Pure-CSS spinner — animates without JS */}
           <div id="ssr-loader" />
