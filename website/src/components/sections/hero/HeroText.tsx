@@ -7,10 +7,10 @@ import gsap from "gsap";
 import { DSButton } from "@/components/design-system";
 import { useMagnetic } from "@/hooks/use-magnetic";
 import { PhoneMockup } from "@/components/phone";
-import { PlaceholderScreen } from "@/components/phone/screens/PlaceholderScreen";
 
 export function HeroText() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const phoneRef = useRef<HTMLDivElement>(null);
   const magnetRef = useMagnetic<HTMLDivElement>({ strength: 0.3 });
 
   const handleWaitlistClick = useCallback(() => {
@@ -35,15 +35,26 @@ export function HeroText() {
 
       if (!prefersReduced) {
         const parallax = containerRef.current?.querySelector<HTMLElement>(".hero-parallax");
-        if (!parallax) return;
-        const xTo = gsap.quickTo(parallax, "x", { duration: 1.2, ease: "power2.out" });
-        const yTo = gsap.quickTo(parallax, "y", { duration: 1.2, ease: "power2.out" });
+        const phone = phoneRef.current;
+        if (!parallax || !phone) return;
+
+        // Text parallax — subtle background layer feel
+        const textXTo = gsap.quickTo(parallax, "x", { duration: 1.2, ease: "power2.out" });
+        const textYTo = gsap.quickTo(parallax, "y", { duration: 1.2, ease: "power2.out" });
+
+        // Phone parallax — slightly stronger, feels closer/foreground
+        const phoneXTo = gsap.quickTo(phone, "x", { duration: 1.4, ease: "power2.out" });
+        const phoneYTo = gsap.quickTo(phone, "y", { duration: 1.4, ease: "power2.out" });
+
         const handleMouseMove = (e: MouseEvent) => {
           const dx = (e.clientX / window.innerWidth - 0.5) * 2;
           const dy = (e.clientY / window.innerHeight - 0.5) * 2;
-          xTo(dx * 12);
-          yTo(dy * 8);
+          textXTo(dx * 12);
+          textYTo(dy * 8);
+          phoneXTo(dx * 22);
+          phoneYTo(dy * 14);
         };
+
         window.addEventListener("mousemove", handleMouseMove);
         return () => window.removeEventListener("mousemove", handleMouseMove);
       }
@@ -56,8 +67,8 @@ export function HeroText() {
       ref={containerRef}
       className="absolute inset-0 flex flex-col items-center z-50 pointer-events-none"
     >
-      {/* Text group — vertically centered in the viewport, ~25vh from top */}
-      <div className="hero-parallax will-change-transform flex flex-col items-center text-center px-6 mt-[22vh] max-w-5xl mx-auto w-full">
+      {/* Text group — vertically centered in the viewport */}
+      <div className="hero-parallax will-change-transform flex flex-col items-center text-center px-6 mt-[32vh] max-w-5xl mx-auto w-full">
         {/* Headline */}
         <h1 className="hero-line font-jakarta text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-[var(--color-ds-text-on-warm-white)] leading-[1.05]">
           The last health app{" "}
@@ -84,15 +95,19 @@ export function HeroText() {
         </div>
       </div>
 
-      {/* Phone — absolutely anchored to lower portion of hero.
-          Intentionally overflows the viewport bottom. Only the notch + top
-          of the screen is visible in the first viewport. */}
+      {/* Phone — absolutely anchored at 78vh, intentionally overflows the viewport.
+          Has its own mouse parallax (stronger than text = feels closer/foreground). */}
       <div
-        className="hero-line absolute left-1/2 -translate-x-1/2 pointer-events-auto"
+        ref={phoneRef}
+        className="hero-line absolute left-1/2 -translate-x-1/2 pointer-events-auto will-change-transform"
         style={{ top: "78vh" }}
       >
         <PhoneMockup frameWidth={420}>
-          <PlaceholderScreen label="ZuraLog" />
+          <img
+            src="/model/phone/textures/brand-forest-green.jpg"
+            alt=""
+            className="w-full h-full object-cover"
+          />
         </PhoneMockup>
       </div>
     </div>
