@@ -15,7 +15,7 @@
 
 function AppleHealthIcon() {
   return (
-    <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center flex-shrink-0">
+    <div aria-hidden="true" className="w-9 h-9 rounded-xl bg-white flex items-center justify-center flex-shrink-0">
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path
           d="M10 17.5C10 17.5 3 13.5 3 8.5C3 6 5 4 7 4C8.5 4 9.5 5 10 5.5C10.5 5 11.5 4 13 4C15 4 17 6 17 8.5C17 13.5 10 17.5 10 17.5Z"
@@ -28,7 +28,7 @@ function AppleHealthIcon() {
 
 function HealthConnectIcon() {
   return (
-    <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center flex-shrink-0">
+    <div aria-hidden="true" className="w-9 h-9 rounded-xl bg-white flex items-center justify-center flex-shrink-0">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M9 3.6C10.8 3.6 12 4.3 12.7 5L14.8 3C13.3 1.6 11.4 0.7 9 0.7C5.5 0.7 2.5 3 1.3 6.2L3.7 8C4.4 5.5 6.5 3.6 9 3.6Z" fill="#EA4335" />
         <path d="M16.5 9.2C16.5 8.5 16.4 7.9 16.3 7.3H9V10.9H13.2C13 12 12.3 12.9 11.3 13.5L13.6 15.5C15.3 14 16.5 11.8 16.5 9.2Z" fill="#4285F4" />
@@ -42,6 +42,7 @@ function HealthConnectIcon() {
 function StravaIcon() {
   return (
     <div
+      aria-hidden="true"
       className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
       style={{ backgroundColor: "#FC4C02" }}
     >
@@ -55,8 +56,8 @@ function StravaIcon() {
 
 function MoreIcon() {
   return (
-    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-[#CFE1B9]">
-      <span className="text-[#161618] text-lg font-bold leading-none">+</span>
+    <div aria-hidden="true" className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-[var(--color-ds-sage)]">
+      <span className="text-[var(--color-ds-text-on-warm-white)] text-lg font-bold leading-none">+</span>
     </div>
   );
 }
@@ -64,8 +65,8 @@ function MoreIcon() {
 function ConnectedBadge() {
   return (
     <div className="flex items-center gap-1.5 mt-0.5">
-      <div className="w-2 h-2 rounded-full bg-[#34C759] flex-shrink-0" />
-      <span className="text-[#34C759] text-[10px] font-medium">Connected</span>
+      <div aria-hidden="true" className="w-2 h-2 rounded-full bg-[var(--color-ds-success)] flex-shrink-0" />
+      <span className="text-[var(--color-ds-success)] text-[10px] font-medium">Connected</span>
     </div>
   );
 }
@@ -73,25 +74,24 @@ function ConnectedBadge() {
 export function ConnectScreen() {
   return (
     <div
-      className="w-full h-full overflow-hidden flex flex-col"
-      style={{ backgroundColor: "#161618", fontFamily: "var(--font-jakarta)" }}
+      className="w-full h-full overflow-hidden flex flex-col bg-[var(--color-ds-canvas)]"
+      style={{ fontFamily: "var(--font-jakarta)" }}
     >
       {/* Status bar */}
       <div
-        className="px-4 pt-2 pb-1 flex justify-between items-center text-[10px] flex-shrink-0"
-        style={{ color: "rgba(240, 238, 233, 0.6)" }}
+        className="px-4 pt-2 pb-1 flex justify-between items-center text-[10px] flex-shrink-0 text-[var(--color-ds-text-primary)]/60"
       >
         <span>9:41</span>
         <div className="flex items-center gap-1.5">
           {/* Signal bars */}
-          <svg width="12" height="9" viewBox="0 0 12 9" fill="currentColor">
+          <svg aria-hidden="true" width="12" height="9" viewBox="0 0 12 9" fill="currentColor">
             <rect x="0" y="5" width="2" height="4" rx="0.5" />
             <rect x="3" y="3" width="2" height="6" rx="0.5" />
             <rect x="6" y="1" width="2" height="8" rx="0.5" />
             <rect x="9" y="0" width="2" height="9" rx="0.5" />
           </svg>
           {/* Battery */}
-          <svg width="14" height="9" viewBox="0 0 14 9" fill="currentColor">
+          <svg aria-hidden="true" width="14" height="9" viewBox="0 0 14 9" fill="currentColor">
             <rect x="0.5" y="0.5" width="11" height="8" rx="1.5" stroke="currentColor" strokeWidth="1" fill="none" />
             <rect x="12" y="2.5" width="1.5" height="4" rx="0.5" />
             <rect x="2" y="2" width="7.5" height="5" rx="0.5" fillOpacity="0.8" />
@@ -101,19 +101,18 @@ export function ConnectScreen() {
 
       {/* Page heading */}
       <div className="px-4 pt-3 pb-3 flex-shrink-0">
-        <h3 className="text-sm font-semibold" style={{ color: "#F0EEE9" }}>
+        <h3 className="text-sm font-semibold text-[var(--color-ds-text-primary)]">
           Connections
         </h3>
       </div>
 
       {/* Apple Health — large card */}
       <div
-        className="mx-4 mb-2.5 rounded-2xl px-4 py-3 flex items-center gap-3 flex-shrink-0"
-        style={{ backgroundColor: "#1E1E20" }}
+        className="mx-4 mb-2.5 rounded-2xl px-4 py-3 flex items-center gap-3 flex-shrink-0 bg-[var(--color-ds-surface)]"
       >
         <AppleHealthIcon />
         <div className="min-w-0">
-          <p className="text-sm font-medium truncate" style={{ color: "#F0EEE9" }}>
+          <p className="text-sm font-medium truncate text-[var(--color-ds-text-primary)]">
             Apple Health
           </p>
           <ConnectedBadge />
@@ -122,12 +121,11 @@ export function ConnectScreen() {
 
       {/* Google Health Connect — large card */}
       <div
-        className="mx-4 mb-3 rounded-2xl px-4 py-3 flex items-center gap-3 flex-shrink-0"
-        style={{ backgroundColor: "#1E1E20" }}
+        className="mx-4 mb-3 rounded-2xl px-4 py-3 flex items-center gap-3 flex-shrink-0 bg-[var(--color-ds-surface)]"
       >
         <HealthConnectIcon />
         <div className="min-w-0">
-          <p className="text-sm font-medium truncate" style={{ color: "#F0EEE9" }}>
+          <p className="text-sm font-medium truncate text-[var(--color-ds-text-primary)]">
             Health Connect
           </p>
           <ConnectedBadge />
@@ -138,12 +136,11 @@ export function ConnectScreen() {
       <div className="flex gap-2.5 mx-4 flex-shrink-0">
         {/* Strava */}
         <div
-          className="flex-1 rounded-2xl px-3 py-3"
-          style={{ backgroundColor: "#1E1E20" }}
+          className="flex-1 rounded-2xl px-3 py-3 bg-[var(--color-ds-surface)]"
         >
           <div className="flex items-center gap-2 mb-1.5">
             <StravaIcon />
-            <p className="text-xs font-medium" style={{ color: "#F0EEE9" }}>
+            <p className="text-xs font-medium text-[var(--color-ds-text-primary)]">
               Strava
             </p>
           </div>
@@ -151,19 +148,15 @@ export function ConnectScreen() {
         </div>
         {/* More+ */}
         <div
-          className="flex-1 rounded-2xl px-3 py-3"
-          style={{ backgroundColor: "#1E1E20" }}
+          className="flex-1 rounded-2xl px-3 py-3 bg-[var(--color-ds-surface)]"
         >
           <div className="flex items-center gap-2 mb-1.5">
             <MoreIcon />
-            <p className="text-xs font-medium" style={{ color: "#F0EEE9" }}>
+            <p className="text-xs font-medium text-[var(--color-ds-text-primary)]">
               More
             </p>
           </div>
-          <p
-            className="text-[10px]"
-            style={{ color: "rgba(240, 238, 233, 0.5)" }}
-          >
+          <p className="text-[10px] text-[var(--color-ds-text-primary)]/50">
             Coming soon
           </p>
         </div>
