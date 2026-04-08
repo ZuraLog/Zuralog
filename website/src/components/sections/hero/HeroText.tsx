@@ -177,10 +177,11 @@ export function HeroText() {
 
       {/* Phone -- absolutely anchored at 78vh, intentionally overflows the
           viewport. Has its own mouse parallax (stronger than text = feels
-          closer/foreground). */}
+          closer/foreground). Hidden on mobile — each section below provides
+          its own inline phone mockup so we don't bleed into the next section. */}
       <div
         ref={phoneRef}
-        className="absolute left-1/2 -translate-x-1/2 pointer-events-auto will-change-transform"
+        className="hidden md:block absolute left-1/2 -translate-x-1/2 pointer-events-auto will-change-transform"
         style={{ top: "78vh" }}
       >
         <PhoneMockup frameWidth={420}>
