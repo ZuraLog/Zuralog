@@ -1,11 +1,12 @@
-import { HeroText } from "./hero/HeroText";
-import { FloatingIcons } from "./hero/FloatingIcons";
-
+// website/src/components/sections/HeroSection.tsx
+// Full implementation: see Hero Section plan
 export function HeroSection() {
-    return (
-        <section id="hero-section" className="relative w-full h-screen overflow-hidden" style={{ backgroundColor: "#F0EEE9" }}>
-            <FloatingIcons />
-            <HeroText />
-        </section>
-    );
+  return (
+    <section
+      id="hero-section"
+      className="min-h-screen flex items-center justify-center"
+    >
+      {/* Hero section — implementation in Hero Section plan */}
+    </section>
+  );
 }
