@@ -66,7 +66,7 @@ export function HeroText() {
       ref={containerRef}
       className="absolute inset-0 flex flex-col items-center justify-center z-50 pointer-events-none"
     >
-      <div className="hero-parallax flex flex-col items-center text-center px-6 mt-10 md:mt-20 max-w-5xl mx-auto">
+      <div className="hero-parallax will-change-transform flex flex-col items-center text-center px-6 mt-10 md:mt-20 max-w-5xl mx-auto">
         {/* Headline */}
         <h1 className="hero-line font-jakarta text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-[var(--color-ds-text-on-warm-white)] leading-[1.05]">
           The last health app{" "}
