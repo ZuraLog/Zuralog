@@ -31,7 +31,7 @@ export const PhoneContext = createContext<PhoneContextValue | null>(null);
 PhoneContext.displayName = "PhoneContext";
 
 /**
- * PhoneProvider — owns the four shared DOM refs and makes them available
+ * PhoneProvider — owns the six shared DOM refs and makes them available
  * to any descendant via usePhoneContext().
  *
  * Mount this high in the tree (e.g. inside ClientProviders) so that both
@@ -47,7 +47,7 @@ export function PhoneProvider({ children }: { children: React.ReactNode }) {
   const placeholderScreenRef = useRef<HTMLDivElement>(null);
   const connectScreenRef = useRef<HTMLDivElement>(null);
   const nutritionScreenRef = useRef<HTMLDivElement>(null);
-  const parallaxRef = useRef<HTMLDivElement>(null);
+  const parallaxRef = useRef<HTMLDivElement>(null); // Wired to DOM node in ScrollPhone
 
   const contextValue: PhoneContextValue = {
     phoneRef,
@@ -139,6 +139,8 @@ export function computeFrameWidth(): number {
  * The positioning div is centered via `top-1/2 -translate-y-1/2`, so its default
  * center is at 50vh. This offset pushes the center down to 78vh + phoneHeight/2,
  * placing the phone top at 78vh.
+ *
+ * Note: this offset is only correct for elements using the CSS centering pattern `top-1/2 -translate-y-1/2`. It is not applicable to `position: absolute; top: 78vh` elements.
  *
  * @param frameWidth - The current computed phone frame width in pixels
  */
