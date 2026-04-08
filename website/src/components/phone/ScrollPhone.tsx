@@ -39,11 +39,11 @@ export function ScrollPhone() {
       {/* Same fixed full-viewport layering as the old ScrollPhoneCanvas */}
       <div
         ref={containerRef}
-        className="hidden md:block fixed inset-0 z-40 pointer-events-none"
+        className="hidden md:block fixed inset-0 z-40 pointer-events-none opacity-0"
         aria-hidden="true"
       >
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-          <PhoneMockup ref={phoneRef}>
+          <PhoneMockup ref={phoneRef} frameWidth={320}>
             <PlaceholderScreen label="ZuraLog" />
           </PhoneMockup>
         </div>

@@ -19,6 +19,7 @@ import { ScrollProgress } from "@/components/design-system/interactions/scroll-p
 import { CustomCursor } from "@/components/design-system/interactions/custom-cursor";
 import { SpotlightFollow } from "@/components/design-system/interactions/spotlight-follow";
 import "./globals.css";
+import "react-device-frameset/styles/marvel-devices.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

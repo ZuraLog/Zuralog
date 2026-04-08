@@ -13,7 +13,6 @@ export function HeroText() {
   const containerRef = useRef<HTMLDivElement>(null);
   const magnetRef = useMagnetic<HTMLDivElement>({ strength: 0.3 });
 
-  // Scroll to waitlist section on CTA click
   const handleWaitlistClick = useCallback(() => {
     const el = document.getElementById("waitlist");
     if (el) el.scrollIntoView({ behavior: "smooth" });
@@ -28,34 +27,23 @@ export function HeroText() {
         gsap.fromTo(
           lines,
           { y: 40, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.9,
-            ease: "power3.out",
-            stagger: 0.12,
-            delay: 0.2,
-          }
+          { y: 0, opacity: 1, duration: 0.9, ease: "power3.out", stagger: 0.12, delay: 0.2 }
         );
       } else {
         gsap.set(lines, { opacity: 1 });
       }
 
       if (!prefersReduced) {
-        // Subtle mouse parallax on the inner content
         const parallax = containerRef.current?.querySelector<HTMLElement>(".hero-parallax");
         if (!parallax) return;
-
         const xTo = gsap.quickTo(parallax, "x", { duration: 1.2, ease: "power2.out" });
         const yTo = gsap.quickTo(parallax, "y", { duration: 1.2, ease: "power2.out" });
-
         const handleMouseMove = (e: MouseEvent) => {
           const dx = (e.clientX / window.innerWidth - 0.5) * 2;
           const dy = (e.clientY / window.innerHeight - 0.5) * 2;
           xTo(dx * 12);
           yTo(dy * 8);
         };
-
         window.addEventListener("mousemove", handleMouseMove);
         return () => window.removeEventListener("mousemove", handleMouseMove);
       }
@@ -66,9 +54,10 @@ export function HeroText() {
   return (
     <div
       ref={containerRef}
-      className="relative min-h-screen md:absolute md:inset-0 md:min-h-0 flex flex-col items-center justify-center z-50 pointer-events-none"
+      className="absolute inset-0 flex flex-col items-center z-50 pointer-events-none"
     >
-      <div className="hero-parallax will-change-transform flex flex-col items-center text-center px-6 py-16 md:py-0 md:mt-20 max-w-5xl mx-auto">
+      {/* Text group — vertically centered in the viewport, ~25vh from top */}
+      <div className="hero-parallax will-change-transform flex flex-col items-center text-center px-6 mt-[22vh] max-w-5xl mx-auto w-full">
         {/* Headline */}
         <h1 className="hero-line font-jakarta text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-[var(--color-ds-text-on-warm-white)] leading-[1.05]">
           The last health app{" "}
@@ -87,19 +76,24 @@ export function HeroText() {
           sense of all of it.
         </p>
 
-        {/* Mobile-only inline phone — shown when the fixed ScrollPhone is hidden */}
-        <div className="hero-line block md:hidden mt-10 pointer-events-auto">
-          <PhoneMockup screenWidth={200}>
-            <PlaceholderScreen label="ZuraLog" />
-          </PhoneMockup>
-        </div>
-
         {/* CTA */}
         <div ref={magnetRef} className="hero-line hero-cta mt-8 pointer-events-auto">
           <DSButton intent="primary" size="lg" onClick={handleWaitlistClick} aria-label="Join the ZuraLog waitlist">
             Waitlist Now
           </DSButton>
         </div>
+      </div>
+
+      {/* Phone — absolutely anchored to lower portion of hero.
+          Intentionally overflows the viewport bottom. Only the notch + top
+          of the screen is visible in the first viewport. */}
+      <div
+        className="hero-line absolute left-1/2 -translate-x-1/2 pointer-events-auto"
+        style={{ top: "78vh" }}
+      >
+        <PhoneMockup frameWidth={420}>
+          <PlaceholderScreen label="ZuraLog" />
+        </PhoneMockup>
       </div>
     </div>
   );

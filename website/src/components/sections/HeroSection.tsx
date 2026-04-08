@@ -8,7 +8,7 @@ export function HeroSection() {
   return (
     <section
       id="hero-section"
-      className="relative min-h-screen overflow-hidden"
+      className="relative min-h-screen"
     >
       {/* Background decoration — floating fitness icons with mouse repellant physics */}
       <FloatingIcons />
