@@ -2,6 +2,7 @@
 import { FloatingNav } from "@/components/layout/FloatingNav";
 import { Footer } from "@/components/layout/Footer";
 import { HeroSection } from "@/components/sections/HeroSection";
+import { ConnectSection } from "@/components/sections/ConnectSection";
 import { WaitlistSection } from "@/components/sections/WaitlistSection";
 import { ClientShellGate } from "@/components/ClientShellGate";
 import { PageBackground } from "@/components/PageBackground";
@@ -9,12 +10,14 @@ import { HashScrollHandler } from "@/components/HashScrollHandler";
 import { ClientProviders } from "@/components/providers/ClientProviders";
 
 /**
- * Scroll anchor IDs referenced by ScrollPhoneCanvas GSAP triggers,
- * FloatingNav links, and Footer links. Each anchor is a minimal
- * <section> with enough height (100vh) to give GSAP ScrollTrigger
- * a trigger range. Real section content will be built directly into
- * these anchors (or as lightweight child components) — they must NOT
- * have their own overflow constraints or scroll contexts.
+ * Scroll anchor IDs referenced by FloatingNav links and Footer links.
+ * Each anchor is a minimal <section> with enough height (100vh) to give
+ * GSAP ScrollTrigger a trigger range. Real section content is built directly
+ * into the section components — they must NOT have their own overflow
+ * constraints or scroll contexts.
+ *
+ * Note: ConnectSection has id="connect-section" baked into its JSX and does
+ * not appear here.
  */
 const SCROLL_ANCHORS = [
   "coach-section",
@@ -29,6 +32,7 @@ export default function Home() {
         <main className="relative min-h-screen">
           <FloatingNav />
           <HeroSection />
+          <ConnectSection />
 
           {/* Scroll zone ------------------------------------------------
               Flat container for GSAP ScrollTrigger anchors.
