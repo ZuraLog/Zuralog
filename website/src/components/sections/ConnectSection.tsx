@@ -60,14 +60,21 @@ export function ConnectSection() {
       const section = sectionRef.current;
       if (!section) return;
 
-      // Compute the horizontal offset needed to move the phone (currently centered
-      // in the viewport) into the visual center of the right grid column.
-      // This is recalculated on each ScrollTrigger refresh via invalidateOnRefresh.
-      const sectionRect = section.getBoundingClientRect();
-      const rightColCenter = sectionRect.left + sectionRect.width * 0.75;
-      const viewportCenter = window.innerWidth / 2;
-      const targetX = Math.round(rightColCenter - viewportCenter);
-      const heroY = computeHeroY(computeFrameWidth());
+      // Use mutable variables so onRefresh can update them on resize.
+      // On each refresh, recalcPositions will recompute targetX and heroY
+      // based on current viewport and section dimensions.
+      let targetX = 0;
+      let heroY = 0;
+
+      const recalcPositions = () => {
+        const sectionRect = section.getBoundingClientRect();
+        const rightColCenter = sectionRect.left + sectionRect.width * 0.75;
+        const viewportCenter = window.innerWidth / 2;
+        targetX = Math.round(rightColCenter - viewportCenter);
+        heroY = computeHeroY(computeFrameWidth());
+      };
+
+      recalcPositions(); // compute initial values
 
       const prefersReduced = window.matchMedia(
         "(prefers-reduced-motion: reduce)"
@@ -114,6 +121,7 @@ export function ConnectSection() {
         start: "top 60%",
         end: "bottom 40%",
         invalidateOnRefresh: true,
+        onRefresh: recalcPositions,
 
         onEnter: () => {
           const phone = phoneRef.current;
