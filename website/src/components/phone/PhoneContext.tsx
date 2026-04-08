@@ -1,7 +1,7 @@
 // website/src/components/phone/PhoneContext.tsx
 "use client";
 
-import { createContext, useContext, useRef, useMemo, type RefObject } from "react";
+import { createContext, useContext, useRef, type RefObject } from "react";
 
 /**
  * Shape of the phone context — everything sections need to animate
@@ -25,6 +25,7 @@ export interface PhoneContextValue {
 }
 
 export const PhoneContext = createContext<PhoneContextValue | null>(null);
+PhoneContext.displayName = "PhoneContext";
 
 /**
  * PhoneProvider — owns the four shared DOM refs and makes them available
@@ -43,12 +44,14 @@ export function PhoneProvider({ children }: { children: React.ReactNode }) {
   const placeholderScreenRef = useRef<HTMLDivElement>(null);
   const connectScreenRef = useRef<HTMLDivElement>(null);
 
-  const value = useMemo<PhoneContextValue>(
-    () => ({ phoneRef, containerRef, placeholderScreenRef, connectScreenRef }),
-    []
-  );
+  const contextValue: PhoneContextValue = {
+    phoneRef,
+    containerRef,
+    placeholderScreenRef,
+    connectScreenRef,
+  };
 
-  return <PhoneContext.Provider value={value}>{children}</PhoneContext.Provider>;
+  return <PhoneContext.Provider value={contextValue}>{children}</PhoneContext.Provider>;
 }
 
 /**
