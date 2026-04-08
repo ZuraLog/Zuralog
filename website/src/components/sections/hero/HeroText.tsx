@@ -1,84 +1,97 @@
+// website/src/components/sections/hero/HeroText.tsx
 "use client";
 
-import { useEffect, useRef } from 'react';
-import gsap from 'gsap';
-import { DSButton } from '@/components/design-system';
-import { useSoundContext } from "@/components/design-system/interactions/sound-provider";
+import { useRef, useCallback } from "react";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
+import { DSButton } from "@/components/design-system";
 import { useMagnetic } from "@/hooks/use-magnetic";
 
 export function HeroText() {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const magnetRef = useMagnetic<HTMLDivElement>();
-    const { playSound } = useSoundContext();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const magnetRef = useMagnetic<HTMLDivElement>({ strength: 0.3 });
 
-    useEffect(() => {
-        let handleMouseMove: (e: MouseEvent) => void;
+  // Scroll to waitlist section on CTA click
+  const handleWaitlistClick = useCallback(() => {
+    const el = document.getElementById("waitlist");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  }, []);
 
-        const ctx = gsap.context(() => {
-            // Timeline for entrance animations
-            const tl = gsap.timeline({ defaults: { ease: 'power3.out', duration: 1 } });
+  useGSAP(
+    () => {
+      const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const lines = gsap.utils.toArray<HTMLElement>(".hero-line", containerRef.current);
 
-            tl.fromTo('.badge', { opacity: 0, y: -15 }, { opacity: 1, y: 0 }, 0.2)
-                .fromTo('.hero-line', { opacity: 0, y: 30 }, { opacity: 1, y: 0, stagger: 0.15 }, 0.3)
-                .fromTo('.hero-cta', { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1 }, 0.8);
+      if (!prefersReduced) {
+        gsap.fromTo(
+          lines,
+          { y: 40, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.9,
+            ease: "power3.out",
+            stagger: 0.12,
+            delay: 0.2,
+          }
+        );
+      } else {
+        gsap.set(lines, { opacity: 1 });
+      }
 
-            // Mouse parallax configuration
-            handleMouseMove = (e: MouseEvent) => {
-                const mx = (e.clientX / window.innerWidth - 0.5) * 2;
-                const my = (e.clientY / window.innerHeight - 0.5) * 2;
+      if (!prefersReduced) {
+        // Subtle mouse parallax on the inner content
+        const parallax = containerRef.current?.querySelector<HTMLElement>(".hero-parallax");
+        if (!parallax) return;
 
-                gsap.to('.hero-parallax', {
-                    x: mx * 25, // Move with mouse
-                    y: my * 25,
-                    duration: 1.5,
-                    ease: 'power2.out'
-                });
-            };
-            if (!window.matchMedia('(max-width: 767px)').matches) {
-                window.addEventListener('mousemove', handleMouseMove);
-            }
-        }, containerRef);
+        const xTo = gsap.quickTo(parallax, "x", { duration: 1.2, ease: "power2.out" });
+        const yTo = gsap.quickTo(parallax, "y", { duration: 1.2, ease: "power2.out" });
 
-        return () => {
-            if (handleMouseMove) window.removeEventListener('mousemove', handleMouseMove);
-            ctx.revert();
+        const handleMouseMove = (e: MouseEvent) => {
+          const dx = (e.clientX / window.innerWidth - 0.5) * 2;
+          const dy = (e.clientY / window.innerHeight - 0.5) * 2;
+          xTo(dx * 12);
+          yTo(dy * 8);
         };
-    }, []);
 
-    return (
-        <div ref={containerRef} className="absolute inset-0 flex flex-col items-center justify-center z-30 pointer-events-none">
-            <div className="hero-parallax flex flex-col items-center mt-10 md:mt-20">
-                <div className="badge pointer-events-auto flex items-center gap-2 border border-black/10 rounded-full px-4 py-1.5 mb-8 bg-white/50 backdrop-blur-sm shadow-sm">
-                    <div className="w-2 h-2 bg-[#CFE1B9] rounded-full animate-pulse" />
-                    <span className="text-sm font-medium text-black/70">The future of wellbeing</span>
-                </div>
+        window.addEventListener("mousemove", handleMouseMove);
+        return () => window.removeEventListener("mousemove", handleMouseMove);
+      }
+    },
+    { scope: containerRef, dependencies: [] }
+  );
 
-                <h1 className="text-center text-dark-charcoal font-jakarta pointer-events-auto max-w-[900px] px-4 md:px-0">
-                    <div className="hero-line text-4xl sm:text-5xl md:text-7xl lg:text-8xl tracking-tight mb-2">
-                        Unified <span className="ds-pattern-text" style={{ backgroundImage: 'var(--ds-pattern-sage)' }}>Health.</span>
-                    </div>
-                    <div className="hero-line text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight">
-                        Made <span className="ds-pattern-text" style={{ backgroundImage: 'var(--ds-pattern-sage)' }}>Smart.</span>
-                    </div>
-                </h1>
+  return (
+    <div
+      ref={containerRef}
+      className="absolute inset-0 flex flex-col items-center justify-center z-50 pointer-events-none"
+    >
+      <div className="hero-parallax flex flex-col items-center text-center px-6 mt-10 md:mt-20 max-w-5xl mx-auto">
+        {/* Headline */}
+        <h1 className="hero-line font-jakarta text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-[var(--color-ds-text-on-warm-white)] leading-[1.05]">
+          The last health app{" "}
+          <span
+            className="ds-pattern-text"
+            style={{ backgroundImage: "var(--ds-pattern-sage)" }}
+          >
+            you&apos;ll ever need.
+          </span>
+        </h1>
 
-                <p className="hero-line text-base md:text-xl text-black mt-6 max-w-[500px] text-center pointer-events-auto px-4 md:px-0">
-                    Bring all your fitness data into one brilliant interface.
-                </p>
+        {/* Subheadline */}
+        <p className="hero-line font-jakarta mt-6 text-base sm:text-lg md:text-xl text-[var(--color-ds-text-secondary)] max-w-2xl leading-relaxed">
+          One place for every workout, every meal, every night&apos;s sleep, and
+          everything else your health needs — powered by an AI coach that makes
+          sense of all of it.
+        </p>
 
-                <div ref={magnetRef} className="hero-cta pointer-events-auto mt-8 md:mt-12">
-                    <DSButton
-                        intent="primary"
-                        size="lg"
-                        onClick={() => {
-                            playSound("click");
-                            document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" });
-                        }}
-                    >
-                        Waitlist Now
-                    </DSButton>
-                </div>
-            </div>
+        {/* CTA */}
+        <div ref={magnetRef} className="hero-line hero-cta mt-8 pointer-events-auto">
+          <DSButton intent="primary" size="lg" onClick={handleWaitlistClick} aria-label="Join the ZuraLog waitlist">
+            Waitlist Now
+          </DSButton>
         </div>
-    );
+      </div>
+    </div>
+  );
 }

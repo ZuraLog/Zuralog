@@ -1,12 +1,20 @@
 // website/src/components/sections/HeroSection.tsx
-// Full implementation: see Hero Section plan
+"use client";
+
+import { FloatingIcons } from "./hero/FloatingIcons";
+import { HeroText } from "./hero/HeroText";
+
 export function HeroSection() {
   return (
     <section
       id="hero-section"
-      className="min-h-screen flex items-center justify-center"
+      className="relative min-h-screen overflow-hidden"
     >
-      {/* Hero section — implementation in Hero Section plan */}
+      {/* Background decoration — floating fitness icons with mouse repellant physics */}
+      <FloatingIcons />
+
+      {/* Text content — z-50 so it sits above the ScrollPhone overlay (z-40) */}
+      <HeroText />
     </section>
   );
 }
