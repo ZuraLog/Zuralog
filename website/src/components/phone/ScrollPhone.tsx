@@ -1,13 +1,15 @@
 // website/src/components/phone/ScrollPhone.tsx
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import { PhoneMockup } from "./PhoneMockup";
 import { PhoneContext } from "./PhoneContext";
+import type { PhoneContextValue } from "./PhoneContext";
 import { PlaceholderScreen } from "./screens/PlaceholderScreen";
+import { ConnectScreen } from "./screens/ConnectScreen";
 import { loadingBridge } from "@/lib/loading-bridge";
 
 if (typeof window !== "undefined") {
@@ -17,6 +19,8 @@ if (typeof window !== "undefined") {
 export function ScrollPhone() {
   const containerRef = useRef<HTMLDivElement>(null);
   const phoneRef = useRef<HTMLDivElement>(null);
+  const placeholderScreenRef = useRef<HTMLDivElement>(null);
+  const connectScreenRef = useRef<HTMLDivElement>(null);
 
   // No 3D assets to load — signal complete immediately so LoadingScreen
   // dismisses after its 1.5s minimum display time.
@@ -34,8 +38,18 @@ export function ScrollPhone() {
     { scope: containerRef, dependencies: [] }
   );
 
+  const contextValue = useMemo<PhoneContextValue>(
+    () => ({
+      phoneRef,
+      containerRef,
+      placeholderScreenRef,
+      connectScreenRef,
+    }),
+    []
+  );
+
   return (
-    <PhoneContext.Provider value={phoneRef}>
+    <PhoneContext.Provider value={contextValue}>
       {/* Same fixed full-viewport layering as the old ScrollPhoneCanvas */}
       <div
         ref={containerRef}
@@ -44,7 +58,25 @@ export function ScrollPhone() {
       >
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
           <PhoneMockup ref={phoneRef} frameWidth={320}>
-            <PlaceholderScreen label="ZuraLog" />
+            {/* Screen stack — both screens are absolutely positioned.
+                PlaceholderScreen starts visible (opacity 1), ConnectScreen starts hidden (opacity 0).
+                Sections animate these opacities to crossfade between them. */}
+            <div className="relative w-full h-full">
+              <div
+                ref={placeholderScreenRef}
+                className="absolute inset-0"
+                style={{ opacity: 1 }}
+              >
+                <PlaceholderScreen label="ZuraLog" />
+              </div>
+              <div
+                ref={connectScreenRef}
+                className="absolute inset-0"
+                style={{ opacity: 0 }}
+              >
+                <ConnectScreen />
+              </div>
+            </div>
           </PhoneMockup>
         </div>
       </div>
