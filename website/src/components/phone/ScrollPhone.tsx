@@ -25,10 +25,11 @@ import { loadingBridge } from "@/lib/loading-bridge";
  *                         ├── connectScreenRef div      (opacity:0, filter:blur(10px))
  *                         └── nutritionScreenRef div    (opacity:0, filter:blur(10px))
  *
- * Always-visible behavior:
- *   The container has NO opacity-0 class — the phone is rendered from the very first
- *   frame. The hero y-offset (set in the mount effect) makes it peek from below the
- *   fold. HeroSection's scroll animation lifts it into its final hero position.
+ * Visibility:
+ *   The container starts at opacity 0 (inline style) to prevent a one-frame flash at
+ *   viewport center. The mount effect (Effect 2) sets the hero y-offset first, then
+ *   reveals the container via gsap.set(container, { opacity: 1 }). The hero y-offset
+ *   makes the phone peek from below the fold.
  *
  * Screen crossfades:
  *   Sections drive opacity + filter transitions on the screen wrapper divs via GSAP.
@@ -54,6 +55,8 @@ export function ScrollPhone() {
 
   // Effect 2 — compute responsive frameWidth and set the hero y-offset on mount.
   // The y-offset positions the phone top at ~78vh so it peeks from below the fold.
+  // After positioning, reveal the container (starts hidden to prevent a one-frame
+  // flash of the phone at viewport center before the y-offset is applied).
   useEffect(() => {
     const fw = computeFrameWidth();
     setFrameWidth(fw);
@@ -62,19 +65,22 @@ export function ScrollPhone() {
     if (phone) {
       gsap.set(phone, { y: computeHeroY(fw) });
     }
+
+    const container = phoneCtx?.containerRef.current;
+    if (container) {
+      gsap.set(container, { opacity: 1 });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Effect 3 — keep frameWidth in sync when the browser is resized.
-  // Also re-apply the hero y-position to keep it current with the new frameWidth.
+  // We do NOT re-apply the hero y-position here: ConnectSection (and future sections)
+  // use ScrollTrigger's invalidateOnRefresh + onRefresh to recompute their target
+  // positions on resize, so forcing hero y here would cause the phone to jump when
+  // the user resizes while viewing another section.
   useEffect(() => {
     const handleResize = () => {
-      const fw = computeFrameWidth();
-      setFrameWidth(fw);
-      const phone = phoneCtx?.phoneRef.current;
-      if (phone) {
-        gsap.set(phone, { y: computeHeroY(fw) });
-      }
+      setFrameWidth(computeFrameWidth());
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -118,10 +124,14 @@ export function ScrollPhone() {
   } = phoneCtx;
 
   return (
-    /* Fixed full-viewport layer — phone overlay above page content, always visible */
+    /* Fixed full-viewport layer — phone overlay above page content.
+       Starts at opacity 0 (hidden) to prevent a one-frame flash of the phone at
+       viewport center before the mount effect applies the hero y-offset. Effect 2
+       sets opacity: 1 immediately after positioning. */
     <div
       ref={containerRef}
       className="hidden md:block fixed inset-0 z-40 pointer-events-none"
+      style={{ opacity: 0 }}
       aria-hidden="true"
     >
       {/* phoneRef: centering + large GSAP position moves (scroll-driven). will-change-transform
