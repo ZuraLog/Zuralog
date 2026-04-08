@@ -66,10 +66,15 @@ export function ScrollPhone() {
   }, []);
 
   // Effect 3 — keep frameWidth in sync when the browser is resized.
+  // Also re-apply the hero y-position to keep it current with the new frameWidth.
   useEffect(() => {
     const handleResize = () => {
       const fw = computeFrameWidth();
       setFrameWidth(fw);
+      const phone = phoneCtx?.phoneRef.current;
+      if (phone) {
+        gsap.set(phone, { y: computeHeroY(fw) });
+      }
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
