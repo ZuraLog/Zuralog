@@ -5,12 +5,38 @@ import { useRef } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
-import { usePhoneContext } from "@/components/phone/PhoneContext";
+import { usePhoneContext, computeFrameWidth, computeHeroY } from "@/components/phone/PhoneContext";
 import { PhoneMockup } from "@/components/phone";
 import { ConnectScreen } from "@/components/phone/screens/ConnectScreen";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
+}
+
+// Helper: blur-fade a screen out (opacity 0, blur 10px)
+function blurOut(el: HTMLElement | null, delay = 0) {
+  if (!el) return;
+  gsap.to(el, {
+    opacity: 0,
+    filter: "blur(10px)",
+    duration: 0.45,
+    delay,
+    ease: "power2.in",
+    overwrite: "auto",
+  });
+}
+
+// Helper: blur-fade a screen in (opacity 1, blur cleared)
+function blurIn(el: HTMLElement | null, delay = 0.1) {
+  if (!el) return;
+  gsap.to(el, {
+    opacity: 1,
+    filter: "blur(0px)",
+    duration: 0.5,
+    delay,
+    ease: "power2.out",
+    overwrite: "auto",
+  });
 }
 
 export function ConnectSection() {
@@ -41,6 +67,7 @@ export function ConnectSection() {
       const rightColCenter = sectionRect.left + sectionRect.width * 0.75;
       const viewportCenter = window.innerWidth / 2;
       const targetX = Math.round(rightColCenter - viewportCenter);
+      const heroY = computeHeroY(computeFrameWidth());
 
       const prefersReduced = window.matchMedia(
         "(prefers-reduced-motion: reduce)"
@@ -89,45 +116,34 @@ export function ConnectSection() {
         invalidateOnRefresh: true,
 
         onEnter: () => {
-          const container = containerRef.current;
           const phone = phoneRef.current;
           const placeholder = placeholderScreenRef.current;
           const connect = connectScreenRef.current;
-          if (!container || !phone || !placeholder || !connect) return;
+          if (!phone || !placeholder || !connect) return;
 
-          // Fade in the ScrollPhone overlay
-          gsap.to(container, {
-            opacity: 1,
-            duration: 0.6,
-            ease: "power2.out",
-          });
-
-          // Move phone to the right column
+          // Phone arrives from hero position (y = heroY). Animate to right column.
+          // Container stays at opacity 1 — phone was already visible in the hero.
           gsap.to(phone, {
             x: targetX,
-            duration: 0.8,
+            y: 0,
+            duration: 1.0,
             ease: "power3.out",
           });
 
-          // Crossfade: PlaceholderScreen out, ConnectScreen in
-          gsap.to(placeholder, { opacity: 0, duration: 0.4, overwrite: "auto" });
-          gsap.to(connect, { opacity: 1, duration: 0.4, delay: 0.1, overwrite: "auto" });
-
-          // Fade in text
+          blurOut(placeholder);
+          blurIn(connect);
           animateTextIn();
         },
 
         onLeave: () => {
-          if (!containerRef.current) return;
+          const container = containerRef.current;
+          if (!container) return;
 
-          // Fade out overlay when scrolling past the section
-          gsap.to(containerRef.current, {
+          gsap.to(container, {
             opacity: 0,
             duration: 0.4,
             ease: "power2.in",
           });
-
-          // Reset text
           resetText();
         },
 
@@ -138,7 +154,6 @@ export function ConnectSection() {
           const connect = connectScreenRef.current;
           if (!container || !phone || !placeholder || !connect) return;
 
-          // Re-show when scrolling back up into the section
           gsap.to(container, {
             opacity: 1,
             duration: 0.6,
@@ -147,40 +162,33 @@ export function ConnectSection() {
 
           gsap.to(phone, {
             x: targetX,
+            y: 0,
             duration: 0.8,
             ease: "power3.out",
           });
 
-          gsap.to(placeholder, { opacity: 0, duration: 0.3, overwrite: "auto" });
-          gsap.to(connect, { opacity: 1, duration: 0.3, overwrite: "auto" });
-
+          blurOut(placeholder, 0);
+          blurIn(connect, 0.1);
           animateTextIn();
         },
 
         onLeaveBack: () => {
-          const container = containerRef.current;
           const phone = phoneRef.current;
           const placeholder = placeholderScreenRef.current;
           const connect = connectScreenRef.current;
-          if (!container || !phone || !placeholder || !connect) return;
+          if (!phone || !placeholder || !connect) return;
 
-          // Scrolling back up past the section -- hide overlay, reset phone
-          gsap.to(container, {
-            opacity: 0,
-            duration: 0.4,
-            ease: "power2.in",
-          });
-
+          // Return phone to hero position. Container stays at opacity 1.
           gsap.to(phone, {
             x: 0,
-            duration: 0.6,
-            ease: "power2.out",
+            y: heroY,
+            duration: 1.0,
+            ease: "power3.out",
           });
 
-          // Reset screens: PlaceholderScreen visible, ConnectScreen hidden
-          gsap.to(placeholder, { opacity: 1, duration: 0.3, overwrite: "auto" });
-          gsap.to(connect, { opacity: 0, duration: 0.3, overwrite: "auto" });
-
+          // Restore PlaceholderScreen for the hero
+          blurOut(connect, 0);
+          blurIn(placeholder, 0.1);
           resetText();
         },
       });
