@@ -46,6 +46,15 @@ export function HeroText() {
             delay: 0.2,
           }
         );
+
+        // Separate entrance for the phone (no stagger, slightly longer delay):
+        if (phoneRef.current) {
+          gsap.fromTo(
+            phoneRef.current,
+            { opacity: 0 },
+            { opacity: 1, duration: 0.9, ease: "power3.out", delay: 0.5 }
+          );
+        }
       } else {
         gsap.set(lines, { opacity: 1 });
       }
@@ -87,24 +96,39 @@ export function HeroText() {
 
         window.addEventListener("mousemove", handleMouseMove);
 
-        // Fade out the hero inline phone as user scrolls away from the hero.
-        // This ensures a clean visual handoff to the ScrollPhone fixed overlay
-        // which fades in when the Connect section enters the viewport.
+        // Hero phone fade-out -- smooth fade for non-reduced-motion users.
         // Desktop only -- on mobile the ScrollPhone overlay is hidden entirely.
         if (window.innerWidth >= 768) {
           ScrollTrigger.create({
             trigger: "#hero-section",
             start: "bottom 80%",
             end: "bottom 20%",
+            invalidateOnRefresh: true,
             onUpdate: (self) => {
-              if (phone) {
-                gsap.set(phone, { opacity: 1 - self.progress });
-              }
+              gsap.set(phone, { opacity: 1 - self.progress });
             },
           });
         }
 
         return () => window.removeEventListener("mousemove", handleMouseMove);
+      }
+
+      // Hero phone fade-out for reduced-motion users -- snaps instead of fading.
+      // This prevents the hero phone and the Connect section's scroll phone from
+      // overlapping when a reduced-motion desktop user scrolls past the hero.
+      if (window.innerWidth >= 768) {
+        const phone = phoneRef.current;
+        if (phone) {
+          ScrollTrigger.create({
+            trigger: "#hero-section",
+            start: "bottom 80%",
+            end: "bottom 20%",
+            invalidateOnRefresh: true,
+            onUpdate: (self) => {
+              gsap.set(phone, { opacity: self.progress > 0.5 ? 0 : 1 });
+            },
+          });
+        }
       }
     },
     { scope: containerRef, dependencies: [] }
@@ -156,7 +180,7 @@ export function HeroText() {
           closer/foreground). */}
       <div
         ref={phoneRef}
-        className="hero-line absolute left-1/2 -translate-x-1/2 pointer-events-auto will-change-transform"
+        className="absolute left-1/2 -translate-x-1/2 pointer-events-auto will-change-transform"
         style={{ top: "78vh" }}
       >
         <PhoneMockup frameWidth={420}>

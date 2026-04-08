@@ -80,36 +80,37 @@ export function ConnectSection() {
         end: "bottom 40%",
 
         onEnter: () => {
+          const container = containerRef.current;
+          const phone = phoneRef.current;
+          const placeholder = placeholderScreenRef.current;
+          const connect = connectScreenRef.current;
+          if (!container || !phone || !placeholder || !connect) return;
+
           // Fade in the ScrollPhone overlay
-          gsap.to(containerRef.current, {
+          gsap.to(container, {
             opacity: 1,
             duration: 0.6,
             ease: "power2.out",
           });
 
           // Move phone to the right column
-          gsap.to(phoneRef.current, {
+          gsap.to(phone, {
             x: 220,
             duration: 0.8,
             ease: "power3.out",
           });
 
           // Crossfade: PlaceholderScreen out, ConnectScreen in
-          gsap.to(placeholderScreenRef.current, {
-            opacity: 0,
-            duration: 0.4,
-          });
-          gsap.to(connectScreenRef.current, {
-            opacity: 1,
-            duration: 0.4,
-            delay: 0.1,
-          });
+          gsap.to(placeholder, { opacity: 0, duration: 0.4, overwrite: "auto" });
+          gsap.to(connect, { opacity: 1, duration: 0.4, delay: 0.1, overwrite: "auto" });
 
           // Fade in text
           animateTextIn();
         },
 
         onLeave: () => {
+          if (!containerRef.current) return;
+
           // Fade out overlay when scrolling past the section
           gsap.to(containerRef.current, {
             opacity: 0,
@@ -122,54 +123,54 @@ export function ConnectSection() {
         },
 
         onEnterBack: () => {
+          const container = containerRef.current;
+          const phone = phoneRef.current;
+          const placeholder = placeholderScreenRef.current;
+          const connect = connectScreenRef.current;
+          if (!container || !phone || !placeholder || !connect) return;
+
           // Re-show when scrolling back up into the section
-          gsap.to(containerRef.current, {
+          gsap.to(container, {
             opacity: 1,
             duration: 0.6,
             ease: "power2.out",
           });
 
-          gsap.to(phoneRef.current, {
+          gsap.to(phone, {
             x: 220,
             duration: 0.8,
             ease: "power3.out",
           });
 
-          gsap.to(placeholderScreenRef.current, {
-            opacity: 0,
-            duration: 0.3,
-          });
-          gsap.to(connectScreenRef.current, {
-            opacity: 1,
-            duration: 0.3,
-          });
+          gsap.to(placeholder, { opacity: 0, duration: 0.3, overwrite: "auto" });
+          gsap.to(connect, { opacity: 1, duration: 0.3, overwrite: "auto" });
 
           animateTextIn();
         },
 
         onLeaveBack: () => {
+          const container = containerRef.current;
+          const phone = phoneRef.current;
+          const placeholder = placeholderScreenRef.current;
+          const connect = connectScreenRef.current;
+          if (!container || !phone || !placeholder || !connect) return;
+
           // Scrolling back up past the section -- hide overlay, reset phone
-          gsap.to(containerRef.current, {
+          gsap.to(container, {
             opacity: 0,
             duration: 0.4,
             ease: "power2.in",
           });
 
-          gsap.to(phoneRef.current, {
+          gsap.to(phone, {
             x: 0,
             duration: 0.6,
             ease: "power2.out",
           });
 
           // Reset screens: PlaceholderScreen visible, ConnectScreen hidden
-          gsap.to(placeholderScreenRef.current, {
-            opacity: 1,
-            duration: 0.3,
-          });
-          gsap.to(connectScreenRef.current, {
-            opacity: 0,
-            duration: 0.3,
-          });
+          gsap.to(placeholder, { opacity: 1, duration: 0.3, overwrite: "auto" });
+          gsap.to(connect, { opacity: 0, duration: 0.3, overwrite: "auto" });
 
           resetText();
         },
