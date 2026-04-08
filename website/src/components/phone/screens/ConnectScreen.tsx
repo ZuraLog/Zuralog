@@ -4,7 +4,10 @@
 /**
  * ConnectScreen — dark-themed "Connections" phone screen for the Connect section.
  *
- * Colors (all brand tokens):
+ * Colors are hardcoded hex values intentionally — the marketing page's
+ * data-theme="light" overrides CSS design tokens, so this dark-themed screen
+ * uses fixed values to preserve its appearance regardless of page theme.
+ *
  *   Canvas:  #161618 — brand dark canvas (app background)
  *   Surface: #1E1E20 — brand dark surface (cards)
  *   Text:    #F0EEE9 — warm white / cream (primary text on dark)
@@ -56,8 +59,8 @@ function StravaIcon() {
 
 function MoreIcon() {
   return (
-    <div aria-hidden="true" className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-[var(--color-ds-sage)]">
-      <span className="text-[var(--color-ds-text-on-warm-white)] text-lg font-bold leading-none">+</span>
+    <div aria-hidden="true" className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-[#CFE1B9]">
+      <span className="text-[#161618] text-lg font-bold leading-none">+</span>
     </div>
   );
 }
@@ -65,8 +68,8 @@ function MoreIcon() {
 function ConnectedBadge() {
   return (
     <div className="flex items-center gap-1.5 mt-0.5">
-      <div aria-hidden="true" className="w-2 h-2 rounded-full bg-[var(--color-ds-success)] flex-shrink-0" />
-      <span className="text-[var(--color-ds-success)] text-[10px] font-medium">Connected</span>
+      <div aria-hidden="true" className="w-2 h-2 rounded-full bg-[#34C759] flex-shrink-0" />
+      <span className="text-[#34C759] text-[10px] font-medium">Connected</span>
     </div>
   );
 }
@@ -74,12 +77,13 @@ function ConnectedBadge() {
 export function ConnectScreen() {
   return (
     <div
-      className="w-full h-full overflow-hidden flex flex-col bg-[var(--color-ds-canvas)]"
+      className="w-full h-full overflow-hidden flex flex-col bg-[#161618]"
       style={{ fontFamily: "var(--font-jakarta)" }}
     >
       {/* Status bar */}
       <div
-        className="px-4 pt-2 pb-1 flex justify-between items-center text-[10px] flex-shrink-0 text-[var(--color-ds-text-primary)]/60"
+        className="px-4 pt-2 pb-1 flex justify-between items-center text-[10px] flex-shrink-0"
+        style={{ color: "rgba(240, 238, 233, 0.6)" }}
       >
         <span>9:41</span>
         <div className="flex items-center gap-1.5">
@@ -101,18 +105,18 @@ export function ConnectScreen() {
 
       {/* Page heading */}
       <div className="px-4 pt-3 pb-3 flex-shrink-0">
-        <h3 className="text-sm font-semibold text-[var(--color-ds-text-primary)]">
+        <h3 className="text-sm font-semibold text-[#F0EEE9]">
           Connections
         </h3>
       </div>
 
       {/* Apple Health — large card */}
       <div
-        className="mx-4 mb-2.5 rounded-2xl px-4 py-3 flex items-center gap-3 flex-shrink-0 bg-[var(--color-ds-surface)]"
+        className="mx-4 mb-2.5 rounded-2xl px-4 py-3 flex items-center gap-3 flex-shrink-0 bg-[#1E1E20]"
       >
         <AppleHealthIcon />
         <div className="min-w-0">
-          <p className="text-sm font-medium truncate text-[var(--color-ds-text-primary)]">
+          <p className="text-sm font-medium truncate text-[#F0EEE9]">
             Apple Health
           </p>
           <ConnectedBadge />
@@ -121,11 +125,11 @@ export function ConnectScreen() {
 
       {/* Google Health Connect — large card */}
       <div
-        className="mx-4 mb-3 rounded-2xl px-4 py-3 flex items-center gap-3 flex-shrink-0 bg-[var(--color-ds-surface)]"
+        className="mx-4 mb-3 rounded-2xl px-4 py-3 flex items-center gap-3 flex-shrink-0 bg-[#1E1E20]"
       >
         <HealthConnectIcon />
         <div className="min-w-0">
-          <p className="text-sm font-medium truncate text-[var(--color-ds-text-primary)]">
+          <p className="text-sm font-medium truncate text-[#F0EEE9]">
             Health Connect
           </p>
           <ConnectedBadge />
@@ -136,11 +140,11 @@ export function ConnectScreen() {
       <div className="flex gap-2.5 mx-4 flex-shrink-0">
         {/* Strava */}
         <div
-          className="flex-1 rounded-2xl px-3 py-3 bg-[var(--color-ds-surface)]"
+          className="flex-1 rounded-2xl px-3 py-3 bg-[#1E1E20]"
         >
           <div className="flex items-center gap-2 mb-1.5">
             <StravaIcon />
-            <p className="text-xs font-medium text-[var(--color-ds-text-primary)]">
+            <p className="text-xs font-medium text-[#F0EEE9]">
               Strava
             </p>
           </div>
@@ -148,15 +152,15 @@ export function ConnectScreen() {
         </div>
         {/* More+ */}
         <div
-          className="flex-1 rounded-2xl px-3 py-3 bg-[var(--color-ds-surface)]"
+          className="flex-1 rounded-2xl px-3 py-3 bg-[#1E1E20]"
         >
           <div className="flex items-center gap-2 mb-1.5">
             <MoreIcon />
-            <p className="text-xs font-medium text-[var(--color-ds-text-primary)]">
+            <p className="text-xs font-medium text-[#F0EEE9]">
               More
             </p>
           </div>
-          <p className="text-[10px] text-[var(--color-ds-text-primary)]/50">
+          <p className="text-[10px]" style={{ color: "rgba(240, 238, 233, 0.5)" }}>
             Coming soon
           </p>
         </div>

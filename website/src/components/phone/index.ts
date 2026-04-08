@@ -4,6 +4,7 @@ export type { PhoneMockupProps } from "./PhoneMockup";
 export { ScrollPhone } from "./ScrollPhone";
 export {
   PhoneContext,
+  PhoneProvider,
   usePhoneRef,
   usePhoneContainerRef,
   usePhoneContext,

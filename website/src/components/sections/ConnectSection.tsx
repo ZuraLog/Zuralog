@@ -34,6 +34,14 @@ export function ConnectSection() {
       const section = sectionRef.current;
       if (!section) return;
 
+      // Compute the horizontal offset needed to move the phone (currently centered
+      // in the viewport) into the visual center of the right grid column.
+      // This is recalculated on each ScrollTrigger refresh via invalidateOnRefresh.
+      const sectionRect = section.getBoundingClientRect();
+      const rightColCenter = sectionRect.left + sectionRect.width * 0.75;
+      const viewportCenter = window.innerWidth / 2;
+      const targetX = Math.round(rightColCenter - viewportCenter);
+
       const prefersReduced = window.matchMedia(
         "(prefers-reduced-motion: reduce)"
       ).matches;
@@ -78,6 +86,7 @@ export function ConnectSection() {
         trigger: section,
         start: "top 60%",
         end: "bottom 40%",
+        invalidateOnRefresh: true,
 
         onEnter: () => {
           const container = containerRef.current;
@@ -95,7 +104,7 @@ export function ConnectSection() {
 
           // Move phone to the right column
           gsap.to(phone, {
-            x: 220,
+            x: targetX,
             duration: 0.8,
             ease: "power3.out",
           });
@@ -137,7 +146,7 @@ export function ConnectSection() {
           });
 
           gsap.to(phone, {
-            x: 220,
+            x: targetX,
             duration: 0.8,
             ease: "power3.out",
           });

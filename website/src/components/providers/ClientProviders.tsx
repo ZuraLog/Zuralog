@@ -1,7 +1,7 @@
 "use client";
 
 import { SoundProvider } from "@/components/design-system";
-import { PhoneProvider } from "@/components/phone/PhoneContext";
+import { PhoneProvider } from "@/components/phone";
 
 /**
  * ClientProviders — wraps the entire app with all client-side context providers.
