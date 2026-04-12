@@ -1,7 +1,6 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
-import { useGSAP } from "@gsap/react";
+import { useEffect, useRef, type ReactNode } from "react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import {
@@ -232,24 +231,45 @@ function Panel({ section, index }: PanelProps) {
 
 // ---------------------------------------------------------------------------
 // FeatureSections — pinned ScrollTrigger container with single GSAP timeline
+//
+// WHY useEffect + RAF POLLING instead of useGSAP:
+// ScrollPhone (which attaches the phone DOM refs) is loaded via next/dynamic
+// with ssr:false inside ClientShellLoader. This means ScrollPhone only mounts
+// AFTER the dynamic import resolves — which is asynchronous and happens after
+// the synchronous useLayoutEffect pass that useGSAP uses. If we check phone
+// refs synchronously on mount, they are always null and the setup exits early.
+//
+// The fix: poll via requestAnimationFrame until the refs are populated, then
+// create a gsap.context() for scoping and cleanup (equivalent to useGSAP scope).
 // ---------------------------------------------------------------------------
 
 export function FeatureSections() {
   const containerRef = useRef<HTMLDivElement>(null);
   const phoneCtx = usePhoneContext();
 
-  useGSAP(
-    () => {
-      if (typeof window === "undefined") return;
-      if (window.innerWidth < 768) return;
-      if (!phoneCtx) return;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.innerWidth < 768) return;
+    if (!phoneCtx) return;
 
+    let ctx: gsap.Context | null = null;
+    let rafId: number;
+
+    const setup = () => {
       const container = containerRef.current;
-      if (!container) return;
+      const phone = phoneCtx.phoneRef.current;
+      const phoneContainer = phoneCtx.containerRef.current;
+
+      // ScrollPhone mounts asynchronously via next/dynamic. Poll until refs
+      // are populated (typically 1-3 frames after the page's first paint).
+      if (!container || !phone || !phoneContainer) {
+        rafId = requestAnimationFrame(setup);
+        return;
+      }
 
       const {
-        containerRef: phoneContainerRef,
         phoneRef,
+        containerRef: phoneContainerRef,
         placeholderScreenRef,
         connectScreenRef,
         nutritionScreenRef,
@@ -259,10 +279,6 @@ export function FeatureSections() {
         moreScreenRef,
         coachScreenRef,
       } = phoneCtx;
-
-      const phone = phoneRef.current;
-      const phoneContainer = phoneContainerRef.current;
-      if (!phone || !phoneContainer) return;
 
       const screenRefs = [
         connectScreenRef,
@@ -274,219 +290,230 @@ export function FeatureSections() {
         coachScreenRef,
       ];
 
-      const panels = gsap.utils.toArray<HTMLElement>(".feature-panel", container);
-      if (panels.length !== SECTIONS.length) return;
+      // gsap.context scopes all animations to the container element and
+      // auto-kills them when ctx.revert() is called on cleanup.
+      ctx = gsap.context(() => {
+        const panels = gsap.utils.toArray<HTMLElement>(".feature-panel", container);
+        if (panels.length !== SECTIONS.length) return;
 
-      let rightX = 0;
-      let leftX = 0;
-      let heroY = 0;
+        let rightX = 0;
+        let leftX = 0;
+        let heroY = 0;
 
-      const recalcPositions = () => {
-        const vw = window.innerWidth;
-        rightX = Math.round(vw * 0.25);
-        leftX = Math.round(vw * -0.25);
-        heroY = computeHeroY(computeFrameWidth());
-      };
-      recalcPositions();
+        const recalcPositions = () => {
+          const vw = window.innerWidth;
+          rightX = Math.round(vw * 0.25);
+          leftX = Math.round(vw * -0.25);
+          heroY = computeHeroY(computeFrameWidth());
+        };
+        recalcPositions();
 
-      const positionX = (pos: PhonePosition): number => {
-        if (pos === "right") return rightX;
-        if (pos === "left") return leftX;
-        return 0;
-      };
+        const positionX = (pos: PhonePosition): number => {
+          if (pos === "right") return rightX;
+          if (pos === "left") return leftX;
+          return 0;
+        };
 
-      const prefersReduced = window.matchMedia(
-        "(prefers-reduced-motion: reduce)"
-      ).matches;
+        const prefersReduced = window.matchMedia(
+          "(prefers-reduced-motion: reduce)"
+        ).matches;
 
-      // Safety: ensure all feature screens start hidden
-      screenRefs.forEach((ref) => {
-        if (ref.current) {
-          gsap.set(ref.current, { opacity: 0, filter: "blur(10px)" });
-        }
-      });
+        // Safety: ensure all feature screens start hidden
+        screenRefs.forEach((ref) => {
+          if (ref.current) {
+            gsap.set(ref.current, { opacity: 0, filter: "blur(10px)" });
+          }
+        });
 
-      // Build master timeline
-      const tl = gsap.timeline();
-      SECTIONS.forEach((section, i) => {
-        tl.addLabel(section.key, i);
-      });
+        // Build master timeline
+        const tl = gsap.timeline();
+        SECTIONS.forEach((section, i) => {
+          tl.addLabel(section.key, i);
+        });
 
-      // 6 transitions between 7 sections
-      for (let i = 0; i < SECTIONS.length - 1; i++) {
-        const fromSection = SECTIONS[i];
-        const toSection = SECTIONS[i + 1];
-        const fromPanel = panels[i];
-        const toPanel = panels[i + 1];
-        const fromScreen = screenRefs[i].current;
-        const toScreen = screenRefs[i + 1].current;
-        const label = fromSection.key;
-        if (!fromScreen || !toScreen) continue;
+        // 6 transitions between 7 sections
+        for (let i = 0; i < SECTIONS.length - 1; i++) {
+          const fromSection = SECTIONS[i];
+          const toSection = SECTIONS[i + 1];
+          const fromPanel = panels[i];
+          const toPanel = panels[i + 1];
+          const fromScreen = screenRefs[i].current;
+          const toScreen = screenRefs[i + 1].current;
+          const label = fromSection.key;
+          if (!fromScreen || !toScreen) continue;
 
-        const fromTextEls = gsap.utils.toArray<HTMLElement>(
-          ".panel-headline, .panel-body",
-          fromPanel
-        );
-        const toTextEls = gsap.utils.toArray<HTMLElement>(
-          ".panel-headline, .panel-body",
-          toPanel
-        );
+          const fromTextEls = gsap.utils.toArray<HTMLElement>(
+            ".panel-headline, .panel-body",
+            fromPanel
+          );
+          const toTextEls = gsap.utils.toArray<HTMLElement>(
+            ".panel-headline, .panel-body",
+            toPanel
+          );
 
-        if (!prefersReduced) {
+          if (!prefersReduced) {
+            tl.to(
+              fromTextEls,
+              {
+                y: -30,
+                opacity: 0,
+                duration: 0.4,
+                stagger: 0.05,
+                ease: "power2.in",
+              },
+              label + "+=0.3"
+            );
+            tl.to(fromPanel, { opacity: 0, duration: 0.1 }, label + "+=0.7");
+            tl.to(toPanel, { opacity: 1, duration: 0.1 }, label + "+=0.7");
+            tl.fromTo(
+              toTextEls,
+              { y: 30, opacity: 0 },
+              {
+                y: 0,
+                opacity: 1,
+                duration: 0.4,
+                stagger: 0.05,
+                ease: "power3.out",
+                immediateRender: false,
+              },
+              label + "+=0.7"
+            );
+          } else {
+            tl.to(fromPanel, { opacity: 0, duration: 0.1 }, label + "+=0.5");
+            tl.to(toPanel, { opacity: 1, duration: 0.1 }, label + "+=0.5");
+          }
+
           tl.to(
-            fromTextEls,
+            phone,
             {
-              y: -30,
+              x: () => positionX(toSection.phonePosition),
+              duration: 0.6,
+              ease: "power3.inOut",
+            },
+            label + "+=0.3"
+          );
+          tl.to(
+            fromScreen,
+            {
               opacity: 0,
+              filter: "blur(10px)",
               duration: 0.4,
-              stagger: 0.05,
               ease: "power2.in",
             },
             label + "+=0.3"
           );
-          tl.to(fromPanel, { opacity: 0, duration: 0.1 }, label + "+=0.7");
-          tl.to(toPanel, { opacity: 1, duration: 0.1 }, label + "+=0.7");
-          tl.fromTo(
-            toTextEls,
-            { y: 30, opacity: 0 },
+          tl.to(
+            toScreen,
             {
-              y: 0,
               opacity: 1,
+              filter: "blur(0px)",
               duration: 0.4,
-              stagger: 0.05,
-              ease: "power3.out",
-              immediateRender: false,
+              ease: "power2.out",
             },
-            label + "+=0.7"
+            label + "+=0.6"
           );
-        } else {
-          tl.to(fromPanel, { opacity: 0, duration: 0.1 }, label + "+=0.5");
-          tl.to(toPanel, { opacity: 1, duration: 0.1 }, label + "+=0.5");
         }
 
-        tl.to(
-          phone,
-          {
-            x: () => positionX(toSection.phonePosition),
-            duration: 0.6,
-            ease: "power3.inOut",
+        ScrollTrigger.create({
+          trigger: container,
+          pin: true,
+          scrub: 1,
+          start: "top top",
+          end: "+=600%",
+          invalidateOnRefresh: true,
+          animation: tl,
+          onRefresh: () => {
+            recalcPositions();
           },
-          label + "+=0.3"
-        );
-        tl.to(
-          fromScreen,
-          {
-            opacity: 0,
-            filter: "blur(10px)",
-            duration: 0.4,
-            ease: "power2.in",
-          },
-          label + "+=0.3"
-        );
-        tl.to(
-          toScreen,
-          {
-            opacity: 1,
-            filter: "blur(0px)",
-            duration: 0.4,
-            ease: "power2.out",
-          },
-          label + "+=0.6"
-        );
-      }
 
-      ScrollTrigger.create({
-        trigger: container,
-        pin: true,
-        scrub: 1,
-        start: "top top",
-        end: "+=600%",
-        invalidateOnRefresh: true,
-        animation: tl,
-        onRefresh: () => {
-          recalcPositions();
-        },
+          onEnter: () => {
+            const cs = connectScreenRef.current;
+            const ph = placeholderScreenRef.current;
+            if (!cs || !ph) return;
+            gsap.to(phone, {
+              x: () => positionX(SECTIONS[0].phonePosition),
+              y: 0,
+              duration: 1.0,
+              ease: "power3.out",
+              overwrite: "auto",
+            });
+            gsap.to(ph, {
+              opacity: 0,
+              filter: "blur(10px)",
+              duration: 0.45,
+              ease: "power2.in",
+              overwrite: "auto",
+            });
+            gsap.to(cs, {
+              opacity: 1,
+              filter: "blur(0px)",
+              duration: 0.5,
+              delay: 0.1,
+              ease: "power2.out",
+              overwrite: "auto",
+            });
+            gsap.to(phoneContainer, {
+              opacity: 1,
+              duration: 0.3,
+              ease: "power2.out",
+            });
+          },
+          onLeave: () => {
+            gsap.to(phoneContainer, {
+              opacity: 0,
+              duration: 0.5,
+              ease: "power2.in",
+            });
+          },
+          onEnterBack: () => {
+            gsap.to(phoneContainer, {
+              opacity: 1,
+              duration: 0.5,
+              ease: "power2.out",
+            });
+          },
+          onLeaveBack: () => {
+            const cs = connectScreenRef.current;
+            const ph = placeholderScreenRef.current;
+            if (!cs || !ph) return;
+            gsap.to(phone, {
+              x: 0,
+              y: heroY,
+              duration: 1.0,
+              ease: "power3.out",
+              overwrite: "auto",
+            });
+            gsap.to(cs, {
+              opacity: 0,
+              filter: "blur(10px)",
+              duration: 0.45,
+              ease: "power2.in",
+            });
+            gsap.to(ph, {
+              opacity: 1,
+              filter: "blur(0px)",
+              duration: 0.5,
+              delay: 0.1,
+              ease: "power2.out",
+            });
+            gsap.to(phoneContainer, {
+              opacity: 0,
+              duration: 0.5,
+              ease: "power2.in",
+            });
+          },
+        });
+      }, container);
+    };
 
-        onEnter: () => {
-          const cs = connectScreenRef.current;
-          const ph = placeholderScreenRef.current;
-          if (!cs || !ph) return;
-          gsap.to(phone, {
-            x: () => positionX(SECTIONS[0].phonePosition),
-            y: 0,
-            duration: 1.0,
-            ease: "power3.out",
-            overwrite: "auto",
-          });
-          gsap.to(ph, {
-            opacity: 0,
-            filter: "blur(10px)",
-            duration: 0.45,
-            ease: "power2.in",
-            overwrite: "auto",
-          });
-          gsap.to(cs, {
-            opacity: 1,
-            filter: "blur(0px)",
-            duration: 0.5,
-            delay: 0.1,
-            ease: "power2.out",
-            overwrite: "auto",
-          });
-          gsap.to(phoneContainer, {
-            opacity: 1,
-            duration: 0.3,
-            ease: "power2.out",
-          });
-        },
-        onLeave: () => {
-          gsap.to(phoneContainer, {
-            opacity: 0,
-            duration: 0.5,
-            ease: "power2.in",
-          });
-        },
-        onEnterBack: () => {
-          gsap.to(phoneContainer, {
-            opacity: 1,
-            duration: 0.5,
-            ease: "power2.out",
-          });
-        },
-        onLeaveBack: () => {
-          const cs = connectScreenRef.current;
-          const ph = placeholderScreenRef.current;
-          if (!cs || !ph) return;
-          gsap.to(phone, {
-            x: 0,
-            y: heroY,
-            duration: 1.0,
-            ease: "power3.out",
-            overwrite: "auto",
-          });
-          gsap.to(cs, {
-            opacity: 0,
-            filter: "blur(10px)",
-            duration: 0.45,
-            ease: "power2.in",
-          });
-          gsap.to(ph, {
-            opacity: 1,
-            filter: "blur(0px)",
-            duration: 0.5,
-            delay: 0.1,
-            ease: "power2.out",
-          });
-          gsap.to(phoneContainer, {
-            opacity: 0,
-            duration: 0.5,
-            ease: "power2.in",
-          });
-        },
-      });
-    },
-    { scope: containerRef, dependencies: [] }
-  );
+    rafId = requestAnimationFrame(setup);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      ctx?.revert();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <section
