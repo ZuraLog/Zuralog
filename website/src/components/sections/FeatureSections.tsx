@@ -1,13 +1,18 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
-import {
-  usePhoneContext,
-  computeFrameWidth,
-  computeHeroY,
-} from "@/components/phone/PhoneContext";
+import { PhoneMockup } from "@/components/phone/PhoneMockup";
+import { ConnectScreen } from "@/components/phone/screens/ConnectScreen";
+import { NutritionScreen } from "@/components/phone/screens/NutritionScreen";
+import { WorkoutScreen } from "@/components/phone/screens/WorkoutScreen";
+import { SleepScreen } from "@/components/phone/screens/SleepScreen";
+import { HeartScreen } from "@/components/phone/screens/HeartScreen";
+import { MoreScreen } from "@/components/phone/screens/MoreScreen";
+import { CoachScreen } from "@/components/phone/screens/CoachScreen";
+import { computeFrameWidth } from "@/components/phone/PhoneContext";
+import { loadingBridge } from "@/lib/loading-bridge";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -26,14 +31,26 @@ interface SectionData {
   body: string;
   phonePosition: PhonePosition;
   layout: PanelLayout;
-  screenRefKey:
-    | "connectScreenRef"
-    | "nutritionScreenRef"
-    | "workoutScreenRef"
-    | "sleepScreenRef"
-    | "heartScreenRef"
-    | "moreScreenRef"
-    | "coachScreenRef";
+}
+
+// ---------------------------------------------------------------------------
+// Phone position helpers
+// ---------------------------------------------------------------------------
+
+function getTargetX(pos: PhonePosition, layout: PanelLayout, vw: number): number {
+  if (layout === "centered") return 0;
+  return pos === "right" ? Math.round(vw * 0.25) : Math.round(vw * -0.25);
+}
+
+function getTargetY(layout: PanelLayout, vh: number): number {
+  // For centered sections, push the phone slightly below the section's
+  // vertical midpoint so it sits below the text block at the top.
+  return layout === "centered" ? Math.round(vh * 0.10) : 0;
+}
+
+function getTargetScale(layout: PanelLayout): number {
+  // Centered layout uses a smaller phone so the top text has room.
+  return layout === "centered" ? 0.65 : 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -45,7 +62,6 @@ const SECTIONS: SectionData[] = [
     key: "connect",
     phonePosition: "right",
     layout: "split-left",
-    screenRefKey: "connectScreenRef",
     headline: (
       <>
         Every app. Every device.{" "}
@@ -63,7 +79,6 @@ const SECTIONS: SectionData[] = [
     key: "nutrition",
     phonePosition: "center",
     layout: "centered",
-    screenRefKey: "nutritionScreenRef",
     headline: (
       <>
         Snap it. Scan it. Say it.{" "}
@@ -81,7 +96,6 @@ const SECTIONS: SectionData[] = [
     key: "workouts",
     phonePosition: "left",
     layout: "split-right",
-    screenRefKey: "workoutScreenRef",
     headline: (
       <>
         Log it live, log it later, or{" "}
@@ -99,7 +113,6 @@ const SECTIONS: SectionData[] = [
     key: "sleep",
     phonePosition: "center",
     layout: "centered",
-    screenRefKey: "sleepScreenRef",
     headline: (
       <>
         Sleep better. Know{" "}
@@ -117,7 +130,6 @@ const SECTIONS: SectionData[] = [
     key: "heart",
     phonePosition: "right",
     layout: "split-left",
-    screenRefKey: "heartScreenRef",
     headline: (
       <>
         Know your heart.{" "}
@@ -135,7 +147,6 @@ const SECTIONS: SectionData[] = [
     key: "more",
     phonePosition: "center",
     layout: "centered",
-    screenRefKey: "moreScreenRef",
     headline: <>And that&apos;s just the beginning.</>,
     body: "The more you track, the more Zura understands. And the more Zura understands, the better it gets.",
   },
@@ -143,7 +154,6 @@ const SECTIONS: SectionData[] = [
     key: "coach",
     phonePosition: "left",
     layout: "split-right",
-    screenRefKey: "coachScreenRef",
     headline: (
       <>
         Meet Zura. The coach who knows your{" "}
@@ -160,7 +170,7 @@ const SECTIONS: SectionData[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Panel sub-component — renders one section's text content
+// Panel sub-component — text content only (phone is a sibling element)
 // ---------------------------------------------------------------------------
 
 interface PanelProps {
@@ -170,15 +180,16 @@ interface PanelProps {
 
 function Panel({ section, index }: PanelProps) {
   const isFirst = index === 0;
+  const isCentered = section.layout === "centered";
 
   const textBlock = (
-    <div className={section.layout === "centered" ? "text-center" : ""}>
+    <div className={isCentered ? "text-center" : ""}>
       <h2 className="panel-headline text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05] text-[var(--color-ds-text-on-warm-white)]">
         {section.headline}
       </h2>
       <p
         className={`panel-body mt-6 text-base md:text-lg lg:text-xl leading-relaxed text-[var(--color-ds-text-secondary)] ${
-          section.layout === "centered" ? "max-w-2xl mx-auto" : ""
+          isCentered ? "max-w-xl mx-auto" : ""
         }`}
       >
         {section.body}
@@ -189,38 +200,43 @@ function Panel({ section, index }: PanelProps) {
   let inner: ReactNode;
 
   if (section.layout === "split-left") {
-    // Text left, empty spacer right (phone overlay fills right)
+    // Text in left column, phone (absolute sibling) fills right column
     inner = (
-      <div className="w-full max-w-7xl mx-auto px-6 md:px-12 lg:px-20">
-        <div className="grid grid-cols-2 gap-12 items-center">
-          <div className="max-w-lg">{textBlock}</div>
-          <div aria-hidden="true" />
+      <div className="h-full flex items-center">
+        <div className="w-full max-w-7xl mx-auto px-6 md:px-12 lg:px-20">
+          <div className="grid grid-cols-2 gap-12 items-center">
+            <div className="max-w-lg">{textBlock}</div>
+            <div aria-hidden="true" />
+          </div>
         </div>
       </div>
     );
   } else if (section.layout === "split-right") {
-    // Empty spacer left (phone overlay fills left), text right
+    // Phone (absolute sibling) fills left column, text in right column
     inner = (
-      <div className="w-full max-w-7xl mx-auto px-6 md:px-12 lg:px-20">
-        <div className="grid grid-cols-2 gap-12 items-center">
-          <div aria-hidden="true" />
-          <div className="max-w-lg">{textBlock}</div>
+      <div className="h-full flex items-center">
+        <div className="w-full max-w-7xl mx-auto px-6 md:px-12 lg:px-20">
+          <div className="grid grid-cols-2 gap-12 items-center">
+            <div aria-hidden="true" />
+            <div className="max-w-lg">{textBlock}</div>
+          </div>
         </div>
       </div>
     );
   } else {
-    // Centered: text centered above, spacer below for phone
+    // Centered: text at top, phone (absolute sibling) sits below center
     inner = (
-      <div className="w-full max-w-7xl mx-auto px-6 md:px-12 lg:px-20 text-center">
-        {textBlock}
-        <div className="h-[420px]" aria-hidden="true" />
+      <div className="h-full flex flex-col items-center justify-start pt-16 md:pt-24">
+        <div className="max-w-2xl px-6 md:px-12 text-center">
+          {textBlock}
+        </div>
       </div>
     );
   }
 
   return (
     <div
-      className="feature-panel absolute inset-0 flex items-center"
+      className="feature-panel absolute inset-0"
       data-panel={section.key}
       style={{ opacity: isFirst ? 1 : 0 }}
     >
@@ -230,288 +246,173 @@ function Panel({ section, index }: PanelProps) {
 }
 
 // ---------------------------------------------------------------------------
-// FeatureSections — pinned ScrollTrigger container with single GSAP timeline
+// FeatureSections — pinned container with phone living inside the same layer
 //
-// WHY useEffect + RAF POLLING instead of useGSAP:
-// ScrollPhone (which attaches the phone DOM refs) is loaded via next/dynamic
-// with ssr:false inside ClientShellLoader. This means ScrollPhone only mounts
-// AFTER the dynamic import resolves — which is asynchronous and happens after
-// the synchronous useLayoutEffect pass that useGSAP uses. If we check phone
-// refs synchronously on mount, they are always null and the setup exits early.
-//
-// The fix: poll via requestAnimationFrame until the refs are populated, then
-// create a gsap.context() for scoping and cleanup (equivalent to useGSAP scope).
+// Architecture change from previous approach:
+// - Phone is now a real DOM element inside the section (not a fixed overlay)
+// - This eliminates the cross-layer z-index coordination with text
+// - No entrance/exit fade needed: phone appears/disappears with the section
+// - Centered sections: text at top, phone at bottom-center, scaled to 0.65
+// - Split sections: text on one side, phone on the other (no overlap possible)
 // ---------------------------------------------------------------------------
 
 export function FeatureSections() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const phoneCtx = usePhoneContext();
+  const phoneWrapperRef = useRef<HTMLDivElement>(null);
 
+  // Screen refs — one per SECTIONS entry, in order
+  const connectScreenRef = useRef<HTMLDivElement>(null);
+  const nutritionScreenRef = useRef<HTMLDivElement>(null);
+  const workoutScreenRef = useRef<HTMLDivElement>(null);
+  const sleepScreenRef = useRef<HTMLDivElement>(null);
+  const heartScreenRef = useRef<HTMLDivElement>(null);
+  const moreScreenRef = useRef<HTMLDivElement>(null);
+  const coachScreenRef = useRef<HTMLDivElement>(null);
+
+  // Responsive phone frame width — updates on resize
+  const [frameWidth, setFrameWidth] = useState(computeFrameWidth);
+
+  // Signal the loading screen that there are no heavy assets to wait for.
+  // Previously ScrollPhone did this; now FeatureSections does it on mount.
+  useEffect(() => {
+    loadingBridge.setProgress(100);
+  }, []);
+
+  // Resize: update frameWidth so PhoneMockup re-renders at the right size.
+  useEffect(() => {
+    const onResize = () => setFrameWidth(computeFrameWidth());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  // GSAP setup — runs once on mount. All refs are local so no polling needed.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.innerWidth < 768) return;
-    if (!phoneCtx) return;
 
-    let ctx: gsap.Context | null = null;
-    let rafId: number;
+    const container = containerRef.current;
+    const phoneWrapper = phoneWrapperRef.current;
+    if (!container || !phoneWrapper) return;
 
-    const setup = () => {
-      const container = containerRef.current;
-      const phone = phoneCtx.phoneRef.current;
-      const phoneContainer = phoneCtx.containerRef.current;
+    const screenRefs = [
+      connectScreenRef,
+      nutritionScreenRef,
+      workoutScreenRef,
+      sleepScreenRef,
+      heartScreenRef,
+      moreScreenRef,
+      coachScreenRef,
+    ];
 
-      // ScrollPhone mounts asynchronously via next/dynamic. Poll until refs
-      // are populated (typically 1-3 frames after the page's first paint).
-      if (!container || !phone || !phoneContainer) {
-        rafId = requestAnimationFrame(setup);
-        return;
-      }
+    const ctx = gsap.context(() => {
+      const panels = gsap.utils.toArray<HTMLElement>(".feature-panel", container);
+      if (panels.length !== SECTIONS.length) return;
 
-      const {
-        phoneRef,
-        containerRef: phoneContainerRef,
-        placeholderScreenRef,
-        connectScreenRef,
-        nutritionScreenRef,
-        workoutScreenRef,
-        sleepScreenRef,
-        heartScreenRef,
-        moreScreenRef,
-        coachScreenRef,
-      } = phoneCtx;
+      // Set initial phone position to match the first section (Connect = right)
+      gsap.set(phoneWrapper, {
+        x: Math.round(window.innerWidth * 0.25),
+        y: 0,
+        scale: 1,
+      });
 
-      const screenRefs = [
-        connectScreenRef,
-        nutritionScreenRef,
-        workoutScreenRef,
-        sleepScreenRef,
-        heartScreenRef,
-        moreScreenRef,
-        coachScreenRef,
-      ];
+      const prefersReduced = window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches;
 
-      // gsap.context scopes all animations to the container element and
-      // auto-kills them when ctx.revert() is called on cleanup.
-      ctx = gsap.context(() => {
-        const panels = gsap.utils.toArray<HTMLElement>(".feature-panel", container);
-        if (panels.length !== SECTIONS.length) return;
+      // Build master timeline
+      const tl = gsap.timeline();
+      SECTIONS.forEach((section, i) => {
+        tl.addLabel(section.key, i);
+      });
 
-        let rightX = 0;
-        let leftX = 0;
-        let heroY = 0;
+      // 6 transitions between 7 sections
+      for (let i = 0; i < SECTIONS.length - 1; i++) {
+        const fromSection = SECTIONS[i];
+        const toSection = SECTIONS[i + 1];
+        const fromPanel = panels[i];
+        const toPanel = panels[i + 1];
+        const fromScreen = screenRefs[i].current;
+        const toScreen = screenRefs[i + 1].current;
+        const label = fromSection.key;
+        if (!fromScreen || !toScreen) continue;
 
-        const recalcPositions = () => {
-          const vw = window.innerWidth;
-          rightX = Math.round(vw * 0.25);
-          leftX = Math.round(vw * -0.25);
-          heroY = computeHeroY(computeFrameWidth());
-        };
-        recalcPositions();
+        const fromTextEls = gsap.utils.toArray<HTMLElement>(
+          ".panel-headline, .panel-body",
+          fromPanel
+        );
+        const toTextEls = gsap.utils.toArray<HTMLElement>(
+          ".panel-headline, .panel-body",
+          toPanel
+        );
 
-        const positionX = (pos: PhonePosition): number => {
-          if (pos === "right") return rightX;
-          if (pos === "left") return leftX;
-          return 0;
-        };
-
-        const prefersReduced = window.matchMedia(
-          "(prefers-reduced-motion: reduce)"
-        ).matches;
-
-        // Safety: ensure all feature screens start hidden
-        screenRefs.forEach((ref) => {
-          if (ref.current) {
-            gsap.set(ref.current, { opacity: 0, filter: "blur(10px)" });
-          }
-        });
-
-        // Build master timeline
-        const tl = gsap.timeline();
-        SECTIONS.forEach((section, i) => {
-          tl.addLabel(section.key, i);
-        });
-
-        // 6 transitions between 7 sections
-        for (let i = 0; i < SECTIONS.length - 1; i++) {
-          const fromSection = SECTIONS[i];
-          const toSection = SECTIONS[i + 1];
-          const fromPanel = panels[i];
-          const toPanel = panels[i + 1];
-          const fromScreen = screenRefs[i].current;
-          const toScreen = screenRefs[i + 1].current;
-          const label = fromSection.key;
-          if (!fromScreen || !toScreen) continue;
-
-          const fromTextEls = gsap.utils.toArray<HTMLElement>(
-            ".panel-headline, .panel-body",
-            fromPanel
-          );
-          const toTextEls = gsap.utils.toArray<HTMLElement>(
-            ".panel-headline, .panel-body",
-            toPanel
-          );
-
-          if (!prefersReduced) {
-            tl.to(
-              fromTextEls,
-              {
-                y: -30,
-                opacity: 0,
-                duration: 0.4,
-                stagger: 0.05,
-                ease: "power2.in",
-              },
-              label + "+=0.3"
-            );
-            tl.to(fromPanel, { opacity: 0, duration: 0.1 }, label + "+=0.7");
-            tl.to(toPanel, { opacity: 1, duration: 0.1 }, label + "+=0.7");
-            tl.fromTo(
-              toTextEls,
-              { y: 30, opacity: 0 },
-              {
-                y: 0,
-                opacity: 1,
-                duration: 0.4,
-                stagger: 0.05,
-                ease: "power3.out",
-                immediateRender: false,
-              },
-              label + "+=0.7"
-            );
-          } else {
-            tl.to(fromPanel, { opacity: 0, duration: 0.1 }, label + "+=0.5");
-            tl.to(toPanel, { opacity: 1, duration: 0.1 }, label + "+=0.5");
-          }
-
+        if (!prefersReduced) {
           tl.to(
-            phone,
-            {
-              x: () => positionX(toSection.phonePosition),
-              duration: 0.6,
-              ease: "power3.inOut",
-            },
+            fromTextEls,
+            { y: -30, opacity: 0, duration: 0.4, stagger: 0.05, ease: "power2.in" },
             label + "+=0.3"
           );
-          tl.to(
-            fromScreen,
-            {
-              opacity: 0,
-              filter: "blur(10px)",
-              duration: 0.4,
-              ease: "power2.in",
-            },
-            label + "+=0.3"
+          tl.to(fromPanel, { opacity: 0, duration: 0.1 }, label + "+=0.7");
+          tl.to(toPanel, { opacity: 1, duration: 0.1 }, label + "+=0.7");
+          tl.fromTo(
+            toTextEls,
+            { y: 30, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.4, stagger: 0.05, ease: "power3.out", immediateRender: false },
+            label + "+=0.7"
           );
-          tl.to(
-            toScreen,
-            {
-              opacity: 1,
-              filter: "blur(0px)",
-              duration: 0.4,
-              ease: "power2.out",
-            },
-            label + "+=0.6"
-          );
+        } else {
+          tl.to(fromPanel, { opacity: 0, duration: 0.1 }, label + "+=0.5");
+          tl.to(toPanel, { opacity: 1, duration: 0.1 }, label + "+=0.5");
         }
 
-        ScrollTrigger.create({
-          trigger: container,
-          pin: true,
-          scrub: 1,
-          start: "top top",
-          end: "+=600%",
-          invalidateOnRefresh: true,
-          animation: tl,
-          onRefresh: () => {
-            recalcPositions();
+        // Phone position — function-based so invalidateOnRefresh re-evaluates
+        tl.to(
+          phoneWrapper,
+          {
+            x: () => getTargetX(toSection.phonePosition, toSection.layout, window.innerWidth),
+            y: () => getTargetY(toSection.layout, window.innerHeight),
+            scale: getTargetScale(toSection.layout),
+            duration: 0.6,
+            ease: "power3.inOut",
           },
+          label + "+=0.3"
+        );
 
-          onEnter: () => {
-            const cs = connectScreenRef.current;
-            const ph = placeholderScreenRef.current;
-            if (!cs || !ph) return;
-            gsap.to(phone, {
-              x: () => positionX(SECTIONS[0].phonePosition),
+        // Screen crossfades
+        tl.to(
+          fromScreen,
+          { opacity: 0, filter: "blur(10px)", duration: 0.4, ease: "power2.in" },
+          label + "+=0.3"
+        );
+        tl.to(
+          toScreen,
+          { opacity: 1, filter: "blur(0px)", duration: 0.4, ease: "power2.out" },
+          label + "+=0.6"
+        );
+      }
+
+      ScrollTrigger.create({
+        trigger: container,
+        pin: true,
+        scrub: 1,
+        start: "top top",
+        end: "+=600%",
+        invalidateOnRefresh: true,
+        animation: tl,
+        onRefresh(self) {
+          // Re-apply initial phone position when at the start of the timeline
+          // so the phone snaps to the correct position after a resize.
+          if (self.progress < 0.01) {
+            gsap.set(phoneWrapper, {
+              x: Math.round(window.innerWidth * 0.25),
               y: 0,
-              duration: 1.0,
-              ease: "power3.out",
-              overwrite: "auto",
+              scale: 1,
             });
-            gsap.to(ph, {
-              opacity: 0,
-              filter: "blur(10px)",
-              duration: 0.45,
-              ease: "power2.in",
-              overwrite: "auto",
-            });
-            gsap.to(cs, {
-              opacity: 1,
-              filter: "blur(0px)",
-              duration: 0.5,
-              delay: 0.1,
-              ease: "power2.out",
-              overwrite: "auto",
-            });
-            gsap.to(phoneContainer, {
-              opacity: 1,
-              duration: 0.3,
-              ease: "power2.out",
-            });
-          },
-          onLeave: () => {
-            gsap.to(phoneContainer, {
-              opacity: 0,
-              duration: 0.5,
-              ease: "power2.in",
-            });
-          },
-          onEnterBack: () => {
-            gsap.to(phoneContainer, {
-              opacity: 1,
-              duration: 0.5,
-              ease: "power2.out",
-            });
-          },
-          onLeaveBack: () => {
-            const cs = connectScreenRef.current;
-            const ph = placeholderScreenRef.current;
-            if (!cs || !ph) return;
-            gsap.to(phone, {
-              x: 0,
-              y: heroY,
-              duration: 1.0,
-              ease: "power3.out",
-              overwrite: "auto",
-            });
-            gsap.to(cs, {
-              opacity: 0,
-              filter: "blur(10px)",
-              duration: 0.45,
-              ease: "power2.in",
-            });
-            gsap.to(ph, {
-              opacity: 1,
-              filter: "blur(0px)",
-              duration: 0.5,
-              delay: 0.1,
-              ease: "power2.out",
-            });
-            gsap.to(phoneContainer, {
-              opacity: 0,
-              duration: 0.5,
-              ease: "power2.in",
-            });
-          },
-        });
-      }, container);
-    };
+          }
+        },
+      });
+    }, container);
 
-    rafId = requestAnimationFrame(setup);
-
-    return () => {
-      cancelAnimationFrame(rafId);
-      ctx?.revert();
-    };
+    return () => ctx.revert();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -519,12 +420,76 @@ export function FeatureSections() {
     <section
       ref={containerRef}
       id="feature-sections"
-      className="relative hidden md:block"
+      className="relative hidden md:block overflow-hidden"
       style={{ height: "100vh" }}
     >
+      {/* Text panels — absolutely stacked, GSAP fades between them */}
       {SECTIONS.map((section, i) => (
         <Panel key={section.key} section={section} index={i} />
       ))}
+
+      {/* Phone — lives in the same layer as text panels.
+          Centered by CSS, then GSAP applies x/y/scale per section.
+          aria-hidden: the phone is decorative (screens have no interactive text). */}
+      <div
+        ref={phoneWrapperRef}
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 will-change-transform pointer-events-none"
+        aria-hidden="true"
+      >
+        <PhoneMockup frameWidth={frameWidth}>
+          <div className="relative w-full h-full">
+            <div
+              ref={connectScreenRef}
+              className="absolute inset-0"
+              style={{ opacity: 1, filter: "blur(0px)" }}
+            >
+              <ConnectScreen />
+            </div>
+            <div
+              ref={nutritionScreenRef}
+              className="absolute inset-0"
+              style={{ opacity: 0, filter: "blur(10px)" }}
+            >
+              <NutritionScreen />
+            </div>
+            <div
+              ref={workoutScreenRef}
+              className="absolute inset-0"
+              style={{ opacity: 0, filter: "blur(10px)" }}
+            >
+              <WorkoutScreen />
+            </div>
+            <div
+              ref={sleepScreenRef}
+              className="absolute inset-0"
+              style={{ opacity: 0, filter: "blur(10px)" }}
+            >
+              <SleepScreen />
+            </div>
+            <div
+              ref={heartScreenRef}
+              className="absolute inset-0"
+              style={{ opacity: 0, filter: "blur(10px)" }}
+            >
+              <HeartScreen />
+            </div>
+            <div
+              ref={moreScreenRef}
+              className="absolute inset-0"
+              style={{ opacity: 0, filter: "blur(10px)" }}
+            >
+              <MoreScreen />
+            </div>
+            <div
+              ref={coachScreenRef}
+              className="absolute inset-0"
+              style={{ opacity: 0, filter: "blur(10px)" }}
+            >
+              <CoachScreen />
+            </div>
+          </div>
+        </PhoneMockup>
+      </div>
     </section>
   );
 }
