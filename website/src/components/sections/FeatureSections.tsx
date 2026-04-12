@@ -43,14 +43,16 @@ function getTargetX(pos: PhonePosition, layout: PanelLayout, vw: number): number
 }
 
 function getTargetY(layout: PanelLayout, vh: number): number {
-  // For centered sections, push the phone slightly below the section's
-  // vertical midpoint so it sits below the text block at the top.
-  return layout === "centered" ? Math.round(vh * 0.10) : 0;
+  // For centered sections, push the phone well below the section's
+  // vertical midpoint so it sits clearly under the text block at the top.
+  // 20% of vh gives ~180px offset on a 900px screen, placing the phone
+  // top at ~350px — safely below the ~280px of headline+body text.
+  return layout === "centered" ? Math.round(vh * 0.20) : 0;
 }
 
 function getTargetScale(layout: PanelLayout): number {
   // Centered layout uses a smaller phone so the top text has room.
-  return layout === "centered" ? 0.65 : 1;
+  return layout === "centered" ? 0.60 : 1;
 }
 
 // ---------------------------------------------------------------------------
