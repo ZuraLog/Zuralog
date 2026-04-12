@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { PhoneMockup } from "@/components/phone";
 import { ConnectScreen } from "@/components/phone/screens/ConnectScreen";
