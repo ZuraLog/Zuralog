@@ -367,7 +367,7 @@ export function FeatureSections() {
         tl.to(
           phone,
           {
-            x: positionX(toSection.phonePosition),
+            x: () => positionX(toSection.phonePosition),
             duration: 0.6,
             ease: "power3.inOut",
           },
@@ -412,7 +412,7 @@ export function FeatureSections() {
           const ph = placeholderScreenRef.current;
           if (!cs || !ph) return;
           gsap.to(phone, {
-            x: positionX(SECTIONS[0].phonePosition),
+            x: () => positionX(SECTIONS[0].phonePosition),
             y: 0,
             duration: 1.0,
             ease: "power3.out",
@@ -423,6 +423,7 @@ export function FeatureSections() {
             filter: "blur(10px)",
             duration: 0.45,
             ease: "power2.in",
+            overwrite: "auto",
           });
           gsap.to(cs, {
             opacity: 1,
@@ -430,6 +431,7 @@ export function FeatureSections() {
             duration: 0.5,
             delay: 0.1,
             ease: "power2.out",
+            overwrite: "auto",
           });
           gsap.to(phoneContainer, {
             opacity: 1,
@@ -474,6 +476,11 @@ export function FeatureSections() {
             duration: 0.5,
             delay: 0.1,
             ease: "power2.out",
+          });
+          gsap.to(phoneContainer, {
+            opacity: 0,
+            duration: 0.5,
+            ease: "power2.in",
           });
         },
       });
