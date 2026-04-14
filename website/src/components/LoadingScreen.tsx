@@ -19,11 +19,11 @@
 import { useEffect, useRef, useCallback } from "react";
 import { loadingBridge } from "@/lib/loading-bridge";
 
-/** Maximum time (ms) to wait for 3D assets before force-dismissing. */
+/** Maximum time (ms) before force-dismissing — absolute last resort. */
 const MAX_LOADING_MS = 8_000;
 
-/** Minimum time (ms) to show the loading screen for brand visibility. */
-const MIN_DISPLAY_MS = 1_500;
+/** Minimum time (ms) the loading screen is always shown. */
+const MIN_DISPLAY_MS = 2_000;
 
 interface LoadingScreenProps {
     onComplete?: () => void;
@@ -66,16 +66,21 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
             return;
         }
 
-        // --- Safety timeout: force-dismiss after MAX_LOADING_MS ---
-        const safetyTimer = setTimeout(() => {
-            handleComplete();
-        }, MAX_LOADING_MS);
+            // --- Safety timeout: absolute last resort ---
+        const safetyTimer = setTimeout(handleComplete, MAX_LOADING_MS);
 
-        // --- Normal path: dismiss when loadingBridge reports 100% ---
+        // --- Normal path: wait for fonts + minimum display time ---
+        // document.fonts.ready resolves when all @font-face fonts have loaded,
+        // so the page never shows with invisible or fallback text.
+        Promise.all([
+            document.fonts.ready,
+            new Promise<void>((r) => setTimeout(r, MIN_DISPLAY_MS)),
+        ]).then(handleComplete);
+
+        // --- Bonus: also dismiss early if 3D assets finish before MIN_DISPLAY_MS ---
+        // handleComplete guards against double-firing via exitFiredRef.
         const unsubscribe = loadingBridge.subscribe((p) => {
-            if (p >= 100) {
-                handleComplete();
-            }
+            if (p >= 100) handleComplete();
         });
 
         return () => {

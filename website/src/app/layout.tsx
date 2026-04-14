@@ -105,33 +105,78 @@ export default function RootLayout({
         <style
           dangerouslySetInnerHTML={{
             __html: `
-              @keyframes ssr-loader-spin {
-                100% { transform: rotate(.5turn); }
+              /* Pattern drift — matches ds-pattern-text on the hero section */
+              @keyframes ssr-drift {
+                0%   { background-position: 0px 0px; }
+                100% { background-position: 300px 300px; }
               }
-              #ssr-loader {
-                width: 50px;
-                aspect-ratio: 1;
-                display: grid;
-                margin-top: 28px;
+              /* Only transform + opacity are GPU-composited — no paint per frame */
+              @keyframes ssr-bounce {
+                25%  { transform: translateY(20px) rotate(22.5deg); }
+                50%  { transform: translateY(40px) scale(1, .9) rotate(45deg); }
+                75%  { transform: translateY(20px) rotate(67.5deg); }
+                100% { transform: translateY(0) rotate(90deg); }
               }
-              #ssr-loader::before,
-              #ssr-loader::after {
-                content: "";
-                grid-area: 1/1;
-                --c: no-repeat radial-gradient(farthest-side, #344E41 92%, #0000);
-                background:
-                  var(--c) 50%  0,
-                  var(--c) 50%  100%,
-                  var(--c) 100% 50%,
-                  var(--c) 0    50%;
-                background-size: 12px 12px;
-                animation: ssr-loader-spin 1s infinite;
+              @keyframes ssr-shadow {
+                0%, 100% { transform: scale(1, 1); }
+                50%       { transform: scale(1.25, 1); }
               }
-              #ssr-loader::before {
-                margin: 4px;
-                --c: no-repeat radial-gradient(farthest-side, #CFE1B9 92%, #0000);
-                background-size: 8px 8px;
-                animation-timing-function: linear;
+              #ssr-loader-wrap {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 48px;
+              }
+              #ssr-logo {
+                width: 120px;
+                height: 120px;
+                background-image: url('/patterns/original.png');
+                background-size: 300px auto;
+                background-repeat: repeat;
+                -webkit-mask-image: url('/logo/ZuraLog-Sage.svg');
+                mask-image: url('/logo/ZuraLog-Sage.svg');
+                -webkit-mask-mode: alpha;
+                mask-mode: alpha;
+                -webkit-mask-size: contain;
+                mask-size: contain;
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-position: center;
+                mask-position: center;
+                animation: ssr-drift 45s linear infinite;
+              }
+              #ssr-spinner {
+                width: 80px;
+                height: 80px;
+                position: relative;
+                will-change: transform;
+              }
+              #ssr-spinner::before {
+                content: '';
+                width: 80px;
+                height: 8px;
+                background: #344E41;
+                opacity: 0.15;
+                position: absolute;
+                top: 126px;
+                left: 0;
+                border-radius: 50%;
+                animation: ssr-shadow 0.55s linear infinite;
+                will-change: transform;
+              }
+              #ssr-spinner::after {
+                content: '';
+                width: 100%;
+                height: 100%;
+                background-image: url('/patterns/original.png');
+                background-size: 200px auto;
+                background-repeat: repeat;
+                animation: ssr-bounce 0.55s linear infinite;
+                position: absolute;
+                top: 0;
+                left: 0;
+                border-radius: 10px;
+                will-change: transform;
               }
             `,
           }}
@@ -143,7 +188,6 @@ export default function RootLayout({
             position: "fixed",
             inset: 0,
             display: "flex",
-            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
             backgroundColor: "#F0EEE9",
@@ -152,41 +196,14 @@ export default function RootLayout({
           }}
           aria-hidden="true"
         >
-          <span
-            style={{
-              fontFamily: "var(--font-jakarta), 'Plus Jakarta Sans', sans-serif",
-              fontSize: "1.5rem",
-              fontWeight: 500,
-              letterSpacing: "0.3em",
-              color: "#2D2D2D",
-              textTransform: "uppercase" as const,
-              opacity: 0.85,
-            }}
-          >
-            ZuraLog
-          </span>
-          {/* Pure-CSS spinner — animates without JS */}
-          <div id="ssr-loader" />
+          {/* Bouncing-box spinner with brand pattern + logo above — pure CSS */}
+          <div id="ssr-loader-wrap">
+            <div id="ssr-logo" />
+            <div id="ssr-spinner" />
+          </div>
         </div>
-        {/* Fallback: auto-dismiss the SSR overlay on mobile where ClientShellGate
-            returns null (no 3D, no LoadingScreen). Fires after 600ms — much faster
-            than OverlayDismisser's 10s safety timeout for the home page. On desktop
-            the overlay is dismissed by LoadingScreen; this script is a no-op once
-            opacity has already been set to '0'. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              setTimeout(function() {
-                var el = document.getElementById('ssr-loading-overlay');
-                if (el && el.style.opacity !== '0') {
-                  el.style.transition = 'opacity 0.4s ease-out';
-                  el.style.opacity = '0';
-                  setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
-                }
-              }, 600);
-            `,
-          }}
-        />
+        {/* No inline dismiss script — LoadingScreen.tsx and OverlayDismisser
+            handle all dismissal logic so the overlay is never cut short. */}
         <PostHogProvider>
           <ScrollProgress />
           <CustomCursor />

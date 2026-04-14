@@ -6,6 +6,7 @@ import { FeatureSections } from "@/components/sections/FeatureSections";
 import { FeaturesCardSection } from "@/components/sections/FeaturesCardSection";
 import { FeatureShowcaseSection } from "@/components/sections/FeatureShowcaseSection";
 import { EverythingElseSection } from "@/components/sections/EverythingElseSection";
+import { CoachSection } from "@/components/sections/CoachSection";
 import { WaitlistSection } from "@/components/sections/WaitlistSection";
 import { ClientShellGate } from "@/components/ClientShellGate";
 import { PageBackground } from "@/components/PageBackground";
@@ -27,6 +28,7 @@ export default function Home() {
           <FeaturesCardSection />
           <FeatureShowcaseSection />
           <EverythingElseSection />
+          <CoachSection />
           <WaitlistSection />
         </main>
         <Footer />
