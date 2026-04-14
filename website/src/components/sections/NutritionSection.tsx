@@ -1,0 +1,182 @@
+// website/src/components/sections/NutritionSection.tsx
+"use client";
+
+import { useRef } from "react";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
+import ScrollTrigger from "gsap/ScrollTrigger";
+import { usePhoneContext } from "@/components/phone/PhoneContext";
+import { PhoneMockup } from "@/components/phone";
+import { NutritionScreen } from "@/components/phone/screens/NutritionScreen";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
+function blurOut(el: HTMLElement | null, delay = 0) {
+  if (!el) return;
+  gsap.to(el, {
+    opacity: 0,
+    filter: "blur(10px)",
+    duration: 0.45,
+    delay,
+    ease: "power2.in",
+    overwrite: "auto",
+  });
+}
+
+function blurIn(el: HTMLElement | null, delay = 0.1) {
+  if (!el) return;
+  gsap.to(el, {
+    opacity: 1,
+    filter: "blur(0px)",
+    duration: 0.5,
+    delay,
+    ease: "power2.out",
+    overwrite: "auto",
+  });
+}
+
+export function NutritionSection() {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const phoneCtx = usePhoneContext();
+
+  useGSAP(
+    () => {
+      if (typeof window === "undefined" || window.innerWidth < 768) return;
+      if (!phoneCtx) return;
+
+      const {
+        containerRef,
+        phoneRef,
+        connectScreenRef,
+        nutritionScreenRef,
+      } = phoneCtx;
+      const section = sectionRef.current;
+      if (!section) return;
+
+      const prefersReduced = window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches;
+
+      const lines = gsap.utils.toArray<HTMLElement>(".nutrition-line", section);
+
+      if (!prefersReduced) {
+        gsap.set(lines, { y: 30, opacity: 0 });
+      }
+
+      const animateTextIn = () => {
+        if (prefersReduced) return;
+        gsap.to(lines, {
+          y: 0,
+          opacity: 1,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: "power3.out",
+          overwrite: true,
+        });
+      };
+
+      const resetText = () => {
+        if (prefersReduced) return;
+        gsap.to(lines, {
+          y: 30,
+          opacity: 0,
+          duration: 0.4,
+          ease: "power2.in",
+          overwrite: true,
+        });
+      };
+
+      ScrollTrigger.create({
+        trigger: section,
+        start: "top 60%",
+        end: "bottom 40%",
+        invalidateOnRefresh: true,
+
+        onEnter: () => {
+          const container = containerRef.current;
+          const phone = phoneRef.current;
+          const connect = connectScreenRef.current;
+          const nutrition = nutritionScreenRef.current;
+          if (!container || !phone || !connect || !nutrition) return;
+
+          // Phone arrives from right-column position (Connect). Animate to center.
+          gsap.to(container, { opacity: 1, duration: 0.6, ease: "power2.out" });
+          gsap.to(phone, { x: 0, y: 0, duration: 1.0, ease: "power3.out" });
+          blurOut(connect);
+          blurIn(nutrition);
+          animateTextIn();
+        },
+
+        onLeave: () => {
+          const container = containerRef.current;
+          if (!container) return;
+          gsap.to(container, { opacity: 0, duration: 0.4, ease: "power2.in" });
+          resetText();
+        },
+
+        onEnterBack: () => {
+          const container = containerRef.current;
+          const phone = phoneRef.current;
+          const connect = connectScreenRef.current;
+          const nutrition = nutritionScreenRef.current;
+          if (!container || !phone || !connect || !nutrition) return;
+
+          gsap.to(container, { opacity: 1, duration: 0.6, ease: "power2.out" });
+          gsap.to(phone, { x: 0, y: 0, duration: 0.8, ease: "power3.out" });
+          blurOut(connect, 0);
+          blurIn(nutrition, 0.1);
+          animateTextIn();
+        },
+
+        onLeaveBack: () => {
+          const connect = connectScreenRef.current;
+          const nutrition = nutritionScreenRef.current;
+          if (!connect || !nutrition) return;
+          // Restore Connect screen — Connect's onEnterBack will move the phone.
+          blurOut(nutrition, 0);
+          blurIn(connect, 0.1);
+          resetText();
+        },
+      });
+    },
+    { scope: sectionRef, dependencies: [] }
+  );
+
+  return (
+    <section
+      ref={sectionRef}
+      id="nutrition-section"
+      className="relative min-h-screen flex flex-col items-center justify-center"
+    >
+      <div className="w-full max-w-7xl mx-auto px-6 md:px-12 lg:px-20 text-center">
+        <h2 className="nutrition-line text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05] text-[var(--color-ds-text-on-warm-white)]">
+          Snap it. Scan it. Say it.{" "}
+          <span
+            className="ds-pattern-text"
+            style={{ backgroundImage: "var(--ds-pattern-sage)" }}
+          >
+            Done.
+          </span>
+        </h2>
+
+        <p className="nutrition-line mt-6 text-base md:text-lg lg:text-xl leading-relaxed text-[var(--color-ds-text-secondary)] max-w-2xl mx-auto">
+          No more nutrition apps that take longer than the meal itself. Snap a
+          photo, scan a label, tell Zura what you had, or log it manually. It
+          figures out everything automatically.
+        </p>
+
+        {/* Mobile: static inline phone */}
+        <div className="flex md:hidden justify-center mt-12">
+          <PhoneMockup frameWidth={260}>
+            <NutritionScreen />
+          </PhoneMockup>
+        </div>
+
+        {/* Desktop: spacer height for the fixed phone overlay */}
+        <div className="hidden md:block h-[420px]" aria-hidden="true" />
+      </div>
+    </section>
+  );
+}
