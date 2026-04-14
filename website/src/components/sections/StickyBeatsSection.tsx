@@ -189,8 +189,8 @@ export function StickyBeatsSection({
           <div
             className={`w-full max-w-[70%] py-24 ${
               isImageLeft
-                ? "pl-8 md:pl-16 pr-10 md:pr-16 lg:pr-24"
-                : "pl-10 md:pl-16 lg:pl-24 pr-8 md:pr-16"
+                ? "pl-4 md:pl-6 pr-10 md:pr-16 lg:pr-24"
+                : "pl-10 md:pl-16 lg:pl-24 pr-4 md:pr-6"
             }`}
           >
             {/* Headlines — progressively revealed, pattern overlay for active state */}
