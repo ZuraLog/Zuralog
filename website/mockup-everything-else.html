@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <title>Everything Else — Mockup</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #F0EEE9;
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      padding: 100px 0 120px;
+      overflow-x: hidden;
+    }
+
+    /* ── Section header ─────────────────────────────────────── */
+    .header {
+      text-align: center;
+      padding: 0 48px;
+      margin-bottom: 64px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid rgba(52,78,65,0.28);
+      background: rgba(52,78,65,0.07);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #344E41;
+      margin-bottom: 24px;
+    }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #344E41; }
+
+    h2 {
+      font-size: clamp(48px, 7vw, 88px);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: -0.04em;
+      line-height: 0.88;
+      color: #161618;
+      margin-bottom: 24px;
+    }
+
+    p.sub {
+      font-size: 18px;
+      color: #6B6864;
+      max-width: 460px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ── Marquee ──────────────────────────────────────────────── */
+    .marquee-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow: hidden;
+      /* edge fades */
+      mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      width: max-content;
+    }
+
+    .row.left  { animation: go-left  28s linear infinite; }
+    .row.right { animation: go-right 34s linear infinite; }
+    .row.left2 { animation: go-left  22s linear infinite; }
+
+    @keyframes go-left {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+    @keyframes go-right {
+      from { transform: translateX(-50%); }
+      to   { transform: translateX(0); }
+    }
+
+    /* ── Pill ─────────────────────────────────────────────────── */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #FFFFFF;
+      border-radius: 100px;
+      padding: 9px 20px 9px 9px;
+      white-space: nowrap;
+      box-shadow:
+        0 1px 3px rgba(22,22,24,0.07),
+        0 0 0 1px rgba(22,22,24,0.06);
+      user-select: none;
+    }
+
+    .icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+
+    .pill-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: #161618;
+      letter-spacing: -0.01em;
+    }
+
+    /* Icon badge colour palette */
+    .c-green  { background: #D0E8D8; }
+    .c-blue   { background: #CCE0F5; }
+    .c-amber  { background: #F5E8CC; }
+    .c-rose   { background: #F5CCCC; }
+    .c-purple { background: #E4CCFF; }
+    .c-teal   { background: #CCF0E8; }
+    .c-peach  { background: #FFE4CC; }
+    .c-sage   { background: #D4E4D0; }
+    .c-slate  { background: #D0D8E8; }
+    .c-mint   { background: #CCFFEC; }
+    .c-gold   { background: #FFF0CC; }
+    .c-blush  { background: #FFCCEE; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="badge"><span class="badge-dot"></span> Everything else</div>
+    <h2>And so much<br>more.</h2>
+    <p class="sub">100+ features across every dimension of your health — all in one place.</p>
+  </div>
+
+  <div class="marquee-wrap">
+    <div class="row left"  id="r1"></div>
+    <div class="row right" id="r2"></div>
+    <div class="row left2" id="r3"></div>
+  </div>
+
+  <script>
+    const all = [
+      { e:'📓', l:'Journal',           c:'c-amber'  },
+      { e:'💧', l:'Water Intake',      c:'c-blue'   },
+      { e:'🧘', l:'Meditation',        c:'c-sage'   },
+      { e:'💊', l:'Supplements',       c:'c-purple' },
+      { e:'🔔', l:'Reminders',         c:'c-peach'  },
+      { e:'⚖️', l:'Weight',            c:'c-slate'  },
+      { e:'😊', l:'Mood Tracking',     c:'c-rose'   },
+      { e:'🫁', l:'Breathing',         c:'c-teal'   },
+      { e:'🌡️', l:'Body Temp',         c:'c-amber'  },
+      { e:'🩸', l:'Blood Glucose',     c:'c-rose'   },
+      { e:'❤️‍🩹',l:'Blood Pressure',   c:'c-blush'  },
+      { e:'🎯', l:'Goals',             c:'c-green'  },
+      { e:'🔥', l:'Streaks',           c:'c-peach'  },
+      { e:'🧠', l:'AI Insights',       c:'c-purple' },
+      { e:'📊', l:'Weekly Reports',    c:'c-slate'  },
+      { e:'🙏', l:'Gratitude',         c:'c-amber'  },
+      { e:'🏃', l:'Steps',             c:'c-green'  },
+      { e:'🌙', l:'Wind Down',         c:'c-purple' },
+      { e:'☀️', l:'Morning Routine',   c:'c-gold'   },
+      { e:'💪', l:'Strength Score',    c:'c-green'  },
+      { e:'🔗', l:'Apple Health',      c:'c-rose'   },
+      { e:'📍', l:'GPS Tracking',      c:'c-blue'   },
+      { e:'🎽', l:'Strava Sync',       c:'c-peach'  },
+      { e:'📈', l:'Progress Charts',   c:'c-slate'  },
+      { e:'🌊', l:'Recovery Score',    c:'c-teal'   },
+      { e:'🍵', l:'Caffeine',          c:'c-amber'  },
+      { e:'🧬', l:'Body Composition',  c:'c-mint'   },
+      { e:'⏱️', l:'Interval Timer',    c:'c-blue'   },
+      { e:'🌿', l:'Habits',            c:'c-sage'   },
+      { e:'🔋', l:'Energy Levels',     c:'c-green'  },
+      { e:'🩺', l:'Symptoms',          c:'c-rose'   },
+      { e:'🫀', l:'HRV Trends',        c:'c-blush'  },
+      { e:'🏋️', l:'1RM Calculator',    c:'c-green'  },
+      { e:'🧪', l:'Lab Results',       c:'c-purple' },
+      { e:'📅', l:'Cycle Tracking',    c:'c-rose'   },
+      { e:'🎵', l:'Focus Music',       c:'c-slate'  },
+      { e:'🧊', l:'Cold Exposure',     c:'c-teal'   },
+      { e:'🌞', l:'Sunlight',          c:'c-gold'   },
+      { e:'📉', l:'Trend Alerts',      c:'c-blue'   },
+      { e:'🏅', l:'Achievements',      c:'c-amber'  },
+    ];
+
+    function pill(f) {
+      return `<div class="pill"><div class="icon ${f.c}">${f.e}</div><span class="pill-text">${f.l}</span></div>`;
+    }
+
+    // Split into 3 roughly equal rows
+    const n = all.length;
+    const a = all.slice(0,  14);
+    const b = all.slice(14, 27);
+    const c = all.slice(27);
+
+    // Double each set for seamless loop
+    ['r1','r2','r3'].forEach((id, i) => {
+      const set = [a, b, c][i];
+      document.getElementById(id).innerHTML = [...set,...set].map(pill).join('');
+    });
+  </script>
+</body>
+</html>
