@@ -176,16 +176,6 @@ export function StickyBeatsSection({
           </div>
         </div>
 
-        {/* Section-level edge fades — painted over everything at all 4 edges */}
-        <div className="absolute inset-x-0 top-0 h-[18%] pointer-events-none z-20"
-          style={{ background: "linear-gradient(to bottom, var(--background), transparent)" }} />
-        <div className="absolute inset-x-0 bottom-0 h-[18%] pointer-events-none z-20"
-          style={{ background: "linear-gradient(to top, var(--background), transparent)" }} />
-        <div className="absolute inset-y-0 left-0 w-[12%] pointer-events-none z-20"
-          style={{ background: "linear-gradient(to right, var(--background), transparent)" }} />
-        <div className="absolute inset-y-0 right-0 w-[12%] pointer-events-none z-20"
-          style={{ background: "linear-gradient(to left, var(--background), transparent)" }} />
-
         {/* Text — z-10, overlapping image */}
         <div
           className={`relative z-10 w-full flex ${
