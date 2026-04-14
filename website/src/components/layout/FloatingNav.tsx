@@ -121,7 +121,7 @@ function DropdownPanel({ items, onSelect, align = "center" }: { items: DropdownI
                         className="group flex items-center gap-3 rounded-xl px-3 py-2 text-left transition-all duration-150 hover:bg-[#344E41]/[0.06] hover:translate-x-0.5 w-full"
                     >
                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white text-[#344E41] shadow-sm border border-black/[0.04] transition-all duration-150 group-hover:shadow-md group-hover:scale-105">
-                            <Icon size={14} strokeWidth={2} />
+                            <Icon size={14} />
                         </span>
                         <span className="flex flex-col min-w-0">
                             <span className="font-jakarta text-[13px] font-semibold text-[#161618] leading-tight">
