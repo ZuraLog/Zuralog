@@ -4,6 +4,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { useRef, useCallback } from "react";
 import gsap from "gsap";
+import { useSoundContext } from "@/components/design-system/interactions/sound-provider";
 
 const CATEGORIES = [
   {
@@ -48,6 +49,7 @@ interface TiltCardProps {
 function TiltCard({ cat, index }: TiltCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
+  const { playSound } = useSoundContext();
 
   const onMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const card = cardRef.current;
@@ -103,6 +105,7 @@ function TiltCard({ cat, index }: TiltCardProps) {
     >
       <div
         ref={cardRef}
+        onMouseEnter={() => playSound("tick")}
         onMouseMove={onMouseMove}
         onMouseLeave={onMouseLeave}
         className="relative overflow-hidden rounded-[20px] flex flex-col"

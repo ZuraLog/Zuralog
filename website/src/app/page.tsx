@@ -12,13 +12,11 @@ import { ClientShellGate } from "@/components/ClientShellGate";
 import { PageBackground } from "@/components/PageBackground";
 import { HashScrollHandler } from "@/components/HashScrollHandler";
 import { ClientProviders } from "@/components/providers/ClientProviders";
-import { CursorTrailCanvas } from "@/components/CursorTrailCanvas";
 
 export default function Home() {
   return (
     <ClientProviders>
       <div data-theme="light">
-        <CursorTrailCanvas />
         <PageBackground />
         <HashScrollHandler />
         <main className="relative min-h-screen">

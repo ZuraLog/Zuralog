@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSoundContext } from "@/components/design-system/interactions/sound-provider";
 import { motion } from "framer-motion";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
@@ -212,6 +213,7 @@ export function FeatureShowcaseSection() {
 
   const [phoneWidth, setPhoneWidth] = useState(370);
 
+  const { playSound } = useSoundContext();
   const sectionRef = useRef<HTMLElement>(null);
   const headlineRef = useRef<HTMLHeadingElement>(null);
   const subheadRef = useRef<HTMLParagraphElement>(null);
@@ -351,6 +353,7 @@ export function FeatureShowcaseSection() {
   const handleCategoryChange = useCallback((index: number) => {
     if (index === activeCat) return;
     if (timerRef.current) clearTimeout(timerRef.current);
+    playSound("tab-click");
 
     swapContent(index, 0);
     setTimeout(() => {
@@ -358,7 +361,7 @@ export function FeatureShowcaseSection() {
       setActiveFeature(0);
       setTimeout(staggerAccordionIn, 60);
     }, 240);
-  }, [activeCat, swapContent, staggerAccordionIn]);
+  }, [activeCat, swapContent, staggerAccordionIn, playSound]);
 
   // -------------------------------------------------------------------------
   // Manual feature select
@@ -366,9 +369,10 @@ export function FeatureShowcaseSection() {
   const handleFeatureSelect = useCallback((index: number) => {
     if (index === activeFeature) return;
     if (timerRef.current) clearTimeout(timerRef.current);
+    playSound("tick");
     setActiveFeature(index);
     setDisplayFeature(index);
-  }, [activeFeature]);
+  }, [activeFeature, playSound]);
 
   // -------------------------------------------------------------------------
   // Render

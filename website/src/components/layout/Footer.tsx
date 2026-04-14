@@ -17,8 +17,7 @@ import {
   FaGooglePlay,
 } from "react-icons/fa6";
 import { ManageCookiesButton } from "@/components/ui/ManageCookiesButton";
-import { playTick, playClick } from "@/lib/sounds";
-import { useRef, useEffect } from "react";
+import { useSoundContext } from "@/components/design-system/interactions/sound-provider";
 
 const NAV_COLUMNS = [
   {
@@ -60,20 +59,10 @@ const SOCIAL_LINKS = [
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
-  const hasInteracted = useRef(false);
+  const { playSound } = useSoundContext();
 
-  useEffect(() => {
-    const unlock = () => { hasInteracted.current = true; };
-    window.addEventListener("click", unlock, { once: true });
-    window.addEventListener("touchstart", unlock, { once: true });
-    return () => {
-      window.removeEventListener("click", unlock);
-      window.removeEventListener("touchstart", unlock);
-    };
-  }, []);
-
-  const handleHover = () => { if (hasInteracted.current) playTick(); };
-  const handleClick = () => { if (hasInteracted.current) playClick(); };
+  const handleHover = () => playSound("tick");
+  const handleClick = () => playSound("click");
 
   return (
     <footer

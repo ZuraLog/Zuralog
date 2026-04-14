@@ -3,6 +3,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import { useInView, motion, AnimatePresence } from "framer-motion";
+import { useSoundContext } from "@/components/design-system/interactions/sound-provider";
 
 // ── Brand tokens (dark theme) ─────────────────────────────────────────────────
 const CANVAS          = "#161618";
@@ -148,6 +149,7 @@ export function CoachScreen() {
   const rootRef    = useRef<HTMLDivElement>(null);
   const scrollRef  = useRef<HTMLDivElement>(null);
   const isInView   = useInView(rootRef, { once: true, margin: "0px 0px -5% 0px" });
+  const { playSound } = useSoundContext();
 
   // Pick one conversation per mount, stays stable across re-renders
   const [convIdx]  = useState(() => Math.floor(Math.random() * CONVERSATIONS.length));
@@ -163,6 +165,16 @@ export function CoachScreen() {
     );
     return () => timers.forEach(clearTimeout);
   }, [isInView]);
+
+  // Play a sound as each message bubble appears
+  useEffect(() => {
+    if (step === 0) return;
+    // User messages: steps 1, 4, 7 → pop
+    // Zura messages: steps 3, 6, 9 → tick
+    // Typing indicators: steps 2, 5, 8 → silent
+    if (step === 1 || step === 4 || step === 7) playSound("pop");
+    if (step === 3 || step === 6 || step === 9) playSound("tick");
+  }, [step, playSound]);
 
   // Auto-scroll to bottom whenever step advances
   useEffect(() => {

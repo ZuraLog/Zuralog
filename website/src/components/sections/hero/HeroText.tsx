@@ -6,15 +6,18 @@ import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { DSButton } from "@/components/design-system";
 import { useMagnetic } from "@/hooks/use-magnetic";
+import { useSoundContext } from "@/components/design-system/interactions/sound-provider";
 
 export function HeroText() {
   const containerRef = useRef<HTMLDivElement>(null);
   const magnetRef = useMagnetic<HTMLDivElement>({ strength: 0.3 });
+  const { playSound } = useSoundContext();
 
   const handleWaitlistClick = useCallback(() => {
+    playSound("click");
     const el = document.getElementById("waitlist");
     if (el) el.scrollIntoView({ behavior: "smooth" });
-  }, []);
+  }, [playSound]);
 
   useGSAP(
     () => {
@@ -100,6 +103,7 @@ export function HeroText() {
         <div
           ref={magnetRef}
           className="hero-line hero-cta mt-8 pointer-events-auto"
+          onMouseEnter={() => playSound("tick")}
         >
           <DSButton
             intent="primary"
