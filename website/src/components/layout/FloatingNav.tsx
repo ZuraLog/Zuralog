@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { DSButton } from "@/components/design-system";
 import { useSoundContext } from "@/components/design-system/interactions/sound-provider";
+import { useCursorParallax } from "@/hooks/use-cursor-parallax";
 
 /* ─────────────────────────────────────────────────────────────
    Nav data
@@ -368,6 +369,7 @@ export function FloatingNav() {
     const { playSound, muted, toggleMute } = useSoundContext();
     const router = useRouter();
     const [mobileOpen, setMobileOpen] = useState(false);
+    const navRef = useCursorParallax<HTMLElement>({ depth: 0.12 });
 
     return (
         <>
@@ -378,7 +380,8 @@ export function FloatingNav() {
                 className="fixed inset-x-0 top-5 z-50 flex justify-center pointer-events-none px-4"
             >
                 <nav
-                    className="pointer-events-auto flex items-center rounded-ds-pill border border-ds-border-strong bg-ds-surface/80 backdrop-blur-xl px-4 py-2.5 shadow-sm w-full md:w-auto gap-3 md:gap-6"
+                    ref={navRef}
+                    className="pointer-events-auto will-change-transform flex items-center rounded-ds-pill border border-ds-border-strong bg-ds-surface/80 backdrop-blur-xl px-4 py-2.5 shadow-sm w-full md:w-auto gap-3 md:gap-6"
                     aria-label="Main navigation"
                 >
                     {/* Brand — always visible */}

@@ -42,6 +42,10 @@ export function StickyBeatsSection({
   // individual ScrollTrigger tweens on .beat-headline / .beat-body are unaffected.
   const textPanelRef = useCursorParallax<HTMLDivElement>({ depth: 0.35 });
 
+  // Cursor parallax on the image inner div — the outer absolute wrapper keeps
+  // its -translate-y-1/2 centering; GSAP only touches the inner div's x/y.
+  const imagePanelRef = useCursorParallax<HTMLDivElement>({ depth: 0.5 });
+
   useEffect(() => {
     const section = sectionRef.current;
     if (!section) return;
@@ -167,7 +171,7 @@ export function StickyBeatsSection({
           }}
           aria-hidden="true"
         >
-          <div className="relative w-full h-full">
+          <div ref={imagePanelRef} className="relative w-full h-full will-change-transform">
             {beats.map((beat, i) => (
               <Image
                 key={i}
