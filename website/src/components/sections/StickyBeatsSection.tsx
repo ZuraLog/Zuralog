@@ -22,14 +22,20 @@ export interface Beat {
 interface StickyBeatsSectionProps {
   id: string;
   beats: Beat[];
+  layout?: "image-left" | "image-right";
 }
 
 // ---------------------------------------------------------------------------
 // StickyBeatsSection
 // ---------------------------------------------------------------------------
 
-export function StickyBeatsSection({ id, beats }: StickyBeatsSectionProps) {
+export function StickyBeatsSection({
+  id,
+  beats,
+  layout = "image-right",
+}: StickyBeatsSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
+  const isImageLeft = layout === "image-left";
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -40,8 +46,6 @@ export function StickyBeatsSection({ id, beats }: StickyBeatsSectionProps) {
     const ctx = gsap.context(() => {
       const beatRows = gsap.utils.toArray<HTMLElement>(".beat-row", section);
       const beatImages = gsap.utils.toArray<HTMLElement>(".beat-image", section);
-      const beatBodies = gsap.utils.toArray<HTMLElement>(".beat-body", section);
-      const beatHeadlines = gsap.utils.toArray<HTMLElement>(".beat-headline", section);
 
       if (beatRows.length !== beats.length) {
         if (process.env.NODE_ENV === "development") {
@@ -73,17 +77,10 @@ export function StickyBeatsSection({ id, beats }: StickyBeatsSectionProps) {
 
       for (let i = 0; i < beats.length - 1; i++) {
         const label = "beat" + i;
-        // Outgoing dims
-        tl.to(beatRows[i], { opacity: 0.2, duration: 0.5, ease: "power2.inOut" }, label + "+=0.2");
-        tl.to(beatHeadlines[i], { color: "#161618", duration: 0.5, ease: "power2.inOut" }, label + "+=0.2");
-        tl.to(beatBodies[i], { opacity: 0, duration: 0.4, ease: "power2.in" }, label + "+=0.2");
-        // Incoming activates
-        tl.to(beatRows[i + 1], { opacity: 1, duration: 0.5, ease: "power2.inOut" }, label + "+=0.4");
-        tl.to(beatHeadlines[i + 1], { color: "#344E41", duration: 0.5, ease: "power2.inOut" }, label + "+=0.4");
-        tl.to(beatBodies[i + 1], { opacity: 1, duration: 0.4, ease: "power2.out" }, label + "+=0.5");
-        // Image crossfade
-        tl.to(beatImages[i], { opacity: 0, duration: 0.5, ease: "power2.inOut" }, label + "+=0.25");
-        tl.to(beatImages[i + 1], { opacity: 1, duration: 0.5, ease: "power2.inOut" }, label + "+=0.35");
+        tl.to(beatRows[i], { opacity: 0, duration: 0.5, ease: "power2.inOut" }, label + "+=0.2");
+        tl.to(beatRows[i + 1], { opacity: 1, duration: 0.5, ease: "power2.inOut" }, label + "+=0.3");
+        tl.to(beatImages[i], { opacity: 0, duration: 0.5, ease: "power2.inOut" }, label + "+=0.2");
+        tl.to(beatImages[i + 1], { opacity: 1, duration: 0.5, ease: "power2.inOut" }, label + "+=0.3");
       }
 
       // Ensure timeline reaches the last label so snap has room to complete
@@ -100,53 +97,71 @@ export function StickyBeatsSection({ id, beats }: StickyBeatsSectionProps) {
       <section
         ref={sectionRef}
         id={id}
-        className="hidden md:grid grid-cols-12 min-h-screen overflow-hidden"
+        className="hidden md:flex relative min-h-screen overflow-hidden items-center"
       >
-        {/* Left column — scrolling beat list */}
-        <div className="col-span-5 flex flex-col justify-center px-12 lg:px-20 py-16">
-          {beats.map((beat, i) => (
-            <div
-              key={i}
-              className={`beat-row${i > 0 ? " mt-10" : ""}`}
-              data-beat={i}
-              style={{ opacity: i === 0 ? 1 : 0.2 }}
-            >
-              <h3
-                className="beat-headline font-bold uppercase tracking-tighter leading-[0.88]"
-                style={{
-                  fontSize: "clamp(2.5rem, 5.5vw, 6.5rem)",
-                  color: i === 0 ? "#344E41" : "#161618",
-                }}
-              >
-                {beat.headline}
-              </h3>
-              <p
-                className="beat-body mt-3 text-lg md:text-xl leading-relaxed"
-                style={{ color: "#6B6864", opacity: i === 0 ? 1 : 0 }}
-              >
-                {beat.body}
-              </p>
-            </div>
-          ))}
+        {/* Image — absolute, behind text */}
+        <div
+          className={`absolute top-1/2 -translate-y-1/2 w-[62%] pointer-events-none select-none ${
+            isImageLeft ? "left-[-4%]" : "right-[-4%]"
+          }`}
+          aria-hidden="true"
+        >
+          <div className="relative" style={{ paddingBottom: "100%" }}>
+            {beats.map((beat, i) => (
+              <Image
+                key={i}
+                src={beat.image}
+                alt=""
+                fill
+                className="beat-image object-contain"
+                style={{ opacity: i === 0 ? 1 : 0 }}
+              />
+            ))}
+          </div>
         </div>
 
-        {/* Right column — stacked images */}
-        <div className="col-span-7 relative">
-          <div className="absolute inset-0 flex items-center justify-center p-12">
-            {beats.map((beat, i) => (
-              <div
-                key={i}
-                className="beat-image absolute inset-0"
-                style={{ opacity: i === 0 ? 1 : 0 }}
-              >
-                <Image
-                  src={beat.image}
-                  alt=""
-                  fill
-                  className="object-contain"
-                />
+        {/* Text — z-10 overlapping image */}
+        <div className={`relative z-10 w-full flex ${isImageLeft ? "justify-end" : "justify-start"}`}>
+          <div
+            className={`w-full max-w-[70%] ${
+              isImageLeft
+                ? "pl-8 md:pl-16 pr-10 md:pr-16 lg:pr-24"
+                : "pl-10 md:pl-16 lg:pl-24 pr-8 md:pr-16"
+            }`}
+          >
+            <div className="relative">
+              {/* Ghost beat — invisible, sets container height */}
+              <div className="invisible pointer-events-none py-24" aria-hidden>
+                <h2
+                  className="font-bold uppercase tracking-tighter leading-[0.85]"
+                  style={{ fontSize: "clamp(3rem, 8.5vw, 10.5rem)" }}
+                >
+                  {beats[0].headline}
+                </h2>
+                <p className="mt-10 text-xl md:text-2xl leading-relaxed max-w-xl">
+                  {beats[0].body}
+                </p>
               </div>
-            ))}
+
+              {/* Beats — absolute, crossfade in place */}
+              {beats.map((beat, i) => (
+                <div
+                  key={i}
+                  className="beat-row absolute inset-0 py-24"
+                  style={{ opacity: i === 0 ? 1 : 0 }}
+                >
+                  <h2
+                    className="beat-headline font-bold uppercase tracking-tighter leading-[0.85] text-[#161618]"
+                    style={{ fontSize: "clamp(3rem, 8.5vw, 10.5rem)" }}
+                  >
+                    {beat.headline}
+                  </h2>
+                  <p className="beat-body mt-10 text-xl md:text-2xl leading-relaxed text-[#6B6864] max-w-xl">
+                    {beat.body}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
