@@ -379,7 +379,7 @@ export function FeatureShowcaseSection() {
       ref={sectionRef}
       id="feature-showcase"
       className="relative py-20 md:py-28 px-6 md:px-12 font-jakarta"
-      style={{ backgroundColor: "#F0EEE9" }}
+      style={{ backgroundColor: "transparent" }}
     >
       <div className="mx-auto max-w-6xl">
 

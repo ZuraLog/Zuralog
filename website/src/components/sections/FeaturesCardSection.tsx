@@ -174,7 +174,6 @@ export function FeaturesCardSection() {
   return (
     <section
       className="relative py-24 md:py-32 px-6 md:px-12 font-jakarta"
-      style={{ backgroundColor: "#F0EEE9" }}
     >
       <div className="mx-auto max-w-6xl">
         {/* Section headline */}
