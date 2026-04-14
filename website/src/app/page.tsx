@@ -7,6 +7,7 @@ import { FeaturesCardSection } from "@/components/sections/FeaturesCardSection";
 import { FeatureShowcaseSection } from "@/components/sections/FeatureShowcaseSection";
 import { EverythingElseSection } from "@/components/sections/EverythingElseSection";
 import { CoachSection } from "@/components/sections/CoachSection";
+import { ZuraInActionSection } from "@/components/sections/ZuraInActionSection";
 import { WaitlistSection } from "@/components/sections/WaitlistSection";
 import { ClientShellGate } from "@/components/ClientShellGate";
 import { PageBackground } from "@/components/PageBackground";
@@ -27,6 +28,7 @@ export default function Home() {
           <div id="deep-dive-section"><FeatureShowcaseSection /></div>
           <div id="more-section"><EverythingElseSection /></div>
           <div id="coach-section"><CoachSection /></div>
+          <div id="action-section"><ZuraInActionSection /></div>
           <WaitlistSection />
         </main>
         <Footer />
