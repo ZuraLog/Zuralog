@@ -56,6 +56,7 @@ export const metadata: Metadata = {
     title: "ZuraLog — Unified Health. Made Smart.",
     description:
       "The AI that connects your fitness apps and actually thinks. Join the waitlist for early access.",
+    images: [{ url: `${siteUrl}/opengraph-image`, width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
@@ -63,6 +64,7 @@ export const metadata: Metadata = {
     title: "ZuraLog — Unified Health. Made Smart.",
     description:
       "The AI that connects your fitness apps and actually thinks. Join the waitlist for early access.",
+    images: [`${siteUrl}/opengraph-image`],
   },
   robots: {
     index: true,
@@ -76,8 +78,11 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: [{ url: "/logo/ZuraLog-Sage.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/logo/ZuraLog-Sage.svg", type: "image/svg+xml" }],
+    icon: [
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/logo/ZuraLog-Sage.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   manifest: "/site.webmanifest",
 };

@@ -1,10 +1,10 @@
 {
-  "name": "Zuralog",
-  "short_name": "Zuralog",
+  "name": "ZuraLog",
+  "short_name": "ZuraLog",
   "description": "The AI that connects your fitness apps and actually thinks.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
+  "background_color": "#F0EEE9",
   "theme_color": "#CFE1B9",
   "icons": [
     {
@@ -26,7 +26,13 @@
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
