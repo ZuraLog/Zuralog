@@ -1,25 +1,9 @@
 "use client";
 
-import type { ReactNode } from "react";
-import Image from "next/image";
 import { StickyBeatsSection, type Beat } from "./StickyBeatsSection";
 
 // ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-type SectionLayout = "image-right" | "image-left" | "image-center";
-
-interface SectionData {
-  key: string;
-  headline: ReactNode;
-  body: string;
-  layout: SectionLayout;
-  image: string | null;
-}
-
-// ---------------------------------------------------------------------------
-// Section data
+// Beat data
 // ---------------------------------------------------------------------------
 
 const CONNECT_BEATS: Beat[] = [
@@ -40,196 +24,115 @@ const CONNECT_BEATS: Beat[] = [
   },
 ];
 
-const SECTIONS: SectionData[] = [
+const NUTRITION_BEATS: Beat[] = [
   {
-    key: "nutrition",
-    layout: "image-left",
-    image: null,
-    headline: (
-      <>
-        Snap it.<br />
-        Scan it.<br />
-        Say it.{" "}
-        <span
-          className="ds-pattern-text"
-          style={{ backgroundImage: "var(--ds-pattern-sage)" }}
-        >
-          Done.
-        </span>
-      </>
-    ),
-    body: "No more nutrition apps that take longer than the meal itself. Snap a photo, scan a label, tell Zura what you had, or log it manually. It figures out everything automatically.",
+    headline: "Snap it.",
+    body: "See it, log it. Snap any meal for an instant nutrition breakdown\u2014no typing, no guessing.",
+    image: "/images/feature/nutrition.png",
   },
   {
-    key: "workouts",
-    layout: "image-right",
-    image: null,
-    headline: (
-      <>
-        Log it live.<br />
-        Log it later.<br />
-        <span
-          className="ds-pattern-text"
-          style={{ backgroundImage: "var(--ds-pattern-sage)" }}
-        >
-          Or let it log itself.
-        </span>
-      </>
-    ),
-    body: "Track your sets and reps live, log a workout you already finished, or let Zura pull it in automatically from Apple Health or Google Health Connect. Every session counts.",
+    headline: "Scan it.",
+    body: "Got a label? Scan it. ZuraLog reads any barcode and fills in the nutrition facts automatically.",
+    image: "/images/feature/nutrition.png",
   },
   {
-    key: "sleep",
-    layout: "image-left",
-    image: null,
-    headline: (
-      <>
-        Sleep better.<br />
-        Know{" "}
-        <span
-          className="ds-pattern-text"
-          style={{ backgroundImage: "var(--ds-pattern-sage)" }}
-        >
-          exactly<br />why you&apos;re not.
-        </span>
-      </>
-    ),
-    body: "Most apps show you a sleep chart and call it done. Zura goes further\u2014connecting your sleep patterns to your workouts, stress, and daily habits.",
+    headline: "Say it. Done.",
+    body: "Just tell Zura what you had, or log it manually. However you want to do it, it works.",
+    image: "/images/feature/nutrition.png",
+  },
+];
+
+const WORKOUTS_BEATS: Beat[] = [
+  {
+    headline: "Log it live.",
+    body: "Track your sets, reps, and weight in real time as you train. No fumbling with paper, no forgetting after.",
+    image: "/images/feature/blank.png",
   },
   {
-    key: "heart",
-    layout: "image-right",
-    image: null,
-    headline: (
-      <>
-        Know your heart.<br />
-        <span
-          className="ds-pattern-text"
-          style={{ backgroundImage: "var(--ds-pattern-sage)" }}
-        >
-          Know your health.
-        </span>
-      </>
-    ),
-    body: "Your heart responds to everything\u2014your workouts, your meals, your sleep, your steps. Zura connects all of it so you stop seeing isolated numbers.",
+    headline: "Log it later.",
+    body: "Finished a workout you didn\u2019t log? Just tell Zura. Add any session after the fact and it slots right into your history.",
+    image: "/images/feature/blank.png",
   },
   {
-    key: "more",
-    layout: "image-center",
-    image: null,
-    headline: (
-      <>
-        And that&apos;s just<br />the beginning.
-      </>
-    ),
-    body: "The more you track, the more Zura understands. And the more Zura understands, the better it gets.",
+    headline: "Or let it log itself.",
+    body: "Connect Apple Health or Google Health Connect and your workouts appear automatically\u2014no extra steps.",
+    image: "/images/feature/blank.png",
+  },
+];
+
+const SLEEP_BEATS: Beat[] = [
+  {
+    headline: "Sleep better.",
+    body: "Every morning, see exactly how you slept\u2014duration, quality, and stages. All synced automatically from your device.",
+    image: "/images/feature/blank.png",
   },
   {
-    key: "coach",
-    layout: "image-left",
-    image: null,
-    headline: (
-      <>
-        Meet Zura.<br />
-        The coach who<br />
-        knows your{" "}
-        <span
-          className="ds-pattern-text"
-          style={{ backgroundImage: "var(--ds-pattern-sage)" }}
-        >
-          whole story.
-        </span>
-      </>
-    ),
-    body: "You\u2019ve been tracking everything. Now finally get something back. Zura tells you what\u2019s working, what isn\u2019t, and exactly what to do next.",
+    headline: "Know exactly.",
+    body: "ZuraLog connects your sleep to everything else\u2014your training load, your meals, your stress. Not just a chart.",
+    image: "/images/feature/blank.png",
+  },
+  {
+    headline: "Why you\u2019re not.",
+    body: "Get clear, specific insights. Not \u2018sleep more.\u2019 What\u2019s actually keeping you up, and what to do about it.",
+    image: "/images/feature/blank.png",
+  },
+];
+
+const HEART_BEATS: Beat[] = [
+  {
+    headline: "Know your heart.",
+    body: "Your resting heart rate, HRV, and recovery score\u2014tracked automatically and shown in context.",
+    image: "/images/feature/blank.png",
+  },
+  {
+    headline: "Know your patterns.",
+    body: "Your heart responds to everything\u2014workouts, meals, sleep, stress. ZuraLog shows you the connections.",
+    image: "/images/feature/blank.png",
+  },
+  {
+    headline: "Know your health.",
+    body: "Stop seeing isolated numbers. Start seeing what they mean together\u2014and what to do about it.",
+    image: "/images/feature/blank.png",
+  },
+];
+
+const COACH_BEATS: Beat[] = [
+  {
+    headline: "What\u2019s working.",
+    body: "Zura reads across all your data to find what\u2019s actually moving the needle for you\u2014not generic advice.",
+    image: "/images/feature/blank.png",
+  },
+  {
+    headline: "What isn\u2019t.",
+    body: "Patterns that are holding you back surface automatically. No manual analysis. No spreadsheets.",
+    image: "/images/feature/blank.png",
+  },
+  {
+    headline: "What to do next.",
+    body: "You\u2019ve been tracking everything. Now finally get something back. Zura tells you exactly what to do next.",
+    image: "/images/feature/blank.png",
   },
 ];
 
 // ---------------------------------------------------------------------------
-// FeatureSection — full-screen, overlapping text + image
+// More — centered teaser, no beats
 // ---------------------------------------------------------------------------
 
-function FeatureSection({ section }: { section: SectionData }) {
-  const isImageLeft = section.layout === "image-left";
-
-  // ── Centered (More section) ──────────────────────────────────────────────
-  if (section.layout === "image-center") {
-    return (
-      <section
-        id={`${section.key}-section`}
-        className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden px-8 md:px-16 text-center"
-      >
-        <h2
-          className="font-jakarta font-bold uppercase tracking-tighter leading-[0.85] text-[#161618]"
-          style={{ fontSize: "clamp(3.5rem, 9vw, 11rem)" }}
-        >
-          {section.headline}
-        </h2>
-        <p className="font-jakarta mt-10 text-xl md:text-2xl text-[#6B6864] max-w-2xl">
-          {section.body}
-        </p>
-      </section>
-    );
-  }
-
-  // ── Split with overlap ───────────────────────────────────────────────────
+function MoreSection() {
   return (
     <section
-      id={`${section.key}-section`}
-      className="relative min-h-screen overflow-hidden flex items-center"
+      id="more-section"
+      className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden px-8 md:px-16 text-center"
     >
-      {/* Image — absolutely placed, behind text */}
-      {section.image && (
-        <div
-          className={`absolute top-1/2 -translate-y-1/2 w-[62%] pointer-events-none select-none ${
-            isImageLeft ? "left-[-4%]" : "right-[-4%]"
-          }`}
-          aria-hidden="true"
-        >
-          <Image
-            src={section.image}
-            alt=""
-            width={1000}
-            height={1000}
-            className="w-full h-auto"
-          />
-        </div>
-      )}
-
-      {/* Placeholder when no image yet */}
-      {!section.image && (
-        <div
-          className={`absolute top-1/2 -translate-y-1/2 w-[55%] aspect-square rounded-3xl bg-black/5 pointer-events-none ${
-            isImageLeft ? "left-0" : "right-0"
-          }`}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Text — z above image, anchored left or right */}
-      <div
-        className={`relative z-10 w-full flex ${
-          isImageLeft ? "justify-end" : "justify-start"
-        }`}
+      <h2
+        className="font-jakarta font-bold uppercase tracking-tighter leading-[0.85] text-[#161618]"
+        style={{ fontSize: "clamp(3.5rem, 9vw, 11rem)" }}
       >
-        <div
-          className={`w-full max-w-[70%] py-24 ${
-            isImageLeft
-              ? "pl-8 md:pl-16 pr-10 md:pr-16 lg:pr-24"
-              : "pl-10 md:pl-16 lg:pl-24 pr-8 md:pr-16"
-          }`}
-        >
-          <h2
-            className="font-jakarta font-bold uppercase tracking-tighter leading-[0.85] text-[#161618]"
-            style={{ fontSize: "clamp(3rem, 8.5vw, 10.5rem)" }}
-          >
-            {section.headline}
-          </h2>
-          <p className="font-jakarta mt-10 text-xl md:text-2xl leading-relaxed text-[#6B6864] max-w-xl">
-            {section.body}
-          </p>
-        </div>
-      </div>
+        And that&apos;s just<br />the beginning.
+      </h2>
+      <p className="font-jakarta mt-10 text-xl md:text-2xl text-[#6B6864] max-w-2xl">
+        The more you track, the more Zura understands. And the more Zura understands, the better it gets.
+      </p>
     </section>
   );
 }
@@ -241,10 +144,13 @@ function FeatureSection({ section }: { section: SectionData }) {
 export function FeatureSections() {
   return (
     <div id="feature-sections">
-      <StickyBeatsSection id="connect-section" beats={CONNECT_BEATS} />
-      {SECTIONS.map((section) => (
-        <FeatureSection key={section.key} section={section} />
-      ))}
+      <StickyBeatsSection id="connect-section"   beats={CONNECT_BEATS}   layout="image-right" />
+      <StickyBeatsSection id="nutrition-section" beats={NUTRITION_BEATS} layout="image-left"  />
+      <StickyBeatsSection id="workouts-section"  beats={WORKOUTS_BEATS}  layout="image-right" />
+      <StickyBeatsSection id="sleep-section"     beats={SLEEP_BEATS}     layout="image-left"  />
+      <StickyBeatsSection id="heart-section"     beats={HEART_BEATS}     layout="image-right" />
+      <MoreSection />
+      <StickyBeatsSection id="coach-section"     beats={COACH_BEATS}     layout="image-left"  />
     </div>
   );
 }
