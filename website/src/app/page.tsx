@@ -3,6 +3,8 @@ import { FloatingNav } from "@/components/layout/FloatingNav";
 import { Footer } from "@/components/layout/Footer";
 import { HeroSection } from "@/components/sections/HeroSection";
 import { FeatureSections } from "@/components/sections/FeatureSections";
+import { FeaturesCardSection } from "@/components/sections/FeaturesCardSection";
+import { FeatureShowcaseSection } from "@/components/sections/FeatureShowcaseSection";
 import { WaitlistSection } from "@/components/sections/WaitlistSection";
 import { ClientShellGate } from "@/components/ClientShellGate";
 import { PageBackground } from "@/components/PageBackground";
@@ -19,6 +21,8 @@ export default function Home() {
           <FloatingNav />
           <HeroSection />
           <FeatureSections />
+          <FeaturesCardSection />
+          <FeatureShowcaseSection />
           <WaitlistSection />
         </main>
         <Footer />
