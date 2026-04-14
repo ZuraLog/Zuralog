@@ -23,11 +23,11 @@ const NAV_COLUMNS = [
   {
     heading: "Features",
     links: [
-      { label: "Today",    href: "/#today-section" },
-      { label: "Data",     href: "/#data-section" },
-      { label: "Coach",    href: "/#coach-section" },
-      { label: "Progress", href: "/#progress-section" },
-      { label: "Trends",   href: "/#trends-section" },
+      { label: "Connect",    href: "/#connect-section" },
+      { label: "Tracking",  href: "/#tracking-section" },
+      { label: "Deep Dive", href: "/#deep-dive-section" },
+      { label: "And More",  href: "/#more-section" },
+      { label: "Coach",     href: "/#coach-section" },
       { label: "Pricing",  href: "/pricing" },
     ],
   },
@@ -113,7 +113,7 @@ export function Footer() {
             </p>
 
             <p className="max-w-xs text-sm leading-relaxed" style={{ color: "rgba(52, 78, 65, 0.50)" }}>
-              The AI that connects your fitness apps and actually thinks — so
+              The AI that connects your fitness apps and actually thinks, so
               your health data finally works for you.
             </p>
 

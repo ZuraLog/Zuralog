@@ -21,7 +21,7 @@ export function buildShareText(
   position: number,
   referralUrl: string,
 ): { twitter: string; generic: string } {
-  const generic = `I'm #${position} on the ZuraLog waitlist — the AI that finally connects all your fitness apps. Skip the line: ${referralUrl}`;
-  const twitter = `I just joined @zuralog — the AI fitness hub that connects ALL your apps. I'm #${position} on the waitlist! Skip ahead 👉 ${referralUrl}`;
+  const generic = `I'm #${position} on the ZuraLog waitlist, the AI that finally connects all your fitness apps. Skip the line: ${referralUrl}`;
+  const twitter = `I just joined @zuralog, the AI fitness hub that connects ALL your apps. I'm #${position} on the waitlist! Skip ahead 👉 ${referralUrl}`;
   return { twitter, generic };
 }

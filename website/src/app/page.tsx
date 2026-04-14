@@ -22,11 +22,11 @@ export default function Home() {
         <main className="relative min-h-screen">
           <FloatingNav />
           <HeroSection />
-          <FeatureSections />
-          <FeaturesCardSection />
-          <FeatureShowcaseSection />
-          <EverythingElseSection />
-          <CoachSection />
+          <div id="connect-section"><FeatureSections /></div>
+          <div id="tracking-section"><FeaturesCardSection /></div>
+          <div id="deep-dive-section"><FeatureShowcaseSection /></div>
+          <div id="more-section"><EverythingElseSection /></div>
+          <div id="coach-section"><CoachSection /></div>
           <WaitlistSection />
         </main>
         <Footer />

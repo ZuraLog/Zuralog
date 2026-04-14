@@ -57,8 +57,10 @@ const ROW_3: Feature[] = [
 function FeaturePill({ f }: { f: Feature }) {
   const Icon = f.icon;
   return (
-    <div
-      className="inline-flex items-center gap-3 rounded-full bg-white mx-1.5"
+    <motion.div
+      whileHover={{ scale: 1.06, y: -2 }}
+      transition={{ type: "spring", stiffness: 400, damping: 20 }}
+      className="inline-flex items-center gap-3 rounded-full bg-white mx-1.5 cursor-default"
       style={{
         padding: "9px 20px 9px 9px",
         boxShadow:
@@ -77,7 +79,7 @@ function FeaturePill({ f }: { f: Feature }) {
       >
         {f.label}
       </span>
-    </div>
+    </motion.div>
   );
 }
 
@@ -123,7 +125,7 @@ export function EverythingElseSection() {
 
           <p className="mt-5 text-lg md:text-xl text-[#6B6864] max-w-xl">
             The details that add up. Dozens of ways to track every corner of
-            your health — all in one place.
+            your health, all in one place.
           </p>
         </div>
       </motion.div>

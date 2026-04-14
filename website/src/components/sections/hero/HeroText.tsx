@@ -62,7 +62,7 @@ export function HeroText() {
         className="hero-parallax will-change-transform flex flex-col items-center text-center px-6 mt-[32vh] max-w-5xl mx-auto w-full"
       >
         {/* Headline */}
-        <h1 className="hero-line font-jakarta text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-[var(--color-ds-text-on-warm-white)] leading-[1.05]">
+        <h1 className="hero-line font-jakarta text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-[var(--color-ds-text-on-warm-white)] leading-[1.05] pointer-events-auto">
           The last health app{" "}
           <span
             className="ds-pattern-text"
@@ -73,9 +73,9 @@ export function HeroText() {
         </h1>
 
         {/* Subheadline */}
-        <p className="hero-line font-jakarta mt-6 text-base sm:text-lg md:text-xl text-[var(--color-ds-text-secondary)] max-w-2xl leading-relaxed">
+        <p className="hero-line font-jakarta mt-6 text-base sm:text-lg md:text-xl text-[var(--color-ds-text-secondary)] max-w-2xl leading-relaxed pointer-events-auto">
           One place for every workout, every meal, every night&apos;s sleep, and
-          everything else your health needs &mdash; powered by an AI coach that makes
+          everything else your health needs, powered by an AI coach that makes
           sense of all of it.
         </p>
 

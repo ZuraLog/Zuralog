@@ -12,7 +12,7 @@ const CATEGORIES = [
     id: "nutrition",
     title: "Nutrition",
     subtitle:
-      "Snap it, scan it, or say it. Log any meal in seconds — no typing, no guessing.",
+      "Snap it, scan it, or say it. Log any meal in seconds. No typing, no guessing.",
     image: "/images/feature/nutrition.png",
   },
   {
@@ -26,14 +26,14 @@ const CATEGORIES = [
     id: "sleep",
     title: "Sleep",
     subtitle:
-      "See how you slept every morning — duration, quality, and stages, automatically.",
+      "See how you slept every morning. Duration, quality, and stages, all automatic.",
     image: "/images/feature/sleep.png",
   },
   {
     id: "heart",
     title: "Heart",
     subtitle:
-      "Resting heart rate, HRV, and recovery — tracked automatically, shown in context.",
+      "Resting heart rate, HRV, and recovery. Tracked automatically, shown in context.",
     image: "/images/feature/heart.png",
   },
 ];
@@ -209,7 +209,7 @@ export function FeaturesCardSection() {
             of your health.
           </h2>
           <p className="mt-5 text-lg md:text-xl text-[#6B6864] max-w-xl">
-            ZuraLog tracks the four things that actually matter — and shows you
+            ZuraLog tracks the four things that actually matter and shows you
             how they all connect.
           </p>
         </motion.div>

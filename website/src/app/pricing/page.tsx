@@ -5,7 +5,7 @@ import { Footer } from '@/components/layout/Footer';
 
 export const metadata: Metadata = {
   title: 'Pricing | ZuraLog',
-  description: 'Simple, transparent pricing for ZuraLog — the AI that unifies your health and fitness data.',
+  description: 'Simple, transparent pricing for ZuraLog, the AI that unifies your health and fitness data.',
 };
 
 export default function PricingPage() {
@@ -32,7 +32,7 @@ export default function PricingPage() {
             Pricing is on the way.
           </h1>
           <p className="text-base leading-relaxed text-black/50">
-            We are still figuring out the right pricing for ZuraLog. Join the waitlist and you will be the first to know — early supporters get founding access.
+            We are still figuring out the right pricing for ZuraLog. Join the waitlist and you will be the first to know. Early supporters get founding access.
           </p>
           <div className="mt-4">
             <Link
