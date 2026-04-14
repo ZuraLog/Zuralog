@@ -86,14 +86,14 @@ export function IPhoneMockup({ emailValue = '' }: IPhoneMockupProps) {
                     <div className="relative h-8 w-8">
                         <Image
                         src="/logo/ZuraLog-Forest-Green.svg"
-                        alt="Zuralog"
+                        alt="ZuraLog"
                         width={32}
                         height={32}
                         className="rounded-lg"
                       />
                     </div>
                     <div>
-                      <p className="text-[11px] font-semibold text-dark-charcoal">Zuralog</p>
+                      <p className="text-[11px] font-semibold text-dark-charcoal">ZuraLog</p>
                        <p className="text-[9px] text-sage-dim">Online</p>
                     </div>
                   </div>
@@ -160,7 +160,7 @@ export function IPhoneMockup({ emailValue = '' }: IPhoneMockupProps) {
                         <span className="h-1 w-1 animate-pulse rounded-full bg-sage/60 [animation-delay:150ms]" />
                         <span className="h-1 w-1 animate-pulse rounded-full bg-sage/60 [animation-delay:300ms]" />
                       </div>
-                      <span className="text-[9px] text-black/30">Zuralog is typing...</span>
+                      <span className="text-[9px] text-black/30">ZuraLog is typing...</span>
                     </div>
                   </div>
 

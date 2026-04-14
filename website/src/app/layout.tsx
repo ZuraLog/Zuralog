@@ -48,6 +48,9 @@ export const metadata: Metadata = {
   description:
     "The AI that connects your fitness apps and actually thinks. Join the waitlist for early access.",
   keywords: ["fitness AI", "health tracker", "fitness app", "AI coach", "ZuraLog"],
+  alternates: {
+    canonical: siteUrl,
+  },
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -87,6 +90,9 @@ export const metadata: Metadata = {
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   manifest: "/site.webmanifest",
+  other: {
+    "theme-color": "#344E41",
+  },
 };
 
 export default function RootLayout({
@@ -97,6 +103,43 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${plusJakartaSans.variable}`}>
       <body className="font-jakarta antialiased" data-theme="light">
+        {/* JSON-LD structured data — helps Google understand the brand and app */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "ZuraLog",
+              url: siteUrl,
+              logo: `${siteUrl}/logo/ZuraLog-Forest-Green.svg`,
+              sameAs: ["https://twitter.com/zuralog"],
+              description:
+                "ZuraLog is an AI-powered health platform that unifies all your fitness apps into a single intelligent layer.",
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "SoftwareApplication",
+              name: "ZuraLog",
+              operatingSystem: "iOS, Android",
+              applicationCategory: "HealthApplication",
+              description:
+                "The AI that connects your fitness apps and actually thinks. Unified health data, smart coaching, and real insights.",
+              offers: {
+                "@type": "Offer",
+                price: "0",
+                priceCurrency: "USD",
+                description: "Free — join the waitlist for early access.",
+              },
+              url: siteUrl,
+            }),
+          }}
+        />
         {/* OverlayDismisser: layout-level safety net. Ensures the loading
             overlay is dismissed on EVERY page — not just the home page.
             On non-home pages it dismisses quickly; on the home page it acts
