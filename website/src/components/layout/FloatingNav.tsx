@@ -86,7 +86,7 @@ interface DropdownItem {
     href: string;
 }
 
-function DropdownPanel({ items, onSelect }: { items: DropdownItem[]; onSelect: () => void }) {
+function DropdownPanel({ items, onSelect, align = "center" }: { items: DropdownItem[]; onSelect: () => void; align?: "center" | "right" }) {
     const { playSound } = useSoundContext();
 
     const handleClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -108,8 +108,8 @@ function DropdownPanel({ items, onSelect }: { items: DropdownItem[]; onSelect: (
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.2, ease: EXPO_OUT }}
-            className="absolute top-full left-1/2 -translate-x-1/2 mt-3 rounded-2xl border border-ds-border-strong bg-[#F7F6F3] shadow-xl overflow-hidden z-[60]"
-            style={{ minWidth: 280 }}
+            className={`absolute top-full mt-3 rounded-2xl border border-ds-border-strong bg-[#F7F6F3] shadow-xl z-[60] ${align === "right" ? "right-0" : "left-1/2 -translate-x-1/2"}`}
+            style={{ minWidth: 260 }}
         >
             <div className="p-1.5 flex flex-col">
                 {items.map(({ icon: Icon, label, description, href }) => (
@@ -146,9 +146,10 @@ interface NavTriggerProps {
     label: string;
     href?: string;
     items?: DropdownItem[];
+    align?: "center" | "right";
 }
 
-function NavTrigger({ label, href, items }: NavTriggerProps) {
+function NavTrigger({ label, href, items, align }: NavTriggerProps) {
     const [open, setOpen]   = useState(false);
     const closeTimer        = useRef<ReturnType<typeof setTimeout> | null>(null);
     const { playSound }     = useSoundContext();
@@ -200,7 +201,7 @@ function NavTrigger({ label, href, items }: NavTriggerProps) {
             )}
 
             <AnimatePresence>
-                {open && items && <DropdownPanel items={items} onSelect={() => setOpen(false)} />}
+                {open && items && <DropdownPanel items={items} onSelect={() => setOpen(false)} align={align} />}
             </AnimatePresence>
         </div>
     );
@@ -391,7 +392,7 @@ export function FloatingNav() {
                 initial={{ opacity: 0, y: -16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: EXPO_OUT, delay: 0.1 }}
-                className="fixed inset-x-0 top-5 z-50 flex justify-center pointer-events-none px-4"
+                className="fixed inset-x-0 top-5 z-[70] flex justify-center pointer-events-none px-4"
             >
                 <nav
                     ref={navRef}
@@ -424,7 +425,7 @@ export function FloatingNav() {
                     <div className="hidden md:flex items-center gap-0.5">
                         <NavTrigger label="Features"  items={FEATURES} />
                         <NavTrigger label="Pricing"   href="/pricing" />
-                        <NavTrigger label="Resources" items={RESOURCES} />
+                        <NavTrigger label="Resources" items={RESOURCES} align="right" />
                     </div>
 
                     <span className="hidden md:block h-4 w-px bg-ds-border-strong shrink-0" aria-hidden />
