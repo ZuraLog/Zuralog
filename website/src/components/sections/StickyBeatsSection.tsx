@@ -43,7 +43,12 @@ export function StickyBeatsSection({ id, beats }: StickyBeatsSectionProps) {
       const beatBodies = gsap.utils.toArray<HTMLElement>(".beat-body", section);
       const beatHeadlines = gsap.utils.toArray<HTMLElement>(".beat-headline", section);
 
-      if (beatRows.length !== beats.length) return;
+      if (beatRows.length !== beats.length) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[StickyBeatsSection] Beat row count mismatch — animation skipped.");
+        }
+        return;
+      }
 
       const tl = gsap.timeline({
         scrollTrigger: {
@@ -80,10 +85,14 @@ export function StickyBeatsSection({ id, beats }: StickyBeatsSectionProps) {
         tl.to(beatImages[i], { opacity: 0, duration: 0.5, ease: "power2.inOut" }, label + "+=0.25");
         tl.to(beatImages[i + 1], { opacity: 1, duration: 0.5, ease: "power2.inOut" }, label + "+=0.35");
       }
+
+      // Ensure timeline reaches the last label so snap has room to complete
+      tl.to({}, { duration: 0.5 }, "beat" + (beats.length - 1));
     }, sectionRef);
 
     return () => ctx.revert();
-  }, [beats]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>
@@ -122,8 +131,8 @@ export function StickyBeatsSection({ id, beats }: StickyBeatsSectionProps) {
         </div>
 
         {/* Right column — stacked images */}
-        <div className="col-span-7 relative flex items-center justify-center">
-          <div className="relative w-full aspect-square">
+        <div className="col-span-7 relative">
+          <div className="absolute inset-0 flex items-center justify-center p-12">
             {beats.map((beat, i) => (
               <div
                 key={i}
