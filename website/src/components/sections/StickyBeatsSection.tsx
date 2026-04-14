@@ -154,7 +154,7 @@ export function StickyBeatsSection({
         {/* Image panel — absolute, behind text */}
         <div
           className={`absolute top-1/2 -translate-y-1/2 pointer-events-none select-none ${
-            isImageLeft ? "left-[-4%]" : "right-[-4%]"
+            isImageLeft ? "left-[8%]" : "right-[8%]"
           }`}
           style={{
             width: "min(62vw, 90vh)",
