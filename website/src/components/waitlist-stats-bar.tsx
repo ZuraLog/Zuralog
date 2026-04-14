@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { WaitlistCounter } from '@/components/waitlist-counter';
 import { createClient } from '@/lib/supabase/client';
+import { useCursorParallax } from '@/hooks/use-cursor-parallax';
 
 interface Stats {
   totalSignups: number;
@@ -53,6 +54,7 @@ async function fetchSupportStats(): Promise<SupportStats | null> {
 export function WaitlistStatsBar() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [supportStats, setSupportStats] = useState<SupportStats | null>(null);
+  const gridRef = useCursorParallax<HTMLDivElement>({ depth: 0.5 });
   // Keep a stable ref to the latest setStats so the realtime callback can use it
   const setStatsRef = useRef(setStats);
   useEffect(() => {
@@ -194,7 +196,8 @@ export function WaitlistStatsBar() {
   ] as const;
 
   return (
-    <div className="mb-12 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+    <div ref={gridRef} className="will-change-transform mb-12">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
       {cards.map((card, i) => (
         <motion.div
           key={card.label}
@@ -242,6 +245,7 @@ export function WaitlistStatsBar() {
           </div>
         </motion.div>
       ))}
+    </div>
     </div>
   );
 }

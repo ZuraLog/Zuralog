@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSoundContext } from "@/components/design-system/interactions/sound-provider";
+import { useCursorParallax } from "@/hooks/use-cursor-parallax";
 import { motion } from "framer-motion";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
@@ -222,6 +223,13 @@ export function FeatureShowcaseSection() {
   const progressRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Cursor parallax — independent wrappers so they don't conflict with GSAP
+  // ScrollTrigger tweens that target headlineRef / phoneColRef directly.
+  const headlineCursorRef = useCursorParallax<HTMLDivElement>({ depth: 0.4 });
+  const phoneCursorRef = useCursorParallax<HTMLDivElement>({ depth: 0.7 });
+  const accordionCursorRef = useCursorParallax<HTMLDivElement>({ depth: 0.35 });
+  const tabBarCursorRef = useCursorParallax<HTMLDivElement>({ depth: 0.3 });
+
   const displayCategory = CATEGORIES[displayCat];
 
   // Responsive phone width
@@ -388,7 +396,7 @@ export function FeatureShowcaseSection() {
       <div className="mx-auto max-w-6xl">
 
         {/* ── Category tab bar ── */}
-        <div className="showcase-tabbar mb-12 md:mb-16">
+        <div ref={tabBarCursorRef} className="will-change-transform showcase-tabbar mb-12 md:mb-16">
           <div className="inline-flex rounded-full bg-[#E8E6E1] p-1 gap-1">
             {CATEGORIES.map((cat, i) => {
               const isActive = i === activeCat;
@@ -426,7 +434,7 @@ export function FeatureShowcaseSection() {
 
           {/* Left: header + accordion */}
           <div className="w-full lg:w-[52%] flex flex-col">
-            <div className="mb-10">
+            <div ref={headlineCursorRef} className="will-change-transform mb-10">
               <h2
                 ref={headlineRef}
                 className="font-bold uppercase tracking-tighter leading-[0.9] text-[#161618] whitespace-pre-line"
@@ -443,6 +451,7 @@ export function FeatureShowcaseSection() {
             </div>
 
             {/* Accordion */}
+            <div ref={accordionCursorRef} className="will-change-transform">
             <div ref={accordionRef} className="flex flex-col gap-1">
               {CATEGORIES[activeCat].features.map((feature, i) => {
                 const Icon = feature.icon;
@@ -512,6 +521,7 @@ export function FeatureShowcaseSection() {
                 );
               })}
             </div>
+            </div>
           </div>
 
           {/* Right: persistent phone — never remounts between categories */}
@@ -519,6 +529,7 @@ export function FeatureShowcaseSection() {
             ref={phoneColRef}
             className="w-full lg:w-[48%] flex justify-center lg:justify-end"
           >
+            <div ref={phoneCursorRef} className="will-change-transform">
             <div className="relative">
               {/* Soft glow behind phone */}
               <div
@@ -533,6 +544,7 @@ export function FeatureShowcaseSection() {
                   label={CATEGORIES[displayCat].features[displayFeature]?.title ?? ""}
                 />
               </PhoneMockup>
+            </div>
             </div>
           </div>
 

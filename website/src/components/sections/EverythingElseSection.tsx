@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import Marquee from "react-fast-marquee";
+import { useCursorParallax } from "@/hooks/use-cursor-parallax";
 import {
   BookOpen, Droplets, Brain, Pill, Bell, Scale, Smile, Wind,
   Thermometer, Heart, Target, Flame, Sparkles, BarChart3, Star, ListChecks,
@@ -86,10 +87,14 @@ function FeaturePill({ f }: { f: Feature }) {
 const GRADIENT_COLOR = "#F0EEE9";
 
 export function EverythingElseSection() {
+  const headlineRef = useCursorParallax<HTMLDivElement>({ depth: 0.3 });
+  const marqueeRef = useCursorParallax<HTMLDivElement>({ depth: 0.35 });
+
   return (
     <section className="relative py-24 md:py-32 font-jakarta overflow-hidden">
 
       {/* Section header */}
+      <div ref={headlineRef} className="will-change-transform">
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -122,9 +127,10 @@ export function EverythingElseSection() {
           </p>
         </div>
       </motion.div>
+      </div>
 
       {/* Marquee rows — autoFill clones children until the row fills the screen */}
-      <div className="flex flex-col gap-3">
+      <div ref={marqueeRef} className="will-change-transform flex flex-col gap-3">
         <Marquee autoFill direction="left"  speed={35} gradient gradientColor={GRADIENT_COLOR} gradientWidth={80}>
           {ROW_1.map((f) => <FeaturePill key={f.label} f={f} />)}
         </Marquee>

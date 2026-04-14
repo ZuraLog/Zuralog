@@ -9,6 +9,7 @@
 
 import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { useCursorParallax } from '@/hooks/use-cursor-parallax';
 import { QuizContainer } from '@/components/quiz/quiz-container';
 import { WaitlistStatsBar } from '@/components/waitlist-stats-bar';
 import { WaitlistParticles } from '@/components/waitlist-particles';
@@ -18,6 +19,9 @@ import { Toaster } from 'sonner';
 export function WaitlistSection() {
   const [emailValue, setEmailValue] = useState('');
   const handleEmailChange = useCallback((value: string) => setEmailValue(value), []);
+  const headlineRef = useCursorParallax<HTMLDivElement>({ depth: 0.3 });
+  const quizCardRef = useCursorParallax<HTMLDivElement>({ depth: 0.35 });
+  const leaderboardRef = useCursorParallax<HTMLDivElement>({ depth: 0.3 });
 
   return (
     <section
@@ -35,6 +39,7 @@ export function WaitlistSection() {
 
       <div className="relative mx-auto max-w-6xl px-6">
         {/* Section header */}
+        <div ref={headlineRef} className="will-change-transform">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -62,6 +67,7 @@ export function WaitlistSection() {
             personalise your experience before launch.
           </p>
         </motion.div>
+        </div>
 
         {/* Animated stats counters */}
         <WaitlistStatsBar />
@@ -69,20 +75,22 @@ export function WaitlistSection() {
         {/* Main layout: quiz left, leaderboard right */}
         <div className="flex flex-col items-center gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-16">
           {/* Quiz (left / main) */}
-          <motion.div
-            initial={{ opacity: 0, x: -24 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="w-full lg:max-w-xl"
-          >
-            <div className="w-full rounded-[24px] border border-[rgba(52,78,65,0.08)] bg-[#E8E6E1] p-6 shadow-sm lg:p-8">
-              <QuizContainer onEmailChange={handleEmailChange} />
-            </div>
-          </motion.div>
+          <div ref={quizCardRef} className="will-change-transform w-full lg:max-w-xl">
+            <motion.div
+              initial={{ opacity: 0, x: -24 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="w-full"
+            >
+              <div className="w-full rounded-[24px] border border-[rgba(52,78,65,0.08)] bg-[#E8E6E1] p-6 shadow-sm lg:p-8">
+                <QuizContainer onEmailChange={handleEmailChange} />
+              </div>
+            </motion.div>
+          </div>
 
           {/* Leaderboard (right) */}
-          <div className="w-full lg:max-w-sm lg:sticky lg:top-32">
+          <div ref={leaderboardRef} className="will-change-transform w-full lg:max-w-sm lg:sticky lg:top-32">
             <WaitlistLeaderboard />
           </div>
         </div>

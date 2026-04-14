@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useRef, useCallback } from "react";
 import gsap from "gsap";
 import { useSoundContext } from "@/components/design-system/interactions/sound-provider";
+import { useCursorParallax } from "@/hooks/use-cursor-parallax";
 
 const CATEGORIES = [
   {
@@ -49,6 +50,7 @@ interface TiltCardProps {
 function TiltCard({ cat, index }: TiltCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
+  const parallaxRef = useCursorParallax<HTMLDivElement>({ depth: 0.6 });
   const { playSound } = useSoundContext();
 
   const onMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -96,6 +98,7 @@ function TiltCard({ cat, index }: TiltCardProps) {
   }, []);
 
   return (
+    <div ref={parallaxRef} className="will-change-transform">
     <motion.div
       initial={{ opacity: 0, y: 32 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -166,6 +169,7 @@ function TiltCard({ cat, index }: TiltCardProps) {
         />
       </div>
     </motion.div>
+    </div>
   );
 }
 
@@ -174,12 +178,16 @@ function TiltCard({ cat, index }: TiltCardProps) {
 // ---------------------------------------------------------------------------
 
 export function FeaturesCardSection() {
+  const headlineRef = useCursorParallax<HTMLDivElement>({ depth: 0.4 });
+  const cardGridRef = useCursorParallax<HTMLDivElement>({ depth: 0.5 });
+
   return (
     <section
       className="relative py-24 md:py-32 px-6 md:px-12 font-jakarta"
     >
       <div className="mx-auto max-w-6xl">
         {/* Section headline */}
+        <div ref={headlineRef} className="will-change-transform">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -205,12 +213,15 @@ export function FeaturesCardSection() {
             how they all connect.
           </p>
         </motion.div>
+        </div>
 
         {/* 2×2 card grid */}
+        <div ref={cardGridRef} className="will-change-transform">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {CATEGORIES.map((cat, i) => (
             <TiltCard key={cat.id} cat={cat} index={i} />
           ))}
+        </div>
         </div>
       </div>
     </section>
