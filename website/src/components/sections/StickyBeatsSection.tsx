@@ -179,6 +179,15 @@ export function StickyBeatsSection({
                 style={{ opacity: 0 }}
               />
             ))}
+            {/* Top/bottom gradient overlays — painted over image edges using page bg */}
+            <div
+              className="absolute inset-x-0 top-0 h-[18%] pointer-events-none z-10"
+              style={{ background: "linear-gradient(to bottom, var(--background), transparent)" }}
+            />
+            <div
+              className="absolute inset-x-0 bottom-0 h-[18%] pointer-events-none z-10"
+              style={{ background: "linear-gradient(to top, var(--background), transparent)" }}
+            />
           </div>
         </div>
 
