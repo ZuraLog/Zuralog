@@ -5,6 +5,7 @@ import { HeroSection } from "@/components/sections/HeroSection";
 import { FeatureSections } from "@/components/sections/FeatureSections";
 import { FeaturesCardSection } from "@/components/sections/FeaturesCardSection";
 import { FeatureShowcaseSection } from "@/components/sections/FeatureShowcaseSection";
+import { EverythingElseSection } from "@/components/sections/EverythingElseSection";
 import { WaitlistSection } from "@/components/sections/WaitlistSection";
 import { ClientShellGate } from "@/components/ClientShellGate";
 import { PageBackground } from "@/components/PageBackground";
@@ -25,6 +26,7 @@ export default function Home() {
           <FeatureSections />
           <FeaturesCardSection />
           <FeatureShowcaseSection />
+          <EverythingElseSection />
           <WaitlistSection />
         </main>
         <Footer />
