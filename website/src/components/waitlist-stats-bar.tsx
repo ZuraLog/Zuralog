@@ -54,7 +54,7 @@ async function fetchSupportStats(): Promise<SupportStats | null> {
 export function WaitlistStatsBar() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [supportStats, setSupportStats] = useState<SupportStats | null>(null);
-  const gridRef = useCursorParallax<HTMLDivElement>({ depth: 0.25 });
+  const gridRef = useCursorParallax<HTMLDivElement>({ depth: 0.5 });
   // Keep a stable ref to the latest setStats so the realtime callback can use it
   const setStatsRef = useRef(setStats);
   useEffect(() => {

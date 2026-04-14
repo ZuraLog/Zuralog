@@ -88,6 +88,7 @@ const GRADIENT_COLOR = "#F0EEE9";
 
 export function EverythingElseSection() {
   const headlineRef = useCursorParallax<HTMLDivElement>({ depth: 0.3 });
+  const marqueeRef = useCursorParallax<HTMLDivElement>({ depth: 0.35 });
 
   return (
     <section className="relative py-24 md:py-32 font-jakarta overflow-hidden">
@@ -129,7 +130,7 @@ export function EverythingElseSection() {
       </div>
 
       {/* Marquee rows — autoFill clones children until the row fills the screen */}
-      <div className="flex flex-col gap-3">
+      <div ref={marqueeRef} className="will-change-transform flex flex-col gap-3">
         <Marquee autoFill direction="left"  speed={35} gradient gradientColor={GRADIENT_COLOR} gradientWidth={80}>
           {ROW_1.map((f) => <FeaturePill key={f.label} f={f} />)}
         </Marquee>

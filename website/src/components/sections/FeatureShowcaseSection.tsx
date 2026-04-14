@@ -227,6 +227,8 @@ export function FeatureShowcaseSection() {
   // ScrollTrigger tweens that target headlineRef / phoneColRef directly.
   const headlineCursorRef = useCursorParallax<HTMLDivElement>({ depth: 0.4 });
   const phoneCursorRef = useCursorParallax<HTMLDivElement>({ depth: 0.7 });
+  const accordionCursorRef = useCursorParallax<HTMLDivElement>({ depth: 0.35 });
+  const tabBarCursorRef = useCursorParallax<HTMLDivElement>({ depth: 0.3 });
 
   const displayCategory = CATEGORIES[displayCat];
 
@@ -394,7 +396,7 @@ export function FeatureShowcaseSection() {
       <div className="mx-auto max-w-6xl">
 
         {/* ── Category tab bar ── */}
-        <div className="showcase-tabbar mb-12 md:mb-16">
+        <div ref={tabBarCursorRef} className="will-change-transform showcase-tabbar mb-12 md:mb-16">
           <div className="inline-flex rounded-full bg-[#E8E6E1] p-1 gap-1">
             {CATEGORIES.map((cat, i) => {
               const isActive = i === activeCat;
@@ -449,6 +451,7 @@ export function FeatureShowcaseSection() {
             </div>
 
             {/* Accordion */}
+            <div ref={accordionCursorRef} className="will-change-transform">
             <div ref={accordionRef} className="flex flex-col gap-1">
               {CATEGORIES[activeCat].features.map((feature, i) => {
                 const Icon = feature.icon;
@@ -517,6 +520,7 @@ export function FeatureShowcaseSection() {
                   </button>
                 );
               })}
+            </div>
             </div>
           </div>
 

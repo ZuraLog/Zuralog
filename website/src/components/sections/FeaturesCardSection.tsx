@@ -50,6 +50,7 @@ interface TiltCardProps {
 function TiltCard({ cat, index }: TiltCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
+  const parallaxRef = useCursorParallax<HTMLDivElement>({ depth: 0.6 });
   const { playSound } = useSoundContext();
 
   const onMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -97,6 +98,7 @@ function TiltCard({ cat, index }: TiltCardProps) {
   }, []);
 
   return (
+    <div ref={parallaxRef} className="will-change-transform">
     <motion.div
       initial={{ opacity: 0, y: 32 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -167,6 +169,7 @@ function TiltCard({ cat, index }: TiltCardProps) {
         />
       </div>
     </motion.div>
+    </div>
   );
 }
 
