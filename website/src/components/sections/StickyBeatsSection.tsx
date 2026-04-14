@@ -189,7 +189,7 @@ export function StickyBeatsSection({
         >
           <div
             ref={textPanelRef}
-            className={`will-change-transform w-full max-w-[70%] py-24 ${
+            className={`will-change-transform w-full max-w-[50%] py-24 ${
               isImageLeft
                 ? "pl-4 md:pl-6 pr-10 md:pr-16 lg:pr-24"
                 : "pl-10 md:pl-16 lg:pl-24 pr-4 md:pr-6"
@@ -205,7 +205,7 @@ export function StickyBeatsSection({
                 {/* Dark base — shows when headline is visible but inactive */}
                 <h2
                   className="font-jakarta font-bold uppercase tracking-tighter leading-[0.85] text-[#161618]"
-                  style={{ fontSize: "clamp(3rem, 8.5vw, 10.5rem)" }}
+                  style={{ fontSize: "clamp(2.5rem, 5vw, 6.5rem)" }}
                 >
                   {beat.headline}
                 </h2>
@@ -213,7 +213,7 @@ export function StickyBeatsSection({
                 <h2
                   className="beat-headline-pattern ds-pattern-text font-jakarta font-bold uppercase tracking-tighter leading-[0.85] absolute inset-0"
                   style={{
-                    fontSize: "clamp(3rem, 8.5vw, 10.5rem)",
+                    fontSize: "clamp(2.5rem, 5vw, 6.5rem)",
                     backgroundImage: "var(--ds-pattern-sage)",
                     opacity: 0,
                   }}

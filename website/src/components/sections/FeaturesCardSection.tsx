@@ -176,6 +176,7 @@ function TiltCard({ cat, index }: TiltCardProps) {
 
 export function FeaturesCardSection() {
   const headlineRef = useCursorParallax<HTMLDivElement>({ depth: 0.4 });
+  const cardGridRef = useCursorParallax<HTMLDivElement>({ depth: 0.5 });
 
   return (
     <section
@@ -212,10 +213,12 @@ export function FeaturesCardSection() {
         </div>
 
         {/* 2×2 card grid */}
+        <div ref={cardGridRef} className="will-change-transform">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {CATEGORIES.map((cat, i) => (
             <TiltCard key={cat.id} cat={cat} index={i} />
           ))}
+        </div>
         </div>
       </div>
     </section>

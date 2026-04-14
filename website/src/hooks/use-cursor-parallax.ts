@@ -85,8 +85,8 @@ export function useCursorParallax<T extends HTMLElement = HTMLDivElement>(
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const { depth = 0.5, duration = 1.2, ease = "power2.out" } = optsRef.current;
-    const xAmt = optsRef.current.xAmt ?? 12 * depth;
-    const yAmt = optsRef.current.yAmt ?? 8 * depth;
+    const xAmt = optsRef.current.xAmt ?? 18 * depth;
+    const yAmt = optsRef.current.yAmt ?? 12 * depth;
 
     const xTo = gsap.quickTo(el, "x", { duration, ease });
     const yTo = gsap.quickTo(el, "y", { duration, ease });
