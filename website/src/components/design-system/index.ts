@@ -218,9 +218,7 @@ export {
 
 // Hooks
 export { useMagnetic } from "@/hooks/use-magnetic";
-export { useTilt } from "@/hooks/use-tilt";
 export { useScrollReveal } from "@/hooks/use-scroll-reveal";
-export { useSplitReveal } from "@/hooks/use-split-reveal";
 export { useScrambleNumber } from "@/hooks/use-scramble-number";
 
 // Interaction components & utilities

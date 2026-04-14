@@ -24,10 +24,11 @@ import { usePathname } from "next/navigation";
 import { loadingBridge } from "@/lib/loading-bridge";
 
 /**
- * Maximum time (ms) before force-dismissing the overlay on any page.
- * This is the absolute upper bound — a last resort if everything else fails.
+ * Maximum time (ms) before force-dismissing on the home page.
+ * Covers mobile where LoadingScreen never mounts (no 3D shell).
+ * Desktop is handled by LoadingScreen; this is just a safety net.
  */
-const ABSOLUTE_MAX_MS = 10_000;
+const ABSOLUTE_MAX_MS = 3_000;
 
 /**
  * On pages without 3D content, dismiss after this many ms (enough for the

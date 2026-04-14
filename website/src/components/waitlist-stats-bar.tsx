@@ -86,7 +86,7 @@ export function WaitlistStatsBar() {
       )
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
-          console.debug('[waitlist] Realtime connected');
+          if (process.env.NODE_ENV !== 'production') console.debug('[waitlist] Realtime connected');
         }
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.warn('[waitlist] Realtime issue:', status, err);

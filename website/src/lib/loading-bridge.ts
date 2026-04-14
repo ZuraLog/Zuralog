@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * loading-bridge.ts
  *
