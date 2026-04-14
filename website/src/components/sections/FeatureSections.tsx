@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Image from "next/image";
+import { StickyBeatsSection, type Beat } from "./StickyBeatsSection";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -21,25 +22,25 @@ interface SectionData {
 // Section data
 // ---------------------------------------------------------------------------
 
-const SECTIONS: SectionData[] = [
+const CONNECT_BEATS: Beat[] = [
   {
-    key: "connect",
-    layout: "image-right",
+    headline: "Every app.",
+    body: "Most health apps make you start from scratch. ZuraLog connects directly to Apple Health, Google Health Connect, Strava, and more.",
     image: "/images/feature/connect.png",
-    headline: (
-      <>
-        Every app.<br />
-        Every device.<br />
-        <span
-          className="ds-pattern-text"
-          style={{ backgroundImage: "var(--ds-pattern-sage)" }}
-        >
-          One place.
-        </span>
-      </>
-    ),
-    body: "Most health apps make you start from scratch. ZuraLog connects directly to Apple Health, Google Health Connect, Strava, and more\u2014so everything you have already been tracking is ready from day one.",
   },
+  {
+    headline: "Every device.",
+    body: "It doesn\u2019t matter what you track it on. Phone, watch, ring, or scale\u2014if it has health data, ZuraLog reads it.",
+    image: "/images/feature/connect.png",
+  },
+  {
+    headline: "One place.",
+    body: "Everything you\u2019ve already been tracking is ready from day one. No setup. No manual entry. Just your data.",
+    image: "/images/feature/connect.png",
+  },
+];
+
+const SECTIONS: SectionData[] = [
   {
     key: "nutrition",
     layout: "image-left",
@@ -240,6 +241,7 @@ function FeatureSection({ section }: { section: SectionData }) {
 export function FeatureSections() {
   return (
     <div id="feature-sections">
+      <StickyBeatsSection id="connect-section" beats={CONNECT_BEATS} />
       {SECTIONS.map((section) => (
         <FeatureSection key={section.key} section={section} />
       ))}
