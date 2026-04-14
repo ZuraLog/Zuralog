@@ -56,20 +56,37 @@ export function StickyBeatsSection({
         return;
       }
 
-      // Everything starts invisible — entrance animation reveals beat 0
+      // Everything starts invisible
       gsap.set(beatHeadlines, { opacity: 0 });
       gsap.set(beatHeadlinePatterns, { opacity: 0 });
       gsap.set(beatBodies, { opacity: 0, y: 60 });
       gsap.set(beatImages, { opacity: 0, scale: 1.06 });
 
+      // ── Entrance: fires at real speed as section approaches viewport ──────
+      ScrollTrigger.create({
+        trigger: section,
+        start: "top 75%",
+        once: true,
+        onEnter: () => {
+          gsap.to(beatHeadlines[0],
+            { opacity: 1, duration: 0.6, ease: "power2.out", delay: 0.05 });
+          gsap.to(beatHeadlinePatterns[0],
+            { opacity: 1, duration: 0.6, ease: "power2.out", delay: 0.25 });
+          gsap.to(beatBodies[0],
+            { opacity: 1, y: 0, duration: 0.7, ease: "power3.out", delay: 0.15 });
+          gsap.to(beatImages[0],
+            { opacity: 1, scale: 1, duration: 0.8, ease: "power2.out", delay: 0.05 });
+        },
+      });
+
+      // ── Scrubbed timeline: beat transitions only ──────────────────────────
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: section,
           pin: true,
           scrub: 1,
           start: "top top",
-          // One extra viewport for entrance phase, then one per transition
-          end: "+=" + beats.length * 100 + "%",
+          end: "+=" + (beats.length - 1) * 100 + "%",
           invalidateOnRefresh: true,
           snap: {
             snapTo: "labels",
@@ -80,26 +97,8 @@ export function StickyBeatsSection({
         },
       });
 
-      // Labels shifted by 1 — entrance lives in the 0→1 window
-      beats.forEach((_, i) => tl.addLabel("beat" + i, i + 1));
-
-      // ── Entrance: beat 0 pops in (0 → beat0 label at 1) ──────────────────
-      // First headline appears
-      tl.to(beatHeadlines[0],
-        { opacity: 1, duration: 0.4, ease: "power2.out" },
-        0.3);
-      // Pattern activates on first headline
-      tl.to(beatHeadlinePatterns[0],
-        { opacity: 1, duration: 0.4, ease: "power2.out" },
-        0.5);
-      // First body slides in from below
-      tl.to(beatBodies[0],
-        { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" },
-        0.4);
-      // First image breathes in
-      tl.to(beatImages[0],
-        { opacity: 1, scale: 1, duration: 0.6, ease: "power2.out" },
-        0.3);
+      // Labels at 0, 1, 2… — no entrance phase in the scrubbed window
+      beats.forEach((_, i) => tl.addLabel("beat" + i, i));
 
       // ── Beat transitions ──────────────────────────────────────────────────
       for (let i = 0; i < beats.length - 1; i++) {
