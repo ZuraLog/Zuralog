@@ -93,8 +93,10 @@ function DropdownPanel({ items, onSelect, align = "center" }: { items: DropdownI
         playSound("pop");
         onSelect();
 
-        // For hash links on the same page, scroll manually
-        if (href.startsWith("/#")) {
+        // For hash links: only scroll manually if we're already on the home page.
+        // If we're on another page, let the <Link> navigate to /#section normally —
+        // HashScrollHandler on the home page will pick up the hash after mount.
+        if (href.startsWith("/#") && window.location.pathname === "/") {
             e.preventDefault();
             const id = href.replace("/#", "");
             const el = document.getElementById(id);
