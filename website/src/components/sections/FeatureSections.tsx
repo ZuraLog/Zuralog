@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import Image from "next/image";
-import { StickyBeatsSection, type Beat } from "./StickyBeatsSection";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,32 +18,28 @@ interface SectionData {
 }
 
 // ---------------------------------------------------------------------------
-// Beat data
-// ---------------------------------------------------------------------------
-
-const CONNECT_BEATS: Beat[] = [
-  {
-    headline: "Every app.",
-    body: "Most health apps make you start from scratch. ZuraLog connects directly to Apple Health, Google Health Connect, Strava, and more.",
-    image: "/images/feature/connect.png",
-  },
-  {
-    headline: "Every device.",
-    body: "It doesn't matter what you track it on. Phone, watch, ring, or scale — if it has health data, ZuraLog reads it.",
-    image: "/images/feature/connect.png",
-  },
-  {
-    headline: "One place.",
-    body: "Everything you've already been tracking is ready from day one. No setup. No manual entry. Just your data.",
-    image: "/images/feature/connect.png",
-  },
-];
-
-// ---------------------------------------------------------------------------
 // Section data
 // ---------------------------------------------------------------------------
 
 const SECTIONS: SectionData[] = [
+  {
+    key: "connect",
+    layout: "image-right",
+    image: "/images/feature/connect.png",
+    headline: (
+      <>
+        Every app.<br />
+        Every device.<br />
+        <span
+          className="ds-pattern-text"
+          style={{ backgroundImage: "var(--ds-pattern-sage)" }}
+        >
+          One place.
+        </span>
+      </>
+    ),
+    body: "Most health apps make you start from scratch. ZuraLog connects directly to Apple Health, Google Health Connect, Strava, and more\u2014so everything you have already been tracking is ready from day one.",
+  },
   {
     key: "nutrition",
     layout: "image-left",
@@ -245,7 +240,6 @@ function FeatureSection({ section }: { section: SectionData }) {
 export function FeatureSections() {
   return (
     <div id="feature-sections">
-      <StickyBeatsSection id="connect-section" beats={CONNECT_BEATS} />
       {SECTIONS.map((section) => (
         <FeatureSection key={section.key} section={section} />
       ))}
