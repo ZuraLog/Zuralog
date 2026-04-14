@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Image from "next/image";
+import { useCursorParallax } from "@/hooks/use-cursor-parallax";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -36,6 +37,10 @@ export function StickyBeatsSection({
 }: StickyBeatsSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const isImageLeft = layout === "image-left";
+
+  // Cursor parallax on the text panel wrapper — targets the whole column so
+  // individual ScrollTrigger tweens on .beat-headline / .beat-body are unaffected.
+  const textPanelRef = useCursorParallax<HTMLDivElement>({ depth: 0.35 });
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -183,7 +188,8 @@ export function StickyBeatsSection({
           }`}
         >
           <div
-            className={`w-full max-w-[70%] py-24 ${
+            ref={textPanelRef}
+            className={`will-change-transform w-full max-w-[70%] py-24 ${
               isImageLeft
                 ? "pl-4 md:pl-6 pr-10 md:pr-16 lg:pr-24"
                 : "pl-10 md:pl-16 lg:pl-24 pr-4 md:pr-6"

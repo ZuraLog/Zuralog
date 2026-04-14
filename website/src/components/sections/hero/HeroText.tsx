@@ -6,11 +6,13 @@ import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { DSButton } from "@/components/design-system";
 import { useMagnetic } from "@/hooks/use-magnetic";
+import { useCursorParallax } from "@/hooks/use-cursor-parallax";
 import { useSoundContext } from "@/components/design-system/interactions/sound-provider";
 
 export function HeroText() {
   const containerRef = useRef<HTMLDivElement>(null);
   const magnetRef = useMagnetic<HTMLDivElement>({ strength: 0.3 });
+  const parallaxRef = useCursorParallax<HTMLDivElement>({ depth: 1.0 });
   const { playSound } = useSoundContext();
 
   const handleWaitlistClick = useCallback(() => {
@@ -42,31 +44,6 @@ export function HeroText() {
             delay: 0.2,
           }
         );
-
-        // Text mouse parallax — subtle background layer feel.
-        // Phone parallax is handled globally in ScrollPhone.
-        const parallax =
-          containerRef.current?.querySelector<HTMLElement>(".hero-parallax");
-        if (!parallax) return;
-
-        const textXTo = gsap.quickTo(parallax, "x", {
-          duration: 1.2,
-          ease: "power2.out",
-        });
-        const textYTo = gsap.quickTo(parallax, "y", {
-          duration: 1.2,
-          ease: "power2.out",
-        });
-
-        const handleMouseMove = (e: MouseEvent) => {
-          const dx = (e.clientX / window.innerWidth - 0.5) * 2;
-          const dy = (e.clientY / window.innerHeight - 0.5) * 2;
-          textXTo(dx * 12);
-          textYTo(dy * 8);
-        };
-
-        window.addEventListener("mousemove", handleMouseMove);
-        return () => window.removeEventListener("mousemove", handleMouseMove);
       } else {
         gsap.set(lines, { opacity: 1 });
       }
@@ -79,8 +56,11 @@ export function HeroText() {
       ref={containerRef}
       className="absolute inset-0 flex flex-col items-center z-50 pointer-events-none"
     >
-      {/* Text group — vertically positioned in the upper viewport */}
-      <div className="hero-parallax will-change-transform flex flex-col items-center text-center px-6 mt-[32vh] max-w-5xl mx-auto w-full">
+      {/* Text group — cursor parallax + entrance animation */}
+      <div
+        ref={parallaxRef}
+        className="hero-parallax will-change-transform flex flex-col items-center text-center px-6 mt-[32vh] max-w-5xl mx-auto w-full"
+      >
         {/* Headline */}
         <h1 className="hero-line font-jakarta text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-[var(--color-ds-text-on-warm-white)] leading-[1.05]">
           The last health app{" "}

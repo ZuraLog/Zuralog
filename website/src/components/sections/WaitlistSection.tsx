@@ -9,6 +9,7 @@
 
 import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { useCursorParallax } from '@/hooks/use-cursor-parallax';
 import { QuizContainer } from '@/components/quiz/quiz-container';
 import { WaitlistStatsBar } from '@/components/waitlist-stats-bar';
 import { WaitlistParticles } from '@/components/waitlist-particles';
@@ -18,6 +19,7 @@ import { Toaster } from 'sonner';
 export function WaitlistSection() {
   const [emailValue, setEmailValue] = useState('');
   const handleEmailChange = useCallback((value: string) => setEmailValue(value), []);
+  const headlineRef = useCursorParallax<HTMLDivElement>({ depth: 0.3 });
 
   return (
     <section
@@ -35,6 +37,7 @@ export function WaitlistSection() {
 
       <div className="relative mx-auto max-w-6xl px-6">
         {/* Section header */}
+        <div ref={headlineRef} className="will-change-transform">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -62,6 +65,7 @@ export function WaitlistSection() {
             personalise your experience before launch.
           </p>
         </motion.div>
+        </div>
 
         {/* Animated stats counters */}
         <WaitlistStatsBar />

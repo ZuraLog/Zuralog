@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import Marquee from "react-fast-marquee";
+import { useCursorParallax } from "@/hooks/use-cursor-parallax";
 import {
   BookOpen, Droplets, Brain, Pill, Bell, Scale, Smile, Wind,
   Thermometer, Heart, Target, Flame, Sparkles, BarChart3, Star, ListChecks,
@@ -86,10 +87,13 @@ function FeaturePill({ f }: { f: Feature }) {
 const GRADIENT_COLOR = "#F0EEE9";
 
 export function EverythingElseSection() {
+  const headlineRef = useCursorParallax<HTMLDivElement>({ depth: 0.3 });
+
   return (
     <section className="relative py-24 md:py-32 font-jakarta overflow-hidden">
 
       {/* Section header */}
+      <div ref={headlineRef} className="will-change-transform">
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -122,6 +126,7 @@ export function EverythingElseSection() {
           </p>
         </div>
       </motion.div>
+      </div>
 
       {/* Marquee rows — autoFill clones children until the row fills the screen */}
       <div className="flex flex-col gap-3">
