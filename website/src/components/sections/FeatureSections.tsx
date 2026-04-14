@@ -26,17 +26,17 @@ const CONNECT_BEATS: Beat[] = [
   {
     headline: "Every app.",
     body: "Most health apps make you start from scratch. ZuraLog connects directly to Apple Health, Google Health Connect, Strava, and more.",
-    image: "/images/feature/connect.png",
+    image: "/images/feature/connect_1.png",
   },
   {
     headline: "Every device.",
     body: "It doesn\u2019t matter what you track it on. Phone, watch, ring, or scale\u2014if it has health data, ZuraLog reads it.",
-    image: "/images/feature/connect.png",
+    image: "/images/feature/connect_2.png",
   },
   {
     headline: "One place.",
     body: "Everything you\u2019ve already been tracking is ready from day one. No setup. No manual entry. Just your data.",
-    image: "/images/feature/connect.png",
+    image: "/images/feature/connect_3.png",
   },
 ];
 
@@ -160,12 +160,12 @@ function FeatureSection({ section }: { section: SectionData }) {
         className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden px-8 md:px-16 text-center"
       >
         <h2
-          className="font-bold uppercase tracking-tighter leading-[0.85] text-[#161618]"
+          className="font-jakarta font-bold uppercase tracking-tighter leading-[0.85] text-[#161618]"
           style={{ fontSize: "clamp(3.5rem, 9vw, 11rem)" }}
         >
           {section.headline}
         </h2>
-        <p className="mt-10 text-xl md:text-2xl text-[#6B6864] max-w-2xl">
+        <p className="font-jakarta mt-10 text-xl md:text-2xl text-[#6B6864] max-w-2xl">
           {section.body}
         </p>
       </section>
@@ -220,12 +220,12 @@ function FeatureSection({ section }: { section: SectionData }) {
           }`}
         >
           <h2
-            className="font-bold uppercase tracking-tighter leading-[0.85] text-[#161618]"
+            className="font-jakarta font-bold uppercase tracking-tighter leading-[0.85] text-[#161618]"
             style={{ fontSize: "clamp(3rem, 8.5vw, 10.5rem)" }}
           >
             {section.headline}
           </h2>
-          <p className="mt-10 text-xl md:text-2xl leading-relaxed text-[#6B6864] max-w-xl">
+          <p className="font-jakarta mt-10 text-xl md:text-2xl leading-relaxed text-[#6B6864] max-w-xl">
             {section.body}
           </p>
         </div>
