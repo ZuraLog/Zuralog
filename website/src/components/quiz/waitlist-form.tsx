@@ -169,15 +169,6 @@ export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormPro
         No spam. Unsubscribe anytime. 30 seconds to complete.
       </p>
 
-      {/* Easter egg hint */}
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 0.7, 0, 0.5, 0, 0.8, 0] }}
-        transition={{ delay: 3, duration: 2.5, repeat: Infinity, repeatDelay: 2.5 }}
-        className="text-center font-mono text-[11px] tracking-widest text-[#344E41]/60 select-none"
-      >
-        psst... try connect4
-      </motion.p>
     </motion.div>
   );
 }
