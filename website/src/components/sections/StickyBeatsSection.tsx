@@ -156,6 +156,14 @@ export function StickyBeatsSection({
           className={`absolute top-1/2 -translate-y-1/2 w-[62%] pointer-events-none select-none ${
             isImageLeft ? "left-[-4%]" : "right-[-4%]"
           }`}
+          style={{
+            maskImage: isImageLeft
+              ? "linear-gradient(to left, transparent 0%, black 20%)"
+              : "linear-gradient(to right, transparent 0%, black 20%)",
+            WebkitMaskImage: isImageLeft
+              ? "linear-gradient(to left, transparent 0%, black 20%)"
+              : "linear-gradient(to right, transparent 0%, black 20%)",
+          }}
           aria-hidden="true"
         >
           <div className="relative" style={{ paddingBottom: "100%" }}>
