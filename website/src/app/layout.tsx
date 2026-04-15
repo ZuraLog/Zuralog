@@ -18,6 +18,7 @@ import { PostHogProvider } from "@/components/providers/PostHogProvider";
 import { ScrollProgress } from "@/components/design-system/interactions/scroll-progress";
 import { CustomCursor } from "@/components/design-system/interactions/custom-cursor";
 import { SpotlightFollow } from "@/components/design-system/interactions/spotlight-follow";
+import { CookieConsent } from "@/components/CookieConsent";
 import "./globals.css";
 import "react-device-frameset/styles/marvel-devices.css";
 
@@ -56,7 +57,7 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: siteUrl,
     siteName: "ZuraLog",
-    title: "ZuraLog — Unified Health. Made Smart.",
+    title: "ZuraLog | Unified Health. Made Smart.",
     description:
       "The AI that connects your fitness apps and actually thinks. Join the waitlist for early access.",
     images: [{ url: `${siteUrl}/opengraph-image`, width: 1200, height: 630 }],
@@ -64,7 +65,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     creator: "@zuralog",
-    title: "ZuraLog — Unified Health. Made Smart.",
+    title: "ZuraLog | Unified Health. Made Smart.",
     description:
       "The AI that connects your fitness apps and actually thinks. Join the waitlist for early access.",
     images: [`${siteUrl}/opengraph-image`],
@@ -262,6 +263,7 @@ export default function RootLayout({
             {children}
           </LenisProvider>
           <DSToaster />
+          <CookieConsent />
           <Analytics />
         </PostHogProvider>
       </body>

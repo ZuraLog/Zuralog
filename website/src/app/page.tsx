@@ -7,6 +7,7 @@ import { FeaturesCardSection } from "@/components/sections/FeaturesCardSection";
 import { FeatureShowcaseSection } from "@/components/sections/FeatureShowcaseSection";
 import { EverythingElseSection } from "@/components/sections/EverythingElseSection";
 import { CoachSection } from "@/components/sections/CoachSection";
+import { ZuraInActionSection } from "@/components/sections/ZuraInActionSection";
 import { WaitlistSection } from "@/components/sections/WaitlistSection";
 import { ClientShellGate } from "@/components/ClientShellGate";
 import { PageBackground } from "@/components/PageBackground";
@@ -22,11 +23,12 @@ export default function Home() {
         <main className="relative min-h-screen">
           <FloatingNav />
           <HeroSection />
-          <FeatureSections />
-          <FeaturesCardSection />
-          <FeatureShowcaseSection />
-          <EverythingElseSection />
-          <CoachSection />
+          <div id="connect-section"><FeatureSections /></div>
+          <div id="tracking-section"><FeaturesCardSection /></div>
+          <div id="deep-dive-section"><FeatureShowcaseSection /></div>
+          <div id="more-section"><EverythingElseSection /></div>
+          <div id="coach-section"><CoachSection /></div>
+          <div id="action-section"><ZuraInActionSection /></div>
           <WaitlistSection />
         </main>
         <Footer />

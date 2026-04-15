@@ -7,11 +7,11 @@ import Image from "next/image";
 import Link from "next/link";
 import {
     ChevronDown,
-    Sun,
-    BarChart2,
+    Cable,
+    Activity,
     MessageSquare,
-    Trophy,
-    TrendingUp,
+    Search,
+    Grid3X3,
     Info,
     Mail,
     LifeBuoy,
@@ -33,34 +33,34 @@ import { useCursorParallax } from "@/hooks/use-cursor-parallax";
 
 const FEATURES = [
     {
-        icon: Sun,
-        label: "Today",
-        description: "Quick logs & AI insight",
-        href: "/#today-section",
+        icon: Cable,
+        label: "Connect",
+        description: "Sync all your apps and devices",
+        href: "/#connect-section",
     },
     {
-        icon: BarChart2,
-        label: "Data",
-        description: "All your health data, one place",
-        href: "/#data-section",
+        icon: Activity,
+        label: "Tracking",
+        description: "Nutrition, workouts, sleep & heart",
+        href: "/#tracking-section",
+    },
+    {
+        icon: Search,
+        label: "Deep Dive",
+        description: "See how each feature works",
+        href: "/#deep-dive-section",
+    },
+    {
+        icon: Grid3X3,
+        label: "And More",
+        description: "Dozens of ways to track your health",
+        href: "/#more-section",
     },
     {
         icon: MessageSquare,
         label: "Coach",
-        description: "Smart AI assistant",
+        description: "Your AI health assistant",
         href: "/#coach-section",
-    },
-    {
-        icon: Trophy,
-        label: "Progress",
-        description: "Goals, achievements & journal",
-        href: "/#progress-section",
-    },
-    {
-        icon: TrendingUp,
-        label: "Trends",
-        description: "Discover data correlations",
-        href: "/#trends-section",
     },
 ];
 
@@ -86,8 +86,23 @@ interface DropdownItem {
     href: string;
 }
 
-function DropdownPanel({ items }: { items: DropdownItem[] }) {
+function DropdownPanel({ items, onSelect, align = "center" }: { items: DropdownItem[]; onSelect: () => void; align?: "center" | "right" }) {
     const { playSound } = useSoundContext();
+
+    const handleClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+        playSound("pop");
+        onSelect();
+
+        // For hash links: only scroll manually if we're already on the home page.
+        // If we're on another page, let the <Link> navigate to /#section normally —
+        // HashScrollHandler on the home page will pick up the hash after mount.
+        if (href.startsWith("/#") && window.location.pathname === "/") {
+            e.preventDefault();
+            const id = href.replace("/#", "");
+            const el = document.getElementById(id);
+            if (el) el.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [playSound, onSelect]);
 
     return (
         <motion.div
@@ -95,25 +110,26 @@ function DropdownPanel({ items }: { items: DropdownItem[] }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.2, ease: EXPO_OUT }}
-            className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-64 rounded-ds-xl border border-ds-border-strong bg-ds-surface-raised backdrop-blur-xl shadow-lg overflow-hidden z-50"
+            className={`absolute top-full mt-3 rounded-2xl border border-ds-border-strong bg-[#F7F6F3] shadow-xl z-[60] ${align === "right" ? "right-0" : "left-1/2 -translate-x-1/2"}`}
+            style={{ minWidth: 260 }}
         >
-            <div className="p-2 flex flex-col gap-0.5">
+            <div className="p-1.5 flex flex-col">
                 {items.map(({ icon: Icon, label, description, href }) => (
                     <Link
                         key={label}
                         href={href}
                         onMouseEnter={() => playSound("tick")}
-                        onClick={() => playSound("pop")}
-                        className="group flex items-center gap-3 rounded-ds-md px-3 py-2.5 text-left transition-colors duration-150 hover:bg-ds-sage-tint w-full"
+                        onClick={(e) => handleClick(e, href)}
+                        className="group flex items-center gap-3 rounded-xl px-3 py-2 text-left transition-all duration-150 hover:bg-[#344E41]/[0.06] hover:translate-x-0.5 w-full"
                     >
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-ds-sm bg-ds-surface text-ds-sage border border-ds-border-subtle">
-                            <Icon size={15} />
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white text-[#344E41] shadow-sm border border-black/[0.04] transition-all duration-150 group-hover:shadow-md group-hover:scale-105">
+                            <Icon size={14} />
                         </span>
-                        <span className="flex flex-col">
-                            <span className="font-jakarta text-[0.8125rem] font-medium text-ds-text-primary leading-tight">
+                        <span className="flex flex-col min-w-0">
+                            <span className="font-jakarta text-[13px] font-semibold text-[#161618] leading-tight">
                                 {label}
                             </span>
-                            <span className="font-jakarta text-[0.6875rem] font-medium text-ds-text-secondary leading-tight mt-0.5">
+                            <span className="font-jakarta text-[11px] text-[#6B6864] leading-tight mt-0.5 truncate">
                                 {description}
                             </span>
                         </span>
@@ -132,9 +148,10 @@ interface NavTriggerProps {
     label: string;
     href?: string;
     items?: DropdownItem[];
+    align?: "center" | "right";
 }
 
-function NavTrigger({ label, href, items }: NavTriggerProps) {
+function NavTrigger({ label, href, items, align }: NavTriggerProps) {
     const [open, setOpen]   = useState(false);
     const closeTimer        = useRef<ReturnType<typeof setTimeout> | null>(null);
     const { playSound }     = useSoundContext();
@@ -186,7 +203,7 @@ function NavTrigger({ label, href, items }: NavTriggerProps) {
             )}
 
             <AnimatePresence>
-                {open && items && <DropdownPanel items={items} />}
+                {open && items && <DropdownPanel items={items} onSelect={() => setOpen(false)} align={align} />}
             </AnimatePresence>
         </div>
     );
@@ -377,11 +394,11 @@ export function FloatingNav() {
                 initial={{ opacity: 0, y: -16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: EXPO_OUT, delay: 0.1 }}
-                className="fixed inset-x-0 top-5 z-50 flex justify-center pointer-events-none px-4"
+                className="fixed inset-x-0 top-5 z-[70] flex justify-center pointer-events-none px-4"
             >
                 <nav
                     ref={navRef}
-                    className="pointer-events-auto will-change-transform flex items-center rounded-ds-pill border border-ds-border-strong bg-ds-surface/80 backdrop-blur-xl px-4 py-2.5 shadow-sm w-full md:w-auto gap-3 md:gap-6"
+                    className="pointer-events-auto will-change-transform flex items-center rounded-ds-pill border border-ds-border-strong bg-[#F0EEE9] px-4 py-2.5 shadow-sm w-full md:w-auto gap-3 md:gap-6"
                     aria-label="Main navigation"
                 >
                     {/* Brand — always visible */}
@@ -410,7 +427,7 @@ export function FloatingNav() {
                     <div className="hidden md:flex items-center gap-0.5">
                         <NavTrigger label="Features"  items={FEATURES} />
                         <NavTrigger label="Pricing"   href="/pricing" />
-                        <NavTrigger label="Resources" items={RESOURCES} />
+                        <NavTrigger label="Resources" items={RESOURCES} align="right" />
                     </div>
 
                     <span className="hidden md:block h-4 w-px bg-ds-border-strong shrink-0" aria-hidden />

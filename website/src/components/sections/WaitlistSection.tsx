@@ -63,7 +63,7 @@ export function WaitlistSection() {
             Join the waitlist
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-black/50 text-lg">
-            Secure your spot first — then answer 3 quick questions so we can
+            Secure your spot first, then answer 3 quick questions so we can
             personalise your experience before launch.
           </p>
         </motion.div>
@@ -83,7 +83,7 @@ export function WaitlistSection() {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="w-full"
             >
-              <div className="w-full rounded-[24px] border border-[rgba(52,78,65,0.08)] bg-[#E8E6E1] p-6 shadow-sm lg:p-8">
+              <div className="w-full rounded-[24px] border border-[rgba(52,78,65,0.08)] bg-[#E8E6E1] p-6 shadow-sm lg:p-8 transition-shadow duration-300 hover:shadow-md">
                 <QuizContainer onEmailChange={handleEmailChange} />
               </div>
             </motion.div>

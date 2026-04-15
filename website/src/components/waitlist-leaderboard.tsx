@@ -78,7 +78,7 @@ export function WaitlistLeaderboard() {
       </div>
 
       {/* Leaderboard card */}
-      <div className="overflow-hidden rounded-[20px] border border-[rgba(52,78,65,0.08)] bg-[#E8E6E1] shadow-sm">
+      <div className="overflow-hidden rounded-[20px] border border-[rgba(52,78,65,0.08)] bg-[#E8E6E1] shadow-sm transition-shadow duration-300 hover:shadow-md">
         {entries.map((entry, i) => {
           const isTop3 = entry.rank <= 3;
           const accentColor = RANK_COLORS[entry.rank] ?? '#E8F5A8';
@@ -90,7 +90,8 @@ export function WaitlistLeaderboard() {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: 0.1 + i * 0.08 }}
-              className={`flex items-center gap-3 px-5 py-3.5 ${
+              whileHover={{ backgroundColor: isTop3 ? "rgba(52,78,65,0.08)" : "rgba(22,22,24,0.03)", x: 2, transition: { duration: 0.2 } }}
+              className={`flex items-center gap-3 px-5 py-3.5 cursor-default ${
                 i !== entries.length - 1 ? 'border-b border-black/5' : ''
               } ${isTop3 ? 'bg-[#344E41]/5' : ''}`}
             >

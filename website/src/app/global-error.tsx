@@ -118,7 +118,7 @@ export default function GlobalError({
                 color: "rgba(0,0,0,0.45)",
               }}
             >
-              Something broke at the deepest level. Try refreshing — if it keeps
+              Something broke at the deepest level. Try refreshing. If it keeps
               happening, reach out and we will look into it.
             </p>
 

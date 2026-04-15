@@ -115,7 +115,7 @@ export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormPro
           Secure your spot
         </h2>
         <p className="mt-2 text-[#6B6864]">
-          Enter your email to join — then answer 3 quick questions so we can personalise your experience.
+          Enter your email to join, then answer 3 quick questions so we can personalise your experience.
         </p>
       </div>
 

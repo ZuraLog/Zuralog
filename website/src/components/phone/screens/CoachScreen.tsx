@@ -92,9 +92,9 @@ const CONVERSATIONS: Msg[][] = [
   // 1 — Energy crash / sleep
   [
     { from: "user", jsx: "Why did I crash so hard Tuesday afternoon?" },
-    { from: "zura", jsx: <>Tuesday you hit <Stat>5h 12m</Stat> of sleep — your lowest this month. HRV dropped to <Stat>38ms</Stat>, signaling incomplete recovery. Add in skipping hydration that morning, and your body had three strikes before noon.</> },
+    { from: "zura", jsx: <>Tuesday you hit <Stat>5h 12m</Stat> of sleep, your lowest this month. HRV dropped to <Stat>38ms</Stat>, signaling incomplete recovery. Add in skipping hydration that morning, and your body had three strikes before noon.</> },
     { from: "user", jsx: "What should I do tonight?" },
-    { from: "zura", jsx: <>Your patterns show two nights above <Stat>7h</Stat> reliably bounce your HRV back. Aim for <Stat>10:30 PM</Stat> tonight — I'll flag if your numbers shift by morning.</> },
+    { from: "zura", jsx: <>Your patterns show two nights above <Stat>7h</Stat> reliably bounce your HRV back. Aim for <Stat>10:30 PM</Stat> tonight. I'll flag if your numbers shift by morning.</> },
     { from: "user", jsx: "Should I skip tomorrow's workout too?" },
     { from: "zura", jsx: <>If your HRV recovers above <Stat>52ms</Stat> by morning, a moderate session is fine. Below <Stat>45ms</Stat>, I'd swap it for a 20-minute walk. I'll notify you at 7 AM.</> },
   ],
@@ -102,31 +102,31 @@ const CONVERSATIONS: Msg[][] = [
   // 2 — Workout recovery
   [
     { from: "user", jsx: "Should I train hard today or take a rest day?" },
-    { from: "zura", jsx: <>Your HRV this morning is <Stat>58ms</Stat> — 18% below your 7-day average. You trained legs yesterday and only slept <Stat>6.1 hours</Stat>. Recovery score is <Stat>41</Stat>. Light movement today.</> },
+    { from: "zura", jsx: <>Your HRV this morning is <Stat>58ms</Stat>, 18% below your 7-day average. You trained legs yesterday and only slept <Stat>6.1 hours</Stat>. Recovery score is <Stat>41</Stat>. Light movement today.</> },
     { from: "user", jsx: "How does tomorrow look?" },
-    { from: "zura", jsx: <>If tonight hits <Stat>7h+</Stat>, your HRV should climb into the <Stat>68–72ms</Stat> range — solidly green. A full session would be appropriate. I'll update your recommendation after sleep tracking ends.</> },
+    { from: "zura", jsx: <>If tonight hits <Stat>7h+</Stat>, your HRV should climb into the <Stat>68–72ms</Stat> range, solidly green. A full session would be appropriate. I'll update your recommendation after sleep tracking ends.</> },
     { from: "user", jsx: "What kind of training fits my cycle right now?" },
-    { from: "zura", jsx: <>You're in the <Stat>follicular phase</Stat> — days 6–13. This is your peak strength window. Your best PRs over the last 3 months all landed here. Go heavier this week.</> },
+    { from: "zura", jsx: <>You're in the <Stat>follicular phase</Stat>, days 6 through 13. This is your peak strength window. Your best PRs over the last 3 months all landed here. Go heavier this week.</> },
   ],
 
   // 3 — Nutrition
   [
     { from: "user", jsx: "Why am I not losing weight even though I'm eating healthy?" },
-    { from: "zura", jsx: <>Your weekly average is <Stat>2,180 kcal</Stat> — about 330 above your target. Weekends account for most of the gap, and cooking oil and snacks are adding roughly <Stat>200 kcal/day</Stat> that aren't being logged.</> },
+    { from: "zura", jsx: <>Your weekly average is <Stat>2,180 kcal</Stat>, about 330 above your target. Weekends account for most of the gap, and cooking oil and snacks are adding roughly <Stat>200 kcal/day</Stat> that aren't being logged.</> },
     { from: "user", jsx: "What's the easiest fix?" },
     { from: "zura", jsx: <>Your biggest lever is dinner portion size. Reducing it by <Stat>20%</Stat> puts you in deficit without drastically changing your meals. That one habit could cover 80% of the adjustment you need.</> },
     { from: "user", jsx: "Is my protein high enough for the training I'm doing?" },
-    { from: "zura", jsx: <>You're averaging <Stat>118g/day</Stat>. For your body weight and training volume, I'd target <Stat>145–160g</Stat>. The gap is biggest on rest days — adding Greek yoghurt or eggs at breakfast would close it.</> },
+    { from: "zura", jsx: <>You're averaging <Stat>118g/day</Stat>. For your body weight and training volume, I'd target <Stat>145–160g</Stat>. The gap is biggest on rest days. Adding Greek yoghurt or eggs at breakfast would close it.</> },
   ],
 
   // 4 — Sleep quality
   [
     { from: "user", jsx: "I slept 8 hours but still feel groggy. What's going on?" },
-    { from: "zura", jsx: <>Your deep sleep was only <Stat>11%</Stat> last night — normally you hit 19–22%. Heart rate stayed elevated until <Stat>2:10 AM</Stat>, likely from the gym session at 9:15 PM. Late workouts suppress your deep sleep.</> },
+    { from: "zura", jsx: <>Your deep sleep was only <Stat>11%</Stat> last night. Normally you hit 19 to 22%. Heart rate stayed elevated until <Stat>2:10 AM</Stat>, likely from the gym session at 9:15 PM. Late workouts suppress your deep sleep.</> },
     { from: "user", jsx: "How late is too late to work out?" },
     { from: "zura", jsx: <>Workouts finishing before <Stat>7 PM</Stat> have zero measurable impact on your sleep. Between 7–9 PM, deep sleep drops ~12%. After 9 PM it drops <Stat>38%</Stat>. Your sweet spot is 5–7 PM.</> },
     { from: "user", jsx: "What else actually helps me get more deep sleep?" },
-    { from: "zura", jsx: <>Three things correlate most strongly for you: early workouts, room below <Stat>19°C</Stat>, and no alcohol. On nights you hit all three, your deep sleep averages <Stat>24%</Stat> — well above baseline.</> },
+    { from: "zura", jsx: <>Three things correlate most strongly for you: early workouts, room below <Stat>19°C</Stat>, and no alcohol. On nights you hit all three, your deep sleep averages <Stat>24%</Stat>, well above baseline.</> },
   ],
 
   // 5 — Productivity patterns
@@ -134,7 +134,7 @@ const CONVERSATIONS: Msg[][] = [
     { from: "user", jsx: "When do I actually feel my best?" },
     { from: "zura", jsx: <>Your top-rated energy days share three things: <Stat>7h+</Stat> sleep, a morning workout, and at least <Stat>2.2L</Stat> of water. That combination accounts for 84% of the days you logged high energy or focus.</> },
     { from: "user", jsx: "How often does that combination actually happen?" },
-    { from: "zura", jsx: <>Only about <Stat>2–3 times per week</Stat>. The biggest bottleneck is morning movement — you skip it 60% of the time. Sleep and hydration are already quite consistent for you.</> },
+    { from: "zura", jsx: <>Only about <Stat>2 to 3 times per week</Stat>. The biggest bottleneck is morning movement. You skip it 60% of the time. Sleep and hydration are already quite consistent for you.</> },
     { from: "user", jsx: "Can you build me a routine around that?" },
     { from: "zura", jsx: <>On it. I'll set a <Stat>7:00 AM</Stat> movement prompt and a midday hydration check. After 2 weeks of data I'll adjust the routine based on what your numbers show. Start tomorrow?</> },
   ],

@@ -43,7 +43,7 @@ export function CoachSection() {
             </h2>
 
             <p className="mt-5 text-lg text-[#6B6864] max-w-lg mx-auto leading-relaxed">
-              One AI coach that connects every dot — across every metric you track.
+              One AI coach that connects every dot, across every metric you track.
             </p>
           </motion.div>
         </div>
@@ -56,11 +56,16 @@ export function CoachSection() {
           transition={{ duration: 0.7, delay: 0.15, ease: "easeOut" }}
           className="flex justify-center"
         >
-          <div ref={phoneCursorRef} className="will-change-transform">
+          <motion.div
+            ref={phoneCursorRef}
+            className="will-change-transform"
+            whileHover={{ scale: 1.02, y: -6 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+          >
             <PhoneMockup frameWidth={380}>
               <CoachScreen />
             </PhoneMockup>
-          </div>
+          </motion.div>
         </motion.div>
 
       </div>

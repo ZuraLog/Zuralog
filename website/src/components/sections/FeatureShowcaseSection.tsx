@@ -59,14 +59,14 @@ const CATEGORIES: ShowcaseCategory[] = [
     id: "nutrition",
     label: "Nutrition",
     headline: "Log food\nthe way you want.",
-    subheadline: "Four ways to track what you eat — pick the one that fits the moment.",
+    subheadline: "Four ways to track what you eat. Pick the one that fits the moment.",
     features: [
       {
         icon: Camera,
         title: "Photo",
         subtitle: "Snap any meal instantly",
         description:
-          "Point your camera at any meal and Zura reads it. Calories, macros, and portion size — all filled in automatically. No typing.",
+          "Point your camera at any meal and Zura reads it. Calories, macros, and portion size, all filled in automatically. No typing.",
       },
       {
         icon: ScanBarcode,
@@ -80,7 +80,7 @@ const CATEGORIES: ShowcaseCategory[] = [
         title: "Talk to Zura",
         subtitle: "Just say what you ate",
         description:
-          "Tell Zura what you had — \"a bowl of oatmeal with berries\" — and it logs it. No searching, no scrolling. Just talk.",
+          "Tell Zura what you had, like \"a bowl of oatmeal with berries,\" and it logs it. No searching, no scrolling. Just talk.",
       },
       {
         icon: PenLine,
@@ -116,7 +116,7 @@ const CATEGORIES: ShowcaseCategory[] = [
         title: "Let it log itself",
         subtitle: "Auto-sync from your apps",
         description:
-          "Connect Apple Health, Google Health Connect, or Strava and your workouts appear automatically — no extra steps, ever.",
+          "Connect Apple Health, Google Health Connect, or Strava and your workouts appear automatically. No extra steps, ever.",
       },
     ],
   },
@@ -124,28 +124,28 @@ const CATEGORIES: ShowcaseCategory[] = [
     id: "sleep",
     label: "Sleep",
     headline: "See how well\nyou really slept.",
-    subheadline: "Duration, quality, stages — and what they actually mean for your day.",
+    subheadline: "Duration, quality, stages, and what they actually mean for your day.",
     features: [
       {
         icon: Moon,
         title: "Duration & quality",
         subtitle: "Every morning, automatically",
         description:
-          "See exactly how long you slept and how good it was — synced automatically from your phone, watch, or ring every morning.",
+          "See exactly how long you slept and how good it was. Synced automatically from your phone, watch, or ring every morning.",
       },
       {
         icon: BarChart2,
         title: "Sleep stages",
         subtitle: "Light, deep, and REM breakdown",
         description:
-          "See how much time you spent in light sleep, deep sleep, and REM. Know which stages you're getting enough of — and which you're not.",
+          "See how much time you spent in light sleep, deep sleep, and REM. Know which stages you're getting enough of, and which you're not.",
       },
       {
         icon: BrainCircuit,
         title: "The full picture",
         subtitle: "How sleep connects everything",
         description:
-          "Zura connects your sleep to your training load, meals, and stress. Not just a chart — an explanation of why you feel the way you do.",
+          "Zura connects your sleep to your training load, meals, and stress. Not just a chart. An explanation of why you feel the way you do.",
       },
     ],
   },
@@ -153,21 +153,21 @@ const CATEGORIES: ShowcaseCategory[] = [
     id: "heart",
     label: "Heart",
     headline: "Know your heart\ninside and out.",
-    subheadline: "Resting heart rate, HRV, and recovery — tracked automatically, shown in context.",
+    subheadline: "Resting heart rate, HRV, and recovery. Tracked automatically, shown in context.",
     features: [
       {
         icon: Heart,
         title: "Resting heart rate & HRV",
         subtitle: "Tracked automatically every day",
         description:
-          "Your resting heart rate and heart rate variability are tracked automatically and shown in context — so you know what the numbers actually mean.",
+          "Your resting heart rate and heart rate variability are tracked automatically and shown in context, so you know what the numbers actually mean.",
       },
       {
         icon: Activity,
         title: "How your heart responds",
         subtitle: "To workouts, meals, and sleep",
         description:
-          "Your heart responds to everything — training load, what you ate, how you slept, stress. Zura shows you exactly which levers are moving it.",
+          "Your heart responds to everything: training load, what you ate, how you slept, stress. Zura shows you exactly which levers are moving it.",
       },
       {
         icon: TrendingDown,
@@ -464,8 +464,8 @@ export function FeatureShowcaseSection() {
                     className="accordion-item w-full text-left focus:outline-none group"
                   >
                     <div
-                      className="rounded-[16px] px-5 py-4 transition-colors duration-300"
-                      style={{ backgroundColor: isActive ? "#E8E6E1" : "transparent" }}
+                      className="rounded-[16px] px-5 py-4 transition-all duration-300 hover:bg-[#E8E6E1]/50"
+                      style={{ backgroundColor: isActive ? "#E8E6E1" : undefined }}
                     >
                       <div className="flex items-center gap-3">
                         {/* Icon wrapper — pattern fill when active */}
