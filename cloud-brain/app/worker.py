@@ -79,6 +79,7 @@ celery_app = Celery(
         "app.tasks.oura_sync",
         "app.tasks.polar_sync",
         "app.tasks.report_tasks",
+        "app.tasks.seed_food_cache",
         "app.tasks.smart_reminder_tasks",
         "app.tasks.withings_sync",
         "app.services.sync_scheduler",
