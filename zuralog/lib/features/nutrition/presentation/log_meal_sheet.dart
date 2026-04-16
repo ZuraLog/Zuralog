@@ -12,9 +12,12 @@
 library;
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
@@ -85,6 +88,21 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
 
   /// Error message from the most recent parse attempt, if any.
   String? _parseError;
+
+  /// Whether the camera/photo scan is currently running.
+  bool _isScanning = false;
+
+  /// The image file most recently picked for scanning.
+  File? _scannedImage;
+
+  /// Error message from the most recent scan attempt, if any.
+  String? _scanError;
+
+  /// Whether the barcode scanner overlay is visible.
+  bool _showBarcodeScanner = false;
+
+  /// Error message from the most recent barcode lookup, if any.
+  String? _barcodeError;
 
   /// Portion multipliers keyed by index in [_mealFoods]. Defaults to 1.0.
   final Map<int, double> _portionMultipliers = {};
@@ -276,6 +294,83 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
         _parseError = 'Could not understand the description. '
             'Try being more specific — for example, '
             '"grilled chicken breast 200g with steamed rice".';
+      });
+    }
+  }
+
+  /// Picks a photo from the camera or gallery and sends it to the backend
+  /// for AI analysis. Parsed food items are added to the meal.
+  Future<void> _pickAndScanImage(ImageSource source) async {
+    if (_isScanning) return;
+
+    final picker = ImagePicker();
+    final xFile = await picker.pickImage(source: source, imageQuality: 85);
+    if (xFile == null) return;
+
+    final file = File(xFile.path);
+    final fileSize = await file.length();
+    if (fileSize > 10 * 1024 * 1024) {
+      setState(() => _scanError = 'Image must be smaller than 10 MB.');
+      return;
+    }
+
+    setState(() {
+      _isScanning = true;
+      _scannedImage = file;
+      _scanError = null;
+    });
+
+    try {
+      final results =
+          await ref.read(nutritionRepositoryProvider).scanFoodImage(file);
+      if (!mounted) return;
+      setState(() {
+        _parsedItems = results;
+        for (final item in results) {
+          _mealFoods.add(item.toMealFood());
+        }
+        _isScanning = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _scanError =
+            'Could not analyse the image. Try describing the food instead.';
+        _isScanning = false;
+      });
+    }
+  }
+
+  /// Handles a barcode detection event from the scanner overlay.
+  /// Closes the scanner, looks the product up, and adds it to the meal.
+  Future<void> _handleBarcodeScan(BarcodeCapture capture) async {
+    final barcodes = capture.barcodes;
+    if (barcodes.isEmpty) return;
+    final code = barcodes.first.rawValue;
+    if (code == null || code.isEmpty) return;
+
+    // Close the scanner immediately so it does not fire again.
+    setState(() => _showBarcodeScanner = false);
+
+    try {
+      final result =
+          await ref.read(nutritionRepositoryProvider).lookupBarcode(code);
+      if (!mounted) return;
+      if (result != null) {
+        setState(() {
+          _mealFoods.add(result.toMealFood());
+          _barcodeError = null;
+        });
+      } else {
+        setState(() {
+          _barcodeError =
+              'Product not found. Try taking a photo of the food instead.';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _barcodeError = 'Could not look up the barcode. Please try again.';
       });
     }
   }
@@ -566,6 +661,119 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
 
                   // ── OR divider ──────────────────────────────────────────
                   _buildOrDivider(),
+
+                  const SizedBox(height: AppDimens.spaceLg),
+
+                  // ── Camera section ─────────────────────────────────────
+                  const SectionHeader(title: 'Scan food'),
+                  const SizedBox(height: AppDimens.spaceSm),
+                  Row(
+                    children: [
+                      _ScanOption(
+                        icon: Icons.camera_alt_outlined,
+                        label: 'Camera',
+                        onTap: () =>
+                            _pickAndScanImage(ImageSource.camera),
+                      ),
+                      const SizedBox(width: AppDimens.spaceSm),
+                      _ScanOption(
+                        icon: Icons.photo_library_outlined,
+                        label: 'Photos',
+                        onTap: () =>
+                            _pickAndScanImage(ImageSource.gallery),
+                      ),
+                      const SizedBox(width: AppDimens.spaceSm),
+                      _ScanOption(
+                        icon: Icons.qr_code_scanner_rounded,
+                        label: 'Barcode',
+                        onTap: () =>
+                            setState(() => _showBarcodeScanner = true),
+                      ),
+                    ],
+                  ),
+
+                  // Image preview.
+                  if (_scannedImage != null) ...[
+                    const SizedBox(height: AppDimens.spaceSm),
+                    ClipRRect(
+                      borderRadius:
+                          BorderRadius.circular(AppDimens.shapeSm),
+                      child: Image.file(
+                        _scannedImage!,
+                        height: 64,
+                        width: 64,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ],
+
+                  // Scanning loading indicator.
+                  if (_isScanning)
+                    const Padding(
+                      padding: EdgeInsets.all(AppDimens.spaceMd),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+
+                  // Scan error banner.
+                  if (_scanError != null) ...[
+                    const SizedBox(height: AppDimens.spaceSm),
+                    ZAlertBanner(
+                      variant: ZAlertVariant.error,
+                      message: _scanError!,
+                      onDismiss: () =>
+                          setState(() => _scanError = null),
+                    ),
+                  ],
+
+                  // Barcode error banner.
+                  if (_barcodeError != null) ...[
+                    const SizedBox(height: AppDimens.spaceSm),
+                    ZAlertBanner(
+                      variant: ZAlertVariant.error,
+                      message: _barcodeError!,
+                      onDismiss: () =>
+                          setState(() => _barcodeError = null),
+                    ),
+                  ],
+
+                  // Barcode scanner overlay.
+                  if (_showBarcodeScanner) ...[
+                    const SizedBox(height: AppDimens.spaceSm),
+                    Container(
+                      height: 300,
+                      decoration: BoxDecoration(
+                        borderRadius:
+                            BorderRadius.circular(AppDimens.shapeMd),
+                        border: Border.all(color: colors.border),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Stack(
+                        children: [
+                          MobileScanner(
+                              onDetect: _handleBarcodeScan),
+                          Positioned(
+                            top: AppDimens.spaceSm,
+                            right: AppDimens.spaceSm,
+                            child: GestureDetector(
+                              onTap: () => setState(
+                                  () => _showBarcodeScanner = false),
+                              child: Container(
+                                padding: const EdgeInsets.all(
+                                    AppDimens.spaceXs),
+                                decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  borderRadius: BorderRadius.circular(
+                                      AppDimens.shapeXs),
+                                ),
+                                child: const Icon(Icons.close,
+                                    color: Colors.white, size: 20),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
 
                   const SizedBox(height: AppDimens.spaceLg),
 
@@ -922,6 +1130,51 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
 }
 
 // ── Private sub-widgets ──────────────────────────────────────────────────────
+
+/// A single scan-option tile (camera, photos, barcode).
+class _ScanOption extends StatelessWidget {
+  const _ScanOption({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceMd),
+          decoration: BoxDecoration(
+            color: AppColors.categoryNutrition.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+          ),
+          child: Column(
+            children: [
+              Icon(icon,
+                  color: AppColors.categoryNutrition,
+                  size: AppDimens.iconMd),
+              const SizedBox(height: AppDimens.spaceXs),
+              Text(
+                label,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 /// A single search result row with name, serving, and calories.
 class _SearchResultRow extends StatelessWidget {
