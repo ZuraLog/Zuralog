@@ -11,6 +11,8 @@
 /// - [MockNutritionRepository]      — hardcoded fixture implementation
 library;
 
+import 'dart:io';
+
 import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
 
 // -- NutritionRepositoryInterface ---------------------------------------------
@@ -71,6 +73,12 @@ abstract interface class NutritionRepositoryInterface {
     required double originalFatG,
     required double correctedFatG,
   });
+
+  /// Analyse a food photo and return structured food items.
+  Future<List<ParsedFoodItem>> scanFoodImage(File imageFile);
+
+  /// Look up a product by its barcode (UPC/EAN).
+  Future<FoodSearchResult?> lookupBarcode(String code);
 }
 
 // -- MockNutritionRepository --------------------------------------------------
@@ -177,6 +185,14 @@ final class MockNutritionRepository implements NutritionRepositoryInterface {
     required double correctedFatG,
   }) =>
       throw UnimplementedError('Mock does not support submitCorrection');
+
+  @override
+  Future<List<ParsedFoodItem>> scanFoodImage(File imageFile) =>
+      throw UnimplementedError('Mock does not support scanFoodImage');
+
+  @override
+  Future<FoodSearchResult?> lookupBarcode(String code) =>
+      throw UnimplementedError('Mock does not support lookupBarcode');
 
   // -- Fixture Builder --------------------------------------------------------
 

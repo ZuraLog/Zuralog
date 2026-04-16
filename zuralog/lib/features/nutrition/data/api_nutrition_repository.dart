@@ -6,6 +6,8 @@
 /// 404 responses in [getMealById] which return `null`.
 library;
 
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 
 import 'package:zuralog/core/network/api_client.dart';
@@ -160,5 +162,40 @@ class ApiNutritionRepository implements NutritionRepositoryInterface {
       'original_fat_g': originalFatG,
       'corrected_fat_g': correctedFatG,
     });
+  }
+
+  // ── Camera / Barcode ──────────────────────────────────────────────────────
+
+  @override
+  Future<List<ParsedFoodItem>> scanFoodImage(File imageFile) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(
+        imageFile.path,
+        filename: imageFile.path.split(Platform.pathSeparator).last,
+      ),
+    });
+    final response = await _api.post(
+      '/api/v1/nutrition/meals/scan-image',
+      data: formData,
+    );
+    final data = response.data as Map<String, dynamic>;
+    final foods = data['foods'] as List<dynamic>? ?? [];
+    return foods
+        .map((e) => ParsedFoodItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<FoodSearchResult?> lookupBarcode(String code) async {
+    try {
+      final response = await _api.get('/api/v1/nutrition/foods/barcode/$code');
+      final data = response.data as Map<String, dynamic>;
+      final foodData = data['food'] as Map<String, dynamic>?;
+      if (foodData == null) return null;
+      return FoodSearchResult.fromJson(foodData);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      rethrow;
+    }
   }
 }
