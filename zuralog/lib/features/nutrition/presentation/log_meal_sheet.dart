@@ -104,6 +104,9 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
   /// Error message from the most recent barcode lookup, if any.
   String? _barcodeError;
 
+  /// Whether rules covered all parsed items (high confidence across the board).
+  bool _rulesHandledEverything = false;
+
   /// Portion multipliers keyed by index in [_mealFoods]. Defaults to 1.0.
   final Map<int, double> _portionMultipliers = {};
 
@@ -286,7 +289,19 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
           _mealFoods.add(item.toMealFood());
         }
         _isParsing = false;
+
+        // When in Guided mode and every parsed item has high confidence,
+        // the user's rules already covered everything — no refinement needed.
+        if (_modeIndex == 1 &&
+            results.isNotEmpty &&
+            results.every((item) => item.confidence >= 0.8)) {
+          _rulesHandledEverything = true;
+        }
       });
+
+      if (_rulesHandledEverything && mounted) {
+        ZToast.success(context, 'Your rules covered everything!');
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -986,7 +1001,8 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
     final isGuided = _modeIndex == 1;
     final ParsedFoodItem? parsedItem =
         index < _parsedItems.length ? _parsedItems[index] : null;
-    final showRefinement = isGuided && parsedItem != null;
+    final showRefinement =
+        isGuided && parsedItem != null && !_rulesHandledEverything;
 
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceSm + 4),

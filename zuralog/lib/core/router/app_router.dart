@@ -93,6 +93,7 @@ import 'package:zuralog/features/trends/presentation/trends_home_screen.dart';
 
 // ── Nutrition (pushed over shell) ────────────────────────────────────────────
 import 'package:zuralog/features/nutrition/presentation/nutrition_home_screen.dart';
+import 'package:zuralog/features/nutrition/presentation/nutrition_rules_screen.dart';
 import 'package:zuralog/features/nutrition/presentation/meal_detail_screen.dart';
 
 // ── Settings (pushed over shell) ──────────────────────────────────────────────
@@ -558,6 +559,14 @@ List<RouteBase> _buildRoutes() {
             child: MealDetailScreen(
               mealId: state.pathParameters['id']!,
             ),
+          ),
+        ),
+        GoRoute(
+          path: 'rules',
+          name: RouteNames.nutritionRules,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'nutrition.rules',
+            child: NutritionRulesScreen(),
           ),
         ),
       ],

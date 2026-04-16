@@ -33,9 +33,16 @@ class NutritionHomeScreen extends ConsumerWidget {
     const catColor = AppColors.categoryNutrition;
 
     return ZuralogScaffold(
-      appBar: const ZuralogAppBar(
+      appBar: ZuralogAppBar(
         title: 'Nutrition',
         showProfileAvatar: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.rule_outlined),
+            tooltip: 'My rules',
+            onPressed: () => context.pushNamed(RouteNames.nutritionRules),
+          ),
+        ],
       ),
       body: mealsAsync.when(
         loading: () => ListView(
