@@ -82,6 +82,7 @@ class TrendsHomeScreen extends ConsumerWidget {
     return ZuralogScaffold(
       appBar: ZuralogAppBar(
         title: 'Trends',
+        showProfileAvatar: false,
         subtitle: subtitle,
       ),
       body: trendsAsync.when(
