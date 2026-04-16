@@ -15,6 +15,7 @@ export 'cards/z_insight_card.dart';
 export 'cards/z_selectable_tile.dart';
 export 'cards/z_snapshot_card.dart';
 export 'cards/zuralog_card.dart';
+export 'cards/z_pillar_card.dart';
 export 'cards/z_locked_overlay.dart';
 export 'cards/z_topographic_card.dart';
 export 'indicators/status_indicator.dart';
