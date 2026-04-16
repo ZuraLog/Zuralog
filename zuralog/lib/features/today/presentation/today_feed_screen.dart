@@ -17,15 +17,15 @@ import 'package:zuralog/core/state/log_sheet_provider.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
-import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
-import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
-import 'package:zuralog/features/today/domain/metric_format_utils.dart';
-import 'package:zuralog/features/today/domain/metric_grid_models.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
-import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
+import 'package:zuralog/features/today/presentation/widgets/heart_pillar_card.dart';
+import 'package:zuralog/features/today/presentation/widgets/journal_prompt_card.dart';
+import 'package:zuralog/features/today/presentation/widgets/nutrition_pillar_card.dart';
+import 'package:zuralog/features/today/presentation/widgets/sleep_pillar_card.dart';
+import 'package:zuralog/features/today/presentation/widgets/workouts_pillar_card.dart';
 import 'package:zuralog/shared/widgets/health_score_widget.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
@@ -51,28 +51,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
     final colors = AppColorsOf(context);
     final scoreAsync = ref.watch(healthScoreProvider);
     final feedAsync = ref.watch(todayFeedProvider);
-    final bannerDismissed = ref.watch(dataMaturityBannerDismissedProvider);
-
-    // Data maturity banner state computation.
     final dataDays = scoreAsync.valueOrNull?.dataDays ?? 0;
-    final profile = ref.watch(userProfileProvider);
-    final accountAge = profile?.createdAt != null
-        ? DateTime.now().difference(profile!.createdAt!).inDays
-        : 0;
-    final accountMature = accountAge >= kMinDataDaysForMaturity;
-    final bannerMode = accountMature
-        ? DataMaturityMode.stillBuilding
-        : DataMaturityMode.progress;
-    final sessionDismissed = ref.watch(todayBannerSessionDismissed);
-    final prefsAsync = ref.watch(userPreferencesProvider);
-    final showBanner = dataDays < kMinDataDaysForMaturity &&
-        !bannerDismissed &&
-        !prefsAsync.isLoading && // Don't show banner while prefs loading — avoids silent dismiss drop
-        (bannerMode == DataMaturityMode.progress || !sessionDismissed);
-
-    void persistBannerDismissed() => ref
-        .read(userPreferencesProvider.notifier)
-        .mutate((p) => p.copyWith(dataMaturityBannerDismissed: true));
 
     // When the user creates, edits, or deletes a goal on the Progress tab,
     // goalsProvider gets invalidated. Listen for that and refresh the daily
@@ -183,83 +162,60 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
               ),
             ),
 
-            // ── Data Maturity banner ─────────────────────────────────────────
-            if (showBanner)
-              ZFadeSlideIn(
-                delay: const Duration(milliseconds: 60),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimens.spaceMd,
-                  ),
-                  child: DataMaturityBanner(
-                    daysWithData: dataDays,
-                    targetDays: kMinDataDaysForMaturity,
-                    mode: bannerMode,
-                    onDismiss: bannerMode == DataMaturityMode.progress
-                        ? persistBannerDismissed
-                        : () =>
-                            ref.read(todayBannerSessionDismissed.notifier).state =
-                                true,
-                    onPermanentDismiss:
-                        bannerMode == DataMaturityMode.stillBuilding
-                            ? persistBannerDismissed
-                            : null,
-                  ),
+            // ── Health Pillar Cards ───────────────────────────────────────
+            ZFadeSlideIn(
+              delay: const Duration(milliseconds: 60),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceMd,
+                ),
+                child: SleepPillarCard(
+                  onTap: () => context.pushNamed(RouteNames.sleepLog),
                 ),
               ),
-
-            // ── Greeting ────────────────────────────────────────────────────
+            ),
+            const SizedBox(height: AppDimens.spaceSm),
             ZFadeSlideIn(
               delay: const Duration(milliseconds: 120),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceLg,
-                  AppDimens.spaceMd,
-                  AppDimens.spaceSm,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceMd,
                 ),
-                child: () {
-                  final subtitle = _greetingSubtitle(
-                    dataDays,
-                    ref.watch(todayLogSummaryProvider).valueOrNull ??
-                        TodayLogSummary.empty,
-                  );
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SectionHeader(
-                        title: _timeOfDayGreeting(profile?.aiName),
-                      ),
-                      if (subtitle != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: AppDimens.spaceXs),
-                          child: Text(
-                            subtitle,
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: colors.textSecondary,
-                            ),
-                          ),
-                        ),
-                    ],
-                  );
-                }(),
+                child: NutritionPillarCard(
+                  onTap: () => context.pushNamed(RouteNames.mealLog),
+                  onAddMeal: () => context.pushNamed(RouteNames.mealLog),
+                ),
               ),
             ),
-
-            // ── My Metrics Grid ──────────────────────────────────────────────
+            const SizedBox(height: AppDimens.spaceSm),
             ZFadeSlideIn(
               delay: const Duration(milliseconds: 180),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-                child: _MetricGridSection(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceMd,
+                ),
+                child: WorkoutsPillarCard(
+                  onTap: () => context.pushNamed(RouteNames.runLog),
+                ),
               ),
             ),
-
+            const SizedBox(height: AppDimens.spaceSm),
+            ZFadeSlideIn(
+              delay: const Duration(milliseconds: 240),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceMd,
+                ),
+                child: HeartPillarCard(
+                  onTap: () => context.go(RouteNames.dataPath),
+                ),
+              ),
+            ),
             const SizedBox(height: AppDimens.spaceMd),
 
             // ── Daily Goals ──────────────────────────────────────────────────
             ZFadeSlideIn(
-              delay: const Duration(milliseconds: 240),
+              delay: const Duration(milliseconds: 300),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.spaceMd,
@@ -268,11 +224,24 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
               ),
             ),
 
+            const SizedBox(height: AppDimens.spaceMd),
+            ZFadeSlideIn(
+              delay: const Duration(milliseconds: 360),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceMd,
+                ),
+                child: JournalPromptCard(
+                  onTap: () => context.pushNamed(RouteNames.journalDiary),
+                ),
+              ),
+            ),
+
             const SizedBox(height: AppDimens.spaceLg),
 
             // ── Section: Your Briefing ────────────────────────────────────────
             ZFadeSlideIn(
-              delay: const Duration(milliseconds: 300),
+              delay: const Duration(milliseconds: 420),
               child: const Padding(
                 padding: EdgeInsets.fromLTRB(
                   AppDimens.spaceMd,
@@ -288,7 +257,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
             ...feedAsync.when(
               error: (err, stack) => [
                 ZFadeSlideIn(
-                  delay: const Duration(milliseconds: 360),
+                  delay: const Duration(milliseconds: 480),
                   child: ZEmptyInsightsCard(
                     onLogTap: openSheet,
                     onConnectTap: () =>
@@ -298,7 +267,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
               ],
               loading: () => [
                 ZFadeSlideIn(
-                  delay: const Duration(milliseconds: 360),
+                  delay: const Duration(milliseconds: 480),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppDimens.spaceMd,
@@ -315,7 +284,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                 if (feed.insights.isEmpty) {
                   return [
                     ZFadeSlideIn(
-                      delay: const Duration(milliseconds: 360),
+                      delay: const Duration(milliseconds: 480),
                       child: ZEmptyInsightsCard(
                         onLogTap: openSheet,
                         onConnectTap: () =>
@@ -331,7 +300,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
 
                 Widget buildInsightCard(InsightCard insight, int index) =>
                     ZFadeSlideIn(
-                      delay: Duration(milliseconds: 360 + (index * 60)),
+                      delay: Duration(milliseconds: 480 + (index * 60)),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: AppDimens.spaceMd,
@@ -477,313 +446,6 @@ class _HealthScoreHero extends ConsumerWidget {
   }
 }
 
-// ── _MetricGridSection ────────────────────────────────────────────────────────
-
-/// Builds the Today tab metric grid, wiring pinned metrics to today's log data.
-class _MetricGridSection extends ConsumerWidget {
-  const _MetricGridSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final pinnedAsync = ref.watch(pinnedMetricsProvider);
-    final summaryAsync = ref.watch(todayLogSummaryProvider);
-
-    return pinnedAsync.when(
-      loading: () => const _MetricGridSkeleton(),
-      error: (e, _) => _MetricGridError(
-        onRetry: () => ref.invalidate(pinnedMetricsProvider),
-      ),
-      data: (pinned) {
-        final summary = summaryAsync.valueOrNull ?? TodayLogSummary.empty;
-
-        // Fetch last-ever logged values for all pinned metrics so unlit tiles
-        // can show "87kg · 4d ago" instead of a plain dash.
-        final latestAsync = ref.watch(
-          latestLogValuesProvider(latestLogValuesKey(pinned.toSet())),
-        );
-        final latest = latestAsync.valueOrNull ?? const {};
-
-        final tiles = pinned
-            .map((type) => _buildTile(type, summary, latest))
-            .toList();
-
-        return MetricGrid(
-          tiles: tiles,
-          onAddTap: () => context.pushNamed(
-            RouteNames.metricPicker,
-            extra: pinned.toSet(),
-          ),
-          onRemove: (tile) {
-            ref
-                .read(pinnedMetricsProvider.notifier)
-                .removeMetric(tile.metricType);
-          },
-          onTileTap: (tile) => _openLogForMetric(context, tile.metricType),
-        );
-      },
-    );
-  }
-
-  /// Opens the appropriate logging experience for [metricType].
-  ///
-  /// Inline metrics (mood/energy/stress/water/weight/steps) open
-  /// [ZLogGridSheet] pre-navigated to the correct panel.
-  /// Full-screen metrics (sleep/run/meal/supplement/symptom) push the
-  /// corresponding named route directly over the shell.
-  /// Read-only synced metrics (heart_rate, etc.) are silently ignored.
-  void _openLogForMetric(BuildContext context, String metricType) {
-    // Map energy/stress → mood since they share the wellness inline panel.
-    final sheetKey = switch (metricType) {
-      'energy' || 'stress' => 'mood',
-      _                    => metricType,
-    };
-
-    // Full-screen routes — push directly, no sheet needed.
-    final fullScreenRoute = switch (metricType) {
-      'sleep'      => RouteNames.sleepLog,
-      'run'        => RouteNames.runLog,
-      'meal'       => RouteNames.mealLog,
-      'supplement' => RouteNames.supplementsLog,
-      'symptom'    => RouteNames.symptomLog,
-      _            => null,
-    };
-
-    if (fullScreenRoute != null) {
-      context.pushNamed(fullScreenRoute);
-      return;
-    }
-
-    // Inline metrics — open the sheet pre-navigated to the right panel.
-    const inlineKeys = {'mood', 'water', 'weight', 'steps'};
-    if (inlineKeys.contains(sheetKey)) {
-      showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        useRootNavigator: true,
-        builder: (_) => ZLogGridSheet(
-          initialTileKey: sheetKey,
-          parentMessenger: ScaffoldMessenger.of(context),
-          onFullScreenRoute: (routeName) {
-            Navigator.of(context, rootNavigator: true).pop();
-            context.pushNamed(routeName);
-          },
-        ),
-      );
-      return;
-    }
-
-    // heart_rate and any unrecognised types are read-only — no action.
-  }
-}
-
-// ── _buildTile ────────────────────────────────────────────────────────────────
-
-/// Maps a metric type string and today's log summary to a [MetricTileData].
-///
-/// [latest] is the result of `latestLogValuesProvider` — the most recent ever-
-/// logged value per metric type (across all time, not just today). Used to
-/// populate [MetricTileData.lastValue] and [MetricTileData.lastLoggedAt] so
-/// unlit tiles can display "87kg · 4d ago" instead of a plain dash.
-MetricTileData _buildTile(
-  String type,
-  TodayLogSummary summary,
-  Map<String, dynamic> latest,
-) {
-  final isLit = summary.loggedTypes.contains(type);
-  final raw = summary.latestValues[type];
-
-  // Extract last-ever logged value and timestamp from the /latest endpoint.
-  final (lastValue, lastLoggedAt) = _extractLastLogged(type, latest);
-
-  return switch (type) {
-    'mood' => MetricTileData(
-        metricType: type,
-        label: 'Mood',
-        icon: Icons.mood_rounded,
-        categoryColor: AppColors.categoryWellness.toARGB32(),
-        value:
-            isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}/10' : null,
-        lastValue: lastValue,
-        lastLoggedAt: lastLoggedAt,
-      ),
-    'energy' => MetricTileData(
-        metricType: type,
-        label: 'Energy',
-        icon: Icons.bolt_rounded,
-        categoryColor: AppColors.categoryWellness.toARGB32(),
-        value:
-            isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}/10' : null,
-        lastValue: lastValue,
-        lastLoggedAt: lastLoggedAt,
-      ),
-    'stress' => MetricTileData(
-        metricType: type,
-        label: 'Stress',
-        icon: Icons.whatshot_rounded,
-        categoryColor: AppColors.categoryWellness.toARGB32(),
-        value:
-            isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}/10' : null,
-        lastValue: lastValue,
-        lastLoggedAt: lastLoggedAt,
-      ),
-    'water' => MetricTileData(
-        metricType: type,
-        label: 'Water',
-        icon: Icons.water_drop_rounded,
-        categoryColor: AppColors.categoryBody.toARGB32(),
-        value:
-            isLit ? '${(raw as num?)?.toStringAsFixed(0) ?? '—'}ml' : null,
-        lastValue: lastValue,
-        lastLoggedAt: lastLoggedAt,
-      ),
-    'sleep' => MetricTileData(
-        metricType: type,
-        label: 'Sleep',
-        icon: Icons.bedtime_rounded,
-        categoryColor: AppColors.categorySleep.toARGB32(),
-        value: isLit && raw != null
-            ? formatSleepMinutes((raw as num).toDouble())
-            : null,
-        lastValue: lastValue,
-        lastLoggedAt: lastLoggedAt,
-      ),
-    'weight' => MetricTileData(
-        metricType: type,
-        label: 'Weight',
-        icon: Icons.monitor_weight_rounded,
-        categoryColor: AppColors.categoryBody.toARGB32(),
-        value:
-            isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}kg' : null,
-        lastValue: lastValue,
-        lastLoggedAt: lastLoggedAt,
-      ),
-    'steps' => MetricTileData(
-        metricType: type,
-        label: 'Steps',
-        icon: Icons.directions_walk_rounded,
-        categoryColor: AppColors.categoryActivity.toARGB32(),
-        value: isLit && raw != null
-            ? formatSteps((raw as num).toInt())
-            : null,
-        lastValue: lastValue,
-        lastLoggedAt: lastLoggedAt,
-      ),
-    'run' => MetricTileData(
-        metricType: type,
-        label: 'Run',
-        icon: Icons.directions_run_rounded,
-        categoryColor: AppColors.categoryActivity.toARGB32(),
-        value:
-            isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}km' : null,
-        lastValue: lastValue,
-        lastLoggedAt: lastLoggedAt,
-      ),
-    'meal' => MetricTileData(
-        metricType: type,
-        label: 'Calories',
-        icon: Icons.restaurant_rounded,
-        categoryColor: AppColors.categoryNutrition.toARGB32(),
-        value: isLit
-            ? '${(raw as num?)?.toStringAsFixed(0) ?? '—'} kcal'
-            : null,
-        lastValue: lastValue,
-        lastLoggedAt: lastLoggedAt,
-      ),
-    'supplement' => MetricTileData(
-        metricType: type,
-        label: 'Supplements',
-        icon: Icons.medication_rounded,
-        categoryColor: AppColors.categoryVitals.toARGB32(),
-        value: isLit && raw != null
-            ? '${(raw as num).toInt()} taken'
-            : null,
-        lastValue: lastValue,
-        lastLoggedAt: lastLoggedAt,
-      ),
-    'symptom' => MetricTileData(
-        metricType: type,
-        label: 'Symptom',
-        icon: Icons.healing_rounded,
-        categoryColor: AppColors.categoryVitals.toARGB32(),
-        // 'symptom_severity' holds the formatted severity string; 'symptom' is the log type key.
-        value: isLit ? (summary.latestValues['symptom_severity'] as String?) : null,
-        lastValue: lastValue,
-        lastLoggedAt: lastLoggedAt,
-      ),
-    'heart_rate' => MetricTileData(
-        metricType: type,
-        label: 'Heart Rate',
-        icon: Icons.favorite_rounded,
-        categoryColor: AppColors.categoryHeart.toARGB32(),
-        value:
-            isLit ? '${(raw as num?)?.toInt() ?? '—'} bpm' : null,
-        lastValue: lastValue,
-        lastLoggedAt: lastLoggedAt,
-      ),
-    _ => MetricTileData(
-        metricType: type,
-        label: type,
-        icon: Icons.bar_chart_rounded,
-        categoryColor: AppColors.categoryVitals.toARGB32(),
-        lastValue: lastValue,
-        lastLoggedAt: lastLoggedAt,
-      ),
-  };
-}
-
-/// Extracts the formatted last-ever value and its timestamp for [type] from
-/// the [latest] map returned by latestLogValuesProvider.
-///
-/// The /api/v1/metrics/latest endpoint returns a uniform shape per metric:
-///   { "value": 87.3, "unit": "kg", "date": "2026-03-22" }
-(String?, DateTime?) _extractLastLogged(
-  String type,
-  Map<String, dynamic> latest,
-) {
-  final raw = latest[type];
-  if (raw is! Map<String, dynamic>) return (null, null);
-  final entry = raw;
-
-  // Parse the date (YYYY-MM-DD format from the server).
-  // Construct as local midnight so relative-time comparisons are timezone-safe.
-  DateTime? loggedAt;
-  final dateStr = entry['date'] as String?;
-  if (dateStr != null) {
-    try {
-      final parsed = DateTime.parse(dateStr);
-      loggedAt = DateTime(parsed.year, parsed.month, parsed.day);
-    } catch (_) {
-      loggedAt = null;
-    }
-  }
-
-  // Format value per type using the raw numeric value.
-  final num? v = entry['value'] as num?;
-  if (v == null) return (null, loggedAt);
-
-  String? lastValue;
-  try {
-    lastValue = switch (type) {
-      'weight'                                   => '${v.toStringAsFixed(1)}kg',
-      'steps'                                    => formatSteps(v.toInt()),
-      'sleep'                                    => formatSleepMinutes(v.toDouble()),
-      'water'                                    => '${v.toStringAsFixed(0)}ml',
-      'run'                                      => '${(v / 1000).toStringAsFixed(1)}km',
-      'meal'                                     => '${v.toStringAsFixed(0)} kcal',
-      'supplement'                               => '${v.toInt()} taken',
-      'heart_rate'                               => '${v.toInt()} bpm',
-      'mood' || 'energy' || 'stress'             => '${v.toStringAsFixed(1)}/10',
-      'symptom'                                  => entry['unit'] as String? ?? v.toStringAsFixed(0),
-      _                                          => v.toString(),
-    };
-  } catch (_) {
-    lastValue = null;
-  }
-
-  return (lastValue, loggedAt);
-}
-
 // ── _DailyGoalsSection ────────────────────────────────────────────────────────
 
 /// Watches [dailyGoalsProvider] and renders [ZDailyGoalsCard] with real data.
@@ -852,93 +514,7 @@ class _GoalsSkeleton extends StatelessWidget {
   }
 }
 
-// ── _MetricGridSkeleton ───────────────────────────────────────────────────────
 
-/// Loading placeholder for the metric grid — two rows of three rounded rects.
-class _MetricGridSkeleton extends StatelessWidget {
-  const _MetricGridSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Section header placeholder
-        const Padding(
-          padding: EdgeInsets.only(bottom: AppDimens.spaceSm),
-          child: ZLoadingSkeleton(width: 80, height: 12),
-        ),
-        // Row 1: 3 tiles
-        for (int row = 0; row < 2; row++) ...[
-          Row(
-            children: [
-              for (int col = 0; col < 3; col++) ...[
-                const Expanded(
-                  child: ZLoadingSkeleton(
-                    width: double.infinity,
-                    height: 56,
-                    borderRadius: AppDimens.shapeSm,
-                  ),
-                ),
-                if (col < 2) const SizedBox(width: AppDimens.spaceXs),
-              ],
-            ],
-          ),
-          if (row < 1) const SizedBox(height: AppDimens.spaceXs),
-        ],
-      ],
-    );
-  }
-}
-
-// ── _MetricGridError ─────────────────────────────────────────────────────────
-
-/// Compact error state shown when the metric grid fails to load.
-class _MetricGridError extends StatelessWidget {
-  const _MetricGridError({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline_rounded,
-            size: AppDimens.iconSm,
-            color: colors.textTertiary,
-          ),
-          const SizedBox(width: AppDimens.spaceXs),
-          Text(
-            "Couldn't load metrics",
-            style: AppTextStyles.bodySmall.copyWith(
-              color: colors.textTertiary,
-            ),
-          ),
-          const SizedBox(width: AppDimens.spaceSm),
-          GestureDetector(
-            onTap: onRetry,
-            child: Semantics(
-              button: true,
-              label: 'Retry loading metrics',
-              child: Text(
-                'Retry',
-                style: AppTextStyles.labelSmall.copyWith(
-                  color: colors.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ── _BuildingInsightsNote ─────────────────────────────────────────────────────
 
@@ -1015,46 +591,3 @@ class _HealthScoreDeltaChip extends StatelessWidget {
   }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-/// Returns a time-of-day greeting string, optionally personalized with [name].
-///
-/// When [name] is provided and non-empty, returns e.g. "Good morning, Alex".
-/// Falls back to the bare greeting when [name] is null or empty.
-String _timeOfDayGreeting([String? name]) {
-  final hour = DateTime.now().hour;
-  String base;
-  if (hour < 12) {
-    base = 'Good morning';
-  } else if (hour < 17) {
-    base = 'Good afternoon';
-  } else if (hour < 21) {
-    base = 'Good evening';
-  } else {
-    base = 'Good night';
-  }
-  if (name != null && name.isNotEmpty) return '$base, $name';
-  return base;
-}
-
-/// Returns a contextual subtitle for the greeting row, or null if none.
-///
-/// Priority order:
-///   1. Sleep ≥ 180 min → "Sleep last night: Xh Ym"
-///   2. Sleep < 180 min → skip sleep, show encouraging line
-///   3. No sleep → Day 1: "Welcome to Zuralog", Days 2–6: "You're building
-///      something real.", Day 7+: null (greeting alone suffices).
-String? _greetingSubtitle(int dataDays, TodayLogSummary summary) {
-  // Check for sleep data.
-  final sleepMinutes = summary.latestValues['sleep'] as num?;
-  if (sleepMinutes != null && sleepMinutes.toDouble() >= 180) {
-    return 'Sleep last night: ${formatSleepMinutes(sleepMinutes.toDouble())}';
-  }
-
-  // No valid sleep — contextual fallback based on data maturity.
-  if (dataDays == 0) return 'Welcome to Zuralog';
-  if (dataDays < kMinDataDaysForMaturity) {
-    return "You're building something real.";
-  }
-  return null; // Day 7+ with no sleep — greeting alone is sufficient.
-}
