@@ -136,6 +136,7 @@ class ParsedFoodItem(BaseModel):
     protein_g: float
     carbs_g: float
     fat_g: float
+    confidence: float = Field(default=0.5, ge=0.0, le=1.0)
 
     @field_validator("food_name")
     @classmethod
@@ -162,8 +163,63 @@ class ParsedFoodItem(BaseModel):
     def clamp_macros(cls, v: float) -> float:
         return max(0.0, min(999.0, round(v, 1)))
 
+    @field_validator("confidence")
+    @classmethod
+    def clamp_confidence(cls, v: float) -> float:
+        return max(0.0, min(1.0, round(v, 2)))
+
 
 class MealParseResponse(BaseModel):
     """Response from the AI meal parser."""
 
     foods: list[ParsedFoodItem]
+
+
+# ---------------------------------------------------------------------------
+# Food Search schemas (Phase 2D)
+# ---------------------------------------------------------------------------
+
+
+class FoodSearchResult(BaseModel):
+    """A single food item from the search cache or AI estimation."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    brand: str | None = None
+    serving_size: float
+    serving_unit: str
+    calories_per_serving: float
+    protein_per_serving: float
+    carbs_per_serving: float
+    fat_per_serving: float
+    source: str = "cached"
+
+
+class FoodSearchResponse(BaseModel):
+    """Response from the food search endpoint."""
+
+    foods: list[FoodSearchResult]
+
+
+class CorrectionRequest(BaseModel):
+    """Request body for submitting a food correction."""
+
+    food_name: str = Field(..., min_length=1, max_length=200)
+    original_calories: float = Field(..., ge=0)
+    corrected_calories: float = Field(..., ge=0)
+    original_protein_g: float = Field(..., ge=0)
+    corrected_protein_g: float = Field(..., ge=0)
+    original_carbs_g: float = Field(..., ge=0)
+    corrected_carbs_g: float = Field(..., ge=0)
+    original_fat_g: float = Field(..., ge=0)
+    corrected_fat_g: float = Field(..., ge=0)
+
+    @field_validator("food_name")
+    @classmethod
+    def strip_food_name(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("food_name must not be empty")
+        return v
