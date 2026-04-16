@@ -12,15 +12,19 @@ Endpoints:
 All endpoints are auth-guarded; users can only access their own data.
 """
 
+import base64
 import json
 import logging
+import re
 import uuid
 from datetime import date, datetime, time, timezone
 
+import httpx
 import sentry_sdk
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
 from openai import APIError
 from sqlalchemy import select, text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 
@@ -39,6 +43,7 @@ from app.api.v1.nutrition_schemas import (
 from app.config import settings
 from app.database import get_db
 from app.limiter import limiter
+from app.models.food_cache import FoodCache
 from app.models.meal import Meal
 from app.models.meal_food import MealFood
 from app.models.nutrition_daily_summary import NutritionDailySummary
@@ -71,6 +76,34 @@ Rules:
 7. Do not add foods that are not mentioned in the description.
 8. Return between 1 and 50 food items.
 9. No text outside the JSON object. No markdown fences. No explanation.\
+"""
+
+_IMAGE_SCAN_SYSTEM_PROMPT = """\
+You are a nutrition data extraction assistant for a health tracking app.
+
+Your job: analyze a food image and extract nutritional information.
+
+The image may contain:
+- A plate of food (identify each food item and estimate nutrition)
+- A nutrition facts label (read the exact values from the label)
+- A food product (identify the product and estimate nutrition)
+
+Rules:
+1. Return ONLY a JSON object with a single key "foods" containing an array.
+2. Each food item must have exactly these fields:
+   - "food_name": string (clear, common name)
+   - "portion_amount": number (numeric portion size)
+   - "portion_unit": string (one of: g, ml, piece, slice, cup, tbsp, tsp, serving, oz, bowl)
+   - "calories": number (estimated calories for this portion)
+   - "protein_g": number (estimated protein in grams)
+   - "carbs_g": number (estimated carbohydrates in grams)
+   - "fat_g": number (estimated fat in grams)
+   - "confidence": number (0.0 to 1.0)
+3. For nutrition labels: read exact values. Set confidence to 0.95.
+4. For food plates: estimate portions visually. Use 0.5-0.8 confidence.
+5. Separate compound items into individual food entries.
+6. Return between 1 and 50 food items.
+7. No text outside the JSON object. No markdown fences. No explanation.\
 """
 
 router = APIRouter(prefix="/nutrition", tags=["nutrition"])
@@ -567,3 +600,271 @@ async def parse_meal_description(
         )
 
     return MealParseResponse(foods=validated_foods[:50])
+
+
+# ---------------------------------------------------------------------------
+# AI Image Scan (Phase 3C)
+# ---------------------------------------------------------------------------
+
+
+@limiter.limit("10/minute")
+@router.post("/meals/scan-image", response_model=MealParseResponse)
+async def scan_food_image(
+    request: Request,
+    file: UploadFile,
+    user_id: str = Depends(get_authenticated_user_id),
+) -> MealParseResponse:
+    """Scan a food image and return structured food items with nutrition estimates.
+
+    Accepts JPEG or PNG. Auto-detects food plates vs nutrition labels.
+    Rate limited to 10/minute (vision calls are expensive).
+    """
+    # Validate content type
+    allowed_types = {"image/jpeg", "image/png", "image/jpg"}
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only JPEG and PNG images are accepted.",
+        )
+
+    # Read and validate size
+    file_bytes = await file.read()
+    max_size = 10 * 1024 * 1024  # 10MB
+    if len(file_bytes) > max_size:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Image must be smaller than 10MB.",
+        )
+
+    if len(file_bytes) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Empty file uploaded.",
+        )
+
+    # Convert to base64
+    b64_image = base64.b64encode(file_bytes).decode("utf-8")
+    mime_type = file.content_type or "image/jpeg"
+
+    # Build vision message
+    llm = LLMClient(model=settings.openrouter_vision_model)
+    messages = [
+        {"role": "system", "content": _IMAGE_SCAN_SYSTEM_PROMPT},
+        {"role": "user", "content": [
+            {"type": "text", "text": "Analyze this food image and extract nutritional information."},
+            {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{b64_image}"}},
+        ]},
+    ]
+
+    try:
+        response = await llm.chat(
+            messages=messages,
+            temperature=0.3,
+            max_tokens=2048,
+        )
+    except APIError as e:
+        logger.error("Image scan LLM call failed: %s", e)
+        sentry_sdk.set_tag("ai.error_type", "image_scan_failure")
+        sentry_sdk.capture_exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="The AI vision service is temporarily unavailable. Try describing the food instead.",
+        )
+
+    # Parse response — same pattern as parse_meal_description
+    raw_content = (response.choices[0].message.content or "").strip()
+
+    if raw_content.startswith("```"):
+        raw_content = raw_content.split("\n", 1)[-1]
+        raw_content = raw_content.rsplit("```", 1)[0].strip()
+
+    try:
+        parsed = json.loads(raw_content)
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.warning("Image scan: malformed JSON — %s. Raw: %.300s", e, raw_content)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="The AI could not process this image. Try a clearer photo or describe the food instead.",
+        )
+
+    if not isinstance(parsed, dict) or "foods" not in parsed:
+        logger.warning("Image scan: missing 'foods' key. Raw: %.300s", raw_content)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="The AI could not identify food in this image. Try a different angle or describe the food instead.",
+        )
+
+    raw_foods = parsed["foods"]
+    if not isinstance(raw_foods, list) or len(raw_foods) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="The AI could not identify any food items. Try a clearer photo.",
+        )
+
+    validated_foods: list[ParsedFoodItem] = []
+    for i, raw_food in enumerate(raw_foods):
+        try:
+            food = ParsedFoodItem.model_validate(raw_food)
+            validated_foods.append(food)
+        except Exception as e:
+            logger.warning("Image scan: skipping invalid food at index %d — %s", i, e)
+
+    if not validated_foods:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="The AI could not extract valid nutrition data. Try describing the food instead.",
+        )
+
+    return MealParseResponse(foods=validated_foods[:50])
+
+
+# ---------------------------------------------------------------------------
+# Barcode Lookup (Phase 3C)
+# ---------------------------------------------------------------------------
+
+
+@limiter.limit("30/minute")
+@router.get("/foods/barcode/{code}")
+async def lookup_barcode(
+    request: Request,
+    code: str,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Look up a food by barcode via Open Food Facts, with caching.
+
+    Returns 404 if the product is not found.
+    """
+    # Validate barcode format
+    code = code.strip()
+    if not code.isdigit() or len(code) < 8 or len(code) > 14:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid barcode. Must be 8-14 digits.",
+        )
+
+    external_id = f"off:{code}"
+
+    # Check cache first
+    result = await db.execute(
+        select(FoodCache).where(FoodCache.external_id == external_id)
+    )
+    cached = result.scalar_one_or_none()
+
+    if cached:
+        return {"food": {
+            "id": str(cached.id),
+            "name": cached.name,
+            "brand": cached.brand,
+            "serving_size": cached.serving_size,
+            "serving_unit": cached.serving_unit,
+            "calories_per_serving": cached.calories_per_serving,
+            "protein_per_serving": cached.protein_per_serving,
+            "carbs_per_serving": cached.carbs_per_serving,
+            "fat_per_serving": cached.fat_per_serving,
+            "source": "openfoodfacts",
+        }}
+
+    # Call Open Food Facts
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            off_response = await client.get(
+                f"https://world.openfoodfacts.org/api/v2/product/{code}",
+                params={"fields": "product_name,brands,serving_size,nutriments"},
+            )
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="The barcode lookup service timed out. Please try again.",
+        )
+
+    if off_response.status_code != 200:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Product not found. Try taking a photo of the food instead.",
+        )
+
+    off_data = off_response.json()
+    if off_data.get("status") != 1:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Product not found. Try taking a photo of the food instead.",
+        )
+
+    product = off_data.get("product", {})
+    nutriments = product.get("nutriments", {})
+
+    product_name = product.get("product_name") or "Unknown product"
+    brand = product.get("brands") or None
+
+    # Parse serving size — default to 100g
+    serving_size = 100.0
+    serving_unit = "g"
+    raw_serving = product.get("serving_size", "")
+    if raw_serving:
+        match = re.match(r"([\d.]+)\s*(\w+)?", str(raw_serving))
+        if match:
+            try:
+                serving_size = float(match.group(1))
+            except ValueError:
+                pass
+            if match.group(2):
+                serving_unit = match.group(2).lower()
+
+    # Extract nutrition — prefer per-serving, fall back to per-100g
+    cal = nutriments.get("energy-kcal_serving") or nutriments.get("energy-kcal_100g") or 0
+    protein = nutriments.get("proteins_serving") or nutriments.get("proteins_100g") or 0
+    carbs = nutriments.get("carbohydrates_serving") or nutriments.get("carbohydrates_100g") or 0
+    fat = nutriments.get("fat_serving") or nutriments.get("fat_100g") or 0
+
+    # Cache the result
+    stmt = pg_insert(FoodCache).values(
+        id=uuid.uuid4(),
+        external_id=external_id,
+        name=product_name,
+        brand=brand,
+        serving_size=round(float(serving_size), 2),
+        serving_unit=serving_unit,
+        calories_per_serving=round(float(cal), 2),
+        protein_per_serving=round(float(protein), 2),
+        carbs_per_serving=round(float(carbs), 2),
+        fat_per_serving=round(float(fat), 2),
+        metadata_={"source": "openfoodfacts", "barcode": code},
+        fetched_at=datetime.now(timezone.utc),
+    ).on_conflict_do_update(
+        index_elements=["external_id"],
+        set_={
+            "name": product_name,
+            "brand": brand,
+            "serving_size": round(float(serving_size), 2),
+            "serving_unit": serving_unit,
+            "calories_per_serving": round(float(cal), 2),
+            "protein_per_serving": round(float(protein), 2),
+            "carbs_per_serving": round(float(carbs), 2),
+            "fat_per_serving": round(float(fat), 2),
+            "metadata": {"source": "openfoodfacts", "barcode": code},
+            "fetched_at": datetime.now(timezone.utc),
+        },
+    )
+    await db.execute(stmt)
+    await db.commit()
+
+    # Fetch the cached entry to get the actual ID
+    result = await db.execute(
+        select(FoodCache).where(FoodCache.external_id == external_id)
+    )
+    cached = result.scalar_one_or_none()
+    food_id = str(cached.id) if cached else ""
+
+    return {"food": {
+        "id": food_id,
+        "name": product_name,
+        "brand": brand,
+        "serving_size": round(float(serving_size), 2),
+        "serving_unit": serving_unit,
+        "calories_per_serving": round(float(cal), 2),
+        "protein_per_serving": round(float(protein), 2),
+        "carbs_per_serving": round(float(carbs), 2),
+        "fat_per_serving": round(float(fat), 2),
+        "source": "openfoodfacts",
+    }}

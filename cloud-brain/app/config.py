@@ -92,6 +92,7 @@ class Settings(BaseSettings):
     # Separate from openrouter_model (Kimi K2.5) which is the Coach tab model.
     openrouter_title_model: str = "qwen/qwen3.5-flash-02-23"
     openrouter_fallback_model: str = "qwen/qwen3.5-flash-02-23"
+    openrouter_vision_model: str = "google/gemini-2.0-flash-001"
     openrouter_classifier_model: str = "qwen/qwen3.5-flash-02-23"
     google_web_client_id: str = ""
     google_web_client_secret: SecretStr = SecretStr("")

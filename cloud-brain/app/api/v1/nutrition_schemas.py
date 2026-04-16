@@ -223,3 +223,9 @@ class CorrectionRequest(BaseModel):
         if not v:
             raise ValueError("food_name must not be empty")
         return v
+
+
+class BarcodeLookupResponse(BaseModel):
+    """Response from the barcode lookup endpoint."""
+
+    food: FoodSearchResult
