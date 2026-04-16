@@ -22,6 +22,7 @@ import 'package:zuralog/features/nutrition/providers/nutrition_providers.dart';
 import 'package:zuralog/shared/widgets/buttons/z_button.dart';
 import 'package:zuralog/shared/widgets/feedback/z_alert_banner.dart';
 import 'package:zuralog/shared/widgets/feedback/z_toast.dart';
+import 'package:zuralog/shared/widgets/inputs/app_text_field.dart';
 import 'package:zuralog/shared/widgets/inputs/z_chip.dart';
 import 'package:zuralog/shared/widgets/inputs/z_search_bar.dart';
 import 'package:zuralog/shared/widgets/inputs/z_segmented_control.dart';
@@ -79,6 +80,9 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
   /// Whether the save operation is currently running.
   bool _isSaving = false;
 
+  /// Whether the user is in manual entry mode (instead of AI description).
+  bool _isManualMode = false;
+
   /// Error message from the most recent parse attempt, if any.
   String? _parseError;
 
@@ -87,6 +91,14 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
 
   /// Cooking method overrides keyed by index in [_mealFoods].
   final Map<int, String> _cookingMethods = {};
+
+  // ── Manual entry controllers ──────────────────────────────────────────────
+
+  final _manualName = TextEditingController();
+  final _manualCalories = TextEditingController();
+  final _manualProtein = TextEditingController();
+  final _manualCarbs = TextEditingController();
+  final _manualFat = TextEditingController();
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -101,6 +113,11 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
     _describeController.dispose();
     _searchController.dispose();
     _searchDebounce?.cancel();
+    _manualName.dispose();
+    _manualCalories.dispose();
+    _manualProtein.dispose();
+    _manualCarbs.dispose();
+    _manualFat.dispose();
     super.dispose();
   }
 
@@ -200,6 +217,35 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
   }
 
   // ── Actions ────────────────────────────────────────────────────────────────
+
+  /// Adds a food item from the manual entry form fields.
+  void _addManualFood() {
+    final name = _manualName.text.trim();
+    final cal = double.tryParse(_manualCalories.text) ?? 0;
+    final protein = double.tryParse(_manualProtein.text) ?? 0;
+    final carbs = double.tryParse(_manualCarbs.text) ?? 0;
+    final fat = double.tryParse(_manualFat.text) ?? 0;
+
+    if (name.isEmpty) return; // Name is required.
+
+    setState(() {
+      _mealFoods.add(MealFood(
+        name: name,
+        portionGrams: 1,
+        portionUnit: 'serving',
+        caloriesKcal: cal.round(),
+        proteinG: protein,
+        carbsG: carbs,
+        fatG: fat,
+      ));
+      // Clear the fields for the next food.
+      _manualName.clear();
+      _manualCalories.clear();
+      _manualProtein.clear();
+      _manualCarbs.clear();
+      _manualFat.clear();
+    });
+  }
 
   /// Parses the natural-language meal description via the AI endpoint.
   Future<void> _handleParse() async {
@@ -413,38 +459,108 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
 
                   const SizedBox(height: AppDimens.spaceLg),
 
-                  // ── Describe section ────────────────────────────────────
-                  const SectionHeader(title: 'Describe what you ate'),
-                  const SizedBox(height: AppDimens.spaceSm),
-                  ZTextArea(
-                    controller: _describeController,
-                    placeholder:
-                        'e.g. grilled chicken with rice and a side salad',
-                    minLines: 3,
-                    maxLines: 4,
-                  ),
-
-                  const SizedBox(height: AppDimens.spaceSm),
-
-                  ZButton(
-                    label: 'Parse with AI',
-                    icon: Icons.auto_awesome_outlined,
-                    variant: ZButtonVariant.secondary,
-                    size: ZButtonSize.medium,
-                    isLoading: _isParsing,
-                    onPressed: _isParsing ? null : _handleParse,
-                  ),
-
-                  // Parse error banner.
-                  if (_parseError != null) ...[
+                  // ── Describe / Manual entry section ─────────────────────
+                  if (_isManualMode) ...[
+                    const SectionHeader(title: 'Enter nutrition manually'),
                     const SizedBox(height: AppDimens.spaceSm),
-                    ZAlertBanner(
-                      variant: ZAlertVariant.error,
-                      message: _parseError!,
-                      onDismiss: () =>
-                          setState(() => _parseError = null),
+                    AppTextField(
+                      controller: _manualName,
+                      hintText: 'Food name (e.g. Chicken breast)',
                     ),
+                    const SizedBox(height: AppDimens.spaceSm),
+                    AppTextField(
+                      controller: _manualCalories,
+                      hintText: 'Calories (kcal)',
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: AppDimens.spaceSm),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AppTextField(
+                            controller: _manualProtein,
+                            hintText: 'Protein (g)',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: AppDimens.spaceSm),
+                        Expanded(
+                          child: AppTextField(
+                            controller: _manualCarbs,
+                            hintText: 'Carbs (g)',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: AppDimens.spaceSm),
+                        Expanded(
+                          child: AppTextField(
+                            controller: _manualFat,
+                            hintText: 'Fat (g)',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppDimens.spaceSm),
+                    ZButton(
+                      label: 'Add food',
+                      variant: ZButtonVariant.secondary,
+                      size: ZButtonSize.medium,
+                      onPressed: _addManualFood,
+                    ),
+                  ] else ...[
+                    const SectionHeader(title: 'Describe what you ate'),
+                    const SizedBox(height: AppDimens.spaceSm),
+                    ZTextArea(
+                      controller: _describeController,
+                      placeholder:
+                          'e.g. grilled chicken with rice and a side salad',
+                      minLines: 3,
+                      maxLines: 4,
+                    ),
+
+                    const SizedBox(height: AppDimens.spaceSm),
+
+                    ZButton(
+                      label: 'Parse with AI',
+                      icon: Icons.auto_awesome_outlined,
+                      variant: ZButtonVariant.secondary,
+                      size: ZButtonSize.medium,
+                      isLoading: _isParsing,
+                      onPressed: _isParsing ? null : _handleParse,
+                    ),
+
+                    // Parse error banner.
+                    if (_parseError != null) ...[
+                      const SizedBox(height: AppDimens.spaceSm),
+                      ZAlertBanner(
+                        variant: ZAlertVariant.error,
+                        message: _parseError!,
+                        onDismiss: () =>
+                            setState(() => _parseError = null),
+                      ),
+                    ],
                   ],
+
+                  // ── Manual / AI mode toggle ────────────────────────────
+                  GestureDetector(
+                    onTap: () =>
+                        setState(() => _isManualMode = !_isManualMode),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppDimens.spaceSm,
+                      ),
+                      child: Text(
+                        _isManualMode
+                            ? 'Switch to AI description'
+                            : 'Enter nutrition manually',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.categoryNutrition,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
 
                   const SizedBox(height: AppDimens.spaceLg),
 
