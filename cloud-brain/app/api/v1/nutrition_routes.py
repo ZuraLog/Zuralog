@@ -12,25 +12,61 @@ Endpoints:
 All endpoints are auth-guarded; users can only access their own data.
 """
 
+import json
 import logging
 import uuid
 from datetime import date, datetime, time, timezone
 
+import sentry_sdk
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from openai import APIError
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 
+from app.agent.llm_client import LLMClient
 from app.api.deps import get_authenticated_user_id
-from app.api.v1.nutrition_schemas import MealCreateRequest, MealUpdateRequest
+from app.api.v1.nutrition_schemas import (
+    MealCreateRequest,
+    MealParseRequest,
+    MealParseResponse,
+    MealUpdateRequest,
+    ParsedFoodItem,
+)
+from app.config import settings
 from app.database import get_db
 from app.limiter import limiter
 from app.models.meal import Meal
 from app.models.meal_food import MealFood
 from app.models.nutrition_daily_summary import NutritionDailySummary
 from app.services.nutrition_service import recompute_nutrition_summary
+from app.utils.sanitize import sanitize_for_llm
 
 logger = logging.getLogger(__name__)
+
+_MEAL_PARSE_SYSTEM_PROMPT = """\
+You are a nutrition data extraction assistant for a health tracking app.
+
+Your job: take a natural-language meal description and break it into individual food items with estimated nutritional values.
+
+Rules:
+1. Return ONLY a JSON object with a single key "foods" containing an array.
+2. Each food item must have exactly these fields:
+   - "food_name": string (clear, common name)
+   - "portion_amount": number (numeric portion size)
+   - "portion_unit": string (one of: g, ml, piece, slice, cup, tbsp, tsp, serving, oz, bowl)
+   - "calories": number (estimated calories for this portion)
+   - "protein_g": number (estimated protein in grams)
+   - "carbs_g": number (estimated carbohydrates in grams)
+   - "fat_g": number (estimated fat in grams)
+3. Separate compound items. "Toast with butter" becomes two items: toast and butter.
+4. Use common-sense portion sizes when not specified.
+5. Nutritional estimates should be reasonable approximations. They do not need to be exact.
+6. If the description is ambiguous, make a reasonable assumption. Never ask for clarification.
+7. Do not add foods that are not mentioned in the description.
+8. Return between 1 and 50 food items.
+9. No text outside the JSON object. No markdown fences. No explanation.\
+"""
 
 router = APIRouter(prefix="/nutrition", tags=["nutrition"])
 
@@ -370,3 +406,100 @@ async def get_recent_foods(
     ]
 
     return {"foods": foods}
+
+
+# ---------------------------------------------------------------------------
+# AI Meal Parse (Phase 2C)
+# ---------------------------------------------------------------------------
+
+
+@limiter.limit("10/minute")
+@router.post("/meals/parse", response_model=MealParseResponse)
+async def parse_meal_description(
+    request: Request,
+    body: MealParseRequest,
+    user_id: str = Depends(get_authenticated_user_id),
+) -> MealParseResponse:
+    """Parse a natural-language meal description into structured food items.
+
+    Uses Qwen 3.5 Flash via OpenRouter. Stateless — nothing is saved.
+    Rate limited to 10/minute (AI calls are expensive).
+    """
+    description = sanitize_for_llm(body.description)
+    if not description.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Could not process the meal description.",
+        )
+
+    # Build LLM client for the insight model (cheaper, faster).
+    llm = LLMClient(model=settings.openrouter_insight_model)
+
+    messages = [
+        {"role": "system", "content": _MEAL_PARSE_SYSTEM_PROMPT},
+        {"role": "user", "content": description},
+    ]
+
+    try:
+        response = await llm.chat(
+            messages=messages,
+            temperature=0.3,
+            max_tokens=2048,
+        )
+    except APIError as e:
+        logger.error("Meal parse LLM call failed: %s", e)
+        sentry_sdk.set_tag("ai.error_type", "meal_parse_failure")
+        sentry_sdk.capture_exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="The AI service is temporarily unavailable. Please try again in a moment.",
+        )
+
+    raw_content = (response.choices[0].message.content or "").strip()
+
+    # Strip markdown code fences if the model wraps its output.
+    if raw_content.startswith("```"):
+        raw_content = raw_content.split("\n", 1)[-1]
+        raw_content = raw_content.rsplit("```", 1)[0].strip()
+
+    # Parse JSON.
+    try:
+        parsed = json.loads(raw_content)
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.warning("Meal parse: malformed JSON — %s. Raw: %.300s", e, raw_content)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="The AI returned an unexpected format. Please try rephrasing your meal description.",
+        )
+
+    if not isinstance(parsed, dict) or "foods" not in parsed:
+        logger.warning("Meal parse: missing 'foods' key. Raw: %.300s", raw_content)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="The AI returned an unexpected format. Please try rephrasing your meal description.",
+        )
+
+    raw_foods = parsed["foods"]
+    if not isinstance(raw_foods, list) or len(raw_foods) == 0:
+        logger.warning("Meal parse: empty foods list. Raw: %.300s", raw_content)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="The AI could not identify any food items. Please try a more specific description.",
+        )
+
+    # Validate each food through Pydantic, skipping invalid items.
+    validated_foods: list[ParsedFoodItem] = []
+    for i, raw_food in enumerate(raw_foods):
+        try:
+            food = ParsedFoodItem.model_validate(raw_food)
+            validated_foods.append(food)
+        except Exception as e:
+            logger.warning("Meal parse: skipping invalid food at index %d — %s", i, e)
+
+    if not validated_foods:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="The AI could not identify any valid food items. Please try rephrasing your meal description.",
+        )
+
+    return MealParseResponse(foods=validated_foods[:50])
