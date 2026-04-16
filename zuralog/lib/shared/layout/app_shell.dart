@@ -1,4 +1,4 @@
-/// Zuralog Edge Agent — App Shell (6-Tab Bottom Navigation Scaffold).
+/// Zuralog Edge Agent — App Shell (3-Tab Bottom Navigation Scaffold).
 library;
 
 import 'dart:ui';
@@ -111,7 +111,7 @@ class _NavTab {
 /// - Dark mode active tab: Sage tint (rgba(207,225,185,0.12)) pill, Sage text (#CFE1B9).
 /// - Light mode active tab: Deep Forest (#344E41) solid pill, Warm Cream (#E8EDE0) text.
 /// - Inactive tabs: Text Secondary (#9B9894 dark / #6B6864 light).
-/// - Icons 22px, labels Label Medium scaled to 11pt for 5-tab fit.
+/// - Icons 22px, labels Label Medium scaled to 11pt for 3-tab fit.
 /// - Bottom padding: safe area + 18px.
 class _FrostedNavigationBar extends StatefulWidget {
   const _FrostedNavigationBar({
@@ -138,16 +138,6 @@ class _FrostedNavigationBar extends StatefulWidget {
       activeIcon: Icons.chat_bubble_rounded,
       label: 'Coach',
     ),
-    _NavTab(
-      icon: Icons.track_changes_outlined,
-      activeIcon: Icons.track_changes_rounded,
-      label: 'Progress',
-    ),
-    _NavTab(
-      icon: Icons.trending_up_rounded,
-      activeIcon: Icons.trending_up_rounded,
-      label: 'Trends',
-    ),
   ];
 
   @override
@@ -165,7 +155,7 @@ class _FrostedNavigationBarState extends State<_FrostedNavigationBar>
       vsync: this,
       value: widget.currentIndex.toDouble(),
       lowerBound: -0.5,
-      upperBound: 4.5,
+      upperBound: 2.5,
     );
   }
 
