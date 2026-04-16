@@ -101,3 +101,69 @@ class MealUpdateRequest(BaseModel):
             msg = f"meal_type must be one of {sorted(VALID_MEAL_TYPES)}"
             raise ValueError(msg)
         return v
+
+
+# ---------------------------------------------------------------------------
+# AI Meal Parse schemas (Phase 2C)
+# ---------------------------------------------------------------------------
+
+
+class MealParseRequest(BaseModel):
+    """Request body for AI-powered meal parsing."""
+
+    description: str = Field(..., min_length=1, max_length=500)
+
+    @field_validator("description")
+    @classmethod
+    def strip_and_validate(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("description must not be empty")
+        return v
+
+
+class ParsedFoodItem(BaseModel):
+    """A single food item returned by the AI meal parser.
+
+    Uses defensive clamping rather than strict rejection since
+    we are validating LLM output, not user input.
+    """
+
+    food_name: str
+    portion_amount: float
+    portion_unit: str
+    calories: float
+    protein_g: float
+    carbs_g: float
+    fat_g: float
+
+    @field_validator("food_name")
+    @classmethod
+    def truncate_food_name(cls, v: str) -> str:
+        return v.strip()[:200]
+
+    @field_validator("portion_unit")
+    @classmethod
+    def truncate_portion_unit(cls, v: str) -> str:
+        return v.strip()[:20]
+
+    @field_validator("portion_amount")
+    @classmethod
+    def clamp_portion_amount(cls, v: float) -> float:
+        return max(0.01, min(9999.0, v))
+
+    @field_validator("calories")
+    @classmethod
+    def clamp_calories(cls, v: float) -> float:
+        return max(0.0, min(9999.0, round(v, 1)))
+
+    @field_validator("protein_g", "carbs_g", "fat_g")
+    @classmethod
+    def clamp_macros(cls, v: float) -> float:
+        return max(0.0, min(999.0, round(v, 1)))
+
+
+class MealParseResponse(BaseModel):
+    """Response from the AI meal parser."""
+
+    foods: list[ParsedFoodItem]
