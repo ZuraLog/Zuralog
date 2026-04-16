@@ -132,3 +132,24 @@ final recentFoodsProvider = FutureProvider<List<RecentFood>>((ref) async {
     return const [];
   }
 });
+
+// ── Nutrition Rules ──────────────────────────────────────────────────────────
+
+/// Async provider for the user's nutrition rules.
+///
+/// Rules give the AI persistent context about dietary preferences so it
+/// asks fewer clarifying questions when parsing meals. Each user may have
+/// up to 20 rules.
+///
+/// Invalidate with `ref.invalidate(nutritionRulesProvider)` after any
+/// create, update, or delete operation.
+final nutritionRulesProvider =
+    FutureProvider<List<NutritionRule>>((ref) async {
+  final repo = ref.read(nutritionRepositoryProvider);
+  try {
+    return await repo.getRules();
+  } catch (e, st) {
+    debugPrint('nutritionRulesProvider failed: $e\n$st');
+    return const [];
+  }
+});

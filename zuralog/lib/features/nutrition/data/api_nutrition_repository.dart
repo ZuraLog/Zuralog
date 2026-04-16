@@ -198,4 +198,38 @@ class ApiNutritionRepository implements NutritionRepositoryInterface {
       rethrow;
     }
   }
+
+  // ── Nutrition Rules ────────────────────────────────────────────────────────
+
+  @override
+  Future<List<NutritionRule>> getRules() async {
+    final response = await _api.get('/api/v1/nutrition/rules');
+    final rules = response.data['rules'] as List<dynamic>? ?? [];
+    return rules
+        .map((e) => NutritionRule.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<NutritionRule> createRule(String ruleText) async {
+    final response = await _api.post(
+      '/api/v1/nutrition/rules',
+      data: {'rule_text': ruleText},
+    );
+    return NutritionRule.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<NutritionRule> updateRule(String ruleId, String ruleText) async {
+    final response = await _api.put(
+      '/api/v1/nutrition/rules/$ruleId',
+      data: {'rule_text': ruleText},
+    );
+    return NutritionRule.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<void> deleteRule(String ruleId) async {
+    await _api.delete('/api/v1/nutrition/rules/$ruleId');
+  }
 }

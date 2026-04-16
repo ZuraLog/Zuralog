@@ -454,3 +454,44 @@ class RecentFood {
         fatG: fatG,
       );
 }
+
+// -- NutritionRule -------------------------------------------------------------
+
+/// A user-defined nutrition rule providing persistent AI context.
+///
+/// Rules let the user teach the AI about dietary preferences, allergies,
+/// portion habits, and other context so it asks fewer clarifying questions
+/// when parsing meals. Each user may have up to 20 rules.
+class NutritionRule {
+  /// Creates an immutable [NutritionRule].
+  const NutritionRule({
+    required this.id,
+    required this.ruleText,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  /// Unique identifier for this rule.
+  final String id;
+
+  /// The human-readable rule text (max 500 characters).
+  final String ruleText;
+
+  /// When the rule was first created.
+  final DateTime createdAt;
+
+  /// When the rule was last modified.
+  final DateTime updatedAt;
+
+  /// Deserialises a [NutritionRule] from a backend JSON map.
+  factory NutritionRule.fromJson(Map<String, dynamic> json) {
+    return NutritionRule(
+      id: json['id'] as String? ?? '',
+      ruleText: json['rule_text'] as String? ?? '',
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
+          DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? '') ??
+          DateTime.now(),
+    );
+  }
+}

@@ -79,6 +79,18 @@ abstract interface class NutritionRepositoryInterface {
 
   /// Look up a product by its barcode (UPC/EAN).
   Future<FoodSearchResult?> lookupBarcode(String code);
+
+  /// Returns all nutrition rules for the current user.
+  Future<List<NutritionRule>> getRules();
+
+  /// Creates a new nutrition rule with the given [ruleText].
+  Future<NutritionRule> createRule(String ruleText);
+
+  /// Updates an existing rule's text.
+  Future<NutritionRule> updateRule(String ruleId, String ruleText);
+
+  /// Deletes the rule matching [ruleId].
+  Future<void> deleteRule(String ruleId);
 }
 
 // -- MockNutritionRepository --------------------------------------------------
@@ -193,6 +205,22 @@ final class MockNutritionRepository implements NutritionRepositoryInterface {
   @override
   Future<FoodSearchResult?> lookupBarcode(String code) =>
       throw UnimplementedError('Mock does not support lookupBarcode');
+
+  @override
+  Future<List<NutritionRule>> getRules() =>
+      throw UnimplementedError('Mock does not support getRules');
+
+  @override
+  Future<NutritionRule> createRule(String ruleText) =>
+      throw UnimplementedError('Mock does not support createRule');
+
+  @override
+  Future<NutritionRule> updateRule(String ruleId, String ruleText) =>
+      throw UnimplementedError('Mock does not support updateRule');
+
+  @override
+  Future<void> deleteRule(String ruleId) =>
+      throw UnimplementedError('Mock does not support deleteRule');
 
   // -- Fixture Builder --------------------------------------------------------
 
