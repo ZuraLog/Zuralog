@@ -184,7 +184,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                   horizontal: AppDimens.spaceMd,
                 ),
                 child: NutritionPillarCard(
-                  onTap: () => context.pushNamed(RouteNames.mealLog),
+                  onTap: () => context.pushNamed(RouteNames.nutrition),
                   onAddMeal: () => context.pushNamed(RouteNames.mealLog),
                 ),
               ),
