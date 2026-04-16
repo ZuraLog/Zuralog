@@ -27,6 +27,9 @@ from sqlalchemy.sql import func
 from app.agent.llm_client import LLMClient
 from app.api.deps import get_authenticated_user_id
 from app.api.v1.nutrition_schemas import (
+    CorrectionRequest,
+    FoodSearchResponse,
+    FoodSearchResult,
     MealCreateRequest,
     MealParseRequest,
     MealParseResponse,
@@ -39,6 +42,7 @@ from app.limiter import limiter
 from app.models.meal import Meal
 from app.models.meal_food import MealFood
 from app.models.nutrition_daily_summary import NutritionDailySummary
+from app.services.food_search_service import record_correction, search_foods
 from app.services.nutrition_service import recompute_nutrition_summary
 from app.utils.sanitize import sanitize_for_llm
 
@@ -59,6 +63,7 @@ Rules:
    - "protein_g": number (estimated protein in grams)
    - "carbs_g": number (estimated carbohydrates in grams)
    - "fat_g": number (estimated fat in grams)
+   - "confidence": number (0.0 to 1.0 — how confident you are in this specific item's nutritional estimate. Use 0.8+ for well-known standard foods, 0.5-0.8 for reasonable guesses, below 0.5 for very uncertain items)
 3. Separate compound items. "Toast with butter" becomes two items: toast and butter.
 4. Use common-sense portion sizes when not specified.
 5. Nutritional estimates should be reasonable approximations. They do not need to be exact.
@@ -406,6 +411,65 @@ async def get_recent_foods(
     ]
 
     return {"foods": foods}
+
+
+@limiter.limit("30/minute")
+@router.get("/foods/search", response_model=FoodSearchResponse)
+async def search_food_cache(
+    request: Request,
+    q: str,
+    limit: int = 10,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> FoodSearchResponse:
+    """Search for foods by name. Checks the cache first, falls back to AI."""
+    if not q or not q.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Search query must not be empty.",
+        )
+    if len(q) > 200:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Search query must be 200 characters or fewer.",
+        )
+
+    foods = await search_foods(db, q, limit)
+    return FoodSearchResponse(
+        foods=[FoodSearchResult(**f) for f in foods]
+    )
+
+
+@limiter.limit("20/minute")
+@router.post("/foods/corrections", status_code=status.HTTP_201_CREATED)
+async def submit_food_correction(
+    request: Request,
+    body: CorrectionRequest,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Submit a correction when the user edits a food's nutrition values."""
+    try:
+        await record_correction(
+            db=db,
+            user_id=user_id,
+            food_name=body.food_name,
+            original_calories=body.original_calories,
+            corrected_calories=body.corrected_calories,
+            original_protein_g=body.original_protein_g,
+            corrected_protein_g=body.corrected_protein_g,
+            original_carbs_g=body.original_carbs_g,
+            corrected_carbs_g=body.corrected_carbs_g,
+            original_fat_g=body.original_fat_g,
+            corrected_fat_g=body.corrected_fat_g,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+    return {"status": "recorded"}
 
 
 # ---------------------------------------------------------------------------
