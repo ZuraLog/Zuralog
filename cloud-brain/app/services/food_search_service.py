@@ -1,10 +1,11 @@
 """
 Zuralog Cloud Brain — Food Search Service.
 
-Handles food search with a cache-first strategy backed by AI estimation
-for unknown foods. Also manages correction learning: when enough users
-correct the same food's nutrition values, the cache entry is updated
-with averaged corrections.
+Handles food search against the database (USDA-seeded data and previously
+cached foods). AI estimation utilities are provided for use by the
+Describe/Parse path — search itself is database-only. Also manages
+correction learning: when enough users correct the same food's nutrition
+values, the cache entry is updated with averaged corrections.
 """
 
 import json
@@ -251,11 +252,12 @@ async def search_foods(
     query: str,
     limit: int = 10,
 ) -> list[dict]:
-    """Search for foods using a cache-first strategy with AI fallback.
+    """Search for foods in the database using trigram similarity.
 
-    First checks the food_cache using PostgreSQL trigram similarity (pg_trgm).
-    If no close matches are found, asks the LLM to estimate nutrition values,
-    caches the result, and returns it.
+    Queries the food_cache table (USDA-seeded data and previously cached
+    foods) using PostgreSQL trigram similarity (pg_trgm). Returns only
+    database results — no AI fallback. AI estimation is handled
+    separately through the Describe/Parse path.
 
     Args:
         db: Active async database session.
@@ -264,6 +266,7 @@ async def search_foods(
 
     Returns:
         A list of dicts, each representing a food cache entry.
+        Returns an empty list if no matches are found.
     """
     normalized = _normalize_food_name(query)
     if not normalized:
@@ -288,25 +291,9 @@ async def search_foods(
         logger.debug("Cache hit for '%s': %d results", normalized, len(rows))
         return [dict(r) for r in rows]
 
-    # No cache hit — fall back to AI estimation.
-    logger.info("Cache miss for '%s', requesting AI estimation", normalized)
-    try:
-        estimated = await _estimate_food_nutrition(normalized)
-    except (APIError, ValueError) as exc:
-        logger.error("AI estimation failed for '%s': %s", normalized, exc)
-        sentry_sdk.capture_exception(exc)
-        return []
-
-    external_id = _make_external_id(normalized)
-
-    try:
-        cached = await _upsert_food_cache(db, external_id, estimated)
-    except Exception as exc:
-        logger.error("Failed to cache AI estimation for '%s': %s", normalized, exc)
-        sentry_sdk.capture_exception(exc)
-        return []
-
-    return [cached]
+    # No cache results — return empty. AI estimation only happens
+    # through the Describe/Parse path, not through search.
+    return []
 
 
 async def record_correction(
