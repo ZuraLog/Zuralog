@@ -54,6 +54,7 @@ from app.api.v1.journal_routes import router as journal_router
 from app.api.v1.memory_routes import router as memory_router
 from app.api.v1.metrics_routes import router as metrics_router
 from app.api.v1.notification_routes import router as notification_router
+from app.api.v1.nutrition_routes import router as nutrition_router
 from app.api.v1.oura_routes import router as oura_router
 from app.api.v1.oura_webhooks import webhook_router as oura_webhook_router
 from app.api.v1.polar_routes import router as polar_router
@@ -436,6 +437,7 @@ app.include_router(today_router, prefix="/api/v1")  # Today tab
 app.include_router(metrics_router, prefix="/api/v1")  # Metrics aggregations
 app.include_router(coach_router, prefix="/api/v1")  # Coach context endpoints
 app.include_router(supplements_router, prefix="/api/v1")  # Supplements list management
+app.include_router(nutrition_router, prefix="/api/v1")  # Phase 2B — nutrition meal CRUD
 app.include_router(export_router, prefix="/api/v1")  # User data export
 
 
