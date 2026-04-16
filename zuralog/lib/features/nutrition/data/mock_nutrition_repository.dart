@@ -32,6 +32,45 @@ abstract interface class NutritionRepositoryInterface {
 
   /// Deletes the meal matching [id]. No-op if the meal does not exist.
   Future<void> deleteMeal(String id);
+
+  /// Create a new meal with food items.
+  Future<Meal> createMeal({
+    required String mealType,
+    String? name,
+    required DateTime loggedAt,
+    required List<MealFood> foods,
+  });
+
+  /// Replace an existing meal entirely.
+  Future<Meal> updateMeal(
+    String id, {
+    required String mealType,
+    String? name,
+    required DateTime loggedAt,
+    required List<MealFood> foods,
+  });
+
+  /// Get the user's most recently logged foods.
+  Future<List<RecentFood>> getRecentFoods();
+
+  /// Search foods by name (cache-first, AI-fallback on backend).
+  Future<List<FoodSearchResult>> searchFoods(String query, {int limit = 10});
+
+  /// Parse a natural-language meal description into structured food items.
+  Future<List<ParsedFoodItem>> parseMealDescription(String description);
+
+  /// Submit a correction for a food's nutrition values.
+  Future<void> submitCorrection({
+    required String foodName,
+    required double originalCalories,
+    required double correctedCalories,
+    required double originalProteinG,
+    required double correctedProteinG,
+    required double originalCarbsG,
+    required double correctedCarbsG,
+    required double originalFatG,
+    required double correctedFatG,
+  });
 }
 
 // -- MockNutritionRepository --------------------------------------------------
@@ -92,6 +131,52 @@ final class MockNutritionRepository implements NutritionRepositoryInterface {
     await Future<void>.delayed(_writeDelay);
     // No-op: mock does not persist state.
   }
+
+  @override
+  Future<Meal> createMeal({
+    required String mealType,
+    String? name,
+    required DateTime loggedAt,
+    required List<MealFood> foods,
+  }) =>
+      throw UnimplementedError('Mock does not support createMeal');
+
+  @override
+  Future<Meal> updateMeal(
+    String id, {
+    required String mealType,
+    String? name,
+    required DateTime loggedAt,
+    required List<MealFood> foods,
+  }) =>
+      throw UnimplementedError('Mock does not support updateMeal');
+
+  @override
+  Future<List<RecentFood>> getRecentFoods() =>
+      throw UnimplementedError('Mock does not support getRecentFoods');
+
+  @override
+  Future<List<FoodSearchResult>> searchFoods(String query,
+          {int limit = 10}) =>
+      throw UnimplementedError('Mock does not support searchFoods');
+
+  @override
+  Future<List<ParsedFoodItem>> parseMealDescription(String description) =>
+      throw UnimplementedError('Mock does not support parseMealDescription');
+
+  @override
+  Future<void> submitCorrection({
+    required String foodName,
+    required double originalCalories,
+    required double correctedCalories,
+    required double originalProteinG,
+    required double correctedProteinG,
+    required double originalCarbsG,
+    required double correctedCarbsG,
+    required double originalFatG,
+    required double correctedFatG,
+  }) =>
+      throw UnimplementedError('Mock does not support submitCorrection');
 
   // -- Fixture Builder --------------------------------------------------------
 
