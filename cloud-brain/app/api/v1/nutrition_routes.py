@@ -38,6 +38,8 @@ from app.api.v1.nutrition_schemas import (
     MealParseRequest,
     MealParseResponse,
     MealUpdateRequest,
+    NutritionRuleCreate,
+    NutritionRuleUpdate,
     ParsedFoodItem,
 )
 from app.config import settings
@@ -46,6 +48,7 @@ from app.limiter import limiter
 from app.models.food_cache import FoodCache
 from app.models.meal import Meal
 from app.models.meal_food import MealFood
+from app.models.nutrition_rule import NutritionRule
 from app.models.nutrition_daily_summary import NutritionDailySummary
 from app.services.food_search_service import record_correction, search_foods
 from app.services.nutrition_service import recompute_nutrition_summary
@@ -503,6 +506,155 @@ async def submit_food_correction(
         )
 
     return {"status": "recorded"}
+
+
+# ---------------------------------------------------------------------------
+# Nutrition Rules CRUD (Phase 3D)
+# ---------------------------------------------------------------------------
+
+MAX_RULES_PER_USER = 20
+
+
+@limiter.limit("60/minute")
+@router.get("/rules")
+async def list_rules(
+    request: Request,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """List all nutrition rules for the authenticated user, oldest first."""
+    result = await db.execute(
+        select(NutritionRule)
+        .where(NutritionRule.user_id == user_id)
+        .order_by(NutritionRule.created_at.asc())
+    )
+    rules = result.scalars().all()
+
+    return {
+        "rules": [
+            {
+                "id": str(r.id),
+                "rule_text": r.rule_text,
+                "created_at": r.created_at.isoformat(),
+                "updated_at": r.updated_at.isoformat(),
+            }
+            for r in rules
+        ]
+    }
+
+
+@limiter.limit("20/minute")
+@router.post("/rules", status_code=status.HTTP_201_CREATED)
+async def create_rule(
+    request: Request,
+    body: NutritionRuleCreate,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Create a new nutrition rule. Each user may have up to 20 rules."""
+    # Enforce per-user cap.
+    count_result = await db.execute(
+        select(func.count())
+        .select_from(NutritionRule)
+        .where(NutritionRule.user_id == user_id)
+    )
+    current_count = count_result.scalar() or 0
+
+    if current_count >= MAX_RULES_PER_USER:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"You can have at most {MAX_RULES_PER_USER} nutrition rules. Delete one before adding another.",
+        )
+
+    clean_text = sanitize_for_llm(body.rule_text)
+    if not clean_text.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Rule text could not be processed.",
+        )
+
+    rule = NutritionRule(
+        user_id=user_id,
+        rule_text=clean_text,
+    )
+    db.add(rule)
+    await db.commit()
+    await db.refresh(rule)
+
+    return {
+        "id": str(rule.id),
+        "rule_text": rule.rule_text,
+        "created_at": rule.created_at.isoformat(),
+        "updated_at": rule.updated_at.isoformat(),
+    }
+
+
+@limiter.limit("20/minute")
+@router.put("/rules/{rule_id}")
+async def update_rule(
+    request: Request,
+    rule_id: uuid.UUID,
+    body: NutritionRuleUpdate,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Update the text of an existing nutrition rule."""
+    result = await db.execute(
+        select(NutritionRule).where(
+            NutritionRule.id == rule_id,
+            NutritionRule.user_id == user_id,
+        )
+    )
+    rule = result.scalar_one_or_none()
+    if not rule:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nutrition rule not found.",
+        )
+
+    clean_text = sanitize_for_llm(body.rule_text)
+    if not clean_text.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Rule text could not be processed.",
+        )
+
+    rule.rule_text = clean_text
+    await db.commit()
+    await db.refresh(rule)
+
+    return {
+        "id": str(rule.id),
+        "rule_text": rule.rule_text,
+        "created_at": rule.created_at.isoformat(),
+        "updated_at": rule.updated_at.isoformat(),
+    }
+
+
+@limiter.limit("20/minute")
+@router.delete("/rules/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_rule(
+    request: Request,
+    rule_id: uuid.UUID,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Hard-delete a nutrition rule."""
+    result = await db.execute(
+        select(NutritionRule).where(
+            NutritionRule.id == rule_id,
+            NutritionRule.user_id == user_id,
+        )
+    )
+    rule = result.scalar_one_or_none()
+    if not rule:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nutrition rule not found.",
+        )
+
+    await db.delete(rule)
+    await db.commit()
 
 
 # ---------------------------------------------------------------------------

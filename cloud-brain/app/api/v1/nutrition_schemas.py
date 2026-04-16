@@ -229,3 +229,36 @@ class BarcodeLookupResponse(BaseModel):
     """Response from the barcode lookup endpoint."""
 
     food: FoodSearchResult
+
+
+# ---------------------------------------------------------------------------
+# Nutrition Rules schemas (Phase 3D)
+# ---------------------------------------------------------------------------
+
+
+class NutritionRuleCreate(BaseModel):
+    """Request body for creating a nutrition rule."""
+
+    rule_text: str = Field(..., min_length=1, max_length=500)
+
+    @field_validator("rule_text")
+    @classmethod
+    def strip_rule_text(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("rule_text must not be empty")
+        return v
+
+
+class NutritionRuleUpdate(BaseModel):
+    """Request body for updating a nutrition rule."""
+
+    rule_text: str = Field(..., min_length=1, max_length=500)
+
+    @field_validator("rule_text")
+    @classmethod
+    def strip_rule_text(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("rule_text must not be empty")
+        return v
