@@ -17,6 +17,10 @@ import 'package:zuralog/features/coach/presentation/widgets/coach_suggestion_car
 import 'package:zuralog/features/coach/presentation/widgets/coach_thinking_layer.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_user_message.dart';
 import 'package:zuralog/features/data/presentation/widgets/tile_visualizations.dart';
+import 'package:zuralog/features/today/presentation/widgets/heart_pillar_card.dart';
+import 'package:zuralog/features/today/presentation/widgets/nutrition_pillar_card.dart';
+import 'package:zuralog/features/today/presentation/widgets/sleep_pillar_card.dart';
+import 'package:zuralog/features/today/presentation/widgets/workouts_pillar_card.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 class ComponentShowcaseScreen extends ConsumerStatefulWidget {
@@ -678,6 +682,15 @@ class _ComponentShowcaseScreenState
               style: AppTextStyles.bodyMedium
                   .copyWith(color: _colors!.textPrimary)),
         ),
+
+        _label('Pillar Cards — all 4 pillars', _colors!),
+        const SleepPillarCard(),
+        _gap(),
+        const NutritionPillarCard(),
+        _gap(),
+        const WorkoutsPillarCard(),
+        _gap(),
+        const HeartPillarCard(),
       ],
     );
   }
