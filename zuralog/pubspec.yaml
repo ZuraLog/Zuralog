@@ -60,6 +60,7 @@ dependencies:
   # File & Image Attachment (Coach chat)
   file_picker: ^8.1.7
   image_picker: ^1.1.2            # Camera / photo library picker
+  mobile_scanner: ^6.0.2            # Barcode scanning for nutrition logging
   connectivity_plus: ^6.0.0       # Network connectivity check before sending
   mime: ^2.0.0                    # MIME type detection via magic bytes
 
