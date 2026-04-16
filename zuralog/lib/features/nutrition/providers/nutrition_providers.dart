@@ -13,11 +13,16 @@
 /// - [todayMealsProvider]           — async list of today's meals
 /// - [nutritionDaySummaryProvider]  — async aggregated day summary
 /// - [mealDetailProvider]           — family: detail for a single meal by ID
+/// - [foodSearchQueryProvider]      — state: current search query text
+/// - [foodSearchResultsProvider]    — async search results for current query
+/// - [recentFoodsProvider]          — async list of recently logged foods
 library;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/features/nutrition/data/api_nutrition_repository.dart';
 import 'package:zuralog/features/nutrition/data/mock_nutrition_repository.dart';
 import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
 
@@ -25,12 +30,11 @@ import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
 
 /// Singleton [NutritionRepositoryInterface] for the nutrition feature.
 ///
-/// Currently wired to the [MockNutritionRepository] for development. Swap to
-/// the real API-backed implementation when the Cloud Brain nutrition endpoints
-/// are ready.
+/// Wired to the [ApiNutritionRepository] backed by Cloud Brain REST endpoints.
+/// Authentication is handled automatically by the [ApiClient] interceptor.
 final nutritionRepositoryProvider =
     Provider<NutritionRepositoryInterface>((ref) {
-  return const MockNutritionRepository();
+  return ApiNutritionRepository(apiClient: ref.read(apiClientProvider));
 });
 
 // -- Today Meals --------------------------------------------------------------
@@ -90,5 +94,41 @@ final mealDetailProvider =
   } catch (e, st) {
     debugPrint('mealDetailProvider($id) failed: $e\n$st');
     return null;
+  }
+});
+
+// ── Food Search ───────────────────────────────────────────────────────────────
+
+/// Holds the current food search query text.
+/// Updated by the LogMealSheet with a 300ms debounce.
+final foodSearchQueryProvider = StateProvider<String>((ref) => '');
+
+/// Async results for the current food search query.
+/// Returns empty list when query is too short or on error.
+final foodSearchResultsProvider =
+    FutureProvider<List<FoodSearchResult>>((ref) async {
+  final query = ref.watch(foodSearchQueryProvider);
+  if (query.trim().length < 2) return const [];
+
+  final repo = ref.read(nutritionRepositoryProvider);
+  try {
+    return await repo.searchFoods(query);
+  } catch (e, st) {
+    debugPrint('foodSearchResultsProvider failed: $e\n$st');
+    return const [];
+  }
+});
+
+// ── Recent Foods ──────────────────────────────────────────────────────────────
+
+/// Async provider for the user's recently logged foods.
+/// Used by the LogMealSheet recents row.
+final recentFoodsProvider = FutureProvider<List<RecentFood>>((ref) async {
+  final repo = ref.read(nutritionRepositoryProvider);
+  try {
+    return await repo.getRecentFoods();
+  } catch (e, st) {
+    debugPrint('recentFoodsProvider failed: $e\n$st');
+    return const [];
   }
 });
