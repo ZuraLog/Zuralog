@@ -1,7 +1,8 @@
 /// Today Feed — Tab 0 root screen.
 ///
 /// Curated daily briefing: Health Score hero paired with the Streak Hero Card,
-/// AI insight cards, metric grid, daily goals, and streak badge.
+/// four health pillar cards (Sleep, Nutrition, Workouts, Heart), daily goals,
+/// journal prompt, and AI insight cards.
 library;
 
 import 'package:flutter/material.dart';
@@ -34,8 +35,9 @@ import 'package:zuralog/shared/widgets/widgets.dart';
 
 /// Today Feed screen — the curated daily briefing.
 ///
-/// Displays the Health Score hero paired with the Streak Hero Card, data maturity
-/// banner, snapshot row, daily goals, AI insight cards, and streak badge.
+/// Displays the Health Score hero paired with the Streak Hero Card, four health
+/// pillar cards (Sleep, Nutrition, Workouts, Heart), daily goals, journal
+/// prompt, and AI insight cards.
 class TodayFeedScreen extends ConsumerStatefulWidget {
   /// Creates the [TodayFeedScreen].
   const TodayFeedScreen({super.key});
