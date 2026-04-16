@@ -346,7 +346,9 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
           top: Radius.circular(AppDimens.shapeXl),
         ),
       ),
-      padding: EdgeInsets.only(bottom: keyboardInset),
+      padding: EdgeInsets.only(
+        bottom: keyboardInset + AppDimens.bottomNavHeight,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
