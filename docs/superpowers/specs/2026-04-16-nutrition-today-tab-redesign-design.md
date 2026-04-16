@@ -1,7 +1,7 @@
 # Nutrition Feature + Today Tab Redesign
 
 **Date:** 2026-04-16
-**Updated:** 2026-04-16 (AI-first food data strategy, smart logging features, resolved open questions)
+**Updated:** 2026-04-17 (Phase 3 scope: camera logging, manual entry, nutrition rules, USDA seeding, bug fixes)
 **Status:** Active — implementation in progress
 **Author:** Hyowon + Claude
 **Type:** Information architecture change + new feature
@@ -38,33 +38,44 @@ These decisions were reached through brainstorming and are final for this spec:
 
 ### Nutrition feature scope
 12. **Nutrition Score is deferred** — meals are logged with foods, portions, calories, and macros, but no quality score for now
-13. **Two logging methods for meals** — search foods and describe it (text-based). Photo recognition and barcode scanning are deferred.
-14. **History and Insights screens are deferred** — Nutrition launches with: Nutrition Home, Log Meal picker, and Meal Detail
+13. **Four logging methods** — Describe/Manual (text-based), Camera (photo/barcode/label), Search (database lookup), and Recents (one-tap re-log)
+14. **History and Insights screens are deferred** — Nutrition launches with: Nutrition Home, LogMealSheet, and Meal Detail
 15. **Glucose monitor integration is out of scope**
 
 ### AI-first food data strategy (resolved — was an open question)
 16. **No commercial food database vendor** — we use AI estimation as the primary source of nutritional data, with results cached in the `food_cache` table. This is 20x cheaper than Nutritionix ($110/month vs $2,000+/month at 1M lookups) and handles international foods that no database covers.
-17. **AI model for food parsing: Qwen 3.5 Flash via OpenRouter** — the cheaper/faster insight model, not the expensive coach model. Stateless one-shot calls. ~$0.00011 per parse request.
-18. **The food_cache table is the unifying data layer** — stores both AI-generated estimates and (future) barcode lookup results. Over time it becomes ZuraLog's own food database.
-19. **Barcode scanning deferred** — when built, will use Open Food Facts (free, 4M+ products, 150+ countries) as the barcode source. Results cached in the same `food_cache` table.
+17. **AI model for food parsing: Qwen 3.5 Flash via OpenRouter** — the cheaper/faster insight model, not the expensive coach model. Stateless one-shot calls.
+18. **Vision model: Gemini** — for camera-based food recognition and nutrition label reading. Native multimodal capabilities.
+19. **The food_cache table is the unifying data layer** — stores AI estimates, USDA-seeded foods, barcode lookups, and user-corrected values. Over time it becomes ZuraLog's own food database.
+20. **USDA FoodData Central seeding** — one-time import of ~10,000 common foods from the USDA bulk download. Pre-populates the food cache so search works for new users from day one. No runtime API calls to USDA.
+21. **Barcode scanning uses Open Food Facts** — free, 4M+ products, 150+ countries. Results cached in food_cache. If barcode not found, user is prompted to take a photo of the food or label instead.
 
 ### Smart logging features (AI-first advantages)
-20. **Two logging modes: Quick and Guided** — a segmented control on the Log Meal screen lets the user switch per-meal. Quick mode: AI parses and shows results, no questions asked. Guided mode (default): AI asks smart follow-up questions to improve accuracy.
-21. **Interactive refinement in Guided mode** — the AI asks up to two follow-up questions per food item when they would meaningfully change the calorie count:
+22. **Two logging modes: Quick and Guided** — a segmented control on the Log Meal screen lets the user switch per-meal. Quick mode: AI does everything silently. Guided mode (default): AI asks smart follow-up questions to improve accuracy.
+23. **Interactive refinement in Guided mode** — the AI asks up to two follow-up questions per food item when they would meaningfully change the calorie count:
     - **Portion size**: XS / S / M / L / XL selector (the AI determines what each size means for that food)
     - **Cooking method**: horizontal chips with relevant options (e.g., Scrambled / Fried / Boiled / Poached for eggs). Only shown when cooking method changes calories significantly. Skipped for raw foods, bread, drinks, etc.
-22. **Confidence scoring (internal only)** — the AI assigns a confidence score (0.0-1.0) to each parsed food item. This drives question selection in Guided mode (low confidence = more questions). Not shown to the user. Architecture is ready for future UI exposure if needed.
-23. **Correction learning** — when users edit AI estimates before saving, the corrections feed into a weighted average over time. The cached value for that food gradually improves as more users provide corrections.
-24. **Correction abuse protection** — two layers:
+24. **Confidence scoring (internal only)** — the AI assigns a confidence score (0.0-1.0) to each parsed food item. This drives question selection in Guided mode (low confidence = more questions). Not shown to the user. Architecture is ready for future UI exposure if needed.
+25. **Correction learning** — when users edit AI estimates before saving, the corrections feed into a weighted average over time. The cached value for that food gradually improves as more users provide corrections.
+26. **Correction abuse protection** — two layers:
     - **Bounds checking**: corrections more than 3x or less than 0.3x the AI's original estimate are rejected from the learning system (the user's personal meal still saves with their number, but it doesn't affect the shared cache)
     - **Minimum threshold**: the cache value doesn't change until at least 5 different users have independently corrected the same food
 
+### Nutrition Rules system
+27. **Persistent user rules** — users can set rules that give the AI permanent context, eliminating repetitive Guided mode questions. Examples:
+    - "I always use oil spray for cooking"
+    - "I always use large eggs"
+    - "My rice portions are always 1 cup cooked"
+    - "I'm vegetarian"
+28. **Rules injected into every AI prompt** — parse, vision, and guided question prompts all include the user's rules as context. The AI adapts its estimates and skips questions that rules already answer.
+29. **When rules answer all Guided questions** — the AI auto-completes and shows a quick notification ("Your rules covered everything") instead of asking questions. Guided effectively becomes Quick when rules are comprehensive enough.
+30. **Rules managed from Nutrition Home** — a "Rules" button/chip in the Nutrition Home header. Opens a simple list editor where users add, edit, or delete rules. Unlimited rules allowed.
+
 ### Deferred features (future work)
-25. **Smart suggestions** (AI predicts "your usual breakfast?" based on time + history) — deferred, needs weeks of user data to be useful
-26. **Meal templates** (one-tap recurring meals) — deferred, same reason
-27. **Photo recognition and barcode scanning** — deferred
-28. **Nutrition Score** — deferred
-29. **Macro targets / goal-setting** — deferred to v2
+31. **Smart suggestions** (AI predicts "your usual breakfast?" based on time + history) — deferred, needs weeks of user data to be useful
+32. **Meal templates** (one-tap recurring meals) — deferred, same reason
+33. **Nutrition Score** — deferred
+34. **Macro targets / goal-setting** — deferred to v2
 
 ---
 
@@ -152,17 +163,18 @@ Journal keeps its existing location under `features/progress/` on disk. It gets 
 | Screen | Purpose | Reached from |
 |--------|---------|-------------|
 | Nutrition card (widget) | Compact summary on Today tab, reads from providers | Rendered inline on Today |
-| Nutrition Home | Full daily view — all meals, macros, calorie total, log button | Tapping the Nutrition card |
-| Log Meal sheet | Choose how to log — search or describe, Quick/Guided toggle, recents row | Tapping "Log meal" on Nutrition Home or "+" on the Nutrition card |
+| Nutrition Home | Full daily view — all meals, macros, calorie total, log button, rules access | Tapping the Nutrition card |
+| Log Meal sheet | Four logging paths: Describe/Manual, Camera, Search, Recents. Quick/Guided toggle. | Tapping "Log meal" on Nutrition Home or "+" on the Nutrition card |
 | Meal Detail | Individual meal view — foods, portions, macros, edit/delete | Tapping a meal from Nutrition Home or after logging |
+| Nutrition Rules | List editor for persistent AI context rules | "Rules" button on Nutrition Home header |
 
 ### Nutrition Home screen
 
-The Nutrition Home screen opens when the user taps the Nutrition card on Today. It has three jobs: show what you ate today, show the daily calorie and macro totals, and make it easy to log the next meal.
+The Nutrition Home screen opens when the user taps the Nutrition card on Today. It has four jobs: show what you ate today, show the daily calorie and macro totals, make it easy to log the next meal, and provide access to nutrition rules.
 
 **Layout (top to bottom):**
 
-1. **Header** — "Nutrition" title, today's date
+1. **Header** — "Nutrition" title, today's date, "Rules" chip/icon button in the header
 2. **Daily summary card** — total calories, protein, carbs, fat displayed as four inline stats inside a feature-variant card with nutrition amber pattern
 3. **Today's meals** — list of meal cards, each showing meal name, meal type (breakfast/lunch/dinner/snack), time, calorie count. Tapping a meal opens Meal Detail.
 4. **Log a meal button** — large, prominent CTA at the bottom. Opens the Log Meal sheet.
@@ -173,24 +185,36 @@ The Nutrition Home screen opens when the user taps the Nutrition card on Today. 
 
 ### Log Meal sheet
 
-A bottom sheet with a **Quick / Guided** segmented control at the top. Two logging methods below:
+A bottom sheet rendered **above the bottom navigation bar** (not behind it). Has a **Quick / Guided** segmented control at the top.
 
-**1. Search foods**
-The user types a food name. The search checks the `food_cache` table first (instant). On cache miss, the AI estimates nutrition for that food and caches the result. The user picks a portion size and taps "Log." Multiple foods can be added to the same meal before saving.
+**Four logging paths:**
 
-**2. Describe it**
-The user types a natural sentence like "two scrambled eggs, a slice of sourdough toast with butter, and a coffee with oat milk." This is sent to the AI parse endpoint, which returns a structured list of foods with estimated portions and a confidence score per item.
+**1. Describe / Manual (text-based)**
+One section with two modes. Default is "Describe" — user types a natural sentence like "two scrambled eggs, a slice of sourdough toast with butter, and a coffee with oat milk." This is sent to the AI parse endpoint, which returns structured foods.
 
-- **Quick mode**: The parsed result appears as an editable list. No follow-up questions. User reviews, edits if needed, taps "Confirm."
-- **Guided mode**: Before showing the final list, the AI presents follow-up questions for items where it would meaningfully improve accuracy:
-  - **Portion size**: XS / S / M / L / XL selector (AI determines ranges per food)
-  - **Cooking method**: horizontal chips (e.g., "Fried / Grilled / Baked / Steamed") — only shown when method changes calories significantly
-  - The AI uses the confidence score internally to decide which questions to ask (low confidence = more questions)
-  - After answering, the AI recalculates macros and shows the final editable list
+A "Enter nutrition manually" link toggles to Manual mode — a simple form with food name, calories, protein, carbs, fat fields. No AI involved. For users who know their numbers.
 
-The "describe it" path always shows the parsed result before saving — we never log anything silently.
+- **Quick mode**: Parsed/entered result appears as an editable list. No follow-up questions.
+- **Guided mode**: AI presents follow-up questions for items where accuracy would improve (portion size, cooking method). User's Nutrition Rules are injected into the AI prompt, so questions already answered by rules are skipped. If rules cover everything, a toast notification says "Your rules covered everything — no questions needed."
 
-**Recents row:** Below the two methods, a horizontal scroll of the user's most recent foods as one-tap chips. Tapping a chip re-logs that food immediately (with the same portion as last time).
+**2. Camera (photo-based, three-in-one)**
+Opens the device camera full-screen or the photo gallery. The system auto-detects what it's looking at:
+
+- **Plate of food** — Gemini vision model identifies the food items and estimates nutrition. Same review/confirm flow as Describe.
+- **Barcode** — detected on-device using a barcode scanner library (not the vision model). Looked up in Open Food Facts. If found, shows the product with nutrition data. If not found, prompts "Barcode not found — try taking a photo of the food or nutrition label instead."
+- **Nutrition label** — Gemini reads the structured nutrition facts panel and extracts the actual numbers (calories, protein, carbs, fat). More accurate than estimation. User provides the food name.
+
+Quick/Guided modes apply to camera results the same way as Describe results.
+
+**3. Search (database only)**
+User types a food name. Searches the `food_cache` table only (USDA-seeded data + previously cached foods + user history). No AI involved in search — this is a pure database lookup. If nothing matches, shows "No results found." User can add multiple foods to the meal before saving.
+
+**4. Recents**
+Horizontal scroll of the user's most recently logged unique foods as one-tap chips. Tapping adds that food to the current meal immediately.
+
+**Meal type selection:** Before saving, the user picks a meal type (breakfast/lunch/dinner/snack) via chips. Auto-suggested based on time of day.
+
+**Save flow:** Saves via `POST /nutrition/meals`. If user edited food values, corrections are submitted. Sheet dismisses, providers invalidated.
 
 ### Meal Detail screen
 
@@ -205,11 +229,26 @@ Shown after logging a meal or when tapping an existing meal from any list.
 
 **Polish:** Loading skeletons, staggered entrance animations.
 
+### Nutrition Rules screen
+
+Accessible from the "Rules" button on the Nutrition Home header. A simple list editor.
+
+**Layout:**
+1. **Header** — "Nutrition Rules" title, "Add rule" button
+2. **Rules list** — each rule displayed as a text card with edit and delete actions
+3. **Add/Edit rule** — simple text input dialog: "Describe your rule in plain language"
+4. **Empty state** — "No rules yet. Rules help the AI understand your preferences so it asks fewer questions."
+
+**Examples shown to the user:**
+- "I always use oil spray for cooking"
+- "I always use large eggs"
+- "My rice portions are always 1 cup cooked"
+
+Rules are stored per-user and injected into every AI prompt (parse, vision, guided).
+
 ### What we are explicitly not building in this version
 
 - Nutrition Score (quality rating per meal)
-- Photo recognition logging
-- Barcode scanning
 - History screen (past days)
 - Insights screen (AI patterns about eating habits)
 - Recipe builder
@@ -238,20 +277,37 @@ We researched all major food database vendors (Nutritionix, Edamam, FatSecret, U
 | Accuracy | Lab-verified for known foods | ~80% accurate (within 20% of lab values) |
 | Dependency | Vendor lock-in, pricing changes | Self-owned, no vendor dependency |
 
-The key insight: ZuraLog's spec already says "reasonable approximations are fine" and the eventual Nutrition Score will be about food quality, not calorie precision. AI accuracy (within 20-25% on average, based on NutriBench research) is good enough for this standard.
+### How food data flows
 
-### How the food data flows
+**Search path (database only):**
+```
+User types food name in search bar
+  --> Query food_cache (GIN trigram fuzzy match)
+  --> Found: return cached result instantly
+  --> Not found: show "No results found"
+```
 
+**Describe path (AI-powered):**
 ```
-User types or describes food
-  --> Check food_cache for match (GIN trigram fuzzy search)
-  --> CACHE HIT: return cached result instantly (~5ms)
-  --> CACHE MISS:
-      --> Call AI (Qwen 3.5 Flash via OpenRouter, ~500ms, ~$0.00011)
-      --> Cache result in food_cache with source="ai_estimated"
-      --> Return result to user
-      --> Future searches for the same food hit cache
+User types meal description
+  --> POST /meals/parse (AI estimates nutrition per food item)
+  --> User reviews, edits, confirms
+  --> Meal saved to database
 ```
+
+**Camera path (vision-powered):**
+```
+User takes photo
+  --> Auto-detect: food plate / barcode / nutrition label
+  --> Food plate: Gemini vision estimates nutrition
+  --> Barcode: Open Food Facts lookup, cache result
+  --> Nutrition label: Gemini reads actual numbers
+  --> User reviews, confirms
+```
+
+### USDA cache seeding
+
+One-time bulk import of ~10,000 common foods from USDA FoodData Central (free, public domain, lab-analyzed). Downloaded as a file, imported via a script into the `food_cache` table with `external_id = "usda:{fdc_id}"` and `metadata = {"source": "usda"}`. This ensures search works for new users from day one without any AI calls.
 
 ### Correction learning flow
 
@@ -267,10 +323,12 @@ User edits AI estimate before saving (e.g., changes 150 kcal to 200 kcal)
 
 ### The food_cache table as the unifying layer
 
-The `food_cache` table stores results from ALL sources — AI estimates today, barcode lookups tomorrow, and potentially a commercial database in the future. The `metadata` JSONB column tracks the source:
+The `food_cache` table stores results from ALL sources. The `metadata` JSONB column tracks the source:
 
 ```json
+{"source": "usda", "fdc_id": "171705"}
 {"source": "ai_estimated", "model": "qwen/qwen3.5-flash", "confidence": 0.85}
+{"source": "ai_vision", "model": "gemini-2.0-flash", "confidence": 0.72}
 {"source": "openfoodfacts", "barcode": "5901234123457"}
 {"source": "user_corrected", "correction_count": 7, "original_ai_estimate": 150}
 ```
@@ -290,8 +348,9 @@ Food data is sensitive. People with eating disorders, body image issues, or rest
 **What we will do:**
 - A clear, one-tap path to delete any logged meal
 - A clear path to delete all nutrition data under Settings -> Privacy
-- Photo data (if added in future) belongs to the user. We do not use it for training. Deleted when the meal is deleted.
+- Photo data belongs to the user. We do not use it for training. Deleted when the meal is deleted.
 - Neutral, encouraging language everywhere. "Room for more vegetables" not "bad meal."
+- Nutrition Rules are private per-user and never shared or used for training.
 
 ---
 
@@ -299,67 +358,44 @@ Food data is sensitive. People with eating disorders, body image issues, or rest
 
 ### Phase 1 — Frontend (Flutter) -- COMPLETED
 
-All work lives under `zuralog/lib/`.
-
 **1A. Navigation changes** -- DONE
-- Bottom nav reduced from 5 tabs to 3 (Today, Data, Coach)
-- Progress and Trends moved to Settings as navigable sections
-- App bars updated for pushed-over-shell screens
-
 **1B. Today tab redesign** -- DONE
-- `ZPillarCard` shared widget added to design system
-- Four pillar cards (Sleep, Nutrition, Workouts, Heart) with brand pattern overlays
-- Journal prompt card
-- Today feed rebuilt: removed Greeting, Metrics Grid, Data Maturity Banner
-- NutritionPillarCard wired to live providers
-
 **1C. Nutrition screens** -- DONE
-- `features/nutrition/` folder with domain models, mock repository, providers
-- Nutrition Home screen with daily summary, meal list, empty state
-- Meal Detail screen with food breakdown, macros, edit/delete
-- Routes registered, pillar card wired to Nutrition Home
-
 **1D. Frontend polish** -- DONE
-- Loading skeletons on both Nutrition screens
-- Pull-to-refresh on Nutrition Home
-- Entrance animations on both screens
-- ZPillarCard added to component showcase
 
----
+### Phase 2 — Backend (FastAPI) + Database (Supabase) -- COMPLETED
 
-### Phase 2 — Backend (FastAPI) + Database (Supabase)
+**2A. Database schema** -- DONE (5 tables: meals, meal_foods, food_cache, nutrition_daily_summaries, food_corrections)
+**2B. Meal CRUD API** -- DONE (7 endpoints)
+**2C. AI meal parsing** -- DONE (POST /meals/parse with Qwen 3.5 Flash)
+**2D. AI-first food search + correction learning** -- DONE (search, corrections, confidence scoring)
+**2E. Frontend wiring** -- DONE (real API repo, LogMealSheet with Quick/Guided, providers)
 
-All backend work lives under `cloud-brain/app/`. Database work uses Alembic migrations and Supabase CLI.
+### Phase 3 — Enhanced Logging + Data Seeding -- IN PROGRESS
 
-**2A. Database schema** -- DONE
-- 4 SQLAlchemy models: Meal, MealFood, FoodCache, NutritionDailySummary
-- Alembic migration creating all tables with indexes (GIN trigram, partial, composite)
-- Supabase RLS policies
+**3A. Quick fixes** -- PLANNED
+- LogMealSheet renders above the bottom nav bar (padding fix)
+- Remove AI fallback from food search endpoint (search = database only)
 
-**2B. Meal CRUD API** -- DONE
-- Pydantic schemas (MealCreateRequest, MealUpdateRequest, FoodItemRequest)
-- Nutrition service for daily summary recomputation (upsert pattern)
-- 7 endpoints: GET /today, POST/GET/PUT/DELETE /meals, GET /foods/recent, POST /meals/parse
+**3B. Manual entry + USDA cache seeding** -- PLANNED
+- Manual food entry mode in the Describe section of LogMealSheet
+- One-time USDA FoodData Central import (~10,000 foods) into food_cache
+- Import script as a Celery task or management command
 
-**2C. AI meal parsing** -- DONE
-- POST /meals/parse endpoint with system prompt, Qwen 3.5 Flash via OpenRouter
-- Defensive JSON parsing with markdown fence stripping
-- Per-item Pydantic validation with clamping (not rejection)
-- Rate limited to 10/minute
+**3C. Camera logging** -- PLANNED
+- Camera integration in LogMealSheet (take photo or upload from gallery)
+- Gemini vision model for food recognition and nutrition estimation
+- Barcode scanning with on-device detection + Open Food Facts lookup
+- Nutrition label reading via Gemini
+- Auto-detection (food vs barcode vs label)
+- Quick/Guided modes apply to camera results
 
-**2D. AI-first food search + correction learning** -- IN PROGRESS
-- Food search endpoint: cache-first, AI-fallback
-- Confidence scoring in parse responses
-- Correction tracking table and weighted average logic
-- Abuse protection (bounds checking + 5-correction threshold)
-- Guided mode follow-up question generation
-
-**2E. Frontend wiring** -- PLANNED
-- Replace MockNutritionRepository with real API client
-- Build LogMealSheet bottom sheet (Quick/Guided toggle, search, describe, recents)
-- Interactive refinement UI (portion slider, cooking method chips)
-- FoodSearchWidget and DescribeMealWidget
-- Wire all providers to real endpoints
+**3D. Nutrition Rules** -- PLANNED
+- nutrition_rules table (per-user, text-based rules)
+- Rules CRUD API endpoints
+- Rules editor screen accessible from Nutrition Home
+- Rules injected into all AI prompts (parse, vision, guided)
+- Auto-skip Guided questions when rules provide the answer
 
 ---
 
@@ -370,6 +406,7 @@ All backend work lives under `cloud-brain/app/`. Database work uses Alembic migr
 Previously open, now resolved:
 - ~~Food database vendor~~ — Resolved: AI-first approach with food_cache, no commercial vendor
 - ~~AI model for parsing~~ — Resolved: Qwen 3.5 Flash via OpenRouter (insight model)
+- ~~AI model for vision~~ — Resolved: Gemini (native multimodal)
 
 ---
 
@@ -377,7 +414,6 @@ Previously open, now resolved:
 
 - Building dedicated home screens for Sleep, Workouts, or Heart pillars (future work)
 - Nutrition Score or meal quality rating (deferred)
-- Photo recognition or barcode scanning for meal logging (deferred)
 - History or Insights screens for nutrition (deferred)
 - Glucose monitor integration (out of scope)
 - Smart suggestions or meal templates (needs user history data)
