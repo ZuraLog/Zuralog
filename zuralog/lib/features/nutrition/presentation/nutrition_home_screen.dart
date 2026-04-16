@@ -37,10 +37,84 @@ class NutritionHomeScreen extends ConsumerWidget {
         showProfileAvatar: false,
       ),
       body: mealsAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(catColor),
-          ),
+        loading: () => ListView(
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            // Date header skeleton.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                AppDimens.spaceLg,
+                AppDimens.spaceMd,
+                0,
+              ),
+              child: ZLoadingSkeleton(
+                width: 140,
+                height: 16,
+                borderRadius: AppDimens.shapeSm,
+              ),
+            ),
+
+            // Daily summary card skeleton.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                AppDimens.spaceMd,
+                AppDimens.spaceMd,
+                0,
+              ),
+              child: ZLoadingSkeleton(
+                width: double.infinity,
+                height: 80,
+                borderRadius: AppDimens.shapeLg,
+              ),
+            ),
+
+            // Section header skeleton.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                AppDimens.spaceLg,
+                AppDimens.spaceMd,
+                AppDimens.spaceSm,
+              ),
+              child: ZLoadingSkeleton(
+                width: 120,
+                height: 16,
+                borderRadius: AppDimens.shapeSm,
+              ),
+            ),
+
+            // Meal card skeleton 1.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                0,
+                AppDimens.spaceMd,
+                AppDimens.spaceSm,
+              ),
+              child: ZLoadingSkeleton(
+                width: double.infinity,
+                height: 72,
+                borderRadius: AppDimens.shapeLg,
+              ),
+            ),
+
+            // Meal card skeleton 2.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                0,
+                AppDimens.spaceMd,
+                AppDimens.spaceSm,
+              ),
+              child: ZLoadingSkeleton(
+                width: double.infinity,
+                height: 72,
+                borderRadius: AppDimens.shapeLg,
+              ),
+            ),
+          ],
         ),
         error: (_, _) => ZErrorState(
           message: 'Something went wrong loading your meals.',
@@ -53,122 +127,165 @@ class NutritionHomeScreen extends ConsumerWidget {
           final summary =
               summaryAsync.valueOrNull ?? NutritionDaySummary.empty;
 
+          Future<void> onRefresh() async {
+            ref.invalidate(todayMealsProvider);
+            ref.invalidate(nutritionDaySummaryProvider);
+            await Future.wait([
+              ref
+                  .read(todayMealsProvider.future)
+                  .catchError((_) => <Meal>[]),
+              ref
+                  .read(nutritionDaySummaryProvider.future)
+                  .catchError((_) => NutritionDaySummary.empty),
+            ]);
+          }
+
           if (meals.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceMd,
-                ),
-                child: ZEmptyState(
-                  icon: Icons.restaurant_outlined,
-                  title: 'No meals logged yet',
-                  message:
-                      'Tap below to log your first meal of the day.',
-                  actionLabel: 'Log a meal',
-                  onAction: () =>
-                      context.pushNamed(RouteNames.mealLog),
-                ),
+            return ZPullToRefresh(
+              onRefresh: onRefresh,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimens.spaceMd,
+                        ),
+                        child: ZEmptyState(
+                          icon: Icons.restaurant_outlined,
+                          title: 'No meals logged yet',
+                          message:
+                              'Tap below to log your first meal of the day.',
+                          actionLabel: 'Log a meal',
+                          onAction: () =>
+                              context.pushNamed(RouteNames.mealLog),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             );
           }
 
-          return ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            children: [
-              // ── Date header ────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceLg,
-                  AppDimens.spaceMd,
-                  0,
-                ),
-                child: Text(
-                  DateFormat('EEEE, MMM d').format(DateTime.now()),
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: colors.textSecondary,
+          return ZPullToRefresh(
+            onRefresh: onRefresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                // ── Date header ────────────────────────────────────────
+                ZFadeSlideIn(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppDimens.spaceMd,
+                      AppDimens.spaceLg,
+                      AppDimens.spaceMd,
+                      0,
+                    ),
+                    child: Text(
+                      DateFormat('EEEE, MMM d').format(DateTime.now()),
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
                   ),
                 ),
-              ),
 
-              // ── Daily summary card ─────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceMd,
-                  AppDimens.spaceMd,
-                  0,
-                ),
-                child: ZuralogCard(
-                  variant: ZCardVariant.feature,
-                  category: catColor,
-                  child: Row(
-                    children: [
-                      _SummaryStat(
-                        value: '${summary.totalCalories}',
-                        label: 'kcal',
-                        color: colors,
+                // ── Daily summary card ─────────────────────────────────
+                ZFadeSlideIn(
+                  delay: const Duration(milliseconds: 60),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppDimens.spaceMd,
+                      AppDimens.spaceMd,
+                      AppDimens.spaceMd,
+                      0,
+                    ),
+                    child: ZuralogCard(
+                      variant: ZCardVariant.feature,
+                      category: catColor,
+                      child: Row(
+                        children: [
+                          _SummaryStat(
+                            value: '${summary.totalCalories}',
+                            label: 'kcal',
+                            color: colors,
+                          ),
+                          _SummaryStat(
+                            value: '${summary.totalProteinG.round()}',
+                            label: 'protein',
+                            color: colors,
+                          ),
+                          _SummaryStat(
+                            value: '${summary.totalCarbsG.round()}',
+                            label: 'carbs',
+                            color: colors,
+                          ),
+                          _SummaryStat(
+                            value: '${summary.totalFatG.round()}',
+                            label: 'fat',
+                            color: colors,
+                          ),
+                        ],
                       ),
-                      _SummaryStat(
-                        value: '${summary.totalProteinG.round()}',
-                        label: 'protein',
-                        color: colors,
-                      ),
-                      _SummaryStat(
-                        value: '${summary.totalCarbsG.round()}',
-                        label: 'carbs',
-                        color: colors,
-                      ),
-                      _SummaryStat(
-                        value: '${summary.totalFatG.round()}',
-                        label: 'fat',
-                        color: colors,
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
 
-              // ── Section header ─────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceLg,
-                  AppDimens.spaceMd,
-                  AppDimens.spaceSm,
-                ),
-                child: SectionHeader(title: "Today's Meals"),
-              ),
-
-              // ── Meal cards ─────────────────────────────────────────
-              for (final meal in meals)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppDimens.spaceMd,
-                    0,
-                    AppDimens.spaceMd,
-                    AppDimens.spaceSm,
+                // ── Section header ─────────────────────────────────────
+                ZFadeSlideIn(
+                  delay: const Duration(milliseconds: 120),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppDimens.spaceMd,
+                      AppDimens.spaceLg,
+                      AppDimens.spaceMd,
+                      AppDimens.spaceSm,
+                    ),
+                    child: SectionHeader(title: "Today's Meals"),
                   ),
-                  child: _MealCard(meal: meal),
                 ),
 
-              // ── Log a meal CTA ─────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceMd,
-                  vertical: AppDimens.spaceLg,
-                ),
-                child: ZButton(
-                  label: 'Log a meal',
-                  icon: Icons.add_rounded,
-                  onPressed: () =>
-                      context.pushNamed(RouteNames.mealLog),
-                ),
-              ),
+                // ── Meal cards ─────────────────────────────────────────
+                for (int i = 0; i < meals.length; i++)
+                  ZFadeSlideIn(
+                    delay: Duration(milliseconds: 180 + (i * 60)),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppDimens.spaceMd,
+                        0,
+                        AppDimens.spaceMd,
+                        AppDimens.spaceSm,
+                      ),
+                      child: _MealCard(meal: meals[i]),
+                    ),
+                  ),
 
-              // ── Bottom clearance ───────────────────────────────────
-              const SizedBox(height: AppDimens.spaceLg),
-            ],
+                // ── Log a meal CTA ─────────────────────────────────────
+                ZFadeSlideIn(
+                  delay: Duration(
+                    milliseconds: 180 + (meals.length * 60) + 60,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimens.spaceMd,
+                      vertical: AppDimens.spaceLg,
+                    ),
+                    child: ZButton(
+                      label: 'Log a meal',
+                      icon: Icons.add_rounded,
+                      onPressed: () =>
+                          context.pushNamed(RouteNames.mealLog),
+                    ),
+                  ),
+                ),
+
+                // ── Bottom clearance ───────────────────────────────────
+                const SizedBox(height: AppDimens.spaceLg),
+              ],
+            ),
           );
         },
       ),
