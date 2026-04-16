@@ -13,6 +13,7 @@ from app.models.conversation import Conversation, Message  # noqa: F401
 from app.models.daily_metrics import DailyHealthMetrics  # noqa: F401
 from app.models.daily_summary import DailySummary  # noqa: F401
 from app.models.emergency_card import EmergencyCard  # noqa: F401
+from app.models.food_cache import FoodCache  # noqa: F401
 from app.models.health_event import HealthEvent  # noqa: F401
 from app.models.health_data import (  # noqa: F401
     ActivityType,
@@ -25,7 +26,10 @@ from app.models.insight import Insight, INSIGHT_TYPES  # noqa: F401
 from app.models.metric_definition import MetricDefinition  # noqa: F401
 from app.models.integration import Integration  # noqa: F401
 from app.models.journal_entry import JournalEntry  # noqa: F401
+from app.models.meal import Meal  # noqa: F401
+from app.models.meal_food import MealFood  # noqa: F401
 from app.models.notification_log import NotificationLog, NOTIFICATION_TYPES  # noqa: F401
+from app.models.nutrition_daily_summary import NutritionDailySummary  # noqa: F401
 from app.models.quick_log import QuickLog, VALID_METRIC_TYPES  # noqa: F401
 from app.models.report import Report, ReportType  # noqa: F401
 from app.models.user import SubscriptionTier, User  # noqa: F401
@@ -54,14 +58,18 @@ __all__ = [
     "DailyHealthMetrics",
     "DailySummary",
     "EmergencyCard",
+    "FoodCache",
     "GoalPeriod",
     "HealthEvent",
     "Insight",
     "Integration",
     "JournalEntry",
+    "Meal",
+    "MealFood",
     "Message",
     "MetricDefinition",
     "NotificationLog",
+    "NutritionDailySummary",
     "NutritionEntry",
     "ProactivityLevel",
     "QuickLog",
