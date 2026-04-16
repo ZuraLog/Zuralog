@@ -27,6 +27,8 @@
 ///   /progress/journal             → JournalScreen
 ///   /progress/journal/diary       → JournalDiaryScreen
 /// /trends                         → TrendsHomeScreen (pushed over shell)
+/// /nutrition                        → NutritionHomeScreen (pushed over shell)
+///   /nutrition/meal/:id             → MealDetailScreen
 /// /settings                       → SettingsHubScreen (pushed over shell)
 ///   /settings/account             → AccountSettingsScreen
 ///   /settings/account/edit-profile → EditProfileScreen
@@ -241,6 +243,20 @@ abstract final class RouteNames {
 
   /// Path for the Trends Home screen.
   static const String trendsPath = '/trends';
+
+  // ── Nutrition (pushed over shell) ────────────────────────────────────────
+
+  /// Name for the Nutrition Home screen.
+  static const String nutrition = 'nutrition';
+
+  /// Path for the Nutrition Home screen.
+  static const String nutritionPath = '/nutrition';
+
+  /// Name for the Meal Detail screen.
+  static const String nutritionMealDetail = 'nutritionMealDetail';
+
+  /// Path for the Meal Detail screen. Parameter: `:id`
+  static const String nutritionMealDetailPath = '/nutrition/meal/:id';
 
   // ── Settings (pushed over shell) ─────────────────────────────────────────
 

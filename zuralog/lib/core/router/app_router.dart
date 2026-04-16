@@ -22,6 +22,8 @@
 ///   /progress/journal               → JournalScreen
 ///   /progress/journal/diary         → JournalDiaryScreen
 /// /trends                           → TrendsHomeScreen (pushed over shell)
+/// /nutrition                        → NutritionHomeScreen (pushed over shell)
+///   /nutrition/meal/:id             → MealDetailScreen
 /// /settings                         → SettingsHubScreen (pushed over shell)
 ///   /settings/journal               → JournalSettingsScreen
 ///   /settings/account ... /settings/about  → sub-screens
@@ -88,6 +90,10 @@ import 'package:zuralog/features/progress/presentation/journal_diary_screen.dart
 
 // ── Trends (pushed over shell) ────────────────────────────────────────────────
 import 'package:zuralog/features/trends/presentation/trends_home_screen.dart';
+
+// ── Nutrition (pushed over shell) ────────────────────────────────────────────
+import 'package:zuralog/features/nutrition/presentation/nutrition_home_screen.dart';
+import 'package:zuralog/features/nutrition/presentation/meal_detail_screen.dart';
 
 // ── Settings (pushed over shell) ──────────────────────────────────────────────
 import 'package:zuralog/features/settings/presentation/settings_hub_screen.dart';
@@ -533,6 +539,28 @@ List<RouteBase> _buildRoutes() {
         module: 'trends',
         child: TrendsHomeScreen(),
       ),
+    ),
+
+    // ── Nutrition (pushed over shell) ────────────────────────────────────
+    GoRoute(
+      path: RouteNames.nutritionPath,
+      name: RouteNames.nutrition,
+      builder: (context, state) => const SentryErrorBoundary(
+        module: 'nutrition',
+        child: NutritionHomeScreen(),
+      ),
+      routes: [
+        GoRoute(
+          path: 'meal/:id',
+          name: RouteNames.nutritionMealDetail,
+          builder: (context, state) => SentryErrorBoundary(
+            module: 'nutrition.meal_detail',
+            child: MealDetailScreen(
+              mealId: state.pathParameters['id']!,
+            ),
+          ),
+        ),
+      ],
     ),
 
     // ── Settings (pushed over shell — full-screen) ────────────────────────
