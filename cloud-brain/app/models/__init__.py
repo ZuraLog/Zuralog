@@ -31,6 +31,7 @@ from app.models.meal import Meal  # noqa: F401
 from app.models.meal_food import MealFood  # noqa: F401
 from app.models.notification_log import NotificationLog, NOTIFICATION_TYPES  # noqa: F401
 from app.models.nutrition_daily_summary import NutritionDailySummary  # noqa: F401
+from app.models.nutrition_rule import NutritionRule  # noqa: F401
 from app.models.quick_log import QuickLog, VALID_METRIC_TYPES  # noqa: F401
 from app.models.report import Report, ReportType  # noqa: F401
 from app.models.user import SubscriptionTier, User  # noqa: F401
@@ -73,6 +74,7 @@ __all__ = [
     "NotificationLog",
     "NutritionDailySummary",
     "NutritionEntry",
+    "NutritionRule",
     "ProactivityLevel",
     "QuickLog",
     "Report",
