@@ -73,10 +73,70 @@ class _MealDetailScreenState extends ConsumerState<MealDetailScreen> {
         showProfileAvatar: false,
       ),
       body: mealAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(catColor),
-          ),
+        loading: () => ListView(
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            // Meal header card skeleton.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                AppDimens.spaceLg,
+                AppDimens.spaceMd,
+                0,
+              ),
+              child: ZLoadingSkeleton(
+                width: double.infinity,
+                height: 100,
+                borderRadius: AppDimens.shapeLg,
+              ),
+            ),
+
+            // Foods section header skeleton.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                AppDimens.spaceLg,
+                AppDimens.spaceMd,
+                AppDimens.spaceSm,
+              ),
+              child: ZLoadingSkeleton(
+                width: 80,
+                height: 16,
+                borderRadius: AppDimens.shapeSm,
+              ),
+            ),
+
+            // Three food row skeletons.
+            for (int i = 0; i < 3; i++)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppDimens.spaceMd,
+                  0,
+                  AppDimens.spaceMd,
+                  AppDimens.spaceSm,
+                ),
+                child: ZLoadingSkeleton(
+                  width: double.infinity,
+                  height: 60,
+                  borderRadius: AppDimens.shapeMd,
+                ),
+              ),
+
+            // Totals card skeleton.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                AppDimens.spaceSm,
+                AppDimens.spaceMd,
+                0,
+              ),
+              child: ZLoadingSkeleton(
+                width: double.infinity,
+                height: 80,
+                borderRadius: AppDimens.shapeLg,
+              ),
+            ),
+          ],
         ),
         error: (_, _) => ZErrorState(
           message: 'Something went wrong loading this meal.',
@@ -94,159 +154,180 @@ class _MealDetailScreenState extends ConsumerState<MealDetailScreen> {
             );
           }
 
+          final foodCount = meal.foods.length;
+          final totalsDelay = 120 + (foodCount * 60) + 60;
+          final buttonsDelay = totalsDelay + 60;
+
           return ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
               // ── Meal header card ─────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceLg,
-                  AppDimens.spaceMd,
-                  0,
-                ),
-                child: ZuralogCard(
-                  variant: ZCardVariant.feature,
-                  category: catColor,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        meal.name,
-                        style: AppTextStyles.displaySmall.copyWith(
-                          color: colors.textPrimary,
+              ZFadeSlideIn(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimens.spaceMd,
+                    AppDimens.spaceLg,
+                    AppDimens.spaceMd,
+                    0,
+                  ),
+                  child: ZuralogCard(
+                    variant: ZCardVariant.feature,
+                    category: catColor,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          meal.name,
+                          style: AppTextStyles.displaySmall.copyWith(
+                            color: colors.textPrimary,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: AppDimens.spaceSm),
-                      Row(
-                        children: [
-                          Icon(
-                            meal.type.icon,
-                            size: AppDimens.iconSm,
-                            color: catColor,
-                          ),
-                          const SizedBox(width: AppDimens.spaceXs),
-                          Text(
-                            '${meal.type.label} at ${DateFormat('h:mm a').format(meal.loggedAt)}',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: colors.textSecondary,
+                        const SizedBox(height: AppDimens.spaceSm),
+                        Row(
+                          children: [
+                            Icon(
+                              meal.type.icon,
+                              size: AppDimens.iconSm,
+                              color: catColor,
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                            const SizedBox(width: AppDimens.spaceXs),
+                            Text(
+                              '${meal.type.label} at ${DateFormat('h:mm a').format(meal.loggedAt)}',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: colors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
 
               // ── Foods section header ─────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceLg,
-                  AppDimens.spaceMd,
-                  AppDimens.spaceSm,
-                ),
-                child: SectionHeader(title: 'Foods'),
-              ),
-
-              // ── Food items ───────────────────────────────────────
-              for (final food in meal.foods)
-                Padding(
+              ZFadeSlideIn(
+                delay: const Duration(milliseconds: 60),
+                child: Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppDimens.spaceMd,
-                    0,
+                    AppDimens.spaceLg,
                     AppDimens.spaceMd,
                     AppDimens.spaceSm,
                   ),
-                  child: _FoodRow(food: food),
+                  child: SectionHeader(title: 'Foods'),
+                ),
+              ),
+
+              // ── Food items ───────────────────────────────────────
+              for (int i = 0; i < foodCount; i++)
+                ZFadeSlideIn(
+                  delay: Duration(milliseconds: 120 + (i * 60)),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppDimens.spaceMd,
+                      0,
+                      AppDimens.spaceMd,
+                      AppDimens.spaceSm,
+                    ),
+                    child: _FoodRow(food: meal.foods[i]),
+                  ),
                 ),
 
               // ── Totals card ──────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceSm,
-                  AppDimens.spaceMd,
-                  0,
-                ),
-                child: ZuralogCard(
-                  variant: ZCardVariant.feature,
-                  category: catColor,
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            'Total',
-                            style: AppTextStyles.titleMedium.copyWith(
-                              color: colors.textPrimary,
+              ZFadeSlideIn(
+                delay: Duration(milliseconds: totalsDelay),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimens.spaceMd,
+                    AppDimens.spaceSm,
+                    AppDimens.spaceMd,
+                    0,
+                  ),
+                  child: ZuralogCard(
+                    variant: ZCardVariant.feature,
+                    category: catColor,
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Total',
+                              style: AppTextStyles.titleMedium.copyWith(
+                                color: colors.textPrimary,
+                              ),
                             ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            '${meal.totalCalories} kcal',
-                            style: AppTextStyles.titleMedium.copyWith(
-                              color: catColor,
+                            const Spacer(),
+                            Text(
+                              '${meal.totalCalories} kcal',
+                              style: AppTextStyles.titleMedium.copyWith(
+                                color: catColor,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppDimens.spaceMd),
-                      Row(
-                        children: [
-                          _MacroChip(
-                            label: 'Protein',
-                            value: '${meal.totalProtein.round()}g',
-                            colors: colors,
-                          ),
-                          _MacroChip(
-                            label: 'Carbs',
-                            value: '${meal.totalCarbs.round()}g',
-                            colors: colors,
-                          ),
-                          _MacroChip(
-                            label: 'Fat',
-                            value: '${meal.totalFat.round()}g',
-                            colors: colors,
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                        const SizedBox(height: AppDimens.spaceMd),
+                        Row(
+                          children: [
+                            _MacroChip(
+                              label: 'Protein',
+                              value: '${meal.totalProtein.round()}g',
+                              colors: colors,
+                            ),
+                            _MacroChip(
+                              label: 'Carbs',
+                              value: '${meal.totalCarbs.round()}g',
+                              colors: colors,
+                            ),
+                            _MacroChip(
+                              label: 'Fat',
+                              value: '${meal.totalFat.round()}g',
+                              colors: colors,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
 
               // ── Action buttons ───────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceLg,
-                  AppDimens.spaceMd,
-                  0,
-                ),
-                child: ZButton(
-                  label: 'Edit meal',
-                  variant: ZButtonVariant.secondary,
-                  icon: Icons.edit_outlined,
-                  onPressed: () =>
-                      context.pushNamed(RouteNames.mealLog),
+              ZFadeSlideIn(
+                delay: Duration(milliseconds: buttonsDelay),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimens.spaceMd,
+                    AppDimens.spaceLg,
+                    AppDimens.spaceMd,
+                    0,
+                  ),
+                  child: ZButton(
+                    label: 'Edit meal',
+                    variant: ZButtonVariant.secondary,
+                    icon: Icons.edit_outlined,
+                    onPressed: () =>
+                        context.pushNamed(RouteNames.mealLog),
+                  ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceSm,
-                  AppDimens.spaceMd,
-                  0,
-                ),
-                child: ZButton(
-                  label: 'Delete meal',
-                  variant: ZButtonVariant.destructive,
-                  icon: Icons.delete_outline_rounded,
-                  isLoading: _isDeleting,
-                  onPressed:
-                      _isDeleting ? null : () => _confirmDelete(meal),
+              ZFadeSlideIn(
+                delay: Duration(milliseconds: buttonsDelay),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimens.spaceMd,
+                    AppDimens.spaceSm,
+                    AppDimens.spaceMd,
+                    0,
+                  ),
+                  child: ZButton(
+                    label: 'Delete meal',
+                    variant: ZButtonVariant.destructive,
+                    icon: Icons.delete_outline_rounded,
+                    isLoading: _isDeleting,
+                    onPressed:
+                        _isDeleting ? null : () => _confirmDelete(meal),
+                  ),
                 ),
               ),
 
