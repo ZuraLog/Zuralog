@@ -104,7 +104,29 @@ class SettingsHubScreen extends ConsumerWidget {
             ],
           ),
 
-          // ── Section 3: Data & Privacy ──────────────────────────────────
+          // ── Section 3: Your Progress ──────────────────────────────────
+          const SettingsSectionLabel('Your Progress'),
+
+          ZSettingsGroup(
+            tiles: [
+              ZSettingsTile(
+                icon: Icons.track_changes_rounded,
+                iconColor: AppColors.categoryActivity,
+                title: 'Progress & Goals',
+                subtitle: 'Streaks, achievements, journal',
+                onTap: () => openSection('Progress & Goals', RouteNames.progressPath),
+              ),
+              ZSettingsTile(
+                icon: Icons.trending_up_rounded,
+                iconColor: AppColors.categorySleep,
+                title: 'Trends & Patterns',
+                subtitle: 'Correlations and insights over time',
+                onTap: () => openSection('Trends & Patterns', RouteNames.trendsPath),
+              ),
+            ],
+          ),
+
+          // ── Section 4: Data & Privacy ──────────────────────────────────
           const SettingsSectionLabel('Data & Privacy'),
 
           ZSettingsGroup(
@@ -126,7 +148,7 @@ class SettingsHubScreen extends ConsumerWidget {
             ],
           ),
 
-          // ── Section 4: About ───────────────────────────────────────────
+          // ── Section 5: About ───────────────────────────────────────────
           const SettingsSectionLabel('About'),
 
           ZSettingsGroup(
