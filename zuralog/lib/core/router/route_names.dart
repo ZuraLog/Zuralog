@@ -8,26 +8,25 @@
 /// - `*Name` — the named route identifier (used with `GoRouter.go`).
 /// - `*Path` — the URL path string (registered in the router config).
 ///
-/// **Route tree (5-tab shell):**
+/// **Route tree (3-tab shell):**
 /// ```
 /// /today                          → TodayFeedScreen (tab 0)
 ///   /today/insight/:id            → InsightDetailScreen
 ///   /today/notifications          → NotificationHistoryScreen
 ///   /today/log/metric-picker      → MetricPickerScreen
- /// /data                           → HealthDashboardScreen (tab 1)
- ///   /data/category/:id            → CategoryDetailScreen
- ///   /data/metric/:id              → MetricDetailScreen
- ///   /data/score-breakdown         → ScoreBreakdownScreen
+/// /data                           → HealthDashboardScreen (tab 1)
+///   /data/category/:id            → CategoryDetailScreen
+///   /data/metric/:id              → MetricDetailScreen
+///   /data/score-breakdown         → ScoreBreakdownScreen
 /// /coach                          → NewChatScreen (tab 2)
-///   /coach/thread/:id             → ChatThreadScreen
-/// /progress                       → ProgressHomeScreen (tab 3)
+/// /progress                       → ProgressHomeScreen (pushed over shell)
 ///   /progress/goals               → GoalsScreen
 ///   /progress/goals/:id           → GoalDetailScreen
 ///   /progress/achievements        → AchievementsScreen
 ///   /progress/report              → WeeklyReportScreen
 ///   /progress/journal             → JournalScreen
 ///   /progress/journal/diary       → JournalDiaryScreen
-/// /trends                         → TrendsHomeScreen (tab 4)
+/// /trends                         → TrendsHomeScreen (pushed over shell)
 /// /settings                       → SettingsHubScreen (pushed over shell)
 ///   /settings/account             → AccountSettingsScreen
 ///   /settings/account/edit-profile → EditProfileScreen
@@ -191,7 +190,7 @@ abstract final class RouteNames {
   /// Path for the New Chat screen.
   static const String coachPath = '/coach';
 
-  // ── Tab 3: Progress ───────────────────────────────────────────────────────
+  // ── Progress (pushed over shell) ───────────────────────────────────────────
 
   /// Name for the Progress Home tab root.
   static const String progress = 'progress';
@@ -235,7 +234,7 @@ abstract final class RouteNames {
   /// Path for the Journal Diary screen.
   static const String journalDiaryPath = '/progress/journal/diary';
 
-  // ── Tab 4: Trends ─────────────────────────────────────────────────────────
+  // ── Trends (pushed over shell) ─────────────────────────────────────────────
 
   /// Name for the Trends Home tab root.
   static const String trends = 'trends';
