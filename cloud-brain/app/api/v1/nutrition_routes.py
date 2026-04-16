@@ -131,6 +131,25 @@ def _food_to_response(food: MealFood) -> dict:
     }
 
 
+async def _get_user_rules_prompt(db: AsyncSession, user_id: str) -> str:
+    """Fetch user's nutrition rules and format as a prompt addendum."""
+    result = await db.execute(
+        select(NutritionRule.rule_text)
+        .where(NutritionRule.user_id == user_id)
+        .order_by(NutritionRule.created_at.asc())
+    )
+    rules = result.scalars().all()
+    if not rules:
+        return ""
+
+    rules_block = "\n".join(f"- {r}" for r in rules)
+    return (
+        "\n\n--- User's personal nutrition rules (apply these to all estimates) ---\n"
+        f"{rules_block}\n"
+        "--- End of user rules ---"
+    )
+
+
 def _meal_to_response(meal: Meal) -> dict:
     """Convert a Meal ORM instance (with loaded foods) to a plain dict.
 
@@ -668,6 +687,7 @@ async def parse_meal_description(
     request: Request,
     body: MealParseRequest,
     user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
 ) -> MealParseResponse:
     """Parse a natural-language meal description into structured food items.
 
@@ -681,11 +701,15 @@ async def parse_meal_description(
             detail="Could not process the meal description.",
         )
 
+    # Inject user's personal nutrition rules into the system prompt.
+    rules_addendum = await _get_user_rules_prompt(db, user_id)
+    system_prompt = _MEAL_PARSE_SYSTEM_PROMPT + rules_addendum
+
     # Build LLM client for the insight model (cheaper, faster).
     llm = LLMClient(model=settings.openrouter_insight_model)
 
     messages = [
-        {"role": "system", "content": _MEAL_PARSE_SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": description},
     ]
 
@@ -765,6 +789,7 @@ async def scan_food_image(
     request: Request,
     file: UploadFile,
     user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
 ) -> MealParseResponse:
     """Scan a food image and return structured food items with nutrition estimates.
 
@@ -798,10 +823,14 @@ async def scan_food_image(
     b64_image = base64.b64encode(file_bytes).decode("utf-8")
     mime_type = file.content_type or "image/jpeg"
 
+    # Inject user's personal nutrition rules into the system prompt.
+    rules_addendum = await _get_user_rules_prompt(db, user_id)
+    system_prompt = _IMAGE_SCAN_SYSTEM_PROMPT + rules_addendum
+
     # Build vision message
     llm = LLMClient(model=settings.openrouter_vision_model)
     messages = [
-        {"role": "system", "content": _IMAGE_SCAN_SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": [
             {"type": "text", "text": "Analyze this food image and extract nutritional information."},
             {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{b64_image}"}},
