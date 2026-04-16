@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import 'package:zuralog/core/router/route_names.dart';
+import 'package:zuralog/features/nutrition/presentation/log_meal_sheet.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -159,8 +160,7 @@ class NutritionHomeScreen extends ConsumerWidget {
                           message:
                               'Tap below to log your first meal of the day.',
                           actionLabel: 'Log a meal',
-                          onAction: () =>
-                              context.pushNamed(RouteNames.mealLog),
+                          onAction: () => LogMealSheet.show(context),
                         ),
                       ),
                     ),
@@ -276,8 +276,7 @@ class NutritionHomeScreen extends ConsumerWidget {
                     child: ZButton(
                       label: 'Log a meal',
                       icon: Icons.add_rounded,
-                      onPressed: () =>
-                          context.pushNamed(RouteNames.mealLog),
+                      onPressed: () => LogMealSheet.show(context),
                     ),
                   ),
                 ),
