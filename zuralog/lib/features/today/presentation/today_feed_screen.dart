@@ -172,7 +172,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                   horizontal: AppDimens.spaceMd,
                 ),
                 child: SleepPillarCard(
-                  onTap: () => context.pushNamed(RouteNames.sleepLog),
+                  onTap: () => context.go(RouteNames.dataPath),
                 ),
               ),
             ),
@@ -197,7 +197,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                   horizontal: AppDimens.spaceMd,
                 ),
                 child: WorkoutsPillarCard(
-                  onTap: () => context.pushNamed(RouteNames.runLog),
+                  onTap: () => context.go(RouteNames.dataPath),
                 ),
               ),
             ),
