@@ -14,6 +14,7 @@ from app.models.daily_metrics import DailyHealthMetrics  # noqa: F401
 from app.models.daily_summary import DailySummary  # noqa: F401
 from app.models.emergency_card import EmergencyCard  # noqa: F401
 from app.models.food_cache import FoodCache  # noqa: F401
+from app.models.food_correction import FoodCorrection  # noqa: F401
 from app.models.health_event import HealthEvent  # noqa: F401
 from app.models.health_data import (  # noqa: F401
     ActivityType,
@@ -59,6 +60,7 @@ __all__ = [
     "DailySummary",
     "EmergencyCard",
     "FoodCache",
+    "FoodCorrection",
     "GoalPeriod",
     "HealthEvent",
     "Insight",
