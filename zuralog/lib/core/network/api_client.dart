@@ -248,6 +248,10 @@ class ApiClient {
   Future<Response<dynamic>> patch(String path, {Map<String, dynamic>? body}) =>
       _dio.patch(path, data: body);
 
+  /// Sends an HTTP PUT request to [path] with optional [data] body.
+  Future<Response<dynamic>> put(String path, {dynamic data}) =>
+      _dio.put(path, data: data);
+
   /// Sends a DELETE request to the given [path].
   ///
   /// Used for resource deletion operations. Returns the Dio [Response]
