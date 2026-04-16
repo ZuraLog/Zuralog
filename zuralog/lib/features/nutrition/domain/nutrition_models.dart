@@ -8,6 +8,9 @@
 /// - [MealFood]              — a single food item with macro breakdown
 /// - [Meal]                  — a logged meal containing one or more foods
 /// - [NutritionDaySummary]   — aggregated calorie and macro totals for a day
+/// - [ParsedFoodItem]        — AI-parsed food item from natural-language input
+/// - [FoodSearchResult]      — food entry returned from the search endpoint
+/// - [RecentFood]            — recently logged food for quick re-logging
 library;
 
 import 'package:flutter/material.dart';
@@ -30,6 +33,16 @@ enum MealType {
 
   /// Between-meal snack.
   snack;
+
+  /// Parses a [MealType] from a lowercase string (e.g. `'breakfast'`).
+  ///
+  /// Falls back to [MealType.snack] if the value is unrecognised.
+  static MealType fromString(String value) {
+    return MealType.values.firstWhere(
+      (e) => e.name == value.toLowerCase(),
+      orElse: () => MealType.snack,
+    );
+  }
 
   /// Human-readable label with the first letter capitalised.
   String get label => switch (this) {
@@ -60,6 +73,7 @@ class MealFood {
   const MealFood({
     required this.name,
     required this.portionGrams,
+    this.portionUnit = 'g',
     required this.caloriesKcal,
     required this.proteinG,
     required this.carbsG,
@@ -72,6 +86,9 @@ class MealFood {
   /// Portion size in grams.
   final int portionGrams;
 
+  /// Unit of measurement for the portion (defaults to `'g'`).
+  final String portionUnit;
+
   /// Energy content in kilocalories.
   final int caloriesKcal;
 
@@ -83,6 +100,30 @@ class MealFood {
 
   /// Fat content in grams.
   final double fatG;
+
+  /// Deserialises a [MealFood] from a backend JSON map.
+  factory MealFood.fromJson(Map<String, dynamic> json) {
+    return MealFood(
+      name: json['food_name'] as String? ?? '',
+      portionGrams: (json['portion_amount'] as num?)?.round() ?? 0,
+      portionUnit: json['portion_unit'] as String? ?? 'g',
+      caloriesKcal: (json['calories'] as num?)?.round() ?? 0,
+      proteinG: (json['protein_g'] as num?)?.toDouble() ?? 0.0,
+      carbsG: (json['carbs_g'] as num?)?.toDouble() ?? 0.0,
+      fatG: (json['fat_g'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
+  /// Serialises this [MealFood] to a JSON map matching the backend schema.
+  Map<String, dynamic> toJson() => {
+        'food_name': name,
+        'portion_amount': portionGrams.toDouble(),
+        'portion_unit': portionUnit,
+        'calories': caloriesKcal.toDouble(),
+        'protein_g': proteinG,
+        'carbs_g': carbsG,
+        'fat_g': fatG,
+      };
 }
 
 // -- Meal ---------------------------------------------------------------------
@@ -115,6 +156,21 @@ class Meal {
 
   /// Individual food items that make up this meal.
   final List<MealFood> foods;
+
+  /// Deserialises a [Meal] from a backend JSON map.
+  factory Meal.fromJson(Map<String, dynamic> json) {
+    final foodsList = (json['foods'] as List<dynamic>?) ?? [];
+    return Meal(
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      type: MealType.fromString(json['meal_type'] as String? ?? 'snack'),
+      loggedAt: DateTime.tryParse(json['logged_at'] as String? ?? '') ??
+          DateTime.now(),
+      foods: foodsList
+          .map((e) => MealFood.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
 
   /// Total calories across all foods in this meal.
   int get totalCalories =>
@@ -161,6 +217,17 @@ class NutritionDaySummary {
   /// Number of meals logged today.
   final int mealCount;
 
+  /// Deserialises a [NutritionDaySummary] from a backend JSON map.
+  factory NutritionDaySummary.fromJson(Map<String, dynamic> json) {
+    return NutritionDaySummary(
+      totalCalories: (json['total_calories'] as num?)?.round() ?? 0,
+      totalProteinG: (json['total_protein_g'] as num?)?.toDouble() ?? 0.0,
+      totalCarbsG: (json['total_carbs_g'] as num?)?.toDouble() ?? 0.0,
+      totalFatG: (json['total_fat_g'] as num?)?.toDouble() ?? 0.0,
+      mealCount: (json['meal_count'] as num?)?.toInt() ?? 0,
+    );
+  }
+
   /// An empty summary with all values at zero.
   static const empty = NutritionDaySummary(
     totalCalories: 0,
@@ -169,4 +236,221 @@ class NutritionDaySummary {
     totalFatG: 0,
     mealCount: 0,
   );
+}
+
+// -- ParsedFoodItem -----------------------------------------------------------
+
+/// A food item returned by the AI meal-parsing endpoint (`POST /meals/parse`).
+///
+/// Includes a [confidence] score indicating how certain the parser is about the
+/// nutritional breakdown. Convert to a [MealFood] via [toMealFood] before
+/// persisting.
+class ParsedFoodItem {
+  /// Creates an immutable [ParsedFoodItem].
+  const ParsedFoodItem({
+    required this.foodName,
+    required this.portionAmount,
+    required this.portionUnit,
+    required this.calories,
+    required this.proteinG,
+    required this.carbsG,
+    required this.fatG,
+    this.confidence = 0.5,
+  });
+
+  /// Human-readable food name.
+  final String foodName;
+
+  /// Portion size in the given [portionUnit].
+  final double portionAmount;
+
+  /// Unit of measurement for the portion (e.g. `'g'`, `'ml'`, `'oz'`).
+  final String portionUnit;
+
+  /// Energy content in kilocalories.
+  final double calories;
+
+  /// Protein content in grams.
+  final double proteinG;
+
+  /// Carbohydrate content in grams.
+  final double carbsG;
+
+  /// Fat content in grams.
+  final double fatG;
+
+  /// Parser confidence score (0.0–1.0). Defaults to 0.5.
+  final double confidence;
+
+  /// Deserialises a [ParsedFoodItem] from a backend JSON map.
+  factory ParsedFoodItem.fromJson(Map<String, dynamic> json) {
+    return ParsedFoodItem(
+      foodName: json['food_name'] as String? ?? '',
+      portionAmount: (json['portion_amount'] as num?)?.toDouble() ?? 0.0,
+      portionUnit: json['portion_unit'] as String? ?? 'g',
+      calories: (json['calories'] as num?)?.toDouble() ?? 0.0,
+      proteinG: (json['protein_g'] as num?)?.toDouble() ?? 0.0,
+      carbsG: (json['carbs_g'] as num?)?.toDouble() ?? 0.0,
+      fatG: (json['fat_g'] as num?)?.toDouble() ?? 0.0,
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.5,
+    );
+  }
+
+  /// Converts this parsed result into a [MealFood] for persisting.
+  MealFood toMealFood() => MealFood(
+        name: foodName,
+        portionGrams: portionAmount.round(),
+        portionUnit: portionUnit,
+        caloriesKcal: calories.round(),
+        proteinG: proteinG,
+        carbsG: carbsG,
+        fatG: fatG,
+      );
+}
+
+// -- FoodSearchResult ---------------------------------------------------------
+
+/// A food entry returned by the search endpoint (`GET /foods/search`).
+///
+/// Contains per-serving nutritional data. Convert to a [MealFood] via
+/// [toMealFood] before adding to a meal.
+class FoodSearchResult {
+  /// Creates an immutable [FoodSearchResult].
+  const FoodSearchResult({
+    required this.id,
+    required this.name,
+    this.brand,
+    required this.servingSize,
+    required this.servingUnit,
+    required this.caloriesPerServing,
+    required this.proteinPerServing,
+    required this.carbsPerServing,
+    required this.fatPerServing,
+    this.source = 'cached',
+  });
+
+  /// Unique identifier for this food entry.
+  final String id;
+
+  /// Human-readable food name.
+  final String name;
+
+  /// Optional brand name (e.g. `'Chobani'`).
+  final String? brand;
+
+  /// Default serving size in the given [servingUnit].
+  final double servingSize;
+
+  /// Unit of measurement for the serving (e.g. `'g'`, `'ml'`).
+  final String servingUnit;
+
+  /// Calories per serving.
+  final double caloriesPerServing;
+
+  /// Protein per serving (grams).
+  final double proteinPerServing;
+
+  /// Carbohydrates per serving (grams).
+  final double carbsPerServing;
+
+  /// Fat per serving (grams).
+  final double fatPerServing;
+
+  /// Data source (e.g. `'cached'`, `'usda'`, `'user'`).
+  final String source;
+
+  /// Deserialises a [FoodSearchResult] from a backend JSON map.
+  factory FoodSearchResult.fromJson(Map<String, dynamic> json) {
+    return FoodSearchResult(
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      brand: json['brand'] as String?,
+      servingSize: (json['serving_size'] as num?)?.toDouble() ?? 100.0,
+      servingUnit: json['serving_unit'] as String? ?? 'g',
+      caloriesPerServing:
+          (json['calories_per_serving'] as num?)?.toDouble() ?? 0.0,
+      proteinPerServing:
+          (json['protein_per_serving'] as num?)?.toDouble() ?? 0.0,
+      carbsPerServing:
+          (json['carbs_per_serving'] as num?)?.toDouble() ?? 0.0,
+      fatPerServing: (json['fat_per_serving'] as num?)?.toDouble() ?? 0.0,
+      source: json['source'] as String? ?? 'cached',
+    );
+  }
+
+  /// Converts this search result into a [MealFood] for adding to a meal.
+  MealFood toMealFood() => MealFood(
+        name: name,
+        portionGrams: servingSize.round(),
+        portionUnit: servingUnit,
+        caloriesKcal: caloriesPerServing.round(),
+        proteinG: proteinPerServing,
+        carbsG: carbsPerServing,
+        fatG: fatPerServing,
+      );
+}
+
+// -- RecentFood ---------------------------------------------------------------
+
+/// A recently logged food returned by the recents endpoint
+/// (`GET /foods/recent`).
+///
+/// Allows the user to quickly re-log a food they have eaten before. Convert to
+/// a [MealFood] via [toMealFood] before adding to a meal.
+class RecentFood {
+  /// Creates an immutable [RecentFood].
+  const RecentFood({
+    required this.foodName,
+    required this.portionAmount,
+    required this.portionUnit,
+    required this.calories,
+    required this.proteinG,
+    required this.carbsG,
+    required this.fatG,
+  });
+
+  /// Human-readable food name.
+  final String foodName;
+
+  /// Portion size in the given [portionUnit].
+  final double portionAmount;
+
+  /// Unit of measurement for the portion.
+  final String portionUnit;
+
+  /// Energy content in kilocalories.
+  final double calories;
+
+  /// Protein content in grams.
+  final double proteinG;
+
+  /// Carbohydrate content in grams.
+  final double carbsG;
+
+  /// Fat content in grams.
+  final double fatG;
+
+  /// Deserialises a [RecentFood] from a backend JSON map.
+  factory RecentFood.fromJson(Map<String, dynamic> json) {
+    return RecentFood(
+      foodName: json['food_name'] as String? ?? '',
+      portionAmount: (json['portion_amount'] as num?)?.toDouble() ?? 0.0,
+      portionUnit: json['portion_unit'] as String? ?? 'g',
+      calories: (json['calories'] as num?)?.toDouble() ?? 0.0,
+      proteinG: (json['protein_g'] as num?)?.toDouble() ?? 0.0,
+      carbsG: (json['carbs_g'] as num?)?.toDouble() ?? 0.0,
+      fatG: (json['fat_g'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
+  /// Converts this recent food into a [MealFood] for adding to a meal.
+  MealFood toMealFood() => MealFood(
+        name: foodName,
+        portionGrams: portionAmount.round(),
+        portionUnit: portionUnit,
+        caloriesKcal: calories.round(),
+        proteinG: proteinG,
+        carbsG: carbsG,
+        fatG: fatG,
+      );
 }
