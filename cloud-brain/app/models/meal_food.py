@@ -46,6 +46,21 @@ class MealFood(Base):
     fat_g: Mapped[float] = mapped_column(
         sa.Numeric(10, 2, asdecimal=False), nullable=False
     )
+
+    # Populated when the food was added via the guided walkthrough —
+    # mined by the rule-suggestion detector.
+    origin: Mapped[str | None] = mapped_column(sa.String(20), nullable=True)
+    # Populated when the food was added via the guided walkthrough —
+    # mined by the rule-suggestion detector.
+    source_question_id: Mapped[str | None] = mapped_column(
+        sa.String(20), nullable=True
+    )
+    # Populated when the food was added via the guided walkthrough —
+    # mined by the rule-suggestion detector.
+    source_answer_value: Mapped[str | None] = mapped_column(
+        sa.String(50), nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         sa.TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )
