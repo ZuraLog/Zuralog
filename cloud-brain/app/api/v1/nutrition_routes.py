@@ -46,6 +46,7 @@ from app.api.v1.nutrition_schemas import (
     NutritionRuleCreate,
     NutritionRuleUpdate,
     ParsedFoodItem,
+    RuleSuggestionDismissRequest,
 )
 from app.config import settings
 from app.database import get_db
@@ -55,6 +56,7 @@ from app.models.meal import Meal
 from app.models.meal_food import MealFood
 from app.models.nutrition_daily_summary import NutritionDailySummary
 from app.models.nutrition_rule import NutritionRule
+from app.models.rule_suggestion_snooze import RuleSuggestionSnooze
 from app.services.food_search_service import record_correction, search_foods
 from app.services.nutrition_service import recompute_nutrition_summary
 from app.services.rule_suggestion import detect_suggested_rule
@@ -967,6 +969,54 @@ async def delete_rule(
         )
 
     await db.delete(rule)
+    await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Rule Suggestion Dismissal (Phase 6 Plan 4)
+# ---------------------------------------------------------------------------
+
+
+@limiter.limit("30/minute")
+@router.post(
+    "/meals/rule-suggestion/dismiss",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def dismiss_rule_suggestion(
+    request: Request,
+    body: RuleSuggestionDismissRequest,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Snooze a rule suggestion for ten more meal saves.
+
+    Upserts a ``rule_suggestion_snooze`` row keyed on
+    ``(user_id, question_id, answer_value)``. Fresh dismissals and
+    repeated dismissals of the same pair both leave the row at
+    ``occurrences_remaining = 10``; the counter is decremented each
+    time the user saves a meal (see ``create_meal``) until it hits
+    zero, at which point the suggestion is eligible to surface again.
+    Returns 204 with no body.
+    """
+
+    stmt = (
+        pg_insert(RuleSuggestionSnooze)
+        .values(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            question_id=body.question_id,
+            answer_value=body.answer_value,
+            occurrences_remaining=10,
+        )
+        .on_conflict_do_update(
+            constraint="uq_rule_suggestion_snooze_user_question_answer",
+            set_={
+                "occurrences_remaining": 10,
+                "created_at": func.now(),
+            },
+        )
+    )
+    await db.execute(stmt)
     await db.commit()
 
 
