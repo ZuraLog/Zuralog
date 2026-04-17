@@ -28,6 +28,7 @@ import 'package:intl/intl.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
+import 'package:zuralog/features/nutrition/presentation/meal_walkthrough_screen.dart';
 import 'package:zuralog/features/nutrition/providers/nutrition_providers.dart';
 import 'package:zuralog/shared/widgets/buttons/z_button.dart';
 import 'package:zuralog/shared/widgets/cards/zuralog_card.dart';
@@ -272,17 +273,13 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
         _preWalkthroughParsedItems = List<ParsedFoodItem>.of(_parsedItems);
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           if (!mounted) return;
-          final answers = await _pushWalkthrough(visibleQuestions);
+          final result = await _pushWalkthrough(visibleQuestions);
           if (!mounted) return;
-          if (answers != null && answers.isNotEmpty) {
-            _walkthroughAnswers
-              ..clear()
-              ..addAll(answers);
-            _applyWalkthroughAnswers(
-              questions: visibleQuestions,
-              answers: answers,
-            );
-          }
+          if (result == null) return;
+          _handleWalkthroughResult(
+            result: result,
+            questions: visibleQuestions,
+          );
         });
       }
     } catch (e) {
@@ -1195,18 +1192,27 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
   /// using the same derivation as the initial parse. [setState] is called
   /// once at the end so the UI refreshes after all ops have been applied.
   /// Pushes the walkthrough screen, optionally pre-filling prior answers so
-  /// the user can edit what they said before. Returns the updated answer map
-  /// when the user finishes, or `null` if they backed out without completing.
-  Future<Map<String, dynamic>?> _pushWalkthrough(
+  /// the user can edit what they said before. Returns a record containing
+  /// the updated answers, the (possibly refined) food list, and a flag
+  /// indicating whether the server ran at least one refine round.
+  ///
+  /// Returns `null` if the user backed out without completing.
+  Future<MealWalkthroughResult?> _pushWalkthrough(
     List<GuidedQuestion> questions, {
     Map<String, dynamic> initialAnswers = const {},
   }) {
-    return context.pushNamed<Map<String, dynamic>>(
+    return context.pushNamed<MealWalkthroughResult>(
       RouteNames.nutritionMealWalkthrough,
       extra: MealWalkthroughArgs(
         questions: questions,
         foods: _preWalkthroughParsedItems ?? _parsedItems,
         initialAnswers: initialAnswers,
+        // Plan 3 — wire in the refine path. Description is only present for
+        // the text-describe input path; image scans pass null which makes
+        // the walkthrough treat `needs_followup` as a local no-op.
+        repository: ref.read(nutritionRepositoryProvider),
+        description: widget.args.descriptionText,
+        initialRound: 1,
       ),
     );
   }
@@ -1585,25 +1591,61 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
   }
 
   /// Re-pushes the walkthrough pre-filled with the user's prior answers.
-  /// On return, re-applies walkthrough ops against the pre-walkthrough
-  /// snapshot so the replay is idempotent.
+  /// On return, either adopts the refined food list (if the server ran a
+  /// refine round) or re-applies walkthrough ops locally against the
+  /// pre-walkthrough snapshot so the replay is idempotent.
   Future<void> _handleChangeAnswer() async {
     if (_questions.isEmpty) return;
     final initial = Map<String, dynamic>.of(_walkthroughAnswers);
-    final answers = await _pushWalkthrough(
+    final result = await _pushWalkthrough(
       _questions,
       initialAnswers: initial,
     );
     if (!mounted) return;
-    if (answers == null || answers.isEmpty) return;
+    if (result == null) return;
 
+    _handleWalkthroughResult(
+      result: result,
+      questions: _questions,
+    );
+  }
+
+  /// Common post-walkthrough handler used by both the initial push and the
+  /// "Change my answer" re-push.
+  ///
+  /// When the walkthrough ran at least one refine round, the server has
+  /// already reconciled the answers into the returned [MealWalkthroughResult.foods].
+  /// We adopt that list wholesale and skip local op application.
+  ///
+  /// When no refine ran, we fall back to Plan 2 behaviour — apply the
+  /// deterministic `on_answer` recipes locally against the pre-walkthrough
+  /// snapshot.
+  void _handleWalkthroughResult({
+    required MealWalkthroughResult result,
+    required List<GuidedQuestion> questions,
+  }) {
+    // Always remember the latest answers so "Change my answer" can pre-fill.
     _walkthroughAnswers
       ..clear()
-      ..addAll(answers);
-    _applyWalkthroughAnswers(
-      questions: _questions,
-      answers: answers,
-    );
+      ..addAll(result.answers);
+
+    if (result.wasRefined) {
+      // Server applied the answers for us — adopt the refined food list
+      // wholesale. Clear the pre-walkthrough snapshot since it no longer
+      // represents a valid baseline for local op replay.
+      setState(() {
+        _parsedItems = result.foods;
+        _mealFoods = result.foods.map((f) => f.toMealFood()).toList();
+        _preWalkthroughParsedItems = List<ParsedFoodItem>.of(result.foods);
+      });
+    } else {
+      // Plan 2 behaviour — apply ops locally against the original parse.
+      if (result.answers.isEmpty) return;
+      _applyWalkthroughAnswers(
+        questions: questions,
+        answers: result.answers,
+      );
+    }
   }
 
   // ── Time picker row ────────────────────────────────────────────────────────

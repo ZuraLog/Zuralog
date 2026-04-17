@@ -11,27 +11,58 @@
 ///   - "Skip all" fills every remaining question with its default and pops.
 ///   - Bottom bar: Back (secondary), Skip (text), Next / Finish (primary).
 ///
-/// Finishing pops the screen and returns the accumulated answers map to the
-/// caller, keyed by [GuidedQuestion.id].
+/// ## Multi-round refine (Plan 3)
+///
+/// Two situations trigger a second AI round:
+///
+///  - The AI flagged an answer as `needs_followup` (e.g. "yes" to "oil or
+///    butter?" is still ambiguous).
+///  - The user typed a free-text answer — open sentences can't be mapped to
+///    a deterministic recipe.
+///
+/// In both cases the walkthrough calls `repository.refineMeal(...)` and
+/// either receives a final refined food list (walkthrough finishes) or one
+/// more batch of questions (appended to the same PageView). A hard client-
+/// side 3-round cap mirrors the server cap.
+///
+/// Finishing pops the screen and returns a `(answers, foods, wasRefined)`
+/// record to the caller.
 library;
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
-import 'package:zuralog/features/nutrition/domain/guided_question.dart';
 import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
 import 'package:zuralog/shared/widgets/animations/z_fade_slide_in.dart';
 import 'package:zuralog/shared/widgets/buttons/z_button.dart';
 import 'package:zuralog/shared/widgets/cards/zuralog_card.dart';
+import 'package:zuralog/shared/widgets/feedback/z_toast.dart';
 import 'package:zuralog/shared/widgets/inputs/z_chip.dart';
 import 'package:zuralog/shared/widgets/inputs/z_number_stepper.dart';
 import 'package:zuralog/shared/widgets/inputs/z_slider.dart';
 import 'package:zuralog/shared/widgets/inputs/z_text_area.dart';
+import 'package:zuralog/shared/widgets/nutrition/z_refine_transition_card.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 
 // ── MealWalkthroughScreen ───────────────────────────────────────────────────
+
+/// Result type returned when the walkthrough finishes.
+///
+/// - [answers] — the full accumulated answer map, keyed by question id.
+/// - [foods] — the current working food list. When [wasRefined] is `true`,
+///   this is the refined list the server produced; otherwise it's the
+///   original parse (and the caller should apply ops locally).
+/// - [wasRefined] — `true` when at least one refine round ran (i.e. the
+///   server has already reconciled the answers into [foods]).
+typedef MealWalkthroughResult = ({
+  Map<String, dynamic> answers,
+  List<ParsedFoodItem> foods,
+  bool wasRefined,
+});
 
 /// Walkthrough that asks the user one guided question at a time.
 class MealWalkthroughScreen extends StatefulWidget {
@@ -58,15 +89,46 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
 
   int _currentIndex = 0;
 
+  // ── Refine state (Plan 3) ─────────────────────────────────────────────────
+
+  /// Which refine round we are currently in. Starts at [MealWalkthroughArgs.initialRound].
+  late int _round;
+
+  /// When `true`, the PageView adds one extra slot at the end rendering the
+  /// [ZRefineTransitionCard] while the refine call is in flight.
+  bool _refining = false;
+
+  /// The mutable list of questions. Starts as a copy of `widget.args.questions`
+  /// and grows when a refine round returns more questions.
+  late List<GuidedQuestion> _questions;
+
+  /// The mutable list of foods — replaced wholesale by each refine response.
+  late List<ParsedFoodItem> _currentFoods;
+
+  /// Running history of every answer the user has given, across all rounds.
+  /// Each entry has shape `{question_id, answer_value, round}`.
+  final List<Map<String, dynamic>> _answersHistory = [];
+
+  /// Progress value to freeze the progress bar at while a refine round is
+  /// in flight, so the user doesn't see it jump when we flip `_refining` off.
+  double _frozenProgress = 0.0;
+
+  /// Optional sub-label shown on the transition card — sourced from the
+  /// `reason` field of the last [NeedsFollowupOp] that triggered refine.
+  String? _pendingRefineReason;
+
   @override
   void initState() {
     super.initState();
+    _round = widget.args.initialRound;
+    _questions = List<GuidedQuestion>.of(widget.args.questions);
+    _currentFoods = List<ParsedFoodItem>.of(widget.args.foods);
     _answers = Map<String, dynamic>.of(widget.args.initialAnswers);
 
     // Pre-seed answers with defaults so Next works even if the user does not
     // interact with the component. Renderers that need mutation (slider,
     // stepper) call [_setAnswer] on every change.
-    for (final q in widget.args.questions) {
+    for (final q in _questions) {
       _answers.putIfAbsent(q.id, () => q.defaultValue);
     }
   }
@@ -95,19 +157,53 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
     );
   }
 
+  /// Normalises an answer value to the string key used by the backend in
+  /// [GuidedQuestion.onAnswer]. Mirrors `_answerKeyFor` in meal_review_screen.
+  String _answerKeyFor(Object? answer) {
+    if (answer == null) return '';
+    if (answer is bool) return answer ? 'yes' : 'no';
+    if (answer is num) return answer.toString();
+    if (answer is String) {
+      final trimmed = answer.trim();
+      return trimmed.length <= 50 ? trimmed : trimmed.substring(0, 50);
+    }
+    final str = answer.toString();
+    return str.length <= 50 ? str : str.substring(0, 50);
+  }
+
   // ── Navigation ────────────────────────────────────────────────────────────
 
-  void _goNext() {
+  Future<void> _goNext() async {
     HapticFeedback.lightImpact();
-    final isLast = _currentIndex >= widget.args.questions.length - 1;
+    final isLast = _currentIndex >= _questions.length - 1;
 
     // Flush any free-text answer for the current question before advancing.
-    final current = widget.args.questions[_currentIndex];
+    final current = _questions[_currentIndex];
     if (current.componentType == GuidedComponentType.freeText) {
       final controller = _textControllers[current.id];
       if (controller != null) {
         _answers[current.id] = controller.text;
       }
+    }
+
+    // Plan 3 refine trigger — either the answer explicitly needs a follow-up
+    // or it's free-text (always routes through refine). Gated on repository
+    // + description being provided AND the client-side round cap.
+    final rawAnswer = _answers[current.id];
+    final key = _answerKeyFor(rawAnswer);
+    final op = current.onAnswer?[key];
+    final isFreeText =
+        current.componentType == GuidedComponentType.freeText;
+    final needsFollowup = op is NeedsFollowupOp;
+    final canRefine = widget.args.repository != null &&
+        widget.args.description != null &&
+        _round < 3;
+
+    if ((needsFollowup || isFreeText) && canRefine) {
+      await _triggerRefine(
+        reasonHint: needsFollowup ? (op).reason : null,
+      );
+      return;
     }
 
     if (isLast) {
@@ -134,24 +230,144 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
 
   void _skipCurrent() {
     HapticFeedback.selectionClick();
-    final current = widget.args.questions[_currentIndex];
+    final current = _questions[_currentIndex];
     _answers[current.id] = current.defaultValue;
-    _goNext();
+    unawaited(_goNext());
   }
 
   void _skipAll() {
     HapticFeedback.mediumImpact();
     // Fill every remaining unanswered question with its default.
-    for (var i = _currentIndex; i < widget.args.questions.length; i++) {
-      final q = widget.args.questions[i];
+    for (var i = _currentIndex; i < _questions.length; i++) {
+      final q = _questions[i];
       _answers[q.id] = q.defaultValue;
     }
     _finish();
   }
 
+  // ── Refine (Plan 3) ───────────────────────────────────────────────────────
+
+  /// Called by [_goNext] when the current answer needs a second AI round.
+  /// Runs `repository.refineMeal(...)`, appends any new questions the server
+  /// returns, and either continues the walkthrough or finishes if the server
+  /// marked this round final (or the 3-round cap has been reached).
+  ///
+  /// Failure modes are non-fatal: network / parse errors show a discreet
+  /// error toast and the walkthrough advances past the problem question.
+  Future<void> _triggerRefine({String? reasonHint}) async {
+    final current = _questions[_currentIndex];
+    final rawAnswer = _answers[current.id];
+    final key = _answerKeyFor(rawAnswer);
+
+    _answersHistory.add({
+      'question_id': current.id,
+      'answer_value': key,
+      'round': _round,
+    });
+
+    // Freeze the progress bar at the current value so it doesn't jump while
+    // the transition card is visible.
+    final total = _questions.length;
+    _frozenProgress = total == 0 ? 0 : (_currentIndex + 1) / total;
+
+    setState(() {
+      _refining = true;
+      _pendingRefineReason = reasonHint;
+    });
+
+    // Slide to the extra transition slot.
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    if (!mounted) return;
+    await _pageController.nextPage(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+    );
+
+    try {
+      final result = await widget.args.repository!.refineMeal(
+        description: widget.args.description!,
+        foods: _currentFoods,
+        questionsHistory: _questions,
+        answersHistory: _answersHistory,
+        round: _round + 1,
+      );
+
+      if (!mounted) return;
+
+      _round += 1;
+      _currentFoods = result.foods;
+
+      // Server-side cap: honour `is_final` and `rounds_remaining` regardless
+      // of local state.
+      final done = result.isFinal ||
+          result.questions.isEmpty ||
+          result.roundsRemaining == 0 ||
+          _round >= 3;
+
+      if (done) {
+        setState(() {
+          _refining = false;
+          _pendingRefineReason = null;
+        });
+        _finish();
+      } else {
+        // Append the new questions, turn off refining, and land on the first
+        // newly-appended question. The PageView's itemCount naturally shrinks
+        // by 1 (transition slot removed) and grows by `result.questions.length`,
+        // so a `jumpToPage` lines us up without visual jitter.
+        final firstNewIndex = _questions.length;
+        setState(() {
+          _questions = [..._questions, ...result.questions];
+          // Pre-seed defaults for the newly-appended questions.
+          for (final q in result.questions) {
+            _answers.putIfAbsent(q.id, () => q.defaultValue);
+          }
+          _refining = false;
+          _pendingRefineReason = null;
+          _currentIndex = firstNewIndex;
+        });
+
+        // Wait a frame so the PageView rebuilds with the new itemCount, then
+        // jump to the first new question.
+        await WidgetsBinding.instance.endOfFrame;
+        if (!mounted) return;
+        if (_pageController.hasClients) {
+          _pageController.jumpToPage(firstNewIndex);
+        }
+      }
+    } catch (e, stack) {
+      debugPrint('refineMeal failed: $e\n$stack');
+      if (!mounted) return;
+
+      setState(() {
+        _refining = false;
+        _pendingRefineReason = null;
+      });
+
+      ZToast.error(
+        context,
+        "Couldn't refine. Continuing with your answer.",
+      );
+
+      // Advance past the problem question normally. The transition slot is
+      // gone, so the old question we were on is still at _currentIndex.
+      if (_currentIndex < _questions.length - 1) {
+        final target = _currentIndex + 1;
+        setState(() => _currentIndex = target);
+        await WidgetsBinding.instance.endOfFrame;
+        if (!mounted) return;
+        if (_pageController.hasClients) {
+          _pageController.jumpToPage(target);
+        }
+      } else {
+        _finish();
+      }
+    }
+  }
+
   void _finish() {
     // Flush any free-text value that was not committed.
-    for (final q in widget.args.questions) {
+    for (final q in _questions) {
       if (q.componentType == GuidedComponentType.freeText) {
         final controller = _textControllers[q.id];
         if (controller != null) {
@@ -159,7 +375,11 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
         }
       }
     }
-    context.pop<Map<String, dynamic>>(_answers);
+    context.pop<MealWalkthroughResult>((
+      answers: _answers,
+      foods: _currentFoods,
+      wasRefined: _round > widget.args.initialRound,
+    ));
   }
 
   // ── Build ────────────────────────────────────────────────────────────────
@@ -167,13 +387,18 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final questions = widget.args.questions;
-    final total = questions.length;
+    final total = _questions.length;
 
     // Empty questions list → nothing to ask, pop immediately on next frame.
     if (total == 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.pop<Map<String, dynamic>>(_answers);
+        if (mounted) {
+          context.pop<MealWalkthroughResult>((
+            answers: _answers,
+            foods: _currentFoods,
+            wasRefined: _round > widget.args.initialRound,
+          ));
+        }
       });
       return Scaffold(
         backgroundColor: colors.background,
@@ -181,8 +406,15 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
       );
     }
 
-    final progress = (_currentIndex + 1) / total;
+    // While refining, freeze the progress bar at its last committed value so
+    // the user doesn't see it jump.
+    final liveProgress = (_currentIndex + 1) / total;
+    final progress = _refining ? _frozenProgress : liveProgress;
     final isFirst = _currentIndex == 0;
+
+    // PageView hosts (_questions.length + 1) slots while refining, where the
+    // last slot renders the transition card.
+    final pageCount = total + (_refining ? 1 : 0);
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -194,9 +426,17 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
               child: PageView.builder(
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: total,
+                itemCount: pageCount,
                 itemBuilder: (context, index) {
-                  final question = questions[index];
+                  // Transition slot — only when _refining is true and this is
+                  // the extra final slot.
+                  if (_refining && index == total) {
+                    return _buildTransitionPage();
+                  }
+                  if (index < 0 || index >= _questions.length) {
+                    return const SizedBox.shrink();
+                  }
+                  final question = _questions[index];
                   final pageIsFirst = index == 0;
                   final pageIsLast = index == total - 1;
                   return _buildQuestionPage(
@@ -222,6 +462,12 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
     int total,
     bool isFirst,
   ) {
+    // While refining, swap the "Question X of Y" label for a softer refine
+    // label. Otherwise show the usual counter.
+    final counterLabel = _refining
+        ? 'Asking one more thing\u2026'
+        : 'Question ${_currentIndex + 1} of $total';
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceSm,
@@ -231,15 +477,15 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
       ),
       child: Row(
         children: [
-          // Back arrow (dims on first question).
+          // Back arrow (dims on first question or while refining).
           Opacity(
-            opacity: isFirst ? 0.3 : 1.0,
+            opacity: (isFirst || _refining) ? 0.3 : 1.0,
             child: IconButton(
               icon: Icon(
                 Icons.arrow_back,
                 color: colors.textPrimary,
               ),
-              onPressed: isFirst ? null : _goBack,
+              onPressed: (isFirst || _refining) ? null : _goBack,
               tooltip: 'Back',
             ),
           ),
@@ -250,7 +496,7 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Question ${_currentIndex + 1} of $total',
+                  counterLabel,
                   style: AppTextStyles.labelMedium.copyWith(
                     color: colors.textSecondary,
                   ),
@@ -290,11 +536,12 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
             ),
           ),
 
-          // Skip all.
+          // Skip all — disabled while refining so the user can't escape
+          // mid-request into an inconsistent state.
           Padding(
             padding: const EdgeInsets.only(left: AppDimens.spaceSm),
             child: TextButton(
-              onPressed: _skipAll,
+              onPressed: _refining ? null : _skipAll,
               style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.spaceSm,
@@ -315,6 +562,34 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
     );
   }
 
+  // ── Transition page (Plan 3) ─────────────────────────────────────────────
+
+  Widget _buildTransitionPage() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            AppDimens.spaceMd,
+            AppDimens.spaceSm,
+            AppDimens.spaceMd,
+            MediaQuery.of(context).padding.bottom + AppDimens.spaceLg,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: ZFadeSlideIn(
+                key: const ValueKey('refine-transition'),
+                child: ZRefineTransitionCard(
+                  subLabel: _pendingRefineReason,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   // ── Question page ────────────────────────────────────────────────────────
 
   Widget _buildQuestionPage(
@@ -324,7 +599,7 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
     bool isLast,
   ) {
     // Resolve the food label for the question (uppercase, amber accent).
-    final foods = widget.args.foods;
+    final foods = _currentFoods;
     final foodName = (question.foodIndex >= 0 &&
             question.foodIndex < foods.length)
         ? foods[question.foodIndex].foodName
@@ -467,7 +742,7 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
           child: ZButton(
             label: isLast ? 'Finish' : 'Next',
             size: ZButtonSize.medium,
-            onPressed: _goNext,
+            onPressed: () => unawaited(_goNext()),
           ),
         ),
       ],

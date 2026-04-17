@@ -6,6 +6,7 @@
 /// and validation bounds.
 library;
 
+import 'package:zuralog/features/nutrition/data/mock_nutrition_repository.dart';
 import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
 
 // ── OnAnswerFood ────────────────────────────────────────────────────────────
@@ -438,13 +439,26 @@ class GuidedQuestion {
 /// Arguments passed to the Meal Walkthrough screen via route navigation.
 ///
 /// The screen walks through [questions] one at a time, accumulates answers,
-/// and returns them to the caller via `context.pop(answers)`.
+/// and returns them to the caller via `context.pop(...)`.
+///
+/// Plan 3 extends this with optional refine-round support:
+///
+///  - [repository] is used to call `POST /meals/refine` when an answer is
+///    either free-text or flagged `needs_followup` by the backend. When
+///    `null`, the `needs_followup` path degrades gracefully to a no-op.
+///  - [description] is the user's original text — required by the refine
+///    prompt to anchor the second LLM pass.
+///  - [initialRound] defaults to `1`. Existing Plan 2 callers continue to
+///    work unchanged because all three new fields are optional.
 class MealWalkthroughArgs {
   /// Creates an immutable [MealWalkthroughArgs].
   const MealWalkthroughArgs({
     required this.questions,
     required this.foods,
     this.initialAnswers = const {},
+    this.repository,
+    this.description,
+    this.initialRound = 1,
   });
 
   /// The ordered list of questions to ask.
@@ -455,4 +469,15 @@ class MealWalkthroughArgs {
 
   /// Optional pre-filled answers keyed by question id.
   final Map<String, dynamic> initialAnswers;
+
+  /// Repository used for refine-round AI calls. When `null`, the walkthrough
+  /// treats every `needs_followup` op as a no-op and advances normally.
+  final NutritionRepositoryInterface? repository;
+
+  /// The user's original meal description — echoed back into the refine
+  /// prompt so the second LLM pass sees the same anchor as the first.
+  final String? description;
+
+  /// Which refine round this walkthrough starts at. Defaults to `1`.
+  final int initialRound;
 }
