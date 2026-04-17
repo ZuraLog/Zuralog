@@ -30,8 +30,9 @@ import 'package:zuralog/features/nutrition/providers/nutrition_providers.dart';
 import 'package:zuralog/shared/widgets/buttons/z_button.dart';
 import 'package:zuralog/shared/widgets/feedback/z_alert_banner.dart';
 import 'package:zuralog/shared/widgets/feedback/z_toast.dart';
-import 'package:zuralog/shared/widgets/inputs/app_text_field.dart';
 import 'package:zuralog/shared/widgets/inputs/z_chip.dart';
+import 'package:zuralog/shared/widgets/inputs/z_labeled_number_field.dart';
+import 'package:zuralog/shared/widgets/inputs/z_labeled_text_field.dart';
 import 'package:zuralog/shared/widgets/inputs/z_search_bar.dart';
 import 'package:zuralog/shared/widgets/inputs/z_segmented_control.dart';
 import 'package:zuralog/shared/widgets/inputs/z_text_area.dart';
@@ -517,40 +518,45 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
                   if (_isManualMode) ...[
                     const SectionHeader(title: 'Enter nutrition manually'),
                     const SizedBox(height: AppDimens.spaceSm),
-                    AppTextField(
+                    ZLabeledTextField(
+                      label: 'Food name',
                       controller: _manualName,
-                      hintText: 'Food name (e.g. Chicken breast)',
+                      hint: 'e.g. Chicken breast',
                     ),
                     const SizedBox(height: AppDimens.spaceSm),
-                    AppTextField(
+                    ZLabeledNumberField(
+                      label: 'Calories',
+                      unit: 'kcal',
+                      allowDecimal: false,
                       controller: _manualCalories,
-                      hintText: 'Calories (kcal)',
-                      keyboardType: TextInputType.number,
                     ),
                     const SizedBox(height: AppDimens.spaceSm),
                     Row(
                       children: [
                         Expanded(
-                          child: AppTextField(
+                          child: ZLabeledNumberField(
+                            label: 'Protein',
+                            unit: 'g',
+                            allowDecimal: true,
                             controller: _manualProtein,
-                            hintText: 'Protein (g)',
-                            keyboardType: TextInputType.number,
                           ),
                         ),
                         const SizedBox(width: AppDimens.spaceSm),
                         Expanded(
-                          child: AppTextField(
+                          child: ZLabeledNumberField(
+                            label: 'Carbs',
+                            unit: 'g',
+                            allowDecimal: true,
                             controller: _manualCarbs,
-                            hintText: 'Carbs (g)',
-                            keyboardType: TextInputType.number,
                           ),
                         ),
                         const SizedBox(width: AppDimens.spaceSm),
                         Expanded(
-                          child: AppTextField(
+                          child: ZLabeledNumberField(
+                            label: 'Fat',
+                            unit: 'g',
+                            allowDecimal: true,
                             controller: _manualFat,
-                            hintText: 'Fat (g)',
-                            keyboardType: TextInputType.number,
                           ),
                         ),
                       ],
