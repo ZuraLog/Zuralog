@@ -233,10 +233,21 @@ class ApiNutritionRepository implements NutritionRepositoryInterface {
   }
 
   @override
-  Future<NutritionRule> createRule(String ruleText) async {
+  Future<NutritionRule> createRule(
+    String ruleText, {
+    String? suppressedQuestionId,
+    String? suppressedAnswerValue,
+  }) async {
+    final Map<String, dynamic> body = {'rule_text': ruleText};
+    if (suppressedQuestionId != null) {
+      body['suppressed_question_id'] = suppressedQuestionId;
+    }
+    if (suppressedAnswerValue != null) {
+      body['suppressed_answer_value'] = suppressedAnswerValue;
+    }
     final response = await _api.post(
       '/api/v1/nutrition/rules',
-      data: {'rule_text': ruleText},
+      data: body,
     );
     return NutritionRule.fromJson(response.data as Map<String, dynamic>);
   }
@@ -253,5 +264,19 @@ class ApiNutritionRepository implements NutritionRepositoryInterface {
   @override
   Future<void> deleteRule(String ruleId) async {
     await _api.delete('/api/v1/nutrition/rules/$ruleId');
+  }
+
+  @override
+  Future<void> dismissRuleSuggestion({
+    required String questionId,
+    required String answerValue,
+  }) async {
+    await _api.post(
+      '/api/v1/nutrition/meals/rule-suggestion/dismiss',
+      data: {
+        'question_id': questionId,
+        'answer_value': answerValue,
+      },
+    );
   }
 }

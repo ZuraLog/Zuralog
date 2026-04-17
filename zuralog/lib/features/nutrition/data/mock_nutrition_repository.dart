@@ -112,13 +112,30 @@ abstract interface class NutritionRepositoryInterface {
   Future<List<NutritionRule>> getRules();
 
   /// Creates a new nutrition rule with the given [ruleText].
-  Future<NutritionRule> createRule(String ruleText);
+  ///
+  /// When the rule is created in response to dismissing or accepting a
+  /// [SuggestedRule], pass [suppressedQuestionId] and [suppressedAnswerValue]
+  /// so the backend won't suggest the same rule again for that answer.
+  Future<NutritionRule> createRule(
+    String ruleText, {
+    String? suppressedQuestionId,
+    String? suppressedAnswerValue,
+  });
 
   /// Updates an existing rule's text.
   Future<NutritionRule> updateRule(String ruleId, String ruleText);
 
   /// Deletes the rule matching [ruleId].
   Future<void> deleteRule(String ruleId);
+
+  /// Dismiss a rule suggestion so the backend won't offer it again.
+  ///
+  /// Identified by the walkthrough [questionId] and the repeated
+  /// [answerValue] that produced the suggestion.
+  Future<void> dismissRuleSuggestion({
+    required String questionId,
+    required String answerValue,
+  });
 }
 
 // -- MockNutritionRepository --------------------------------------------------
@@ -255,7 +272,11 @@ final class MockNutritionRepository implements NutritionRepositoryInterface {
       throw UnimplementedError('Mock does not support getRules');
 
   @override
-  Future<NutritionRule> createRule(String ruleText) =>
+  Future<NutritionRule> createRule(
+    String ruleText, {
+    String? suppressedQuestionId,
+    String? suppressedAnswerValue,
+  }) =>
       throw UnimplementedError('Mock does not support createRule');
 
   @override
@@ -265,6 +286,14 @@ final class MockNutritionRepository implements NutritionRepositoryInterface {
   @override
   Future<void> deleteRule(String ruleId) =>
       throw UnimplementedError('Mock does not support deleteRule');
+
+  @override
+  Future<void> dismissRuleSuggestion({
+    required String questionId,
+    required String answerValue,
+  }) async {
+    throw UnimplementedError('Mock does not support dismissRuleSuggestion');
+  }
 
   // -- Fixture Builder --------------------------------------------------------
 
