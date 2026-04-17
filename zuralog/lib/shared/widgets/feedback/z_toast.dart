@@ -267,14 +267,22 @@ class _ZToastOverlayState extends State<_ZToastOverlay>
     return Center(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        // The decoration is intentionally minimal — a single surface-raised
+        // pill with no border, no shadow, and no outline. The `border: null`
+        // and `boxShadow: const []` are pinned explicitly so no theme-level
+        // inheritance can reintroduce an accent edge (e.g. the amber hairline
+        // the warning variant used to show on top of a tinted accent banner).
         decoration: BoxDecoration(
           color: colors.surfaceRaised,
           borderRadius: BorderRadius.circular(AppDimens.shapePill),
+          border: null,
+          boxShadow: const [],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Status dot.
+            // Status dot — circle + dot color only. No border here either so
+            // the variant accent only ever appears as the filled dot.
             Container(
               width: 8,
               height: 8,
@@ -315,7 +323,3 @@ class _ZToastOverlayState extends State<_ZToastOverlay>
     );
   }
 }
-
-/// Workaround: Flutter's [AnimatedBuilder] is the modern name for
-/// [AnimatedWidget]-style builders. We use the standard approach here.
-/// Note: In Flutter 3.x+, AnimatedBuilder is available directly.
