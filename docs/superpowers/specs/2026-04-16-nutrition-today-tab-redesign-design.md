@@ -1,7 +1,7 @@
 # Nutrition Feature + Today Tab Redesign
 
 **Date:** 2026-04-16
-**Updated:** 2026-04-17 (Phase 3 scope: camera logging, manual entry, nutrition rules, USDA seeding, bug fixes)
+**Updated:** 2026-04-17 (Phase 4: Meal Review dialog, time picker, edit flow, AI prompt improvements, mode persistence)
 **Status:** Active — implementation in progress
 **Author:** Hyowon + Claude
 **Type:** Information architecture change + new feature
@@ -164,8 +164,10 @@ Journal keeps its existing location under `features/progress/` on disk. It gets 
 |--------|---------|-------------|
 | Nutrition card (widget) | Compact summary on Today tab, reads from providers | Rendered inline on Today |
 | Nutrition Home | Full daily view — all meals, macros, calorie total, log button, rules access | Tapping the Nutrition card |
-| Log Meal sheet | Four logging paths: Describe/Manual, Camera, Search, Recents. Quick/Guided toggle. | Tapping "Log meal" on Nutrition Home or "+" on the Nutrition card |
-| Meal Detail | Individual meal view — foods, portions, macros, edit/delete | Tapping a meal from Nutrition Home or after logging |
+| Log Meal sheet | Input screen: scan food, search, describe/manual, recents. Quick/Guided toggle persisted. | Tapping "Log meal" on Nutrition Home or "+" on the Nutrition card |
+| Meal Review screen | Full-screen interactive review of AI-parsed foods with editing, refinement, meal type, time picker, save | Triggered by any AI action (describe parse, camera, barcode) |
+| Meal Detail | Individual meal view — foods, portions, macros, inline edit, delete | Tapping a meal from Nutrition Home or after logging |
+| Meal Edit dialog | Pre-filled manual edit of an existing meal's name, foods, macros, type, and time | "Edit" button on Meal Detail |
 | Nutrition Rules | List editor for persistent AI context rules | "Rules" button on Nutrition Home header |
 
 ### Nutrition Home screen
@@ -185,49 +187,91 @@ The Nutrition Home screen opens when the user taps the Nutrition card on Today. 
 
 ### Log Meal sheet
 
-A bottom sheet rendered **above the bottom navigation bar** (not behind it). Has a **Quick / Guided** segmented control at the top.
+A bottom sheet rendered above the bottom navigation bar (via `useRootNavigator: true`). This is the **input-only** screen — it collects what the user wants to log. All review, editing, and saving happens in the Meal Review screen.
 
-**Four logging paths:**
+The Quick/Guided mode preference is **persisted** across sessions so the user doesn't have to pick every time.
 
-**1. Describe / Manual (text-based)**
-One section with two modes. Default is "Describe" — user types a natural sentence like "two scrambled eggs, a slice of sourdough toast with butter, and a coffee with oat milk." This is sent to the AI parse endpoint, which returns structured foods.
+**Layout (top to bottom):**
 
-A "Enter nutrition manually" link toggles to Manual mode — a simple form with food name, calories, protein, carbs, fat fields. No AI involved. For users who know their numbers.
+1. **Quick / Guided toggle** — `ZSegmentedControl`. Preference saved to local storage.
+2. **Meal type chips** — auto-suggested by time of day (before 10am = breakfast, 10-14 = lunch, 14-17 = snack, after 17 = dinner). Can be changed later in Meal Review.
+3. **Scan food section** (primary) — three buttons: Camera, Photos, Barcode
+   - Camera: opens device camera via `image_picker`, sends photo to backend vision endpoint → opens **Meal Review screen**
+   - Photos: opens gallery picker, same flow
+   - Barcode: opens `mobile_scanner` overlay, looks up Open Food Facts → opens **Meal Review screen**
+4. **Search section** — `ZSearchBar` searching the food_cache (USDA + cached foods). Results shown below. Tapping a result adds it directly to the meal being built (no Meal Review — it's a known food with verified data).
+5. **OR divider**
+6. **Describe / Manual section** (secondary)
+   - Describe: text area + "Parse with AI" button → opens **Meal Review screen**
+   - Manual: toggle to enter food name + calories + macros directly. "Add food" adds to the meal being built.
+   - Advanced manual toggle: expands to show additional fields (fiber, sodium, sugar, saturated fat)
+7. **Recents row** — horizontal scroll of recent foods as one-tap chips. Tapping adds directly to the meal being built.
+8. **Food list** — shows manually added and search-added foods (not AI-parsed — those go through Meal Review). Only visible when foods have been added via search/manual/recents.
+9. **Save button** — only shown when food list has items AND no AI path was used. For AI paths, saving happens in the Meal Review screen.
 
-- **Quick mode**: Parsed/entered result appears as an editable list. No follow-up questions.
-- **Guided mode**: AI presents follow-up questions for items where accuracy would improve (portion size, cooking method). User's Nutrition Rules are injected into the AI prompt, so questions already answered by rules are skipped. If rules cover everything, a toast notification says "Your rules covered everything — no questions needed."
+### Meal Review screen (NEW)
 
-**2. Camera (photo-based, three-in-one)**
-Opens the device camera full-screen or the photo gallery. The system auto-detects what it's looking at:
+A full-screen pushed route that opens whenever AI is involved in parsing food. This is the interactive review experience that replaces the old "results appear in a flat list" pattern.
 
-- **Plate of food** — Gemini vision model identifies the food items and estimates nutrition. Same review/confirm flow as Describe.
-- **Barcode** — detected on-device using a barcode scanner library (not the vision model). Looked up in Open Food Facts. If found, shows the product with nutrition data. If not found, prompts "Barcode not found — try taking a photo of the food or nutrition label instead."
-- **Nutrition label** — Gemini reads the structured nutrition facts panel and extracts the actual numbers (calories, protein, carbs, fat). More accurate than estimation. User provides the food name.
+**When it opens:**
+- After "Parse with AI" returns results from the describe path
+- After the camera/gallery vision model returns results
+- After a barcode scan finds a product
 
-Quick/Guided modes apply to camera results the same way as Describe results.
+**Three phases:**
 
-**3. Search (database only)**
-User types a food name. Searches the `food_cache` table only (USDA-seeded data + previously cached foods + user history). No AI involved in search — this is a pure database lookup. If nothing matches, shows "No results found." User can add multiple foods to the meal before saving.
+**Phase 1 — Analyzing (loading)**
+Not a spinner — an engaging branded loading state:
+- Shows what the user submitted (their text description as a quote, or a thumbnail of their photo)
+- Animated progress using the nutrition amber color and brand pattern
+- Status text that updates: "Reading your description..." → "Identifying foods..." → "Estimating nutrition..."
+- Takes 1-5 seconds depending on the input type
 
-**4. Recents**
-Horizontal scroll of the user's most recently logged unique foods as one-tap chips. Tapping adds that food to the current meal immediately.
+**Phase 2 — Results ("Here's what I found")**
+Foods appear one by one with staggered `ZFadeSlideIn` animation:
+- Each food gets its own card showing:
+  - Food name (prominent)
+  - Portion amount and unit
+  - Compact macro display: calories / P / C / F
+  - Confidence indicator (green dot = high confidence, amber = estimated)
+  - Edit icon to tap and adjust values inline
+- In **Guided mode**: refinement questions appear under each food card:
+  - Portion size: XS / S / M / L / XL chips (multipliers: 0.5x, 0.75x, 1.0x, 1.5x, 2.0x)
+  - Cooking method: relevant chips (only when confidence < 0.8 and food is cookable)
+  - Items covered by rules: subtle "Covered by your rules" label instead of questions
+  - If ALL items are high-confidence (rules covered everything): toast notification + skip refinement
+- In **Quick mode**: no refinement questions, just results with edit icons
+- **Total summary card** at the bottom — combined calories, protein, carbs, fat. Updates live as user adjusts.
 
-**Meal type selection:** Before saving, the user picks a meal type (breakfast/lunch/dinner/snack) via chips. Auto-suggested based on time of day.
+**Phase 3 — Save ("Confirm your meal")**
+Below the food list and total:
+- **Meal type chips** — pre-filled from LogMealSheet selection, editable here
+- **Time picker** — defaults to current time, shown as "3:21 PM" with an edit icon. Tapping opens a time picker dialog. This solves the "forgot to log earlier" use case.
+- **"Save meal" button** — large CTA
+- After saving: success animation, dialog dismisses, LogMealSheet also closes, providers invalidated, back to wherever the user came from
 
-**Save flow:** Saves via `POST /nutrition/meals`. If user edited food values, corrections are submitted. Sheet dismisses, providers invalidated.
-
-### Meal Detail screen
+### Meal Detail screen (updated)
 
 Shown after logging a meal or when tapping an existing meal from any list.
 
 **Layout:**
-
 1. **Meal header card** — meal name, meal type icon + label, time. Feature-variant card with nutrition pattern.
 2. **Foods list** — each food item with its portion and calorie/macro breakdown in data-variant cards
 3. **Totals card** — summed calories, protein, carbs, fat for the whole meal. Feature-variant card.
-4. **Edit / Delete buttons** — edit navigates to the existing meal log screen (placeholder), delete shows confirmation dialog with soft-delete
+4. **Edit button** — opens a **Meal Edit dialog** (pre-filled with the meal's current data: name, foods with macros, meal type, time). User can change any field and save.
+5. **Delete button** — confirmation dialog, then soft-delete
 
-**Polish:** Loading skeletons, staggered entrance animations.
+### Meal Edit dialog (NEW)
+
+A full-screen pushed route for editing an existing meal. Pre-filled with the meal's current values.
+
+**Layout:**
+1. **Header** — "Edit meal" title
+2. **Meal name** — editable text field, pre-filled
+3. **Meal type chips** — pre-selected to current type
+4. **Time picker** — showing current meal time, editable
+5. **Foods list** — each food shown with editable name, calories, protein, carbs, fat fields. Delete button per food. "Add food" button at the bottom for manual additions.
+6. **Save changes button** — calls `PUT /nutrition/meals/{id}`, invalidates providers, pops back to Meal Detail
 
 ### Nutrition Rules screen
 
@@ -254,7 +298,7 @@ Rules are stored per-user and injected into every AI prompt (parse, vision, guid
 - Recipe builder
 - Meal plans
 - Water tracking (already handled separately)
-- Micronutrient deep-dive
+- Micronutrient deep-dive (basic manual mode covers calories + P/C/F; advanced mode adds fiber, sodium, sugar, saturated fat)
 - Glucose monitor integration
 - Calorie/macro targets or goal-setting for nutrition
 - Smart suggestions (AI predicts your usual meals)
@@ -371,31 +415,55 @@ Food data is sensitive. People with eating disorders, body image issues, or rest
 **2D. AI-first food search + correction learning** -- DONE (search, corrections, confidence scoring)
 **2E. Frontend wiring** -- DONE (real API repo, LogMealSheet with Quick/Guided, providers)
 
-### Phase 3 — Enhanced Logging + Data Seeding -- IN PROGRESS
+### Phase 3 — Enhanced Logging + Data Seeding -- COMPLETED
 
-**3A. Quick fixes** -- PLANNED
-- LogMealSheet renders above the bottom nav bar (padding fix)
-- Remove AI fallback from food search endpoint (search = database only)
+**3A. Quick fixes** -- DONE
+- LogMealSheet renders above nav bar via useRootNavigator
+- Food search endpoint is database-only (no AI fallback)
+- Daily summary upsert constraint fix
+- Rules screen crash fix
 
-**3B. Manual entry + USDA cache seeding** -- PLANNED
-- Manual food entry mode in the Describe section of LogMealSheet
-- One-time USDA FoodData Central import (~10,000 foods) into food_cache
-- Import script as a Celery task or management command
+**3B. Manual entry + USDA cache seeding** -- DONE
+- Manual food entry mode with proper ZButton toggle
+- USDA FoodData Central import (249 foods) into food_cache
+- Seed script as Celery task + standalone command
 
-**3C. Camera logging** -- PLANNED
-- Camera integration in LogMealSheet (take photo or upload from gallery)
-- Gemini vision model for food recognition and nutrition estimation
-- Barcode scanning with on-device detection + Open Food Facts lookup
-- Nutrition label reading via Gemini
+**3C. Camera logging** -- DONE
+- Camera + gallery integration via image_picker
+- Gemini vision model for food/label recognition via OpenRouter
+- Barcode scanning via mobile_scanner + Open Food Facts
 - Auto-detection (food vs barcode vs label)
-- Quick/Guided modes apply to camera results
 
-**3D. Nutrition Rules** -- PLANNED
-- nutrition_rules table (per-user, text-based rules)
-- Rules CRUD API endpoints
+**3D. Nutrition Rules** -- DONE
+- nutrition_rules table with CRUD endpoints
 - Rules editor screen accessible from Nutrition Home
-- Rules injected into all AI prompts (parse, vision, guided)
-- Auto-skip Guided questions when rules provide the answer
+- Rules injected into parse + vision AI prompts
+- Auto-skip Guided refinement when rules cover everything
+
+### Phase 4 — Meal Review Experience + UX Polish -- IN PROGRESS
+
+**4A. Meal Review screen** -- PLANNED
+- Full-screen interactive review dialog for AI-parsed foods
+- Three phases: Analyzing (animated loading) → Results (food cards with editing) → Save (meal type + time + confirm)
+- Guided mode refinement inline (portion, cooking method)
+- Live-updating total summary
+- Success animation on save
+
+**4B. LogMealSheet simplification** -- PLANNED
+- Remove food list and save button for AI paths (moved to Meal Review)
+- Keep food list + save for non-AI paths (search, manual, recents)
+- Persist Quick/Guided mode preference
+- Section reorder: scan → search → describe/manual
+
+**4C. Time picker + Edit meal flow** -- PLANNED
+- Time picker on Meal Review screen and Meal Edit dialog
+- Meal Edit dialog (pre-filled manual edit of existing meals)
+- Update Meal Detail "Edit" button to open Meal Edit dialog
+
+**4D. AI prompt improvements** -- PLANNED
+- Tune parse prompt to not assume quantities not mentioned (e.g., "toast" = 1 slice, not 2)
+- Better portion estimation guidance in system prompt
+- Add explicit instruction: "Only use the quantities the user specified. Do not assume multiples."
 
 ---
 
