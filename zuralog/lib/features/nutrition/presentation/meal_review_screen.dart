@@ -1260,6 +1260,12 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
           );
         case NoOpOp():
           break;
+        case NeedsFollowupOp():
+          // Refine runs in the walkthrough screen (see Plan 3, Task 10).
+          // When ops are applied locally here (non-refine path) this
+          // behaves as a no-op — we keep the food list untouched and
+          // continue.
+          break;
       }
     }
 

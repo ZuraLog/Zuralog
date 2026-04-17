@@ -67,6 +67,22 @@ abstract interface class NutritionRepositoryInterface {
     required String mode,
   });
 
+  /// Request a second-round refinement of an existing parse.
+  ///
+  /// Called by the guided walkthrough when an answer is open-ended or the
+  /// backend flagged it as `needs_followup`. The server runs a second LLM
+  /// pass over the full question-and-answer history and returns either a
+  /// refined food list (`isFinal: true`) or one more batch of follow-up
+  /// questions. The 3-round cap is enforced server-side; [round] is the
+  /// round number this request represents (1–3).
+  Future<MealRefineResult> refineMeal({
+    required String description,
+    required List<ParsedFoodItem> foods,
+    required List<GuidedQuestion> questionsHistory,
+    required List<Map<String, dynamic>> answersHistory,
+    required int round,
+  });
+
   /// Submit a correction for a food's nutrition values.
   Future<void> submitCorrection({
     required String foodName,
@@ -198,6 +214,16 @@ final class MockNutritionRepository implements NutritionRepositoryInterface {
     required String mode,
   }) =>
       throw UnimplementedError('Mock does not support parseMealDescription');
+
+  @override
+  Future<MealRefineResult> refineMeal({
+    required String description,
+    required List<ParsedFoodItem> foods,
+    required List<GuidedQuestion> questionsHistory,
+    required List<Map<String, dynamic>> answersHistory,
+    required int round,
+  }) =>
+      throw UnimplementedError('Mock does not support refineMeal');
 
   @override
   Future<void> submitCorrection({

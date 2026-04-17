@@ -86,6 +86,39 @@ void main() {
       final op = OnAnswerOp.fromJson(<String, dynamic>{});
       expect(op, isA<NoOpOp>());
     });
+
+    test('parses needs_followup with reason', () {
+      final op = OnAnswerOp.fromJson({
+        'op': 'needs_followup',
+        'reason': 'oil or butter?',
+      });
+      expect(op, isA<NeedsFollowupOp>());
+      expect((op as NeedsFollowupOp).reason, 'oil or butter?');
+    });
+
+    test('parses needs_followup without reason', () {
+      final op = OnAnswerOp.fromJson({'op': 'needs_followup'});
+      expect(op, isA<NeedsFollowupOp>());
+      expect((op as NeedsFollowupOp).reason, isNull);
+    });
+
+    test('parses needs_followup with empty-string reason as null', () {
+      final op =
+          OnAnswerOp.fromJson({'op': 'needs_followup', 'reason': '   '});
+      expect(op, isA<NeedsFollowupOp>());
+      expect((op as NeedsFollowupOp).reason, isNull);
+    });
+
+    test('truncates needs_followup reason at 200 chars', () {
+      final longReason = 'x' * 500;
+      final op = OnAnswerOp.fromJson({
+        'op': 'needs_followup',
+        'reason': longReason,
+      });
+      expect(op, isA<NeedsFollowupOp>());
+      expect((op as NeedsFollowupOp).reason, isNotNull);
+      expect(op.reason!.length, 200);
+    });
   });
 
   group('OnAnswerFood.toParsedFoodItem', () {

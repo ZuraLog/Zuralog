@@ -632,3 +632,94 @@ class MealParseResult {
     return MealParseResult(foods: parsedFoods, questions: parsedQuestions);
   }
 }
+
+// -- MealRefineResult ---------------------------------------------------------
+
+/// Result from the AI refine endpoint (`POST /meals/refine`).
+///
+/// The refine endpoint runs a second LLM pass on the original parse using
+/// the follow-up answers gathered so far. It returns either (a) a refined
+/// food list with [isFinal] = `true`, or (b) one more batch of follow-up
+/// [questions] with [isFinal] = `false`. [roundsRemaining] reflects the
+/// server-side hard 3-round cap — when it hits zero the client must stop
+/// calling refine regardless of [isFinal].
+class MealRefineResult {
+  /// Creates an immutable [MealRefineResult].
+  const MealRefineResult({
+    required this.foods,
+    required this.questions,
+    required this.isFinal,
+    required this.roundsRemaining,
+  });
+
+  /// The refined food items. On a final round this is the committed list;
+  /// on an intermediate round it is the best-effort running list.
+  final List<ParsedFoodItem> foods;
+
+  /// Additional follow-up questions the AI wants answered. Empty on the
+  /// final round.
+  final List<GuidedQuestion> questions;
+
+  /// Whether this is the last round. When `true` the client commits
+  /// [foods] and finishes the walkthrough.
+  final bool isFinal;
+
+  /// How many refine calls the client is still allowed to make this meal.
+  /// Enforced server-side; the client honours this as an upper bound.
+  final int roundsRemaining;
+
+  /// Deserialises a [MealRefineResult] defensively from a backend JSON map.
+  ///
+  /// Every field tolerates null or missing values so a malformed server
+  /// payload never throws — the walkthrough never crashes mid-refine.
+  factory MealRefineResult.fromJson(Map<String, dynamic> json) {
+    final foodsRaw = json['foods'];
+    final foods = <ParsedFoodItem>[];
+    if (foodsRaw is List) {
+      for (final entry in foodsRaw) {
+        if (entry is Map<String, dynamic>) {
+          try {
+            foods.add(ParsedFoodItem.fromJson(entry));
+          } catch (_) {
+            // Skip invalid food entries.
+          }
+        } else if (entry is Map) {
+          try {
+            foods.add(
+              ParsedFoodItem.fromJson(Map<String, dynamic>.from(entry)),
+            );
+          } catch (_) {
+            // Skip invalid food entries.
+          }
+        }
+      }
+    }
+    final questionsRaw = json['questions'];
+    final questions = <GuidedQuestion>[];
+    if (questionsRaw is List) {
+      for (final entry in questionsRaw) {
+        if (entry is Map<String, dynamic>) {
+          try {
+            questions.add(GuidedQuestion.fromJson(entry));
+          } catch (_) {
+            // Skip invalid question entries.
+          }
+        } else if (entry is Map) {
+          try {
+            questions.add(
+              GuidedQuestion.fromJson(Map<String, dynamic>.from(entry)),
+            );
+          } catch (_) {
+            // Skip invalid question entries.
+          }
+        }
+      }
+    }
+    return MealRefineResult(
+      foods: foods,
+      questions: questions,
+      isFinal: (json['is_final'] as bool?) ?? false,
+      roundsRemaining: (json['rounds_remaining'] as num?)?.toInt() ?? 0,
+    );
+  }
+}

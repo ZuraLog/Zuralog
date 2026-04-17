@@ -88,6 +88,19 @@ class OnAnswerFood {
       sourceAnswerValue: sourceAnswerValue,
     );
   }
+
+  /// Serialises this [OnAnswerFood] to a JSON map matching the backend
+  /// schema. Mirrors [OnAnswerFood.fromJson] field-for-field with snake_case
+  /// keys so it round-trips through `POST /meals/refine`.
+  Map<String, dynamic> toJson() => {
+        'food_name': foodName,
+        'portion_amount': portionAmount,
+        'portion_unit': portionUnit,
+        'calories': calories,
+        'protein_g': proteinG,
+        'carbs_g': carbsG,
+        'fat_g': fatG,
+      };
 }
 
 // ── OnAnswerOp ──────────────────────────────────────────────────────────────
@@ -124,6 +137,18 @@ sealed class OnAnswerOp {
           return ReplaceFoodOp(food: OnAnswerFood.fromJson(food));
         case 'no_op':
           return NoOpOp.instance;
+        case 'needs_followup':
+          final reasonRaw = json['reason'];
+          String? reason;
+          if (reasonRaw is String) {
+            final trimmed = reasonRaw.trim();
+            if (trimmed.isNotEmpty) {
+              reason = trimmed.length > 200
+                  ? trimmed.substring(0, 200)
+                  : trimmed;
+            }
+          }
+          return NeedsFollowupOp(reason: reason);
         default:
           return NoOpOp.instance;
       }
@@ -132,6 +157,12 @@ sealed class OnAnswerOp {
       return NoOpOp.instance;
     }
   }
+
+  /// Serialises this [OnAnswerOp] back to a JSON map matching the backend
+  /// schema. Each sealed subclass overrides this to emit its own shape, so
+  /// refine requests can round-trip prior rounds' questions back to the
+  /// server verbatim.
+  Map<String, dynamic> toJson();
 }
 
 /// Append a new [ParsedFoodItem] (built from [food]) to the working list.
@@ -141,6 +172,12 @@ class AddFoodOp extends OnAnswerOp {
 
   /// The food payload to mint into a [ParsedFoodItem].
   final OnAnswerFood food;
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'op': 'add_food',
+        'food': food.toJson(),
+      };
 }
 
 /// Scale the referenced food's portion and macros by [factor].
@@ -152,6 +189,12 @@ class ScaleFoodOp extends OnAnswerOp {
 
   /// Multiplier applied to portion / calories / macros.
   final double factor;
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'op': 'scale_food',
+        'factor': factor,
+      };
 }
 
 /// Replace the referenced food with a new [ParsedFoodItem] (built from [food]).
@@ -161,6 +204,12 @@ class ReplaceFoodOp extends OnAnswerOp {
 
   /// The food payload to mint into a [ParsedFoodItem].
   final OnAnswerFood food;
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'op': 'replace_food',
+        'food': food.toJson(),
+      };
 }
 
 /// No-op — the answer does not change the food list.
@@ -171,6 +220,30 @@ class NoOpOp extends OnAnswerOp {
 
   /// Canonical instance — always reuse instead of constructing a new one.
   static const NoOpOp instance = NoOpOp._();
+
+  @override
+  Map<String, dynamic> toJson() => {'op': 'no_op'};
+}
+
+/// Signals the answer needs a second AI round; emitted for free-text or
+/// ambiguous answers. The walkthrough collects the answer, pauses, calls
+/// refine, and continues with the server's response.
+///
+/// The optional [reason] is advisory — it hints the refine prompt about
+/// what's still unclear (e.g. `"was it oil or butter?"`) and is never
+/// shown to the user.
+class NeedsFollowupOp extends OnAnswerOp {
+  /// Creates a [NeedsFollowupOp] with an optional advisory [reason].
+  const NeedsFollowupOp({this.reason});
+
+  /// Advisory hint for the refine prompt — never surfaced in the UI.
+  final String? reason;
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'op': 'needs_followup',
+        'reason': reason,
+      };
 }
 
 // ── GuidedComponentType ─────────────────────────────────────────────────────
@@ -335,6 +408,28 @@ class GuidedQuestion {
       unit: json['unit'] as String?,
       onAnswer: parsedOnAnswer,
     );
+  }
+
+  /// Serialises this [GuidedQuestion] to a JSON map matching the backend
+  /// schema. Mirrors [GuidedQuestion.fromJson] field-for-field so refine
+  /// requests can round-trip prior rounds' questions back to the server.
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic>? onAnswerJson =
+        onAnswer?.map((key, value) => MapEntry(key, value.toJson()));
+    return {
+      'id': id,
+      'food_index': foodIndex,
+      'question': question,
+      'component_type': componentType.wire,
+      'options': options,
+      'default_value': defaultValue,
+      'skipped_by_rule': skippedByRule,
+      'min': min,
+      'max': max,
+      'step': step,
+      'unit': unit,
+      'on_answer': onAnswerJson,
+    };
   }
 }
 

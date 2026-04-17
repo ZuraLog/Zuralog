@@ -137,6 +137,28 @@ class ApiNutritionRepository implements NutritionRepositoryInterface {
     return MealParseResult.fromJson(response.data as Map<String, dynamic>);
   }
 
+  @override
+  Future<MealRefineResult> refineMeal({
+    required String description,
+    required List<ParsedFoodItem> foods,
+    required List<GuidedQuestion> questionsHistory,
+    required List<Map<String, dynamic>> answersHistory,
+    required int round,
+  }) async {
+    final response = await _api.post(
+      '/api/v1/nutrition/meals/refine',
+      data: {
+        'description': description,
+        'foods': foods.map((f) => f.toJson()).toList(),
+        'questions_history':
+            questionsHistory.map((q) => q.toJson()).toList(),
+        'answers_history': answersHistory,
+        'round': round,
+      },
+    );
+    return MealRefineResult.fromJson(response.data as Map<String, dynamic>);
+  }
+
   // ── Corrections ────────────────────────────────────────────────────────────
 
   @override
