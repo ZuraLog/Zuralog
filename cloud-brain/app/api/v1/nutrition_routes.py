@@ -25,7 +25,9 @@ import sentry_sdk
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile, status
 from openai import APIError
 from pydantic import ValidationError
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import select, text
+from sqlalchemy import update as sa_update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
@@ -573,6 +575,21 @@ async def create_meal(
     await db.commit()
     await db.refresh(meal)
 
+    # Decrement every active snooze for this user — the zero-floor means
+    # counters never go negative, so exhausted rows stop blocking the
+    # detector naturally without ever needing a cleanup job.
+    await db.execute(
+        sa_update(RuleSuggestionSnooze)
+        .where(
+            RuleSuggestionSnooze.user_id == user_id,
+            RuleSuggestionSnooze.occurrences_remaining > 0,
+        )
+        .values(
+            occurrences_remaining=RuleSuggestionSnooze.occurrences_remaining - 1
+        )
+    )
+    await db.commit()
+
     # Recompute daily summary (best-effort — never block the main response).
     try:
         summary_date = body.logged_at.date()
@@ -895,6 +912,24 @@ async def create_rule(
     db.add(rule)
     await db.commit()
     await db.refresh(rule)
+
+    # If the client tells us which suggestion this rule came from, clear
+    # its snooze row so the exact pair is never re-surfaced. We do not
+    # infer the (question_id, answer_value) pair from rule text — the
+    # client sends it explicitly, which keeps the server logic simple
+    # and testable.
+    if (
+        body.suppressed_question_id is not None
+        and body.suppressed_answer_value is not None
+    ):
+        await db.execute(
+            sa_delete(RuleSuggestionSnooze).where(
+                RuleSuggestionSnooze.user_id == user_id,
+                RuleSuggestionSnooze.question_id == body.suppressed_question_id,
+                RuleSuggestionSnooze.answer_value == body.suppressed_answer_value,
+            )
+        )
+        await db.commit()
 
     return {
         "id": str(rule.id),
