@@ -122,6 +122,12 @@ async def classify_message(text: str) -> MessageTier:
                 ],
                 temperature=0.0,
                 max_tokens=10,
+                # MiniMax M2.7 is a reasoning model — without this override it
+                # burns the 10-token budget on hidden chain-of-thought and
+                # returns empty content, making every classification default
+                # to "standard". effort=none is OpenRouter's documented kill
+                # switch for reasoning.
+                extra_body={"reasoning": {"effort": "none"}},
             ),
             timeout=_CLASSIFIER_TIMEOUT,
         )

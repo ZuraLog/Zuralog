@@ -92,6 +92,15 @@ async def _estimate_food_nutrition(food_name: str) -> dict:
         ],
         temperature=0.3,
         max_tokens=256,
+        # Defence in depth for a reasoning model:
+        #   - json_object forces syntactically valid JSON
+        #   - reasoning effort=none stops the model burning tokens on hidden
+        #     chain-of-thought and returning empty content
+        #   - response-healing plugin auto-repairs trailing commas, stray
+        #     markdown fences, and missing brackets at the edge.
+        response_format={"type": "json_object"},
+        reasoning={"effort": "none"},
+        plugins=[{"id": "response-healing"}],
     )
 
     raw = response.choices[0].message.content.strip()
