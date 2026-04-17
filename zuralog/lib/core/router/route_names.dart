@@ -264,6 +264,12 @@ abstract final class RouteNames {
   /// Path for the Nutrition Rules screen.
   static const String nutritionRulesPath = '/nutrition/rules';
 
+  /// Name for the Meal Review screen.
+  static const String nutritionMealReview = 'nutritionMealReview';
+
+  /// Path for the Meal Review screen.
+  static const String nutritionMealReviewPath = '/nutrition/meal-review';
+
   // ── Settings (pushed over shell) ─────────────────────────────────────────
 
   /// Name for the Settings Hub screen (pushed over the shell, not a tab).
