@@ -640,6 +640,78 @@ class NutritionRule {
   }
 }
 
+// -- SuggestedRule ------------------------------------------------------------
+
+/// A rule the backend suggests the user save, based on repeated walkthrough
+/// answers.
+///
+/// When the user gives the same answer to the same walkthrough question 3+
+/// times across recent meals, the backend returns a [SuggestedRule] alongside
+/// the parse/refine response so the client can offer to save it as a
+/// persistent rule. Dismissing a suggestion is handled via
+/// `dismissRuleSuggestion` on the repository.
+class SuggestedRule {
+  /// Creates an immutable [SuggestedRule].
+  const SuggestedRule({
+    required this.ruleText,
+    required this.questionId,
+    required this.answerValue,
+  });
+
+  /// Human-readable rule text the user would save (e.g. "I always use
+  /// whole milk in my coffee").
+  final String ruleText;
+
+  /// Id of the walkthrough question whose repeated answer triggered this
+  /// suggestion.
+  final String questionId;
+
+  /// The answer value the user repeatedly picked for [questionId].
+  final String answerValue;
+
+  /// Deserialises a [SuggestedRule] from a backend JSON map.
+  ///
+  /// All fields default to empty strings if missing or malformed so a
+  /// partial payload never throws.
+  factory SuggestedRule.fromJson(Map<String, dynamic> json) {
+    return SuggestedRule(
+      ruleText: (json['rule_text'] as String?) ?? '',
+      questionId: (json['question_id'] as String?) ?? '',
+      answerValue: (json['answer_value'] as String?) ?? '',
+    );
+  }
+
+  /// Serialises this [SuggestedRule] to a JSON map matching the backend
+  /// schema.
+  Map<String, dynamic> toJson() => {
+        'rule_text': ruleText,
+        'question_id': questionId,
+        'answer_value': answerValue,
+      };
+}
+
+/// Extracts a [SuggestedRule] from a JSON payload defensively.
+///
+/// Returns `null` when the key is missing, null, or not a `Map` — never
+/// throws — so a malformed server response can't crash parse/refine.
+SuggestedRule? _suggestedRuleFromJson(dynamic raw) {
+  if (raw is Map<String, dynamic>) {
+    try {
+      return SuggestedRule.fromJson(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+  if (raw is Map) {
+    try {
+      return SuggestedRule.fromJson(Map<String, dynamic>.from(raw));
+    } catch (_) {
+      return null;
+    }
+  }
+  return null;
+}
+
 // -- MealParseResult ----------------------------------------------------------
 
 /// Combined result from the AI parse/scan endpoints.
@@ -652,6 +724,7 @@ class MealParseResult {
   const MealParseResult({
     required this.foods,
     this.questions = const [],
+    this.suggestedRule,
   });
 
   /// Parsed food items ready to show in the review screen.
@@ -659,6 +732,10 @@ class MealParseResult {
 
   /// Guided follow-up questions the AI wants the user to answer.
   final List<GuidedQuestion> questions;
+
+  /// A rule the backend suggests saving, detected from repeated walkthrough
+  /// answers across recent meals. `null` when no suggestion is offered.
+  final SuggestedRule? suggestedRule;
 
   /// Deserialises a [MealParseResult] defensively from a backend JSON map.
   factory MealParseResult.fromJson(Map<String, dynamic> json) {
@@ -676,7 +753,11 @@ class MealParseResult {
             .map(GuidedQuestion.fromJson)
             .toList()
         : const <GuidedQuestion>[];
-    return MealParseResult(foods: parsedFoods, questions: parsedQuestions);
+    return MealParseResult(
+      foods: parsedFoods,
+      questions: parsedQuestions,
+      suggestedRule: _suggestedRuleFromJson(json['suggested_rule']),
+    );
   }
 }
 
@@ -697,6 +778,7 @@ class MealRefineResult {
     required this.questions,
     required this.isFinal,
     required this.roundsRemaining,
+    this.suggestedRule,
   });
 
   /// The refined food items. On a final round this is the committed list;
@@ -714,6 +796,10 @@ class MealRefineResult {
   /// How many refine calls the client is still allowed to make this meal.
   /// Enforced server-side; the client honours this as an upper bound.
   final int roundsRemaining;
+
+  /// A rule the backend suggests saving, detected from repeated walkthrough
+  /// answers across recent meals. `null` when no suggestion is offered.
+  final SuggestedRule? suggestedRule;
 
   /// Deserialises a [MealRefineResult] defensively from a backend JSON map.
   ///
@@ -767,6 +853,7 @@ class MealRefineResult {
       questions: questions,
       isFinal: (json['is_final'] as bool?) ?? false,
       roundsRemaining: (json['rounds_remaining'] as num?)?.toInt() ?? 0,
+      suggestedRule: _suggestedRuleFromJson(json['suggested_rule']),
     );
   }
 }
