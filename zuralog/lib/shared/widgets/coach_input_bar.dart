@@ -346,6 +346,7 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
                       color: colors.inputBackground,
                       borderRadius:
                           BorderRadius.circular(AppDimens.radiusInput),
+                      border: Border.all(color: colors.border, width: 1),
                     ),
                     child: TextField(
                       controller: widget.controller,
@@ -360,6 +361,7 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
                         hintText: isExhausted ? 'Message limit reached' : widget.placeholder,
                         hintStyle: AppTextStyles.bodyLarge
                             .copyWith(color: colors.textTertiary),
+                        // Outer Container paints the visible outline (see BoxDecoration above).
                         border: InputBorder.none,
                         counterText: '',
                         contentPadding: const EdgeInsets.symmetric(
