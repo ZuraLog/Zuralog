@@ -1,7 +1,7 @@
 # Nutrition Feature + Today Tab Redesign
 
 **Date:** 2026-04-16
-**Updated:** 2026-04-17 (Phase 4: Meal Review dialog, time picker, edit flow, AI prompt improvements, mode persistence)
+**Updated:** 2026-04-17 (Phase 5: Interactive Guided Walkthrough with AI-generated questions + rules-applied badges)
 **Status:** Active — implementation in progress
 **Author:** Hyowon + Claude
 **Type:** Information architecture change + new feature
@@ -52,9 +52,26 @@ These decisions were reached through brainstorming and are final for this spec:
 
 ### Smart logging features (AI-first advantages)
 22. **Two logging modes: Quick and Guided** — a segmented control on the Log Meal screen lets the user switch per-meal. Quick mode: AI does everything silently. Guided mode (default): AI asks smart follow-up questions to improve accuracy.
-23. **Interactive refinement in Guided mode** — the AI asks up to two follow-up questions per food item when they would meaningfully change the calorie count:
-    - **Portion size**: XS / S / M / L / XL selector (the AI determines what each size means for that food)
-    - **Cooking method**: horizontal chips with relevant options (e.g., Scrambled / Fried / Boiled / Poached for eggs). Only shown when cooking method changes calories significantly. Skipped for raw foods, bread, drinks, etc.
+23. **Interactive Guided Walkthrough** — when Guided mode is active, after parsing the AI generates targeted follow-up questions rendered as a **full-screen card-based walkthrough**, one question per screen. The AI picks the best input component for each question. The walkthrough applies to **all AI-driven logging methods** (describe, camera, nutrition label, barcode) but NOT to manual entry (manual = user trusts their own numbers). Rules-applied badges appear on food cards in the results phase.
+
+    **Component types the AI can generate:**
+    - `slider` — continuous ranges (e.g., "How many grams of rice?")
+    - `button_group` — discrete single-choice (e.g., "How were the eggs cooked?")
+    - `number_stepper` — integer counts (e.g., "How many slices?")
+    - `size_picker` — labeled presets with visual sizes (e.g., Small 100g / Medium 200g / Large 300g)
+    - `yes_no` — simple binary (e.g., "Any sauce or dressing?")
+    - `free_text` — fallback for anything else
+
+    **Walkthrough behavior:**
+    - Full-screen push, one question per screen, card-based layout with amber pattern accent
+    - Progress bar at the top ("Question 2 of 5")
+    - Every question has a **Skip** option (uses the AI-provided default); a **Skip all** escape hatch jumps straight to results with defaults applied
+    - **Back button** goes to the previous question, preserving the prior answer
+    - No hard cap on number of questions — we trust the AI to be concise because the app is AI-first
+    - Questions the AI would have asked but that are **already answered by a user rule** are NOT shown; instead they appear as "rule was applied" notes on the food card in results
+    - After the final question, user lands on the normal **Results phase** of the Meal Review screen (food cards + totals + meal type + time picker + save)
+    - Quick mode skips the walkthrough entirely (goes straight from Analyzing to Results)
+    - Manual entry bypasses the AI entirely (no walkthrough regardless of mode)
 24. **Confidence scoring (internal only)** — the AI assigns a confidence score (0.0-1.0) to each parsed food item. This drives question selection in Guided mode (low confidence = more questions). Not shown to the user. Architecture is ready for future UI exposure if needed.
 25. **Correction learning** — when users edit AI estimates before saving, the corrections feed into a weighted average over time. The cached value for that food gradually improves as more users provide corrections.
 26. **Correction abuse protection** — two layers:
@@ -70,6 +87,7 @@ These decisions were reached through brainstorming and are final for this spec:
 28. **Rules injected into every AI prompt** — parse, vision, and guided question prompts all include the user's rules as context. The AI adapts its estimates and skips questions that rules already answer.
 29. **When rules answer all Guided questions** — the AI auto-completes and shows a quick notification ("Your rules covered everything") instead of asking questions. Guided effectively becomes Quick when rules are comprehensive enough.
 30. **Rules managed from Nutrition Home** — a "Rules" button/chip in the Nutrition Home header. Opens a simple list editor where users add, edit, or delete rules. Unlimited rules allowed.
+31. **Rules-applied badges** — when the AI used one or more rules while estimating a food, that food card in the Meal Review results phase shows a small interactive badge ("N rules applied"). Tapping the badge opens a bottom sheet listing exactly which rules were applied to that specific food. The parse/scan API returns an `applied_rules` array per food so the client can show these badges. This gives users visual confirmation that their rules are actually being used.
 
 ### Deferred features (future work)
 31. **Smart suggestions** (AI predicts "your usual breakfast?" based on time + history) — deferred, needs weeks of user data to be useful
@@ -440,30 +458,50 @@ Food data is sensitive. People with eating disorders, body image issues, or rest
 - Rules injected into parse + vision AI prompts
 - Auto-skip Guided refinement when rules cover everything
 
-### Phase 4 — Meal Review Experience + UX Polish -- IN PROGRESS
+### Phase 4 — Meal Review Experience + UX Polish -- COMPLETED
 
-**4A. Meal Review screen** -- PLANNED
+**4A. Meal Review screen** -- DONE
 - Full-screen interactive review dialog for AI-parsed foods
 - Three phases: Analyzing (animated loading) → Results (food cards with editing) → Save (meal type + time + confirm)
 - Guided mode refinement inline (portion, cooking method)
 - Live-updating total summary
-- Success animation on save
 
-**4B. LogMealSheet simplification** -- PLANNED
-- Remove food list and save button for AI paths (moved to Meal Review)
-- Keep food list + save for non-AI paths (search, manual, recents)
-- Persist Quick/Guided mode preference
-- Section reorder: scan → search → describe/manual
+**4B. LogMealSheet simplification** -- DONE
+- AI paths open Meal Review, non-AI paths stay inline with save button
+- Quick/Guided mode persisted via SharedPreferences
 
-**4C. Time picker + Edit meal flow** -- PLANNED
-- Time picker on Meal Review screen and Meal Edit dialog
-- Meal Edit dialog (pre-filled manual edit of existing meals)
-- Update Meal Detail "Edit" button to open Meal Edit dialog
+**4C. Time picker + Edit meal flow** -- DONE
+- Time picker on Meal Review and Meal Edit screens
+- Meal Edit screen (pre-filled) wired from Meal Detail's edit button
 
-**4D. AI prompt improvements** -- PLANNED
-- Tune parse prompt to not assume quantities not mentioned (e.g., "toast" = 1 slice, not 2)
-- Better portion estimation guidance in system prompt
-- Add explicit instruction: "Only use the quantities the user specified. Do not assume multiples."
+**4D. AI prompt improvements** -- DONE
+- Prompts tuned to not assume unspecified quantities
+
+### Phase 5 — Interactive Guided Walkthrough -- IN PROGRESS
+
+**5A. Backend: Enhanced parse/scan responses** -- PLANNED
+- Extend `/meals/parse` and `/meals/scan-image` to return `questions[]` and `applied_rules[]` per food when Guided mode is on
+- Update AI system prompts to generate structured questions with component types (slider, button_group, number_stepper, size_picker, yes_no, free_text)
+- System prompt instructs the AI to mark questions already answered by user rules as `skipped_by_rule` (not shown to the user, only used for badges)
+- New Pydantic schemas: `GuidedQuestion`, `ParsedFoodItemWithRules` (ParsedFoodItem + applied_rules)
+
+**5B. Flutter: Question Walkthrough screen** -- PLANNED
+- New full-screen route, pushed after the Analyzing phase in Guided mode
+- Card-based layout with amber pattern corner accent
+- Progress bar + "Skip all" at top, Back / Skip / Next at bottom
+- 6 reusable question component renderers (slider, button_group, number_stepper, size_picker, yes_no, free_text)
+- Slide transitions between questions
+- Answers collected in a Map<String, dynamic> keyed by question ID
+
+**5C. Flutter: Apply answers + rules-applied badges** -- PLANNED
+- Mapping function that applies walkthrough answers to the food list (portion multipliers, cooking methods, additions, etc.)
+- "N rules applied" badge on food cards in the Results phase
+- Tapping the badge opens a bottom sheet listing the applied rules
+- Quick mode skips the walkthrough; Manual bypasses it entirely
+
+**5D. Flutter: Wire walkthrough into Meal Review flow** -- PLANNED
+- After Analyzing completes in Guided mode: push Walkthrough if any non-skipped questions exist, otherwise go straight to Results
+- On walkthrough completion (finish or Skip all): return to Meal Review and land on Results with answers applied
 
 ---
 
