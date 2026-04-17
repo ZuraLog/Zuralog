@@ -261,6 +261,9 @@ class ParsedFoodItem {
     required this.fatG,
     this.confidence = 0.5,
     this.appliedRules = const [],
+    this.origin = 'user',
+    this.sourceQuestionId,
+    this.sourceAnswerValue,
   });
 
   /// Human-readable food name.
@@ -293,6 +296,25 @@ class ParsedFoodItem {
   /// saved rules affected the parse.
   final List<String> appliedRules;
 
+  /// Where this food came from.
+  ///
+  /// `'user'` (default) — mentioned in the user's description or image.
+  /// `'from_answer'` — added or replaced by a walkthrough answer. Used to
+  /// toggle the violet "From your answer" badge in Meal Review.
+  final String origin;
+
+  /// Id of the walkthrough question that produced this food, if any.
+  ///
+  /// Only populated when [origin] is `'from_answer'`. Lets the detail sheet
+  /// look up the original question text.
+  final String? sourceQuestionId;
+
+  /// The answer value the user picked for [sourceQuestionId], if any.
+  ///
+  /// Only populated when [origin] is `'from_answer'`. Surfaced in the detail
+  /// sheet so the user can see exactly which answer added the food.
+  final String? sourceAnswerValue;
+
   /// Deserialises a [ParsedFoodItem] from a backend JSON map.
   factory ParsedFoodItem.fromJson(Map<String, dynamic> json) {
     final rawApplied = json['applied_rules'];
@@ -313,6 +335,9 @@ class ParsedFoodItem {
       fatG: (json['fat_g'] as num?)?.toDouble() ?? 0.0,
       confidence: (json['confidence'] as num?)?.toDouble() ?? 0.5,
       appliedRules: parsedApplied,
+      origin: json['origin'] as String? ?? 'user',
+      sourceQuestionId: json['source_question_id'] as String?,
+      sourceAnswerValue: json['source_answer_value'] as String?,
     );
   }
 
@@ -328,7 +353,45 @@ class ParsedFoodItem {
         'fat_g': fatG,
         'confidence': confidence,
         'applied_rules': appliedRules,
+        'origin': origin,
+        'source_question_id': sourceQuestionId,
+        'source_answer_value': sourceAnswerValue,
       };
+
+  /// Returns a new [ParsedFoodItem] with the given fields replaced.
+  ///
+  /// Used by the walkthrough `on_answer` pipeline to scale portions / macros
+  /// and to tag replacement foods with `origin: 'from_answer'` without
+  /// mutating the original instance.
+  ParsedFoodItem copyWith({
+    String? foodName,
+    double? portionAmount,
+    String? portionUnit,
+    double? calories,
+    double? proteinG,
+    double? carbsG,
+    double? fatG,
+    double? confidence,
+    List<String>? appliedRules,
+    String? origin,
+    String? sourceQuestionId,
+    String? sourceAnswerValue,
+  }) {
+    return ParsedFoodItem(
+      foodName: foodName ?? this.foodName,
+      portionAmount: portionAmount ?? this.portionAmount,
+      portionUnit: portionUnit ?? this.portionUnit,
+      calories: calories ?? this.calories,
+      proteinG: proteinG ?? this.proteinG,
+      carbsG: carbsG ?? this.carbsG,
+      fatG: fatG ?? this.fatG,
+      confidence: confidence ?? this.confidence,
+      appliedRules: appliedRules ?? this.appliedRules,
+      origin: origin ?? this.origin,
+      sourceQuestionId: sourceQuestionId ?? this.sourceQuestionId,
+      sourceAnswerValue: sourceAnswerValue ?? this.sourceAnswerValue,
+    );
+  }
 
   /// Converts this parsed result into a [MealFood] for persisting.
   MealFood toMealFood() => MealFood(
