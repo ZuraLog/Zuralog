@@ -382,11 +382,38 @@ class GuidedQuestion(BaseModel):
         return v
 
 
+class SuggestedRule(BaseModel):
+    """A single rule the backend wants the user to adopt.
+
+    Composed server-side from validated (question_id, answer_value) pairs
+    via a hand-written template map — never a raw LLM string. All three
+    fields are clamped to match the same widths as Plan 2's existing
+    attribution validators, so nothing wider than 200 chars can leave the
+    server.
+    """
+
+    rule_text: str = Field(..., min_length=1, max_length=200)
+    question_id: str = Field(..., min_length=1, max_length=20)
+    answer_value: str = Field(..., min_length=1, max_length=50)
+
+    @field_validator("rule_text", "question_id", "answer_value")
+    @classmethod
+    def _strip_and_truncate(cls, v: str, info) -> str:  # noqa: ANN001
+        v = v.strip()
+        max_len = {
+            "rule_text": 200,
+            "question_id": 20,
+            "answer_value": 50,
+        }.get(info.field_name, 200)
+        return v[:max_len]
+
+
 class MealParseResponse(BaseModel):
     """Response from the AI meal parser."""
 
     foods: list[ParsedFoodItem]
     questions: list[GuidedQuestion] = Field(default_factory=list)
+    suggested_rule: SuggestedRule | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -463,6 +490,36 @@ class MealRefineResponse(BaseModel):
     questions: list[GuidedQuestion] = Field(default_factory=list)
     is_final: bool
     rounds_remaining: int = Field(..., ge=0, le=2)
+    suggested_rule: SuggestedRule | None = None
+
+
+class RuleSuggestionDismissRequest(BaseModel):
+    """Body for `POST /meals/rule-suggestion/dismiss`.
+
+    The (question_id, answer_value) pair identifies the exact suggestion
+    the user dismissed. The server upserts a snooze row with a
+    decrementing counter so the same suggestion reappears after 10 more
+    meal saves.
+    """
+
+    question_id: str = Field(..., min_length=1, max_length=20)
+    answer_value: str = Field(..., min_length=1, max_length=50)
+
+    @field_validator("question_id")
+    @classmethod
+    def _strip_question_id(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("question_id must not be empty")
+        return v[:20]
+
+    @field_validator("answer_value")
+    @classmethod
+    def _strip_answer_value(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("answer_value must not be empty")
+        return v[:50]
 
 
 # ---------------------------------------------------------------------------
@@ -527,9 +584,19 @@ class BarcodeLookupResponse(BaseModel):
 
 
 class NutritionRuleCreate(BaseModel):
-    """Request body for creating a nutrition rule."""
+    """Request body for creating a nutrition rule.
+
+    When a client accepts a suggested rule it may include the
+    ``suppressed_question_id`` and ``suppressed_answer_value`` pair from
+    the original ``SuggestedRule``. If both are present, the server
+    deletes the matching ``rule_suggestion_snooze`` row after the rule is
+    committed so the suggestion does not re-surface alongside the newly
+    saved rule.
+    """
 
     rule_text: str = Field(..., min_length=1, max_length=500)
+    suppressed_question_id: str | None = Field(default=None, max_length=20)
+    suppressed_answer_value: str | None = Field(default=None, max_length=50)
 
     @field_validator("rule_text")
     @classmethod
@@ -538,6 +605,22 @@ class NutritionRuleCreate(BaseModel):
         if not v:
             raise ValueError("rule_text must not be empty")
         return v
+
+    @field_validator("suppressed_question_id")
+    @classmethod
+    def strip_suppressed_question_id(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip()
+        return v[:20] if v else None
+
+    @field_validator("suppressed_answer_value")
+    @classmethod
+    def strip_suppressed_answer_value(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip()
+        return v[:50] if v else None
 
 
 class NutritionRuleUpdate(BaseModel):
