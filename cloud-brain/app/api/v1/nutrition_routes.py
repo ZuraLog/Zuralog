@@ -18,10 +18,11 @@ import logging
 import re
 import uuid
 from datetime import date, datetime, time, timezone
+from typing import Literal
 
 import httpx
 import sentry_sdk
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile, status
 from openai import APIError
 from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -897,6 +898,7 @@ async def parse_meal_description(
 async def scan_food_image(
     request: Request,
     file: UploadFile,
+    mode: Literal["quick", "guided"] = Form(default="quick"),
     user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> MealParseResponse:
@@ -936,12 +938,20 @@ async def scan_food_image(
     rules_addendum = await _get_user_rules_prompt(db, user_id)
     system_prompt = _IMAGE_SCAN_SYSTEM_PROMPT + rules_addendum
 
+    # Suffix the user message in Guided mode so the model branches on it.
+    user_text = "Analyze this food image and extract nutritional information."
+    if mode == "guided":
+        user_text = (
+            f"{user_text}\n\n"
+            "(GUIDED MODE — generate follow-up questions to improve accuracy)"
+        )
+
     # Build vision message
     llm = LLMClient(model=settings.openrouter_vision_model)
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": [
-            {"type": "text", "text": "Analyze this food image and extract nutritional information."},
+            {"type": "text", "text": user_text},
             {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{b64_image}"}},
         ]},
     ]
@@ -1005,7 +1015,32 @@ async def scan_food_image(
             detail="The AI could not extract valid nutrition data. Try describing the food instead.",
         )
 
-    return MealParseResponse(foods=validated_foods[:50])
+    foods_out = validated_foods[:50]
+
+    # Validate optional questions array (best-effort).
+    validated_questions: list[GuidedQuestion] = []
+    raw_questions = parsed.get("questions")
+    if isinstance(raw_questions, list):
+        for i, raw_q in enumerate(raw_questions):
+            try:
+                q = GuidedQuestion.model_validate(raw_q)
+            except Exception as e:
+                logger.warning(
+                    "Image scan: skipping invalid question at index %d — %s", i, e
+                )
+                continue
+            if q.food_index >= len(foods_out):
+                logger.warning(
+                    "Image scan: dropping question %s — food_index %d out of range",
+                    q.id, q.food_index,
+                )
+                continue
+            validated_questions.append(q)
+
+    return MealParseResponse(
+        foods=foods_out,
+        questions=validated_questions,
+    )
 
 
 # ---------------------------------------------------------------------------
