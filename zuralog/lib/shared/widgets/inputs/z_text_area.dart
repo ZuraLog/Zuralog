@@ -55,6 +55,13 @@ class ZTextArea extends StatelessWidget {
     final colors = AppColorsOf(context);
     final sageFocusBorder = colors.primary.withValues(alpha: 0.3);
 
+    // Visible outline when empty — matches ZLabeledTextField.
+    // Do not set BorderSide.none here.
+    final unfocusedBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+      borderSide: BorderSide(color: colors.border, width: 1),
+    );
+
     final field = IgnorePointer(
       ignoring: !enabled,
       child: Opacity(
@@ -77,14 +84,8 @@ class ZTextArea extends StatelessWidget {
           filled: true,
           fillColor: colors.surface,
           contentPadding: const EdgeInsets.all(AppDimens.spaceMd),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppDimens.shapeSm),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppDimens.shapeSm),
-            borderSide: BorderSide.none,
-          ),
+          border: unfocusedBorder,
+          enabledBorder: unfocusedBorder,
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppDimens.shapeSm),
             borderSide: BorderSide(color: sageFocusBorder, width: 1.5),
