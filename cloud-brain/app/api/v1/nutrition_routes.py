@@ -34,6 +34,7 @@ from app.api.v1.nutrition_schemas import (
     CorrectionRequest,
     FoodSearchResponse,
     FoodSearchResult,
+    GuidedQuestion,
     MealCreateRequest,
     MealParseRequest,
     MealParseResponse,
@@ -780,12 +781,20 @@ async def parse_meal_description(
     rules_addendum = await _get_user_rules_prompt(db, user_id)
     system_prompt = _MEAL_PARSE_SYSTEM_PROMPT + rules_addendum
 
+    # Suffix the user message in Guided mode so the model branches on it.
+    user_message = description
+    if body.mode == "guided":
+        user_message = (
+            f"{description}\n\n"
+            "(GUIDED MODE — generate follow-up questions to improve accuracy)"
+        )
+
     # Build LLM client for the insight model (cheaper, faster).
     llm = LLMClient(model=settings.openrouter_insight_model)
 
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user", "content": description},
+        {"role": "user", "content": user_message},
     ]
 
     try:
@@ -850,7 +859,32 @@ async def parse_meal_description(
             detail="The AI could not identify any valid food items. Please try rephrasing your meal description.",
         )
 
-    return MealParseResponse(foods=validated_foods[:50])
+    foods_out = validated_foods[:50]
+
+    # Validate optional questions array (best-effort).
+    validated_questions: list[GuidedQuestion] = []
+    raw_questions = parsed.get("questions")
+    if isinstance(raw_questions, list):
+        for i, raw_q in enumerate(raw_questions):
+            try:
+                q = GuidedQuestion.model_validate(raw_q)
+            except Exception as e:
+                logger.warning(
+                    "Meal parse: skipping invalid question at index %d — %s", i, e
+                )
+                continue
+            if q.food_index >= len(foods_out):
+                logger.warning(
+                    "Meal parse: dropping question %s — food_index %d out of range",
+                    q.id, q.food_index,
+                )
+                continue
+            validated_questions.append(q)
+
+    return MealParseResponse(
+        foods=foods_out,
+        questions=validated_questions,
+    )
 
 
 # ---------------------------------------------------------------------------
