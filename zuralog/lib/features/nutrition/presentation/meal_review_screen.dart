@@ -843,6 +843,52 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
               ),
             ),
 
+          // Rules-applied badge — only shown if this food had rules applied.
+          if (parsedItem != null && parsedItem.appliedRules.isNotEmpty) ...[
+            const SizedBox(height: AppDimens.spaceSm),
+            GestureDetector(
+              onTap: () => _showAppliedRulesSheet(context, parsedItem),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceSm,
+                  vertical: AppDimens.spaceXs,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.categoryNutrition.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+                  border: Border.all(
+                    color: AppColors.categoryNutrition.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.verified_outlined,
+                      size: AppDimens.iconSm,
+                      color: AppColors.categoryNutrition,
+                    ),
+                    const SizedBox(width: AppDimens.spaceXs),
+                    Text(
+                      '${parsedItem.appliedRules.length} ${parsedItem.appliedRules.length == 1 ? "rule" : "rules"} applied',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.categoryNutrition,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: AppDimens.spaceXs),
+                    const Icon(
+                      Icons.chevron_right,
+                      size: AppDimens.iconSm,
+                      color: AppColors.categoryNutrition,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
           // Guided refinement controls.
           if (showRefinement) ...[
             const SizedBox(height: AppDimens.spaceSm),
@@ -1035,6 +1081,92 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
           onTap: () => setState(() => _selectedMealType = type),
         );
       }).toList(),
+    );
+  }
+
+  // ── Applied rules sheet ────────────────────────────────────────────────────
+
+  void _showAppliedRulesSheet(BuildContext context, ParsedFoodItem food) {
+    final colors = AppColorsOf(context);
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: colors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppDimens.shapeXl)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(AppDimens.spaceLg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drag handle
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: AppDimens.spaceMd),
+                decoration: BoxDecoration(
+                  color: colors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                const Icon(
+                  Icons.verified_outlined,
+                  color: AppColors.categoryNutrition,
+                  size: AppDimens.iconMd,
+                ),
+                const SizedBox(width: AppDimens.spaceSm),
+                Expanded(
+                  child: Text(
+                    'Rules applied to ${food.foodName}',
+                    style: AppTextStyles.titleMedium.copyWith(
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppDimens.spaceSm),
+            Text(
+              'The AI used these rules while estimating this food:',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: colors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            for (final rule in food.appliedRules) ...[
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppDimens.spaceSm),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.check_circle_outline,
+                      color: AppColors.categoryNutrition,
+                      size: AppDimens.iconSm,
+                    ),
+                    const SizedBox(width: AppDimens.spaceSm),
+                    Expanded(
+                      child: Text(
+                        rule,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: AppDimens.spaceMd),
+          ],
+        ),
+      ),
     );
   }
 
