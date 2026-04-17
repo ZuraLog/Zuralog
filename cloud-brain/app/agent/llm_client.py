@@ -69,6 +69,8 @@ class LLMClient:
         temperature: float = 0.7,
         max_tokens: int | None = None,
         response_format: dict[str, Any] | None = None,
+        reasoning: dict[str, Any] | None = None,
+        plugins: list[dict[str, Any]] | None = None,
     ) -> Any:
         """Internal helper to call the LLM with a specific model.
 
@@ -79,8 +81,16 @@ class LLMClient:
             temperature: Sampling temperature (0.0-2.0). Defaults to 0.7.
             max_tokens: Optional cap on the number of tokens in the response.
             response_format: Optional response format spec forwarded to the
-                OpenAI SDK. Use ``{"type": "json_object"}`` to force JSON mode
-                on models that support it (e.g. MiniMax M2.7, Gemini 3.1).
+                OpenAI SDK. Use ``{"type": "json_object"}`` to force JSON mode.
+            reasoning: Optional OpenRouter unified reasoning control. Pass
+                ``{"effort": "none"}`` to disable reasoning on reasoning-capable
+                models (e.g. MiniMax M2.7). This is critical for structured
+                extraction — reasoning models otherwise spend their output
+                tokens on hidden reasoning and return an empty content field.
+            plugins: Optional list of OpenRouter plugins to enable for this
+                request. Pass ``[{"id": "response-healing"}]`` to auto-repair
+                malformed JSON (trailing commas, missing brackets, markdown
+                fences) at the edge before the response reaches us.
 
         Returns:
             The full ChatCompletion response object from the OpenAI SDK.
@@ -100,6 +110,16 @@ class LLMClient:
         if response_format is not None:
             kwargs["response_format"] = response_format
 
+        # OpenRouter-specific fields ride through the OpenAI SDK's `extra_body`
+        # escape hatch so they reach the OpenRouter endpoint unchanged.
+        extra_body: dict[str, Any] = {}
+        if reasoning is not None:
+            extra_body["reasoning"] = reasoning
+        if plugins is not None:
+            extra_body["plugins"] = plugins
+        if extra_body:
+            kwargs["extra_body"] = extra_body
+
         response = await self._client.chat.completions.create(**kwargs)
         return response
 
@@ -110,6 +130,8 @@ class LLMClient:
         temperature: float = 0.7,
         max_tokens: int | None = None,
         response_format: dict[str, Any] | None = None,
+        reasoning: dict[str, Any] | None = None,
+        plugins: list[dict[str, Any]] | None = None,
     ) -> Any:
         """Send a chat completion request to the LLM.
 
@@ -121,6 +143,14 @@ class LLMClient:
             response_format: Optional response format spec forwarded to the
                 OpenAI SDK. Use ``{"type": "json_object"}`` to force JSON mode
                 on models that support it (e.g. MiniMax M2.7, Gemini 3.1).
+            reasoning: Optional OpenRouter unified reasoning control. Pass
+                ``{"effort": "none"}`` to disable reasoning on reasoning-capable
+                models (e.g. MiniMax M2.7). Critical for structured extraction
+                — without this, reasoning models spend all output tokens on
+                hidden reasoning and return empty content.
+            plugins: Optional OpenRouter plugins array. Pass
+                ``[{"id": "response-healing"}]`` to auto-repair malformed JSON
+                at the edge (free; non-streaming only).
 
         Returns:
             The full ChatCompletion response object from the OpenAI SDK.
@@ -143,6 +173,8 @@ class LLMClient:
                 temperature=temperature,
                 max_tokens=max_tokens,
                 response_format=response_format,
+                reasoning=reasoning,
+                plugins=plugins,
             )
         except openai.APIStatusError as e:
             # Fix 4.2 (H-10): Fallback model on 429/503
@@ -159,6 +191,8 @@ class LLMClient:
                         temperature=temperature,
                         max_tokens=max_tokens,
                         response_format=response_format,
+                        reasoning=reasoning,
+                        plugins=plugins,
                     )
                 except APIError as fallback_exc:
                     sentry_sdk.set_tag("ai.error_type", "llm_failure")

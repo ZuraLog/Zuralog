@@ -205,11 +205,19 @@ async def _call_llm_with_json_retry(
     Returns (parsed_dict, raw_content). Raises HTTPException on persistent
     failure.
 
-    The helper forces ``response_format={"type": "json_object"}`` at the API
-    layer so compliant models return syntactically valid JSON. On a parse
-    failure we retry exactly once with an extra system-message nudge. Two
-    attempts total — the models in use (MiniMax M2.7, Gemini 3.1 Flash Lite)
-    are reliable at structured output so one retry absorbs transient glitches.
+    Defence in depth, four layers:
+
+    1. ``response_format={"type": "json_object"}`` — JSON mode at the model
+       layer so compliant models emit syntactically valid JSON.
+    2. ``reasoning={"effort": "none"}`` — the OpenRouter-documented way to
+       fully disable reasoning. MiniMax M2.7 is a reasoning model; with JSON
+       mode set but reasoning left on, it spends all output tokens on hidden
+       chain-of-thought and returns an empty ``message.content``. Structured
+       extraction doesn't need reasoning, so we turn it off.
+    3. ``plugins=[{"id": "response-healing"}]`` — OpenRouter's free edge
+       repair that fixes trailing commas, missing brackets, and stray
+       markdown fences before the response leaves their servers.
+    4. One retry with a stricter system nudge if JSON parsing still fails.
     """
     for attempt in range(2):
         try:
@@ -218,6 +226,8 @@ async def _call_llm_with_json_retry(
                 temperature=temperature,
                 max_tokens=max_tokens,
                 response_format={"type": "json_object"},
+                reasoning={"effort": "none"},
+                plugins=[{"id": "response-healing"}],
             )
         except APIError as e:
             logger.error("LLM call failed (attempt %d): %s", attempt + 1, e)
