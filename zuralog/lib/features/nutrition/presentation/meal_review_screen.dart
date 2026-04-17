@@ -731,11 +731,11 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
                   ),
                 ],
 
-                // Meal type chips.
+                // Meal type dropdown (auto-suggested by time of day).
                 const SizedBox(height: AppDimens.spaceLg),
                 const SectionHeader(title: 'Meal type'),
                 const SizedBox(height: AppDimens.spaceSm),
-                _buildMealTypeChips(),
+                _buildMealTypeDropdown(colors),
 
                 // Time picker.
                 const SizedBox(height: AppDimens.spaceLg),
@@ -1095,20 +1095,44 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
     );
   }
 
-  // ── Meal type chips ────────────────────────────────────────────────────────
+  // ── Meal type dropdown ─────────────────────────────────────────────────────
 
-  Widget _buildMealTypeChips() {
-    return Wrap(
-      spacing: AppDimens.spaceSm,
-      runSpacing: AppDimens.spaceSm,
-      children: MealType.values.map((type) {
-        return ZChip(
-          label: type.label,
-          icon: type.icon,
-          isActive: _selectedMealType == type,
-          onTap: () => setState(() => _selectedMealType = type),
-        );
-      }).toList(),
+  Widget _buildMealTypeDropdown(AppColorsOf colors) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+        border: Border.all(color: colors.border),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceSm),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<MealType>(
+          value: _selectedMealType,
+          isExpanded: true,
+          icon: Icon(Icons.expand_more, color: colors.textSecondary),
+          dropdownColor: colors.cardBackground,
+          style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
+          items: MealType.values.map((t) {
+            return DropdownMenuItem<MealType>(
+              value: t,
+              child: Row(
+                children: [
+                  Icon(
+                    t.icon,
+                    size: AppDimens.iconSm,
+                    color: AppColors.categoryNutrition,
+                  ),
+                  const SizedBox(width: AppDimens.spaceSm),
+                  Text(t.label),
+                ],
+              ),
+            );
+          }).toList(),
+          onChanged: (v) {
+            if (v != null) setState(() => _selectedMealType = v);
+          },
+        ),
+      ),
     );
   }
 
