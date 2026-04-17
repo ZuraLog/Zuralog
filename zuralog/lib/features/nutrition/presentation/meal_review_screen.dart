@@ -1149,78 +1149,95 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
 
   // ── Walkthrough answer mapping ─────────────────────────────────────────────
 
-  /// Applies the walkthrough answers to the food items by updating portion
-  /// multipliers, cooking methods, or direct macro values.
+  /// Applies the walkthrough answers by executing each question's embedded
+  /// [OnAnswerOp] against the working parsed-food list.
   ///
-  /// Answer types by component:
-  /// - slider / number_stepper -> double (interpreted based on question context)
-  /// - button_group / size_picker / free_text -> String
-  /// - yes_no -> bool
+  /// The backend ships a deterministic per-answer recipe on every
+  /// [GuidedQuestion.onAnswer] map. For each question the user answered, we
+  /// look up the matching op by the string key returned by [_answerKeyFor]
+  /// and dispatch on the sealed [OnAnswerOp] hierarchy:
   ///
-  /// For slider/stepper questions whose unit is "g" or "ml", we treat the
-  /// value as the new portion_amount for that food. For button_group with
-  /// cooking-method-style options, we save to _cookingMethods. For others,
-  /// we apply reasonable heuristics or skip.
+  /// - [AddFoodOp]     — mint a new [ParsedFoodItem] tagged `from_answer`
+  ///                     and append it to the list.
+  /// - [ScaleFoodOp]   — multiply the referenced food's portion + macros by
+  ///                     the clamped factor; origin is preserved.
+  /// - [ReplaceFoodOp] — replace the referenced food with a new one tagged
+  ///                     `from_answer`.
+  /// - [NoOpOp]        — no change.
+  ///
+  /// After the loop, [_mealFoods] is rebuilt from the updated [_parsedItems]
+  /// using the same derivation as the initial parse. [setState] is called
+  /// once at the end so the UI refreshes after all ops have been applied.
   void _applyWalkthroughAnswers({
     required List<GuidedQuestion> questions,
     required Map<String, dynamic> answers,
   }) {
+    if (questions.isEmpty) return;
+
+    // Take a mutable copy of the working parsed-food list so intermediate
+    // ops never touch the original list before setState runs.
+    final foods = List<ParsedFoodItem>.from(_parsedItems);
+
     for (final question in questions) {
-      final answer = answers[question.id];
-      if (answer == null) continue;
+      final rawAnswer = answers[question.id];
+      if (rawAnswer == null) continue;
 
-      final foodIndex = question.foodIndex;
-      if (foodIndex < 0 || foodIndex >= _mealFoods.length) continue;
+      final key = _answerKeyFor(rawAnswer);
+      final op = question.onAnswer?[key];
+      if (op == null) continue;
 
-      switch (question.componentType) {
-        case GuidedComponentType.slider:
-        case GuidedComponentType.numberStepper:
-          // If the unit suggests a portion adjustment, apply it as a
-          // multiplier relative to the original portion.
-          if (answer is num) {
-            final value = answer.toDouble();
-            final original = _mealFoods[foodIndex].portionGrams;
-            if (original > 0 &&
-                (question.unit == 'g' || question.unit == 'ml')) {
-              _portionMultipliers[foodIndex] = value / original;
-            }
-          }
-          break;
-        case GuidedComponentType.buttonGroup:
-        case GuidedComponentType.sizePicker:
-          if (answer is String) {
-            // If the answer is one of the recognized cooking methods,
-            // save it. Otherwise, skip (it's a contextual choice we can't
-            // directly map to macros).
-            const cookingMethods = [
-              'Grilled',
-              'Fried',
-              'Baked',
-              'Steamed',
-              'Boiled',
-              'Raw',
-            ];
-            if (cookingMethods.contains(answer)) {
-              _cookingMethods[foodIndex] = answer;
-            }
-            // For size_picker, we could parse "Large 300g" format to
-            // extract the gram amount, but for MVP we skip this and trust
-            // the AI to have baked the size into the original estimate.
-          }
-          break;
-        case GuidedComponentType.yesNo:
-          // yes/no answers typically affect whether an addition is present.
-          // For MVP, we don't adjust macros based on yes/no — the AI can
-          // re-estimate on the next parse if this becomes important.
-          break;
-        case GuidedComponentType.freeText:
-          // Free text is informational only — doesn't affect macros.
-          break;
-        case GuidedComponentType.unknown:
+      switch (op) {
+        case AddFoodOp(:final food):
+          foods.add(food.toParsedFoodItem(
+            sourceQuestionId: question.id,
+            sourceAnswerValue: key,
+          ));
+        case ScaleFoodOp(:final factor):
+          final idx = question.foodIndex;
+          if (idx < 0 || idx >= foods.length) break;
+          final existing = foods[idx];
+          foods[idx] = existing.copyWith(
+            calories: existing.calories * factor,
+            proteinG: existing.proteinG * factor,
+            carbsG: existing.carbsG * factor,
+            fatG: existing.fatG * factor,
+            portionAmount: existing.portionAmount * factor,
+            // origin intentionally preserved — a scaled user food is still
+            // a user food, not a "from_answer" food.
+          );
+        case ReplaceFoodOp(:final food):
+          final idx = question.foodIndex;
+          if (idx < 0 || idx >= foods.length) break;
+          foods[idx] = food.toParsedFoodItem(
+            sourceQuestionId: question.id,
+            sourceAnswerValue: key,
+          );
+        case NoOpOp():
           break;
       }
     }
-    setState(() {}); // Trigger rebuild to show updated values
+
+    setState(() {
+      _parsedItems = foods;
+      // Rebuild _mealFoods from _parsedItems using the same derivation path
+      // as the initial parse (see _startAnalysis) so the UI stays in lock-
+      // step with the structured data.
+      _mealFoods = foods.map((item) => item.toMealFood()).toList();
+    });
+  }
+
+  /// Normalises an answer value to the string key used by the backend in
+  /// [GuidedQuestion.onAnswer]. Mirrors the backend's key validation —
+  /// trimmed and capped at 50 characters.
+  String _answerKeyFor(Object answer) {
+    if (answer is bool) return answer ? 'yes' : 'no';
+    if (answer is num) return answer.toString();
+    if (answer is String) {
+      final trimmed = answer.trim();
+      return trimmed.length <= 50 ? trimmed : trimmed.substring(0, 50);
+    }
+    final str = answer.toString();
+    return str.length <= 50 ? str : str.substring(0, 50);
   }
 
   // ── Applied rules sheet ────────────────────────────────────────────────────
