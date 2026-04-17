@@ -56,6 +56,7 @@ export 'inputs/z_slider.dart';
 export 'inputs/z_text_area.dart';
 export 'inputs/z_calendar.dart';
 export 'inputs/z_email_typo_suggestion.dart';
+export 'inputs/z_labeled_number_field.dart';
 export 'inputs/z_toggle.dart';
 export 'log_panels/z_steps_log_panel.dart';
 export 'log_panels/z_water_log_panel.dart';
