@@ -29,6 +29,7 @@ import 'package:zuralog/shared/widgets/inputs/z_chip.dart';
 import 'package:zuralog/shared/widgets/inputs/z_number_stepper.dart';
 import 'package:zuralog/shared/widgets/inputs/z_slider.dart';
 import 'package:zuralog/shared/widgets/inputs/z_text_area.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 
 // ── MealWalkthroughScreen ───────────────────────────────────────────────────
 
@@ -252,13 +253,32 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
                 const SizedBox(height: AppDimens.spaceXxs + 2),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(AppDimens.shapePill),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 4,
-                    backgroundColor: colors.surfaceRaised,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppColors.categoryNutrition,
-                    ),
+                  child: Stack(
+                    children: [
+                      LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 6,
+                        backgroundColor: colors.surfaceRaised,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.categoryNutrition,
+                        ),
+                      ),
+                      // Pattern overlay matching nutrition amber.
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: ClipRect(
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              widthFactor: progress.clamp(0.0, 1.0),
+                              child: const ZPatternOverlay(
+                                variant: ZPatternVariant.amber,
+                                opacity: 0.25,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
