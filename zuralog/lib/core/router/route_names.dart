@@ -277,6 +277,12 @@ abstract final class RouteNames {
   /// Path for the Meal Review screen.
   static const String nutritionMealReviewPath = '/nutrition/meal-review';
 
+  /// Name for the Meal Walkthrough screen.
+  static const String nutritionMealWalkthrough = 'nutritionMealWalkthrough';
+
+  /// Path for the Meal Walkthrough screen.
+  static const String nutritionMealWalkthroughPath = '/nutrition/meal-walkthrough';
+
   // ── Settings (pushed over shell) ─────────────────────────────────────────
 
   /// Name for the Settings Hub screen (pushed over the shell, not a tab).

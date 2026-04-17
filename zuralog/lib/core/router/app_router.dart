@@ -96,7 +96,9 @@ import 'package:zuralog/features/nutrition/presentation/nutrition_home_screen.da
 import 'package:zuralog/features/nutrition/presentation/nutrition_rules_screen.dart';
 import 'package:zuralog/features/nutrition/presentation/meal_detail_screen.dart';
 import 'package:zuralog/features/nutrition/presentation/meal_edit_screen.dart';
+import 'package:zuralog/features/nutrition/domain/guided_question.dart';
 import 'package:zuralog/features/nutrition/presentation/meal_review_screen.dart';
+import 'package:zuralog/features/nutrition/presentation/meal_walkthrough_screen.dart';
 
 // ── Settings (pushed over shell) ──────────────────────────────────────────────
 import 'package:zuralog/features/settings/presentation/settings_hub_screen.dart';
@@ -590,6 +592,17 @@ List<RouteBase> _buildRoutes() {
             return SentryErrorBoundary(
               module: 'nutrition.meal_review',
               child: MealReviewScreen(args: args),
+            );
+          },
+        ),
+        GoRoute(
+          path: 'meal-walkthrough',
+          name: RouteNames.nutritionMealWalkthrough,
+          builder: (context, state) {
+            final args = state.extra as MealWalkthroughArgs;
+            return SentryErrorBoundary(
+              module: 'nutrition.meal_walkthrough',
+              child: MealWalkthroughScreen(args: args),
             );
           },
         ),
