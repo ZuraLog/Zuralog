@@ -35,8 +35,8 @@ import 'package:zuralog/shared/widgets/cards/zuralog_card.dart';
 import 'package:zuralog/shared/widgets/feedback/z_alert_banner.dart';
 import 'package:zuralog/shared/widgets/feedback/z_toast.dart';
 import 'package:zuralog/shared/widgets/inputs/z_chip.dart';
-import 'package:zuralog/shared/widgets/inputs/app_text_field.dart';
 import 'package:zuralog/shared/widgets/inputs/z_labeled_number_field.dart';
+import 'package:zuralog/shared/widgets/inputs/z_labeled_text_field.dart';
 import 'package:zuralog/shared/widgets/layout/section_header.dart';
 import 'package:zuralog/shared/widgets/animations/z_fade_slide_in.dart';
 import 'package:zuralog/shared/widgets/nutrition/z_answer_origin_badge.dart';
@@ -1040,9 +1040,9 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        AppTextField(
+        ZLabeledTextField(
+          label: 'Food name',
           controller: c.name,
-          hintText: 'Food name',
           textInputAction: TextInputAction.next,
         ),
         const SizedBox(height: AppDimens.spaceXs),
