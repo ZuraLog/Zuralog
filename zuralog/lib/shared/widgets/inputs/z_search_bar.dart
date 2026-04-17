@@ -21,6 +21,8 @@ class ZSearchBar extends StatefulWidget {
     this.placeholder = 'Search...',
     this.onChanged,
     this.onClear,
+    this.autofocus = false,
+    this.textInputAction,
   });
 
   /// Controller for the search text field.
@@ -34,6 +36,15 @@ class ZSearchBar extends StatefulWidget {
 
   /// Called when the user taps the clear button.
   final VoidCallback? onClear;
+
+  /// Whether the field should auto-focus when it first appears.
+  ///
+  /// Defaults to false so existing call sites are unaffected. Set true for
+  /// modal search overlays where the keyboard should appear immediately.
+  final bool autofocus;
+
+  /// Keyboard action button (e.g. [TextInputAction.search]). Optional.
+  final TextInputAction? textInputAction;
 
   @override
   State<ZSearchBar> createState() => _ZSearchBarState();
@@ -93,6 +104,8 @@ class _ZSearchBarState extends State<ZSearchBar> {
           // The text field (top layer, above the pattern).
           TextFormField(
             controller: _controller,
+            autofocus: widget.autofocus,
+            textInputAction: widget.textInputAction,
             cursorColor: colors.primary,
             style: AppTextStyles.bodyMedium.copyWith(
               color: colors.textPrimary,

@@ -16,6 +16,7 @@ import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_models.dart';
 import 'package:zuralog/features/data/presentation/widgets/metric_tile.dart';
 import 'package:zuralog/features/data/presentation/widgets/tile_visualizations.dart';
+import 'package:zuralog/shared/widgets/inputs/z_search_bar.dart';
 
 // ── SearchOverlay ─────────────────────────────────────────────────────────────
 
@@ -103,7 +104,6 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
               _SearchBar(
                 controller: _controller,
                 onClose: widget.onClose,
-                colors: colors,
               ),
 
               // ── Results ──────────────────────────────────────────────────
@@ -129,12 +129,10 @@ class _SearchBar extends StatelessWidget {
   const _SearchBar({
     required this.controller,
     required this.onClose,
-    required this.colors,
   });
 
   final TextEditingController controller;
   final VoidCallback onClose;
-  final AppColorsOf colors;
 
   @override
   Widget build(BuildContext context) {
@@ -148,38 +146,11 @@ class _SearchBar extends StatelessWidget {
             tooltip: 'Close search',
           ),
           Expanded(
-            child: TextField(
+            child: ZSearchBar(
               controller: controller,
+              placeholder: 'Search metrics…',
               autofocus: true,
               textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: 'Search metrics…',
-                filled: true,
-                fillColor: colors.inputBackground,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppDimens.shapeSm), // 12px
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimens.shapeSm),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimens.shapeSm),
-                  borderSide: BorderSide(color: colors.primary, width: 1.5),
-                ),
-                suffixIcon: controller.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () => controller.clear(),
-                      )
-                    : null,
-              ),
             ),
           ),
         ],
