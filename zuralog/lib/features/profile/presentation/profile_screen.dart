@@ -378,7 +378,11 @@ class _NameEditRow extends StatelessWidget {
               fillColor: colors.inputBackground,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppDimens.radiusInput),
-                borderSide: BorderSide.none,
+                borderSide: BorderSide(color: colors.border, width: 1),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppDimens.radiusInput),
+                borderSide: BorderSide(color: colors.border, width: 1),
               ),
             ),
             onSubmitted: (_) => onSave(),
