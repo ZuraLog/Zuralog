@@ -1084,6 +1084,83 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
     );
   }
 
+  // ── Walkthrough answer mapping ─────────────────────────────────────────────
+
+  /// Applies the walkthrough answers to the food items by updating portion
+  /// multipliers, cooking methods, or direct macro values.
+  ///
+  /// Answer types by component:
+  /// - slider / number_stepper -> double (interpreted based on question context)
+  /// - button_group / size_picker / free_text -> String
+  /// - yes_no -> bool
+  ///
+  /// For slider/stepper questions whose unit is "g" or "ml", we treat the
+  /// value as the new portion_amount for that food. For button_group with
+  /// cooking-method-style options, we save to _cookingMethods. For others,
+  /// we apply reasonable heuristics or skip.
+  // ignore: unused_element
+  void _applyWalkthroughAnswers({
+    required List<GuidedQuestion> questions,
+    required Map<String, dynamic> answers,
+  }) {
+    for (final question in questions) {
+      final answer = answers[question.id];
+      if (answer == null) continue;
+
+      final foodIndex = question.foodIndex;
+      if (foodIndex < 0 || foodIndex >= _mealFoods.length) continue;
+
+      switch (question.componentType) {
+        case GuidedComponentType.slider:
+        case GuidedComponentType.numberStepper:
+          // If the unit suggests a portion adjustment, apply it as a
+          // multiplier relative to the original portion.
+          if (answer is num) {
+            final value = answer.toDouble();
+            final original = _mealFoods[foodIndex].portionGrams;
+            if (original > 0 &&
+                (question.unit == 'g' || question.unit == 'ml')) {
+              _portionMultipliers[foodIndex] = value / original;
+            }
+          }
+          break;
+        case GuidedComponentType.buttonGroup:
+        case GuidedComponentType.sizePicker:
+          if (answer is String) {
+            // If the answer is one of the recognized cooking methods,
+            // save it. Otherwise, skip (it's a contextual choice we can't
+            // directly map to macros).
+            const cookingMethods = [
+              'Grilled',
+              'Fried',
+              'Baked',
+              'Steamed',
+              'Boiled',
+              'Raw',
+            ];
+            if (cookingMethods.contains(answer)) {
+              _cookingMethods[foodIndex] = answer;
+            }
+            // For size_picker, we could parse "Large 300g" format to
+            // extract the gram amount, but for MVP we skip this and trust
+            // the AI to have baked the size into the original estimate.
+          }
+          break;
+        case GuidedComponentType.yesNo:
+          // yes/no answers typically affect whether an addition is present.
+          // For MVP, we don't adjust macros based on yes/no — the AI can
+          // re-estimate on the next parse if this becomes important.
+          break;
+        case GuidedComponentType.freeText:
+          // Free text is informational only — doesn't affect macros.
+          break;
+        case GuidedComponentType.unknown:
+          break;
+      }
+    }
+    setState(() {}); // Trigger rebuild to show updated values
+  }
+
   // ── Applied rules sheet ────────────────────────────────────────────────────
 
   void _showAppliedRulesSheet(BuildContext context, ParsedFoodItem food) {
