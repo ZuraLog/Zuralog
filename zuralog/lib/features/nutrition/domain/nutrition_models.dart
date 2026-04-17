@@ -82,6 +82,9 @@ class MealFood {
     required this.proteinG,
     required this.carbsG,
     required this.fatG,
+    this.origin,
+    this.sourceQuestionId,
+    this.sourceAnswerValue,
   });
 
   /// Human-readable food name (e.g. "Greek yogurt").
@@ -105,6 +108,25 @@ class MealFood {
   /// Fat content in grams.
   final double fatG;
 
+  /// Where this food came from when it was added to the meal.
+  ///
+  /// `'user'` — mentioned in the original description or image.
+  /// `'from_answer'` — added or replaced by a guided walkthrough answer.
+  /// `null` on manual entries and older rows — keeps payloads small.
+  final String? origin;
+
+  /// Id of the walkthrough question that produced this food, if any.
+  ///
+  /// Populated when [origin] is `'from_answer'`. Mined server-side by the
+  /// rule-suggestion detector to spot repeated answers.
+  final String? sourceQuestionId;
+
+  /// The answer value the user picked for [sourceQuestionId], if any.
+  ///
+  /// Populated when [origin] is `'from_answer'`. Mined server-side by the
+  /// rule-suggestion detector to spot repeated answers.
+  final String? sourceAnswerValue;
+
   /// Deserialises a [MealFood] from a backend JSON map.
   factory MealFood.fromJson(Map<String, dynamic> json) {
     return MealFood(
@@ -115,19 +137,37 @@ class MealFood {
       proteinG: (json['protein_g'] as num?)?.toDouble() ?? 0.0,
       carbsG: (json['carbs_g'] as num?)?.toDouble() ?? 0.0,
       fatG: (json['fat_g'] as num?)?.toDouble() ?? 0.0,
+      origin: json['origin'] as String?,
+      sourceQuestionId: json['source_question_id'] as String?,
+      sourceAnswerValue: json['source_answer_value'] as String?,
     );
   }
 
   /// Serialises this [MealFood] to a JSON map matching the backend schema.
-  Map<String, dynamic> toJson() => {
-        'food_name': name,
-        'portion_amount': portionGrams.toDouble(),
-        'portion_unit': portionUnit,
-        'calories': caloriesKcal.toDouble(),
-        'protein_g': proteinG,
-        'carbs_g': carbsG,
-        'fat_g': fatG,
-      };
+  ///
+  /// Attribution fields ([origin], [sourceQuestionId], [sourceAnswerValue])
+  /// are only emitted when non-null so manual-entry payloads stay small.
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> json = {
+      'food_name': name,
+      'portion_amount': portionGrams.toDouble(),
+      'portion_unit': portionUnit,
+      'calories': caloriesKcal.toDouble(),
+      'protein_g': proteinG,
+      'carbs_g': carbsG,
+      'fat_g': fatG,
+    };
+    if (origin != null) {
+      json['origin'] = origin;
+    }
+    if (sourceQuestionId != null) {
+      json['source_question_id'] = sourceQuestionId;
+    }
+    if (sourceAnswerValue != null) {
+      json['source_answer_value'] = sourceAnswerValue;
+    }
+    return json;
+  }
 }
 
 // -- Meal ---------------------------------------------------------------------
@@ -394,6 +434,10 @@ class ParsedFoodItem {
   }
 
   /// Converts this parsed result into a [MealFood] for persisting.
+  ///
+  /// Forwards attribution so the backend rule-suggestion detector can mine
+  /// repeated walkthrough answers. [origin] is passed through as-is;
+  /// [sourceQuestionId] and [sourceAnswerValue] come along when present.
   MealFood toMealFood() => MealFood(
         name: foodName,
         portionGrams: portionAmount.round(),
@@ -402,6 +446,9 @@ class ParsedFoodItem {
         proteinG: proteinG,
         carbsG: carbsG,
         fatG: fatG,
+        origin: origin,
+        sourceQuestionId: sourceQuestionId,
+        sourceAnswerValue: sourceAnswerValue,
       );
 }
 
