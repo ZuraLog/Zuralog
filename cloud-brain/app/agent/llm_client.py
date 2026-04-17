@@ -84,7 +84,7 @@ class LLMClient:
                 OpenAI SDK. Use ``{"type": "json_object"}`` to force JSON mode.
             reasoning: Optional OpenRouter unified reasoning control. Pass
                 ``{"effort": "none"}`` to disable reasoning on reasoning-capable
-                models (e.g. MiniMax M2.7). This is critical for structured
+                models (e.g. Gemini 3.1 Flash Lite, Kimi K2.5). This is critical for structured
                 extraction — reasoning models otherwise spend their output
                 tokens on hidden reasoning and return an empty content field.
             plugins: Optional list of OpenRouter plugins to enable for this
@@ -145,7 +145,7 @@ class LLMClient:
                 on models that support it (e.g. MiniMax M2.7, Gemini 3.1).
             reasoning: Optional OpenRouter unified reasoning control. Pass
                 ``{"effort": "none"}`` to disable reasoning on reasoning-capable
-                models (e.g. MiniMax M2.7). Critical for structured extraction
+                models (e.g. Gemini 3.1 Flash Lite, Kimi K2.5). Critical for structured extraction
                 — without this, reasoning models spend all output tokens on
                 hidden reasoning and return empty content.
             plugins: Optional OpenRouter plugins array. Pass

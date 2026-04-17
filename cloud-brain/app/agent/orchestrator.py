@@ -247,9 +247,9 @@ class Orchestrator:
                     {"role": "user", "content": first_user_message[:300]},
                 ],
                 temperature=0.3,
-                # Title model (MiniMax M2.7) is a reasoning model; without this
-                # the tiny output budget is spent on hidden reasoning and the
-                # returned title is empty.
+                # Title model is reasoning-capable; without this override the
+                # tiny output budget can be spent on hidden reasoning, leaving
+                # an empty title.
                 reasoning={"effort": "none"},
             )
             title = (response.choices[0].message.content or "").strip().strip('"').strip("'")

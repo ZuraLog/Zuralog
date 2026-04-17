@@ -210,9 +210,9 @@ async def _call_llm_with_json_retry(
     1. ``response_format={"type": "json_object"}`` — JSON mode at the model
        layer so compliant models emit syntactically valid JSON.
     2. ``reasoning={"effort": "none"}`` — the OpenRouter-documented way to
-       fully disable reasoning. MiniMax M2.7 is a reasoning model; with JSON
-       mode set but reasoning left on, it spends all output tokens on hidden
-       chain-of-thought and returns an empty ``message.content``. Structured
+       fully disable reasoning. Reasoning-capable models (e.g. Gemini 3.1
+       Flash Lite, Kimi K2.5) can otherwise spend output tokens on hidden
+       chain-of-thought and return an empty ``message.content``. Structured
        extraction doesn't need reasoning, so we turn it off.
     3. ``plugins=[{"id": "response-healing"}]`` — OpenRouter's free edge
        repair that fixes trailing commas, missing brackets, and stray

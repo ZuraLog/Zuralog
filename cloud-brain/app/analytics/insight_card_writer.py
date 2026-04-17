@@ -175,10 +175,10 @@ class InsightCardWriter:
             ],
             temperature=0.4,
             max_tokens=1024,
-            # Insight model (MiniMax M2.7) is a reasoning model; without this
-            # it spends output tokens on hidden chain-of-thought and returns
-            # empty content, forcing every call to fall back to rule-based.
-            # The response is a JSON array, so we can't use json_object mode
+            # Insight model is reasoning-capable; without this override it can
+            # spend output tokens on hidden chain-of-thought and return empty
+            # content, forcing every call to fall back to rule-based. The
+            # response is a JSON array, so we can't use json_object mode
             # (which requires an object top-level) — rely on prompt discipline
             # for format and disable reasoning to guarantee content is emitted.
             reasoning={"effort": "none"},

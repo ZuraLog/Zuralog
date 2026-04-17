@@ -87,17 +87,25 @@ class Settings(BaseSettings):
     rate_limit_bypass_user_ids: str = ""
     openrouter_title: str = "Zuralog"
     openrouter_model: str = "moonshotai/kimi-k2.5"
-    openrouter_insight_model: str = "minimax/minimax-m2.7"
-    # OPENROUTER_INSIGHT_MODEL — MiniMax M2.7 rivals Kimi in quality with many
-    # providers on OpenRouter (no single-provider bottleneck). Used for meal
-    # parsing, insights, search AI fallback, and other structured extraction.
-    openrouter_title_model: str = "minimax/minimax-m2.7"
-    openrouter_fallback_model: str = "minimax/minimax-m2.7"
+    # OPENROUTER_MODEL — Coach / main conversational model. Kimi K2.5 has 14
+    # providers on OpenRouter (zero single-provider risk), native multimodal,
+    # 262k context. Reasoning is off unless explicitly requested.
+    openrouter_insight_model: str = "google/gemini-3.1-flash-lite-preview"
+    # OPENROUTER_INSIGHT_MODEL — Gemini 3.1 Flash Lite for all structured
+    # extraction (meal parse, insights, food search, classifier, titles).
+    # 1M context, full multimodal, and — unlike MiniMax M2.7 — it honours
+    # reasoning={"effort":"none"} so JSON extraction actually returns content.
+    openrouter_title_model: str = "google/gemini-3.1-flash-lite-preview"
+    openrouter_fallback_model: str = "moonshotai/kimi-k2.5"
+    # OPENROUTER_FALLBACK_MODEL — cross-provider fallback on 429/503. When
+    # Google's 2-provider stack flakes we cascade to Kimi K2.5's 14 non-Google
+    # providers (Chutes, DeepInfra, Together, Fireworks, Moonshot direct, …)
+    # so correlated outages can't take the whole system down.
     openrouter_vision_model: str = "google/gemini-3.1-flash-lite-preview"
     # OPENROUTER_VISION_MODEL — Gemini 3.1 Flash Lite Preview is fully
     # multimodal (text + image + video + audio + file) with a 1M context
     # window and native structured_outputs support.
-    openrouter_classifier_model: str = "minimax/minimax-m2.7"
+    openrouter_classifier_model: str = "google/gemini-3.1-flash-lite-preview"
     google_web_client_id: str = ""
     google_web_client_secret: SecretStr = SecretStr("")
     strava_client_id: str = ""
