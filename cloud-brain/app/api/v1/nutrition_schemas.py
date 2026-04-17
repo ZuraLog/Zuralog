@@ -13,7 +13,7 @@ Schemas:
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -140,6 +140,9 @@ class ParsedFoodItem(BaseModel):
     fat_g: float
     confidence: float = Field(default=0.5, ge=0.0, le=1.0)
     applied_rules: list[str] = Field(default_factory=list)
+    origin: Literal["user", "from_answer"] = "user"
+    source_question_id: str | None = None
+    source_answer_value: str | None = None
 
     @field_validator("food_name")
     @classmethod
@@ -171,6 +174,98 @@ class ParsedFoodItem(BaseModel):
     def clamp_confidence(cls, v: float) -> float:
         return max(0.0, min(1.0, round(v, 2)))
 
+    @field_validator("source_question_id", "source_answer_value")
+    @classmethod
+    def truncate_source_fields(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip()
+        return v[:50] if v else None
+
+
+class OnAnswerFood(BaseModel):
+    """A lightweight food payload embedded inside an `add_food` or
+    `replace_food` op.
+
+    Mirrors `ParsedFoodItem` but only carries the fields needed to
+    reconstruct a food line. Reuses the same clamping validators so
+    untrusted LLM values cannot exceed sane bounds.
+    """
+
+    food_name: str
+    portion_amount: float
+    portion_unit: str
+    calories: float
+    protein_g: float
+    carbs_g: float
+    fat_g: float
+
+    @field_validator("food_name")
+    @classmethod
+    def truncate_food_name(cls, v: str) -> str:
+        return v.strip()[:200]
+
+    @field_validator("portion_unit")
+    @classmethod
+    def truncate_portion_unit(cls, v: str) -> str:
+        return v.strip()[:20]
+
+    @field_validator("portion_amount")
+    @classmethod
+    def clamp_portion_amount(cls, v: float) -> float:
+        return max(0.01, min(9999.0, v))
+
+    @field_validator("calories")
+    @classmethod
+    def clamp_calories(cls, v: float) -> float:
+        return max(0.0, min(9999.0, round(v, 1)))
+
+    @field_validator("protein_g", "carbs_g", "fat_g")
+    @classmethod
+    def clamp_macros(cls, v: float) -> float:
+        return max(0.0, min(999.0, round(v, 1)))
+
+
+class AddFoodOp(BaseModel):
+    """Append a new food line to the working meal."""
+
+    op: Literal["add_food"]
+    food: OnAnswerFood
+
+
+class ScaleFoodOp(BaseModel):
+    """Multiply the calories, macros, and portion of the question's target
+    food by a scalar factor.
+    """
+
+    op: Literal["scale_food"]
+    factor: float
+
+    @field_validator("factor")
+    @classmethod
+    def clamp_factor(cls, v: float) -> float:
+        return max(0.1, min(10.0, v))
+
+
+class ReplaceFoodOp(BaseModel):
+    """Replace the question's target food with a new one (e.g. swap raw
+    oats for cooked oatmeal)."""
+
+    op: Literal["replace_food"]
+    food: OnAnswerFood
+
+
+class NoOp(BaseModel):
+    """Do nothing — use when an answer value does not change the meal."""
+
+    op: Literal["no_op"]
+
+
+OnAnswerOp = Annotated[
+    Union[AddFoodOp, ScaleFoodOp, ReplaceFoodOp, NoOp],
+    Field(discriminator="op"),
+]
+
 
 class GuidedQuestion(BaseModel):
     """A single follow-up question the AI asks during Guided mode.
@@ -190,6 +285,7 @@ class GuidedQuestion(BaseModel):
     max: float | None = None
     step: float | None = None
     unit: str | None = None
+    on_answer: dict[str, OnAnswerOp] | None = None
 
     @field_validator("component_type")
     @classmethod
@@ -218,6 +314,22 @@ class GuidedQuestion(BaseModel):
             return None
         v = v.strip()
         return v[:500] if v else None
+
+    @field_validator("on_answer")
+    @classmethod
+    def validate_on_answer(
+        cls, v: dict[str, OnAnswerOp] | None
+    ) -> dict[str, OnAnswerOp] | None:
+        if v is None:
+            return None
+        if len(v) > 10:
+            raise ValueError("on_answer map must contain at most 10 entries")
+        for key in v:
+            if len(key) > 50:
+                raise ValueError(
+                    "on_answer keys must be at most 50 characters long"
+                )
+        return v
 
 
 class MealParseResponse(BaseModel):
