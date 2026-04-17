@@ -36,6 +36,13 @@ class FoodItemRequest(BaseModel):
         protein_g: Protein in grams (>= 0).
         carbs_g: Carbohydrates in grams (>= 0).
         fat_g: Fat in grams (>= 0).
+        origin: Optional tag ("user" or "from_answer") marking how this
+            food landed on the meal. Only set for foods added via the
+            guided walkthrough.
+        source_question_id: Optional walkthrough question id that seeded
+            this food. Truncated to 20 chars to match the DB column.
+        source_answer_value: Optional answer value that seeded this
+            food. Truncated to 50 chars to match the DB column.
     """
 
     food_name: str = Field(..., min_length=1, max_length=200)
@@ -45,6 +52,25 @@ class FoodItemRequest(BaseModel):
     protein_g: float = Field(..., ge=0)
     carbs_g: float = Field(..., ge=0)
     fat_g: float = Field(..., ge=0)
+    origin: Literal["user", "from_answer"] | None = None
+    source_question_id: str | None = None
+    source_answer_value: str | None = None
+
+    @field_validator("source_question_id")
+    @classmethod
+    def truncate_source_question_id(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip()
+        return v[:20] if v else None
+
+    @field_validator("source_answer_value")
+    @classmethod
+    def truncate_source_answer_value(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip()
+        return v[:50] if v else None
 
 
 # ---------------------------------------------------------------------------

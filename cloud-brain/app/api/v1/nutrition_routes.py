@@ -561,6 +561,9 @@ async def create_meal(
             protein_g=food_req.protein_g,
             carbs_g=food_req.carbs_g,
             fat_g=food_req.fat_g,
+            origin=food_req.origin,
+            source_question_id=food_req.source_question_id,
+            source_answer_value=food_req.source_answer_value,
         )
         db.add(food)
 
@@ -653,6 +656,9 @@ async def update_meal(
             protein_g=food_req.protein_g,
             carbs_g=food_req.carbs_g,
             fat_g=food_req.fat_g,
+            origin=food_req.origin,
+            source_question_id=food_req.source_question_id,
+            source_answer_value=food_req.source_answer_value,
         )
         db.add(food)
 
