@@ -300,42 +300,51 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
         ? foods[question.foodIndex].foodName
         : '';
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimens.spaceMd,
-        vertical: AppDimens.spaceSm,
-      ),
-      child: ZFadeSlideIn(
-        key: ValueKey('page-${question.id}'),
-        child: ZuralogCard(
-          variant: ZCardVariant.feature,
-          category: AppColors.categoryNutrition,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (foodName.isNotEmpty) ...[
-                Text(
-                  foodName.toUpperCase(),
-                  style: AppTextStyles.labelMedium.copyWith(
-                    color: AppColors.categoryNutrition,
-                    letterSpacing: 0.8,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimens.spaceMd,
+            vertical: AppDimens.spaceSm,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: ZFadeSlideIn(
+                key: ValueKey('page-${question.id}'),
+                child: ZuralogCard(
+                  variant: ZCardVariant.feature,
+                  category: AppColors.categoryNutrition,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (foodName.isNotEmpty) ...[
+                        Text(
+                          foodName.toUpperCase(),
+                          style: AppTextStyles.labelMedium.copyWith(
+                            color: AppColors.categoryNutrition,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        const SizedBox(height: AppDimens.spaceXs),
+                      ],
+                      Text(
+                        question.question,
+                        style: AppTextStyles.titleMedium.copyWith(
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: AppDimens.spaceLg),
+                      _buildComponent(colors, question),
+                    ],
                   ),
                 ),
-                const SizedBox(height: AppDimens.spaceXs),
-              ],
-              Text(
-                question.question,
-                style: AppTextStyles.titleMedium.copyWith(
-                  color: colors.textPrimary,
-                ),
               ),
-              const SizedBox(height: AppDimens.spaceLg),
-              _buildComponent(colors, question),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
