@@ -54,8 +54,12 @@ class _NutritionRulesScreenState extends ConsumerState<NutritionRulesScreen> {
     try {
       final repo = ref.read(nutritionRepositoryProvider);
       await repo.createRule(text.trim());
-      ref.invalidate(nutritionRulesProvider);
-      if (mounted) ZToast.success(context, 'Rule added.');
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) ref.invalidate(nutritionRulesProvider);
+        });
+        ZToast.success(context, 'Rule added.');
+      }
     } catch (e) {
       if (mounted) ZToast.error(context, 'Could not add the rule.');
     } finally {
@@ -74,8 +78,12 @@ class _NutritionRulesScreenState extends ConsumerState<NutritionRulesScreen> {
     try {
       final repo = ref.read(nutritionRepositoryProvider);
       await repo.updateRule(rule.id, text.trim());
-      ref.invalidate(nutritionRulesProvider);
-      if (mounted) ZToast.success(context, 'Rule updated.');
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) ref.invalidate(nutritionRulesProvider);
+        });
+        ZToast.success(context, 'Rule updated.');
+      }
     } catch (e) {
       if (mounted) ZToast.error(context, 'Could not update the rule.');
     } finally {
@@ -98,8 +106,12 @@ class _NutritionRulesScreenState extends ConsumerState<NutritionRulesScreen> {
     try {
       final repo = ref.read(nutritionRepositoryProvider);
       await repo.deleteRule(rule.id);
-      ref.invalidate(nutritionRulesProvider);
-      if (mounted) ZToast.success(context, 'Rule deleted.');
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) ref.invalidate(nutritionRulesProvider);
+        });
+        ZToast.success(context, 'Rule deleted.');
+      }
     } catch (e) {
       if (mounted) ZToast.error(context, 'Could not delete the rule.');
     } finally {

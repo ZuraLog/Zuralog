@@ -77,7 +77,7 @@ async def recompute_nutrition_summary(
         meal_count=len(meals),
     )
     stmt = stmt.on_conflict_do_update(
-        constraint="uix_nutrition_summary_user_date",
+        index_elements=["user_id", "date"],
         set_={
             "total_calories": stmt.excluded.total_calories,
             "total_protein_g": stmt.excluded.total_protein_g,
