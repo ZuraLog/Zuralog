@@ -133,7 +133,6 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
   MealType? _selectedMealType;
   DateTime _loggedAt = DateTime.now();
   bool _isSaving = false;
-  bool _rulesHandledEverything = false;
   String? _error;
 
   /// The questions that drove the walkthrough, captured so the attribution
@@ -266,19 +265,7 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
         // Adopt the backend-suggested rule (if any). Shown as a banner in
         // the results phase above "Here's what I found".
         _suggestedRule = parsed.suggestedRule;
-
-        // When in Guided mode and every parsed item is high confidence,
-        // the user's rules already covered everything.
-        if (args.isGuidedMode &&
-            results.isNotEmpty &&
-            results.every((item) => item.confidence >= 0.8)) {
-          _rulesHandledEverything = true;
-        }
       });
-
-      if (_rulesHandledEverything && mounted) {
-        ZToast.success(context, 'Your rules covered everything!');
-      }
 
       // Guided mode: if there are unskipped questions, open the walkthrough
       // after the results phase is on screen so the user sees the parsed
@@ -880,8 +867,7 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
     final isGuided = widget.args.isGuidedMode;
     final ParsedFoodItem? parsedItem =
         index < _parsedItems.length ? _parsedItems[index] : null;
-    final showRefinement =
-        isGuided && parsedItem != null && !_rulesHandledEverything;
+    final showRefinement = isGuided && parsedItem != null;
 
     // Confidence dot color.
     final confidenceColor = parsedItem != null
