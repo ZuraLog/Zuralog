@@ -258,9 +258,9 @@ class _AddSupplementForm extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AppTextField(controller: nameCtrl, labelText: 'Name *', hintText: 'e.g. Vitamin D'),
+            ZLabeledTextField(controller: nameCtrl, label: 'Name *', hint: 'e.g. Vitamin D'),
             const SizedBox(height: AppDimens.spaceSm),
-            AppTextField(controller: doseCtrl, labelText: 'Dose (optional)', hintText: 'e.g. 1000 IU'),
+            ZLabeledTextField(controller: doseCtrl, label: 'Dose (optional)', hint: 'e.g. 1000 IU'),
             const SizedBox(height: AppDimens.spaceSm),
             Wrap(
               spacing: AppDimens.spaceSm,
