@@ -78,7 +78,9 @@ Rules:
 6. If the description is ambiguous, make a reasonable assumption. Never ask for clarification.
 7. Do not add foods that are not mentioned in the description.
 8. Return between 1 and 50 food items.
-9. No text outside the JSON object. No markdown fences. No explanation.\
+9. No text outside the JSON object. No markdown fences. No explanation.
+10. Only use quantities the user explicitly mentioned. If the user says 'toast' without a number, assume 1. If they say 'two eggs', use 2. Never invent quantities that weren't stated.
+11. Default portion sizes when not specified: 'toast' = 1 slice, 'egg' = 1 piece, 'coffee' = 1 cup (240ml), 'rice' = 1 bowl (200g cooked), 'chicken breast' = 1 piece (150g), 'banana' = 1 piece (120g).\
 """
 
 _IMAGE_SCAN_SYSTEM_PROMPT = """\
@@ -106,7 +108,8 @@ Rules:
 4. For food plates: estimate portions visually. Use 0.5-0.8 confidence.
 5. Separate compound items into individual food entries.
 6. Return between 1 and 50 food items.
-7. No text outside the JSON object. No markdown fences. No explanation.\
+7. No text outside the JSON object. No markdown fences. No explanation.
+8. Only use quantities you can actually see in the image. If you see one piece of toast, report 1 — do not assume multiples. Count what is visible, nothing more.\
 """
 
 router = APIRouter(prefix="/nutrition", tags=["nutrition"])

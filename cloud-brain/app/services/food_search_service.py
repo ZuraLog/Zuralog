@@ -39,7 +39,8 @@ _BOUNDS_RATIO_MIN = 0.3
 
 _ESTIMATION_SYSTEM_PROMPT = (
     "You are a nutrition database. Given a food name, return its estimated "
-    "nutritional values for one standard serving.\n"
+    "nutritional values for a single standard serving. Always use exactly one "
+    "serving — never multiple.\n"
     "Return ONLY a JSON object with: food_name, serving_size, serving_unit, "
     "calories_per_serving, protein_per_serving, carbs_per_serving, "
     "fat_per_serving, confidence (0.0-1.0)"
