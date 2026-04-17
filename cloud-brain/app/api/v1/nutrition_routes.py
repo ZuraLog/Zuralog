@@ -53,10 +53,11 @@ from app.limiter import limiter
 from app.models.food_cache import FoodCache
 from app.models.meal import Meal
 from app.models.meal_food import MealFood
-from app.models.nutrition_rule import NutritionRule
 from app.models.nutrition_daily_summary import NutritionDailySummary
+from app.models.nutrition_rule import NutritionRule
 from app.services.food_search_service import record_correction, search_foods
 from app.services.nutrition_service import recompute_nutrition_summary
+from app.services.rule_suggestion import detect_suggested_rule
 from app.utils.sanitize import sanitize_for_llm
 
 logger = logging.getLogger(__name__)
@@ -1075,9 +1076,12 @@ async def parse_meal_description(
                 continue
             validated_questions.append(q)
 
+    suggested = await detect_suggested_rule(db, user_id)
+
     return MealParseResponse(
         foods=foods_out,
         questions=validated_questions,
+        suggested_rule=suggested,
     )
 
 
@@ -1228,11 +1232,14 @@ async def refine_meal(
 
     rounds_remaining = max(0, 3 - body.round)
 
+    suggested = await detect_suggested_rule(db, user_id)
+
     return MealRefineResponse(
         foods=refined_foods,
         questions=refined_questions,
         is_final=is_final,
         rounds_remaining=rounds_remaining,
+        suggested_rule=suggested,
     )
 
 
@@ -1363,9 +1370,12 @@ async def scan_food_image(
                 continue
             validated_questions.append(q)
 
+    suggested = await detect_suggested_rule(db, user_id)
+
     return MealParseResponse(
         foods=foods_out,
         questions=validated_questions,
+        suggested_rule=suggested,
     )
 
 
