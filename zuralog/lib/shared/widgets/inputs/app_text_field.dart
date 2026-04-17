@@ -121,8 +121,10 @@ class AppTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    // Universal unfocused outline so every field in the app has a clearly
-    // visible border when empty — matches [ZLabeledTextField] / [ZLabeledNumberField].
+    // EXPLICIT unfocused border — do not delete. The inputDecorationTheme would
+    // otherwise cover this, but having it here locally protects against any
+    // future theme change that forgets the dark-mode branch. Phase 6 Plan 6
+    // locked this in.
     final unfocusedBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(AppDimens.shapeSm),
       borderSide: BorderSide(color: colors.border, width: 1),
