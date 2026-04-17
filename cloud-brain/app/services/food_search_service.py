@@ -289,7 +289,21 @@ async def search_foods(
 
     if rows:
         logger.debug("Cache hit for '%s': %d results", normalized, len(rows))
-        return [dict(r) for r in rows]
+        return [
+            {
+                "id": str(r["id"]),
+                "name": r["name"],
+                "brand": r["brand"],
+                "serving_size": float(r["serving_size"]),
+                "serving_unit": r["serving_unit"],
+                "calories_per_serving": float(r["calories_per_serving"]),
+                "protein_per_serving": float(r["protein_per_serving"]),
+                "carbs_per_serving": float(r["carbs_per_serving"]),
+                "fat_per_serving": float(r["fat_per_serving"]),
+                "source": (r["metadata"] or {}).get("source", "cached") if r["metadata"] else "cached",
+            }
+            for r in rows
+        ]
 
     # No cache results — return empty. AI estimation only happens
     # through the Describe/Parse path, not through search.
