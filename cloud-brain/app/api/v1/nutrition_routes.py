@@ -134,12 +134,17 @@ Four operations are supported:
 4. no_op — Answer doesn't change nutrition.
    Example: user said "no" to "Did you use oil?"
    { "op": "no_op" }
+5. needs_followup — Answer is ambiguous or open-ended; a second AI round is needed.
+   Example: user said "yes" to "Did you use oil or butter?" — we still don't know which.
+   { "op": "needs_followup", "reason": "was it oil or butter?" }
+   Use sparingly. Prefer concrete add_food/scale_food/replace_food recipes when possible.
+   Always emit needs_followup for free_text questions.
 
 Which answer keys to emit per question type:
 - yes_no → emit "yes" and "no"
 - button_group → emit one key per option (use the exact option value)
 - slider, number_stepper, size_picker → emit one key per representative value (min, default, max) — the client interpolates between them via scale_food
-- free_text → emit a single "default" key with no_op for now (future work will handle free-text via a follow-up call)
+- free_text → emit a single "default" key with {"op": "needs_followup", "reason": "..."}. The client will collect the typed answer and POST to /meals/refine for a second AI round.
 
 Rules:
 - Keep the on_answer map small — at most 10 keys per question.
@@ -229,12 +234,17 @@ Four operations are supported:
 4. no_op — Answer doesn't change nutrition.
    Example: user said "no" to "Did you use oil?"
    { "op": "no_op" }
+5. needs_followup — Answer is ambiguous or open-ended; a second AI round is needed.
+   Example: user said "yes" to "Did you use oil or butter?" — we still don't know which.
+   { "op": "needs_followup", "reason": "was it oil or butter?" }
+   Use sparingly. Prefer concrete add_food/scale_food/replace_food recipes when possible.
+   Always emit needs_followup for free_text questions.
 
 Which answer keys to emit per question type:
 - yes_no → emit "yes" and "no"
 - button_group → emit one key per option (use the exact option value)
 - slider, number_stepper, size_picker → emit one key per representative value (min, default, max) — the client interpolates between them via scale_food
-- free_text → emit a single "default" key with no_op for now (future work will handle free-text via a follow-up call)
+- free_text → emit a single "default" key with {"op": "needs_followup", "reason": "..."}. The client will collect the typed answer and POST to /meals/refine for a second AI round.
 
 Rules:
 - Keep the on_answer map small — at most 10 keys per question.
@@ -244,6 +254,61 @@ Rules:
 
 APPLIED RULES:
 For each food, list in "applied_rules" which of the user's personal rules (provided below if any) you used while estimating it. Quote the rule text exactly as given. If no rules applied to this specific food, return an empty array [].\
+"""
+
+_MEAL_REFINE_SYSTEM_PROMPT = """\
+You are refining an existing meal estimate.
+
+You already parsed the meal once and asked the user some follow-up questions. Use their answers to either:
+(a) return a refined `foods` list and `is_final: true`, OR
+(b) ask one more round of follow-up questions and `is_final: false`.
+
+Use the same JSON schema as /meals/parse: a top-level `foods` array, an optional `questions` array with the on_answer contract, plus an `is_final: bool` field.
+
+ON_ANSWER CONTRACT (only when mode = guided):
+For every question you emit, include an "on_answer" map in the question object. The map tells the client exactly how to update the meal when the user picks each possible answer. The client applies your recipes instantly — no second AI call is made. Your recipes must be realistic and conservative.
+
+Four operations are supported:
+1. add_food — Add a new food line to the meal.
+   Example: user said "yes" to "Did you use oil to cook?"
+   { "op": "add_food", "food": { "food_name": "cooking oil", "portion_amount": 1, "portion_unit": "tsp", "calories": 45, "protein_g": 0, "carbs_g": 0, "fat_g": 5 } }
+2. scale_food — Multiply one existing food's numbers by a factor.
+   Example: user picked "Large" on a portion-size question
+   { "op": "scale_food", "factor": 1.5 }
+   Factor must be between 0.1 and 10.0.
+3. replace_food — Swap an existing food for a different one (used for cooking-method changes like grilled → fried).
+   Example: user picked "Fried" on "How was it cooked?"
+   { "op": "replace_food", "food": { "food_name": "fried chicken breast", "portion_amount": 100, "portion_unit": "g", "calories": 250, "protein_g": 28, "carbs_g": 8, "fat_g": 12 } }
+4. no_op — Answer doesn't change nutrition.
+   Example: user said "no" to "Did you use oil?"
+   { "op": "no_op" }
+5. needs_followup — Answer is ambiguous or open-ended; a second AI round is needed.
+   Example: user said "yes" to "Did you use oil or butter?" — we still don't know which.
+   { "op": "needs_followup", "reason": "was it oil or butter?" }
+   Use sparingly. Prefer concrete add_food/scale_food/replace_food recipes when possible.
+   Always emit needs_followup for free_text questions.
+
+Which answer keys to emit per question type:
+- yes_no → emit "yes" and "no"
+- button_group → emit one key per option (use the exact option value)
+- slider, number_stepper, size_picker → emit one key per representative value (min, default, max) — the client interpolates between them via scale_food
+- free_text → emit a single "default" key with {"op": "needs_followup", "reason": "..."}. The client will collect the typed answer and POST to /meals/refine for a second AI round.
+
+Rules:
+- Keep the on_answer map small — at most 10 keys per question.
+- Keys must be 50 characters or less.
+- Nutrition estimates inside add_food / replace_food must be realistic and conservative. Never optimistic, never punitive. A teaspoon of cooking oil is ~40-50 kcal, not 200 or 10.
+- Always include on_answer when mode = guided. Omit it entirely when mode = quick or manual.
+
+REFINE RULES:
+
+1. Round-3 hard stop. If the user message tells you this is round 3, you MUST return `is_final: true` with a best-effort refined `foods` list and an empty `questions` array. Do not ask more questions regardless of how ambiguous things feel.
+
+2. Conservative numbers only. A teaspoon of cooking oil is ~40-50 kcal, not 200 or 10. A tablespoon of dressing is ~60-80 kcal.
+
+3. Preserve attribution. For every food that the prior rounds already attributed (origin == "from_answer" with source_question_id and source_answer_value), preserve those fields as-is. Only set `origin: "from_answer"` on newly-added foods from THIS round — and tag them with the question id and answer value from this round's inputs.
+
+4. No markdown, no explanation, no text outside the JSON object.
 """
 
 router = APIRouter(prefix="/nutrition", tags=["nutrition"])

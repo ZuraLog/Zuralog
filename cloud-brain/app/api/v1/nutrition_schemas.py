@@ -261,8 +261,32 @@ class NoOp(BaseModel):
     op: Literal["no_op"]
 
 
+class NeedsFollowupOp(BaseModel):
+    """Signal that an answer is ambiguous or open-ended and needs a
+    second AI round to resolve.
+
+    Emitted for free-text answers (which can't be mapped to a fixed
+    recipe) and for structured answers the model flagged as still
+    unclear (e.g. a "yes" to "oil or butter?" doesn't tell us which).
+
+    The optional `reason` is advisory — it hints the refine prompt at
+    what's still unclear and is never shown to the user.
+    """
+
+    op: Literal["needs_followup"]
+    reason: str | None = None
+
+    @field_validator("reason")
+    @classmethod
+    def sanitize_reason(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip()[:200]
+        return v if v else None
+
+
 OnAnswerOp = Annotated[
-    Union[AddFoodOp, ScaleFoodOp, ReplaceFoodOp, NoOp],
+    Union[AddFoodOp, ScaleFoodOp, ReplaceFoodOp, NoOp, NeedsFollowupOp],
     Field(discriminator="op"),
 ]
 
@@ -337,6 +361,82 @@ class MealParseResponse(BaseModel):
 
     foods: list[ParsedFoodItem]
     questions: list[GuidedQuestion] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Meal Refine schemas (Phase 6 Plan 3)
+# ---------------------------------------------------------------------------
+
+
+class AnswerHistoryEntry(BaseModel):
+    """A single answer the user has given during the walkthrough.
+
+    Refine uses the full history so the model can see what has already
+    been asked and how the user responded across rounds.
+    """
+
+    question_id: str = Field(..., min_length=1, max_length=20)
+    answer_value: str = Field(..., min_length=1, max_length=500)
+    round: int = Field(..., ge=1, le=3)
+
+    @field_validator("question_id")
+    @classmethod
+    def strip_question_id(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("question_id must not be empty")
+        return v[:20]
+
+    @field_validator("answer_value")
+    @classmethod
+    def strip_answer_value(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("answer_value must not be empty")
+        return v[:500]
+
+
+class MealRefineRequest(BaseModel):
+    """Request body for a second-round meal refinement.
+
+    Carries the original description plus every question and answer the
+    walkthrough has collected so far. Capped at 30 questions / answers
+    and at 3 refine rounds so a misbehaving client cannot burn unbounded
+    AI spend per meal.
+    """
+
+    description: str = Field(..., min_length=1, max_length=500)
+    foods: list[ParsedFoodItem] = Field(..., min_length=1, max_length=50)
+    questions_history: list[GuidedQuestion] = Field(
+        ..., min_length=1, max_length=30
+    )
+    answers_history: list[AnswerHistoryEntry] = Field(
+        ..., min_length=1, max_length=30
+    )
+    round: int = Field(..., ge=1, le=3)
+
+    @field_validator("description")
+    @classmethod
+    def strip_description(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("description must not be empty")
+        return v
+
+
+class MealRefineResponse(BaseModel):
+    """Response from a second-round meal refinement.
+
+    When `is_final` is true the client adopts `foods` as the final meal
+    and stops asking questions. When false the client renders the new
+    `questions` batch and may call refine once more (subject to the
+    3-round cap enforced server-side).
+    """
+
+    foods: list[ParsedFoodItem]
+    questions: list[GuidedQuestion] = Field(default_factory=list)
+    is_final: bool
+    rounds_remaining: int = Field(..., ge=0, le=2)
 
 
 # ---------------------------------------------------------------------------
