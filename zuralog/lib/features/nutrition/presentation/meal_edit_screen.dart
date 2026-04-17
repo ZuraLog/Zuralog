@@ -241,20 +241,11 @@ class _MealEditScreenState extends ConsumerState<MealEditScreen> {
 
           const SizedBox(height: AppDimens.spaceLg),
 
-          // ── Meal type chips ────────────────────────────────────────────
-          SectionHeader(title: 'Meal type'),
-          const SizedBox(height: AppDimens.spaceSm),
-          Wrap(
-            spacing: AppDimens.spaceSm,
-            runSpacing: AppDimens.spaceSm,
-            children: MealType.values.map((type) {
-              return ZChip(
-                label: type.label,
-                icon: type.icon,
-                isActive: _selectedMealType == type,
-                onTap: () => setState(() => _selectedMealType = type),
-              );
-            }).toList(),
+          // ── Meal type picker ───────────────────────────────────────────
+          ZMealTypePicker(
+            value: _selectedMealType,
+            onChanged: (v) => setState(() => _selectedMealType = v),
+            label: 'Meal type',
           ),
 
           const SizedBox(height: AppDimens.spaceLg),
