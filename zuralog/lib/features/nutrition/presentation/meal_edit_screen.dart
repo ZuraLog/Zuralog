@@ -7,7 +7,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -392,11 +391,11 @@ class _FoodEditCard extends StatelessWidget {
           const SizedBox(height: AppDimens.spaceSm),
 
           // Calories.
-          AppTextField(
-            labelText: 'Calories (kcal)',
+          ZLabeledNumberField(
+            label: 'Calories',
+            unit: 'kcal',
+            allowDecimal: false,
             controller: entry.caloriesController,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             textInputAction: TextInputAction.next,
           ),
 
@@ -404,42 +403,34 @@ class _FoodEditCard extends StatelessWidget {
 
           // Protein / Carbs / Fat row.
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: AppTextField(
-                  labelText: 'Protein (g)',
+                child: ZLabeledNumberField(
+                  label: 'Protein',
+                  unit: 'g',
+                  allowDecimal: true,
                   controller: entry.proteinController,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-                  ],
                   textInputAction: TextInputAction.next,
                 ),
               ),
               const SizedBox(width: AppDimens.spaceSm),
               Expanded(
-                child: AppTextField(
-                  labelText: 'Carbs (g)',
+                child: ZLabeledNumberField(
+                  label: 'Carbs',
+                  unit: 'g',
+                  allowDecimal: true,
                   controller: entry.carbsController,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-                  ],
                   textInputAction: TextInputAction.next,
                 ),
               ),
               const SizedBox(width: AppDimens.spaceSm),
               Expanded(
-                child: AppTextField(
-                  labelText: 'Fat (g)',
+                child: ZLabeledNumberField(
+                  label: 'Fat',
+                  unit: 'g',
+                  allowDecimal: true,
                   controller: entry.fatController,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-                  ],
                   textInputAction: TextInputAction.done,
                 ),
               ),

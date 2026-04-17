@@ -35,6 +35,7 @@ import 'package:zuralog/shared/widgets/feedback/z_alert_banner.dart';
 import 'package:zuralog/shared/widgets/feedback/z_toast.dart';
 import 'package:zuralog/shared/widgets/inputs/z_chip.dart';
 import 'package:zuralog/shared/widgets/inputs/app_text_field.dart';
+import 'package:zuralog/shared/widgets/inputs/z_labeled_number_field.dart';
 import 'package:zuralog/shared/widgets/layout/section_header.dart';
 import 'package:zuralog/shared/widgets/animations/z_fade_slide_in.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
@@ -946,37 +947,47 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
         AppTextField(
           controller: c.name,
           hintText: 'Food name',
+          textInputAction: TextInputAction.next,
         ),
         const SizedBox(height: AppDimens.spaceXs),
-        AppTextField(
+        ZLabeledNumberField(
+          label: 'Calories',
+          unit: 'kcal',
+          allowDecimal: false,
           controller: c.calories,
-          hintText: 'Calories (kcal)',
-          keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.next,
         ),
         const SizedBox(height: AppDimens.spaceXs),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: AppTextField(
+              child: ZLabeledNumberField(
+                label: 'Protein',
+                unit: 'g',
+                allowDecimal: true,
                 controller: c.protein,
-                hintText: 'P (g)',
-                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.next,
               ),
             ),
             const SizedBox(width: AppDimens.spaceXs),
             Expanded(
-              child: AppTextField(
+              child: ZLabeledNumberField(
+                label: 'Carbs',
+                unit: 'g',
+                allowDecimal: true,
                 controller: c.carbs,
-                hintText: 'C (g)',
-                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.next,
               ),
             ),
             const SizedBox(width: AppDimens.spaceXs),
             Expanded(
-              child: AppTextField(
+              child: ZLabeledNumberField(
+                label: 'Fat',
+                unit: 'g',
+                allowDecimal: true,
                 controller: c.fat,
-                hintText: 'F (g)',
-                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
               ),
             ),
           ],
