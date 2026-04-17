@@ -24,6 +24,7 @@ import httpx
 import sentry_sdk
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile, status
 from openai import APIError
+from pydantic import ValidationError
 from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,6 +40,8 @@ from app.api.v1.nutrition_schemas import (
     MealCreateRequest,
     MealParseRequest,
     MealParseResponse,
+    MealRefineRequest,
+    MealRefineResponse,
     MealUpdateRequest,
     NutritionRuleCreate,
     NutritionRuleUpdate,
@@ -1069,6 +1072,161 @@ async def parse_meal_description(
     return MealParseResponse(
         foods=foods_out,
         questions=validated_questions,
+    )
+
+
+# ---------------------------------------------------------------------------
+# AI Meal Refine (Phase 6 Plan 3)
+# ---------------------------------------------------------------------------
+
+
+@limiter.limit("10/minute")
+@router.post("/meals/refine", response_model=MealRefineResponse)
+async def refine_meal(
+    request: Request,
+    body: MealRefineRequest,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> MealRefineResponse:
+    """Run a second-round refinement over an existing meal parse.
+
+    Called by the walkthrough when an answer is open-ended (free text) or
+    the first round's recipes couldn't resolve it deterministically. Feeds
+    the original description plus the full question-and-answer history
+    back to the model, which returns either a refined food list or one
+    more round of questions.
+
+    Hard-capped at 3 refine rounds per meal — enforced server-side so a
+    malicious client cannot force unbounded AI spend.
+    """
+    # Server-side hard cap — client enforces this too but we never trust it.
+    if body.round > 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Maximum refinement rounds exceeded.",
+        )
+
+    # Build the LLM user message. Sanitize every string that might echo
+    # user input back into the prompt.
+    sanitized_description = sanitize_for_llm(body.description)
+
+    # Build a recap of the Q&A history — each entry tagged by its round.
+    history_lines: list[str] = []
+    questions_by_id = {q.id: q for q in body.questions_history}
+    for entry in body.answers_history:
+        q = questions_by_id.get(entry.question_id)
+        q_text = sanitize_for_llm(q.question) if q else "(question not found)"
+        a_text = sanitize_for_llm(entry.answer_value)
+        history_lines.append(
+            f"  • Round {entry.round}: Q: {q_text}  →  A: {a_text}"
+        )
+    history_block = "\n".join(history_lines) if history_lines else "  (no prior answers)"
+
+    foods_json = json.dumps([f.model_dump() for f in body.foods], indent=2)
+
+    # Inject user rules (same helper as parse_meal_description uses).
+    rules_block = await _get_user_rules_prompt(db, user_id)
+
+    round_marker = ""
+    if body.round == 3:
+        round_marker = (
+            "THIS IS THE FINAL ROUND. Return is_final=true and empty questions. "
+            "Best-effort foods only.\n\n"
+        )
+
+    user_message = (
+        f"{round_marker}"
+        f"Original description: {sanitized_description}\n\n"
+        f"Current foods:\n{foods_json}\n\n"
+        f"Question and answer history:\n{history_block}\n\n"
+        f"This is refinement round {body.round} of 3.\n\n"
+        f"{rules_block}"
+    )
+
+    messages = [
+        {"role": "system", "content": _MEAL_REFINE_SYSTEM_PROMPT},
+        {"role": "user", "content": user_message},
+    ]
+
+    # Run through the retry wrapper, same as parse.
+    llm = LLMClient(model=settings.openrouter_insight_model)
+    try:
+        parsed_dict, raw_content = await _call_llm_with_json_retry(
+            llm,
+            messages,
+            temperature=0.3,
+            max_tokens=2048,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("refine_meal LLM call failed")
+        sentry_sdk.capture_exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Meal refinement service is temporarily unavailable.",
+        ) from e
+
+    # Validate response structure — tolerate missing fields.
+    foods_list = parsed_dict.get("foods") or []
+    if not isinstance(foods_list, list):
+        foods_list = []
+    refined_foods: list[ParsedFoodItem] = []
+    for f in foods_list:
+        if not isinstance(f, dict):
+            continue
+        try:
+            refined_foods.append(ParsedFoodItem.model_validate(f))
+        except ValidationError:
+            logger.warning("refine_meal: skipping invalid food: %r", f)
+            continue
+
+    # Defence: if the LLM returned no valid foods, fall back to the input foods
+    # so the walkthrough can keep going rather than crash the user's session.
+    if not refined_foods:
+        logger.warning(
+            "refine_meal: LLM returned no valid foods, falling back to input. Raw: %.300s",
+            raw_content,
+        )
+        refined_foods = list(body.foods)
+
+    questions_list = parsed_dict.get("questions") or []
+    if not isinstance(questions_list, list):
+        questions_list = []
+    refined_questions: list[GuidedQuestion] = []
+    for q in questions_list:
+        if not isinstance(q, dict):
+            continue
+        try:
+            gq = GuidedQuestion.model_validate(q)
+        except ValidationError:
+            logger.warning("refine_meal: skipping invalid question: %r", q)
+            continue
+        # Drop questions with out-of-range food_index.
+        if gq.food_index < 0 or gq.food_index >= len(refined_foods):
+            logger.warning(
+                "refine_meal: dropping question with out-of-range food_index: %d",
+                gq.food_index,
+            )
+            continue
+        refined_questions.append(gq)
+
+    is_final_raw = parsed_dict.get("is_final", False)
+    is_final = bool(is_final_raw) if is_final_raw is not None else False
+
+    # Server-side override — round 3 forces is_final=true, empty questions.
+    # Last line of defence against runaway rounds.
+    if body.round >= 3:
+        is_final = True
+        refined_questions = []
+
+    rounds_remaining = max(0, 3 - body.round)
+
+    return MealRefineResponse(
+        foods=refined_foods,
+        questions=refined_questions,
+        is_final=is_final,
+        rounds_remaining=rounds_remaining,
     )
 
 
