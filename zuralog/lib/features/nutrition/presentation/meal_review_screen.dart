@@ -30,6 +30,7 @@ import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
 import 'package:zuralog/features/nutrition/providers/nutrition_providers.dart';
 import 'package:zuralog/shared/widgets/buttons/z_button.dart';
+import 'package:zuralog/shared/widgets/cards/zuralog_card.dart';
 import 'package:zuralog/shared/widgets/feedback/z_alert_banner.dart';
 import 'package:zuralog/shared/widgets/feedback/z_toast.dart';
 import 'package:zuralog/shared/widgets/inputs/z_chip.dart';
@@ -1064,12 +1065,9 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
   Widget _buildTotalSummary(AppColorsOf colors) {
     final macros = _totalMacros;
 
-    return Container(
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: AppColors.categoryNutrition.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(AppDimens.shapeSm),
-      ),
+    return ZuralogCard(
+      variant: ZCardVariant.feature,
+      category: AppColors.categoryNutrition,
       child: Row(
         children: [
           _TotalStat(
