@@ -95,6 +95,7 @@ import 'package:zuralog/features/trends/presentation/trends_home_screen.dart';
 import 'package:zuralog/features/nutrition/presentation/nutrition_home_screen.dart';
 import 'package:zuralog/features/nutrition/presentation/nutrition_rules_screen.dart';
 import 'package:zuralog/features/nutrition/presentation/meal_detail_screen.dart';
+import 'package:zuralog/features/nutrition/presentation/meal_edit_screen.dart';
 import 'package:zuralog/features/nutrition/presentation/meal_review_screen.dart';
 
 // ── Settings (pushed over shell) ──────────────────────────────────────────────
@@ -569,6 +570,17 @@ List<RouteBase> _buildRoutes() {
             module: 'nutrition.rules',
             child: NutritionRulesScreen(),
           ),
+        ),
+        GoRoute(
+          path: 'meal-edit',
+          name: RouteNames.nutritionMealEdit,
+          builder: (context, state) {
+            final args = state.extra as MealEditArgs;
+            return SentryErrorBoundary(
+              module: 'nutrition.meal_edit',
+              child: MealEditScreen(args: args),
+            );
+          },
         ),
         GoRoute(
           path: 'meal-review',

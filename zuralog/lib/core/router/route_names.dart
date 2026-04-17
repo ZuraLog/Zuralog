@@ -29,6 +29,7 @@
 /// /trends                         → TrendsHomeScreen (pushed over shell)
 /// /nutrition                        → NutritionHomeScreen (pushed over shell)
 ///   /nutrition/meal/:id             → MealDetailScreen
+///   /nutrition/meal-edit            → MealEditScreen
 /// /settings                       → SettingsHubScreen (pushed over shell)
 ///   /settings/account             → AccountSettingsScreen
 ///   /settings/account/edit-profile → EditProfileScreen
@@ -263,6 +264,12 @@ abstract final class RouteNames {
 
   /// Path for the Nutrition Rules screen.
   static const String nutritionRulesPath = '/nutrition/rules';
+
+  /// Name for the Meal Edit screen.
+  static const String nutritionMealEdit = 'nutritionMealEdit';
+
+  /// Path for the Meal Edit screen.
+  static const String nutritionMealEditPath = '/nutrition/meal-edit';
 
   /// Name for the Meal Review screen.
   static const String nutritionMealReview = 'nutritionMealReview';
