@@ -72,6 +72,7 @@ Rules:
    - "carbs_g": number (estimated carbohydrates in grams)
    - "fat_g": number (estimated fat in grams)
    - "confidence": number (0.0 to 1.0 — how confident you are in this specific item's nutritional estimate. Use 0.8+ for well-known standard foods, 0.5-0.8 for reasonable guesses, below 0.5 for very uncertain items)
+   - "applied_rules": array of strings (which user rules you used while estimating this food — see APPLIED RULES below)
 3. Separate compound items. "Toast with butter" becomes two items: toast and butter.
 4. Use common-sense portion sizes when not specified.
 5. Nutritional estimates should be reasonable approximations. They do not need to be exact.
@@ -80,7 +81,42 @@ Rules:
 8. Return between 1 and 50 food items.
 9. No text outside the JSON object. No markdown fences. No explanation.
 10. Only use quantities the user explicitly mentioned. If the user says 'toast' without a number, assume 1. If they say 'two eggs', use 2. Never invent quantities that weren't stated.
-11. Default portion sizes when not specified: 'toast' = 1 slice, 'egg' = 1 piece, 'coffee' = 1 cup (240ml), 'rice' = 1 bowl (200g cooked), 'chicken breast' = 1 piece (150g), 'banana' = 1 piece (120g).\
+11. Default portion sizes when not specified: 'toast' = 1 slice, 'egg' = 1 piece, 'coffee' = 1 cup (240ml), 'rice' = 1 bowl (200g cooked), 'chicken breast' = 1 piece (150g), 'banana' = 1 piece (120g).
+
+GUIDED MODE QUESTIONS:
+If the user has Guided mode enabled (indicated by "GUIDED MODE" in the user message), after the foods array also return a "questions" array with follow-up questions that would improve accuracy. Otherwise, omit the questions array or return it empty.
+
+Rules for questions:
+- Only ask questions that would meaningfully change the calorie or macro count by at least 10%.
+- Each question must have a unique id (q1, q2, q3, ...).
+- Each question references a food by its food_index (0-based into the foods array).
+- Pick the best component_type for the question:
+  * "slider" for continuous numeric ranges (use min, max, step, unit, default — all numeric).
+  * "button_group" for single-choice from 2-6 options (use options list of strings and a default string).
+  * "number_stepper" for integer counts 1-20 (use min=1, max=20, step=1, default integer).
+  * "size_picker" for preset size labels like "Small 100g", "Medium 250ml", "Large 400g" (use options list and default string).
+  * "yes_no" for binary questions (use default=true or default=false; do not include options).
+  * "free_text" as a fallback only when no structured option fits (use default string).
+- Always provide a sensible default so the user can skip.
+- If a user rule already answers the question, STILL include the question but set "skipped_by_rule" to the exact text of the rule that answered it.
+- Be concise — if the foods are common and high-confidence, return a short or empty questions array.
+- Question JSON shape (use null for unused fields):
+  {
+    "id": "q1",
+    "food_index": 0,
+    "question": "How were the eggs cooked?",
+    "component_type": "button_group",
+    "options": ["Scrambled", "Fried", "Boiled", "Poached"],
+    "default": "Scrambled",
+    "skipped_by_rule": null,
+    "min": null,
+    "max": null,
+    "step": null,
+    "unit": null
+  }
+
+APPLIED RULES:
+For each food, list in "applied_rules" which of the user's personal rules (provided below if any) you used while estimating it. Quote the rule text exactly as given. If no rules applied to this specific food, return an empty array [].\
 """
 
 _IMAGE_SCAN_SYSTEM_PROMPT = """\
@@ -104,12 +140,48 @@ Rules:
    - "carbs_g": number (estimated carbohydrates in grams)
    - "fat_g": number (estimated fat in grams)
    - "confidence": number (0.0 to 1.0)
+   - "applied_rules": array of strings (which user rules you used while estimating this food — see APPLIED RULES below)
 3. For nutrition labels: read exact values. Set confidence to 0.95.
 4. For food plates: estimate portions visually. Use 0.5-0.8 confidence.
 5. Separate compound items into individual food entries.
 6. Return between 1 and 50 food items.
 7. No text outside the JSON object. No markdown fences. No explanation.
-8. Only use quantities you can actually see in the image. If you see one piece of toast, report 1 — do not assume multiples. Count what is visible, nothing more.\
+8. Only use quantities you can actually see in the image. If you see one piece of toast, report 1 — do not assume multiples. Count what is visible, nothing more.
+
+GUIDED MODE QUESTIONS:
+If the user has Guided mode enabled (indicated by "GUIDED MODE" in the user message), after the foods array also return a "questions" array with follow-up questions that would improve accuracy. Otherwise, omit the questions array or return it empty.
+
+Rules for questions:
+- Only ask questions that would meaningfully change the calorie or macro count by at least 10%.
+- Each question must have a unique id (q1, q2, q3, ...).
+- Each question references a food by its food_index (0-based into the foods array).
+- Pick the best component_type for the question:
+  * "slider" for continuous numeric ranges (use min, max, step, unit, default — all numeric).
+  * "button_group" for single-choice from 2-6 options (use options list of strings and a default string).
+  * "number_stepper" for integer counts 1-20 (use min=1, max=20, step=1, default integer).
+  * "size_picker" for preset size labels like "Small 100g", "Medium 250ml", "Large 400g" (use options list and default string).
+  * "yes_no" for binary questions (use default=true or default=false; do not include options).
+  * "free_text" as a fallback only when no structured option fits (use default string).
+- Always provide a sensible default so the user can skip.
+- If a user rule already answers the question, STILL include the question but set "skipped_by_rule" to the exact text of the rule that answered it.
+- Be concise — if the foods are common and high-confidence, return a short or empty questions array.
+- Question JSON shape (use null for unused fields):
+  {
+    "id": "q1",
+    "food_index": 0,
+    "question": "How were the eggs cooked?",
+    "component_type": "button_group",
+    "options": ["Scrambled", "Fried", "Boiled", "Poached"],
+    "default": "Scrambled",
+    "skipped_by_rule": null,
+    "min": null,
+    "max": null,
+    "step": null,
+    "unit": null
+  }
+
+APPLIED RULES:
+For each food, list in "applied_rules" which of the user's personal rules (provided below if any) you used while estimating it. Quote the rule text exactly as given. If no rules applied to this specific food, return an empty array [].\
 """
 
 router = APIRouter(prefix="/nutrition", tags=["nutrition"])
