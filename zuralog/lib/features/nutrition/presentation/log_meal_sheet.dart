@@ -45,6 +45,7 @@ class LogMealSheet extends ConsumerStatefulWidget {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       useSafeArea: true,
+      useRootNavigator: true,
       builder: (_) => const LogMealSheet(),
     );
   }
@@ -495,11 +496,9 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
     final colors = AppColorsOf(context);
     final mediaQuery = MediaQuery.of(context);
     final keyboardInset = mediaQuery.viewInsets.bottom;
-    // Always account for the nav bar overlay and the safe area (notch/home
-    // indicator). When the keyboard is open the safe-area bottom is already
-    // consumed, so we only add it when the keyboard is closed.
-    final safeBottom = keyboardInset > 0 ? 0.0 : mediaQuery.padding.bottom;
-    final bottomPad = keyboardInset + AppDimens.bottomNavHeight + safeBottom;
+    // Sheet renders above the nav bar via useRootNavigator: true.
+    // Only keyboard inset needs accounting.
+    final bottomPad = keyboardInset;
 
     return Container(
       decoration: BoxDecoration(
