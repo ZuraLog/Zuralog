@@ -13,6 +13,7 @@ Schemas:
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -112,6 +113,7 @@ class MealParseRequest(BaseModel):
     """Request body for AI-powered meal parsing."""
 
     description: str = Field(..., min_length=1, max_length=500)
+    mode: Literal["quick", "guided"] = "quick"
 
     @field_validator("description")
     @classmethod
@@ -137,6 +139,7 @@ class ParsedFoodItem(BaseModel):
     carbs_g: float
     fat_g: float
     confidence: float = Field(default=0.5, ge=0.0, le=1.0)
+    applied_rules: list[str] = Field(default_factory=list)
 
     @field_validator("food_name")
     @classmethod
@@ -169,10 +172,59 @@ class ParsedFoodItem(BaseModel):
         return max(0.0, min(1.0, round(v, 2)))
 
 
+class GuidedQuestion(BaseModel):
+    """A single follow-up question the AI asks during Guided mode.
+
+    The `default` field is typed as `Any` because valid values differ per
+    component_type (int/float for slider and number_stepper, str for
+    button_group, size_picker, and free_text, bool for yes_no).
+    """
+    id: str = Field(..., min_length=1, max_length=20)
+    food_index: int = Field(..., ge=0)
+    question: str = Field(..., min_length=1, max_length=200)
+    component_type: str
+    options: list[str] | None = None
+    default: Any = None
+    skipped_by_rule: str | None = None
+    min: float | None = None
+    max: float | None = None
+    step: float | None = None
+    unit: str | None = None
+
+    @field_validator("component_type")
+    @classmethod
+    def validate_component_type(cls, v: str) -> str:
+        allowed = {
+            "slider",
+            "button_group",
+            "number_stepper",
+            "size_picker",
+            "yes_no",
+            "free_text",
+        }
+        if v not in allowed:
+            raise ValueError(f"component_type must be one of {sorted(allowed)}")
+        return v
+
+    @field_validator("question")
+    @classmethod
+    def strip_question(cls, v: str) -> str:
+        return v.strip()[:200]
+
+    @field_validator("skipped_by_rule")
+    @classmethod
+    def strip_skipped_by_rule(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip()
+        return v[:500] if v else None
+
+
 class MealParseResponse(BaseModel):
     """Response from the AI meal parser."""
 
     foods: list[ParsedFoodItem]
+    questions: list[GuidedQuestion] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
