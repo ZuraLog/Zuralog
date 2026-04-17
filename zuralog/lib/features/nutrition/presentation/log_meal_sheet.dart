@@ -37,6 +37,7 @@ import 'package:zuralog/shared/widgets/inputs/z_search_bar.dart';
 import 'package:zuralog/shared/widgets/inputs/z_segmented_control.dart';
 import 'package:zuralog/shared/widgets/inputs/z_text_area.dart';
 import 'package:zuralog/shared/widgets/layout/section_header.dart';
+import 'package:zuralog/shared/widgets/nutrition/z_meal_type_picker.dart';
 import 'package:zuralog/shared/widgets/z_divider.dart';
 
 /// SharedPreferences key for persisting the Quick/Guided mode choice.
@@ -128,7 +129,7 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  bool get _canSave => _selectedMealType != null && _mealFoods.isNotEmpty;
+  bool get _canSave => _mealFoods.isNotEmpty;
 
   /// Returns a meal type based on the current hour of the day.
   MealType _autoSuggestMealType() {
@@ -311,7 +312,7 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
       final repo = ref.read(nutritionRepositoryProvider);
 
       await repo.createMeal(
-        mealType: _selectedMealType!.name,
+        mealType: (_selectedMealType ?? _autoSuggestMealType()).name,
         name: _generateMealName(),
         loggedAt: DateTime.now(),
         foods: _mealFoods,
@@ -411,13 +412,6 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ── Meal type chips ─────────────────────────────────────
-                  const SectionHeader(title: 'Meal type'),
-                  const SizedBox(height: AppDimens.spaceSm),
-                  _buildMealTypeChips(),
-
-                  const SizedBox(height: AppDimens.spaceLg),
-
                   // ── Camera / Scan food section ─────────────────────────
                   const SectionHeader(title: 'Scan food'),
                   const SizedBox(height: AppDimens.spaceSm),
@@ -623,6 +617,21 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
             ),
           ),
 
+          // ── Meal type picker (just above Save) ───────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppDimens.spaceMd,
+              AppDimens.spaceSm,
+              AppDimens.spaceMd,
+              0,
+            ),
+            child: ZMealTypePicker(
+              value: _selectedMealType,
+              onChanged: (v) => setState(() => _selectedMealType = v),
+              label: 'Meal type',
+            ),
+          ),
+
           // ── Save button ──────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(
@@ -643,22 +652,6 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
   }
 
   // ── Sub-builders ───────────────────────────────────────────────────────────
-
-  /// Meal type chip row.
-  Widget _buildMealTypeChips() {
-    return Wrap(
-      spacing: AppDimens.spaceSm,
-      runSpacing: AppDimens.spaceSm,
-      children: MealType.values.map((type) {
-        return ZChip(
-          label: type.label,
-          icon: type.icon,
-          isActive: _selectedMealType == type,
-          onTap: () => setState(() => _selectedMealType = type),
-        );
-      }).toList(),
-    );
-  }
 
   /// "or" divider between describe and search.
   Widget _buildOrDivider() {
