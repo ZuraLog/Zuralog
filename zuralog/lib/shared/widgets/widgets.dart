@@ -72,6 +72,7 @@ export 'loading/z_loading_skeleton.dart';
 export 'metric_grid/metric_grid.dart';
 export 'metric_grid/metric_picker_sheet.dart';
 export 'metric_grid/metric_tile.dart';
+export 'nutrition/z_answer_origin_badge.dart';
 export 'sheets/z_log_grid_cell.dart';
 export 'sheets/z_log_grid_sheet.dart';
 export 'health_score_building_state.dart';
