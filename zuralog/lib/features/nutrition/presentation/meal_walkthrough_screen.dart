@@ -183,7 +183,6 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
 
     final progress = (_currentIndex + 1) / total;
     final isFirst = _currentIndex == 0;
-    final isLast = _currentIndex == total - 1;
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -198,11 +197,17 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
                 itemCount: total,
                 itemBuilder: (context, index) {
                   final question = questions[index];
-                  return _buildQuestionPage(colors, question);
+                  final pageIsFirst = index == 0;
+                  final pageIsLast = index == total - 1;
+                  return _buildQuestionPage(
+                    colors,
+                    question,
+                    pageIsFirst,
+                    pageIsLast,
+                  );
                 },
               ),
             ),
-            _buildBottomBar(colors, isFirst, isLast),
           ],
         ),
       ),
@@ -312,7 +317,12 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
 
   // ── Question page ────────────────────────────────────────────────────────
 
-  Widget _buildQuestionPage(AppColorsOf colors, GuidedQuestion question) {
+  Widget _buildQuestionPage(
+    AppColorsOf colors,
+    GuidedQuestion question,
+    bool isFirst,
+    bool isLast,
+  ) {
     // Resolve the food label for the question (uppercase, amber accent).
     final foods = widget.args.foods;
     final foodName = (question.foodIndex >= 0 &&
@@ -323,42 +333,51 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppDimens.spaceMd,
-            vertical: AppDimens.spaceSm,
+          padding: EdgeInsets.fromLTRB(
+            AppDimens.spaceMd,
+            AppDimens.spaceSm,
+            AppDimens.spaceMd,
+            MediaQuery.of(context).padding.bottom + AppDimens.spaceLg,
           ),
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Center(
               child: ZFadeSlideIn(
                 key: ValueKey('page-${question.id}'),
-                child: ZuralogCard(
-                  variant: ZCardVariant.feature,
-                  category: AppColors.categoryNutrition,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (foodName.isNotEmpty) ...[
-                        Text(
-                          foodName.toUpperCase(),
-                          style: AppTextStyles.labelMedium.copyWith(
-                            color: AppColors.categoryNutrition,
-                            letterSpacing: 0.8,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ZuralogCard(
+                      variant: ZCardVariant.feature,
+                      category: AppColors.categoryNutrition,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (foodName.isNotEmpty) ...[
+                            Text(
+                              foodName.toUpperCase(),
+                              style: AppTextStyles.labelMedium.copyWith(
+                                color: AppColors.categoryNutrition,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                            const SizedBox(height: AppDimens.spaceXs),
+                          ],
+                          Text(
+                            question.question,
+                            style: AppTextStyles.titleMedium.copyWith(
+                              color: colors.textPrimary,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: AppDimens.spaceXs),
-                      ],
-                      Text(
-                        question.question,
-                        style: AppTextStyles.titleMedium.copyWith(
-                          color: colors.textPrimary,
-                        ),
+                          const SizedBox(height: AppDimens.spaceLg),
+                          _buildComponent(colors, question),
+                        ],
                       ),
-                      const SizedBox(height: AppDimens.spaceLg),
-                      _buildComponent(colors, question),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: AppDimens.spaceLg),
+                    _buildBottomBar(colors, isFirst, isLast),
+                  ],
                 ),
               ),
             ),
@@ -422,44 +441,36 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
   // ── Bottom bar ───────────────────────────────────────────────────────────
 
   Widget _buildBottomBar(AppColorsOf colors, bool isFirst, bool isLast) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceSm,
-        AppDimens.spaceMd,
-        MediaQuery.of(context).padding.bottom + AppDimens.spaceSm,
-      ),
-      child: Row(
-        children: [
-          // Back.
-          Expanded(
-            child: ZButton(
-              label: 'Back',
-              variant: ZButtonVariant.secondary,
-              size: ZButtonSize.medium,
-              onPressed: isFirst ? null : _goBack,
-            ),
-          ),
-          const SizedBox(width: AppDimens.spaceSm),
-          // Skip.
-          ZButton(
-            label: 'Skip',
-            variant: ZButtonVariant.text,
+    return Row(
+      children: [
+        // Back.
+        Expanded(
+          child: ZButton(
+            label: 'Back',
+            variant: ZButtonVariant.secondary,
             size: ZButtonSize.medium,
-            isFullWidth: false,
-            onPressed: _skipCurrent,
+            onPressed: isFirst ? null : _goBack,
           ),
-          const SizedBox(width: AppDimens.spaceSm),
-          // Next / Finish.
-          Expanded(
-            child: ZButton(
-              label: isLast ? 'Finish' : 'Next',
-              size: ZButtonSize.medium,
-              onPressed: _goNext,
-            ),
+        ),
+        const SizedBox(width: AppDimens.spaceSm),
+        // Skip.
+        ZButton(
+          label: 'Skip',
+          variant: ZButtonVariant.text,
+          size: ZButtonSize.medium,
+          isFullWidth: false,
+          onPressed: _skipCurrent,
+        ),
+        const SizedBox(width: AppDimens.spaceSm),
+        // Next / Finish.
+        Expanded(
+          child: ZButton(
+            label: isLast ? 'Finish' : 'Next',
+            size: ZButtonSize.medium,
+            onPressed: _goNext,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
