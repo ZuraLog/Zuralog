@@ -194,6 +194,78 @@ router = APIRouter(prefix="/nutrition", tags=["nutrition"])
 # ---------------------------------------------------------------------------
 
 
+async def _call_llm_with_json_retry(
+    llm: LLMClient,
+    messages: list[dict],
+    temperature: float = 0.3,
+    max_tokens: int = 2048,
+) -> tuple[dict, str]:
+    """Call the LLM with JSON mode and retry once on malformed JSON.
+
+    Returns (parsed_dict, raw_content). Raises HTTPException on persistent
+    failure.
+
+    The helper forces ``response_format={"type": "json_object"}`` at the API
+    layer so compliant models return syntactically valid JSON. On a parse
+    failure we retry exactly once with an extra system-message nudge. Two
+    attempts total — the models in use (MiniMax M2.7, Gemini 3.1 Flash Lite)
+    are reliable at structured output so one retry absorbs transient glitches.
+    """
+    for attempt in range(2):
+        try:
+            response = await llm.chat(
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                response_format={"type": "json_object"},
+            )
+        except APIError as e:
+            logger.error("LLM call failed (attempt %d): %s", attempt + 1, e)
+            sentry_sdk.set_tag("ai.error_type", "meal_parse_llm_failure")
+            sentry_sdk.capture_exception(e)
+            if attempt == 0:
+                continue  # Retry once
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="The AI service is temporarily unavailable. Please try again in a moment.",
+            )
+
+        raw_content = (response.choices[0].message.content or "").strip()
+
+        # Strip markdown code fences as a safety net.
+        if raw_content.startswith("```"):
+            raw_content = raw_content.split("\n", 1)[-1] if "\n" in raw_content else raw_content
+            raw_content = raw_content.rsplit("```", 1)[0].strip()
+
+        try:
+            parsed = json.loads(raw_content)
+            return parsed, raw_content
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.warning(
+                "LLM returned malformed JSON on attempt %d: %s. Raw: %.500s",
+                attempt + 1, e, raw_content,
+            )
+            if attempt == 0:
+                logger.info("Retrying LLM call with stricter prompt nudge...")
+                # On retry, add a system message nudge to reinforce JSON-only output
+                messages = list(messages) + [
+                    {
+                        "role": "system",
+                        "content": "Your previous response was not valid JSON. Return ONLY a valid JSON object. No markdown, no explanation, no text outside the JSON.",
+                    }
+                ]
+                continue
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="The AI could not analyze your input. Please try rephrasing.",
+            )
+    # Unreachable, but for type checker
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail="The AI could not analyze your input.",
+    )
+
+
 def _food_to_response(food: MealFood) -> dict:
     """Convert a MealFood ORM instance to a plain dict for JSON response."""
     return {
@@ -798,37 +870,14 @@ async def parse_meal_description(
         {"role": "user", "content": user_message},
     ]
 
-    try:
-        response = await llm.chat(
-            messages=messages,
-            temperature=0.3,
-            max_tokens=2048,
-        )
-    except APIError as e:
-        logger.error("Meal parse LLM call failed: %s", e)
-        sentry_sdk.set_tag("ai.error_type", "meal_parse_failure")
-        sentry_sdk.capture_exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="The AI service is temporarily unavailable. Please try again in a moment.",
-        )
-
-    raw_content = (response.choices[0].message.content or "").strip()
-
-    # Strip markdown code fences if the model wraps its output.
-    if raw_content.startswith("```"):
-        raw_content = raw_content.split("\n", 1)[-1]
-        raw_content = raw_content.rsplit("```", 1)[0].strip()
-
-    # Parse JSON.
-    try:
-        parsed = json.loads(raw_content)
-    except (json.JSONDecodeError, ValueError) as e:
-        logger.warning("Meal parse: malformed JSON — %s. Raw: %.300s", e, raw_content)
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="The AI returned an unexpected format. Please try rephrasing your meal description.",
-        )
+    # JSON mode + one retry on malformed output. The helper handles API errors,
+    # markdown fences, and the retry-with-nudge flow.
+    parsed, raw_content = await _call_llm_with_json_retry(
+        llm,
+        messages,
+        temperature=0.3,
+        max_tokens=2048,
+    )
 
     if not isinstance(parsed, dict) or "foods" not in parsed:
         logger.warning("Meal parse: missing 'foods' key. Raw: %.300s", raw_content)
@@ -956,36 +1005,14 @@ async def scan_food_image(
         ]},
     ]
 
-    try:
-        response = await llm.chat(
-            messages=messages,
-            temperature=0.3,
-            max_tokens=2048,
-        )
-    except APIError as e:
-        logger.error("Image scan LLM call failed: %s", e)
-        sentry_sdk.set_tag("ai.error_type", "image_scan_failure")
-        sentry_sdk.capture_exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="The AI vision service is temporarily unavailable. Try describing the food instead.",
-        )
-
-    # Parse response — same pattern as parse_meal_description
-    raw_content = (response.choices[0].message.content or "").strip()
-
-    if raw_content.startswith("```"):
-        raw_content = raw_content.split("\n", 1)[-1]
-        raw_content = raw_content.rsplit("```", 1)[0].strip()
-
-    try:
-        parsed = json.loads(raw_content)
-    except (json.JSONDecodeError, ValueError) as e:
-        logger.warning("Image scan: malformed JSON — %s. Raw: %.300s", e, raw_content)
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="The AI could not process this image. Try a clearer photo or describe the food instead.",
-        )
+    # JSON mode + one retry on malformed output. The helper handles API errors,
+    # markdown fences, and the retry-with-nudge flow.
+    parsed, raw_content = await _call_llm_with_json_retry(
+        llm,
+        messages,
+        temperature=0.3,
+        max_tokens=2048,
+    )
 
     if not isinstance(parsed, dict) or "foods" not in parsed:
         logger.warning("Image scan: missing 'foods' key. Raw: %.300s", raw_content)

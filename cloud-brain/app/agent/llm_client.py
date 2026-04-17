@@ -68,6 +68,7 @@ class LLMClient:
         tools: list[dict[str, Any]] | None = None,
         temperature: float = 0.7,
         max_tokens: int | None = None,
+        response_format: dict[str, Any] | None = None,
     ) -> Any:
         """Internal helper to call the LLM with a specific model.
 
@@ -77,6 +78,9 @@ class LLMClient:
             tools: Optional list of tool definitions for function-calling.
             temperature: Sampling temperature (0.0-2.0). Defaults to 0.7.
             max_tokens: Optional cap on the number of tokens in the response.
+            response_format: Optional response format spec forwarded to the
+                OpenAI SDK. Use ``{"type": "json_object"}`` to force JSON mode
+                on models that support it (e.g. MiniMax M2.7, Gemini 3.1).
 
         Returns:
             The full ChatCompletion response object from the OpenAI SDK.
@@ -93,6 +97,9 @@ class LLMClient:
         if tools:
             kwargs["tools"] = tools
 
+        if response_format is not None:
+            kwargs["response_format"] = response_format
+
         response = await self._client.chat.completions.create(**kwargs)
         return response
 
@@ -102,6 +109,7 @@ class LLMClient:
         tools: list[dict[str, Any]] | None = None,
         temperature: float = 0.7,
         max_tokens: int | None = None,
+        response_format: dict[str, Any] | None = None,
     ) -> Any:
         """Send a chat completion request to the LLM.
 
@@ -110,6 +118,9 @@ class LLMClient:
             tools: Optional list of tool definitions for function-calling.
             temperature: Sampling temperature (0.0-2.0). Defaults to 0.7.
             max_tokens: Optional cap on the number of tokens in the response.
+            response_format: Optional response format spec forwarded to the
+                OpenAI SDK. Use ``{"type": "json_object"}`` to force JSON mode
+                on models that support it (e.g. MiniMax M2.7, Gemini 3.1).
 
         Returns:
             The full ChatCompletion response object from the OpenAI SDK.
@@ -131,6 +142,7 @@ class LLMClient:
                 tools=tools,
                 temperature=temperature,
                 max_tokens=max_tokens,
+                response_format=response_format,
             )
         except openai.APIStatusError as e:
             # Fix 4.2 (H-10): Fallback model on 429/503
@@ -146,6 +158,7 @@ class LLMClient:
                         tools=tools,
                         temperature=temperature,
                         max_tokens=max_tokens,
+                        response_format=response_format,
                     )
                 except APIError as fallback_exc:
                     sentry_sdk.set_tag("ai.error_type", "llm_failure")
