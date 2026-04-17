@@ -38,6 +38,7 @@ import 'package:zuralog/shared/widgets/inputs/app_text_field.dart';
 import 'package:zuralog/shared/widgets/inputs/z_labeled_number_field.dart';
 import 'package:zuralog/shared/widgets/layout/section_header.dart';
 import 'package:zuralog/shared/widgets/animations/z_fade_slide_in.dart';
+import 'package:zuralog/shared/widgets/nutrition/z_answer_origin_badge.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 
 // ── Input types ─────────────────────────────────────────────────────────────
@@ -132,6 +133,20 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
   bool _isSaving = false;
   bool _rulesHandledEverything = false;
   String? _error;
+
+  /// The questions that drove the walkthrough, captured so the attribution
+  /// sheet can render the original question text next to the user's answer.
+  List<GuidedQuestion> _questions = const [];
+
+  /// The answers the user gave in the walkthrough, keyed by question id.
+  /// Kept so "Change my answer" can re-push the walkthrough pre-filled and
+  /// "Remove this food" can flip a yes_no answer from `true` to `false`.
+  final Map<String, dynamic> _walkthroughAnswers = {};
+
+  /// Snapshot of [_parsedItems] taken before the walkthrough ops were first
+  /// applied. Replaying ops (after the user edits their answers via the
+  /// attribution sheet) works off this snapshot so re-entry is idempotent.
+  List<ParsedFoodItem>? _preWalkthroughParsedItems;
 
   /// Portion multipliers keyed by food index. Defaults to 1.0 per item.
   final Map<int, double> _portionMultipliers = {};
@@ -251,17 +266,18 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
       // after the results phase is on screen so the user sees the parsed
       // foods underneath once the walkthrough is dismissed.
       if (args.isGuidedMode && visibleQuestions.isNotEmpty) {
+        _questions = visibleQuestions;
+        // Snapshot the pre-walkthrough foods once so replaying answers via
+        // "Change my answer" always starts from the same baseline.
+        _preWalkthroughParsedItems = List<ParsedFoodItem>.of(_parsedItems);
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           if (!mounted) return;
-          final answers = await context.pushNamed<Map<String, dynamic>>(
-            RouteNames.nutritionMealWalkthrough,
-            extra: MealWalkthroughArgs(
-              questions: visibleQuestions,
-              foods: _parsedItems,
-            ),
-          );
+          final answers = await _pushWalkthrough(visibleQuestions);
           if (!mounted) return;
           if (answers != null && answers.isNotEmpty) {
+            _walkthroughAnswers
+              ..clear()
+              ..addAll(answers);
             _applyWalkthroughAnswers(
               questions: visibleQuestions,
               answers: answers,
@@ -921,6 +937,16 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
             ),
           ],
 
+          // Answer-origin badge — only shown if this food was derived from a
+          // walkthrough answer. Stacks cleanly below the amber rules pill if
+          // the AI somehow emits a food with both attributions.
+          if (parsedItem != null && parsedItem.origin == 'from_answer') ...[
+            const SizedBox(height: AppDimens.spaceSm),
+            ZAnswerOriginBadge(
+              onTap: () => _showAnswerOriginSheet(context, parsedItem),
+            ),
+          ],
+
           // Guided refinement controls.
           if (showRefinement) ...[
             const SizedBox(height: AppDimens.spaceSm),
@@ -1168,15 +1194,35 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
   /// After the loop, [_mealFoods] is rebuilt from the updated [_parsedItems]
   /// using the same derivation as the initial parse. [setState] is called
   /// once at the end so the UI refreshes after all ops have been applied.
+  /// Pushes the walkthrough screen, optionally pre-filling prior answers so
+  /// the user can edit what they said before. Returns the updated answer map
+  /// when the user finishes, or `null` if they backed out without completing.
+  Future<Map<String, dynamic>?> _pushWalkthrough(
+    List<GuidedQuestion> questions, {
+    Map<String, dynamic> initialAnswers = const {},
+  }) {
+    return context.pushNamed<Map<String, dynamic>>(
+      RouteNames.nutritionMealWalkthrough,
+      extra: MealWalkthroughArgs(
+        questions: questions,
+        foods: _preWalkthroughParsedItems ?? _parsedItems,
+        initialAnswers: initialAnswers,
+      ),
+    );
+  }
+
   void _applyWalkthroughAnswers({
     required List<GuidedQuestion> questions,
     required Map<String, dynamic> answers,
   }) {
     if (questions.isEmpty) return;
 
-    // Take a mutable copy of the working parsed-food list so intermediate
-    // ops never touch the original list before setState runs.
-    final foods = List<ParsedFoodItem>.from(_parsedItems);
+    // Take a mutable copy of the pre-walkthrough snapshot (falling back to
+    // the current list on first application) so replaying answers always
+    // starts from the same baseline — re-entry from the attribution sheet
+    // is idempotent.
+    final baseline = _preWalkthroughParsedItems ?? _parsedItems;
+    final foods = List<ParsedFoodItem>.from(baseline);
 
     for (final question in questions) {
       final rawAnswer = answers[question.id];
@@ -1323,6 +1369,234 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
           ],
         ),
       ),
+    );
+  }
+
+  // ── Answer origin sheet ────────────────────────────────────────────────────
+
+  /// Opens a bottom sheet explaining which walkthrough answer produced [food],
+  /// and offers two actions:
+  ///
+  ///  - **Remove this food** — deletes the food from the meal and, for a
+  ///    yes_no question, flips the recorded answer so the source question
+  ///    now reads "no" (matching user intuition: removing the oil means the
+  ///    user didn't actually use oil). For other question types the answer
+  ///    entry is cleared so the user can re-answer it later.
+  ///  - **Change my answer** — re-pushes the walkthrough pre-filled with the
+  ///    prior answers. On return, walkthrough ops are re-applied against the
+  ///    pre-walkthrough snapshot (captured on first run) so the replay is
+  ///    idempotent.
+  void _showAnswerOriginSheet(BuildContext context, ParsedFoodItem food) {
+    final colors = AppColorsOf(context);
+    const accent = AppColors.categorySleep;
+
+    // Look up the source question text for display.
+    final questionId = food.sourceQuestionId;
+    GuidedQuestion? sourceQuestion;
+    for (final q in _questions) {
+      if (q.id == questionId) {
+        sourceQuestion = q;
+        break;
+      }
+    }
+    final questionText = sourceQuestion?.question ?? 'Question no longer available';
+
+    // Title-case yes/no answers for friendlier display.
+    final rawAnswer = food.sourceAnswerValue ?? '';
+    final displayAnswer = switch (rawAnswer.toLowerCase()) {
+      'yes' => 'Yes',
+      'no' => 'No',
+      _ => rawAnswer,
+    };
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: colors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppDimens.shapeXl)),
+      ),
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsets.all(AppDimens.spaceLg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drag handle
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: AppDimens.spaceMd),
+                decoration: BoxDecoration(
+                  color: colors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                const Icon(
+                  Icons.question_answer_outlined,
+                  color: accent,
+                  size: AppDimens.iconMd,
+                ),
+                const SizedBox(width: AppDimens.spaceSm),
+                Expanded(
+                  child: Text(
+                    'From your answer',
+                    style: AppTextStyles.titleMedium.copyWith(
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+
+            // Question label + text.
+            Text(
+              'Question',
+              style: AppTextStyles.labelSmall.copyWith(
+                color: colors.textSecondary,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.4,
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceXxs),
+            Text(
+              questionText,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: colors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceSm),
+
+            // Your answer.
+            Text(
+              'Your answer',
+              style: AppTextStyles.labelSmall.copyWith(
+                color: colors.textSecondary,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.4,
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceXxs),
+            Text(
+              displayAnswer.isEmpty ? '—' : displayAnswer,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: colors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceSm),
+
+            // Contribution.
+            Text(
+              'Contribution',
+              style: AppTextStyles.labelSmall.copyWith(
+                color: colors.textSecondary,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.4,
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceXxs),
+            Text(
+              'Added ${food.calories.round()} kcal, '
+              '${food.proteinG.toStringAsFixed(1)}g protein, '
+              '${food.carbsG.toStringAsFixed(1)}g carbs, '
+              '${food.fatG.toStringAsFixed(1)}g fat',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: colors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceLg),
+
+            // Remove button (destructive).
+            SizedBox(
+              width: double.infinity,
+              child: ZButton(
+                label: 'Remove this food',
+                variant: ZButtonVariant.destructive,
+                onPressed: () {
+                  Navigator.of(sheetContext).pop();
+                  _handleRemoveAnswerFood(food);
+                },
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceSm),
+
+            // Change my answer button (secondary).
+            SizedBox(
+              width: double.infinity,
+              child: ZButton(
+                label: 'Change my answer',
+                variant: ZButtonVariant.secondary,
+                onPressed: () {
+                  Navigator.of(sheetContext).pop();
+                  _handleChangeAnswer();
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Removes [food] from the working list and updates the recorded answer
+  /// for its source question. For a yes_no question the answer flips from
+  /// `true` to `false`; for other types the entry is removed so the user can
+  /// answer fresh next time.
+  void _handleRemoveAnswerFood(ParsedFoodItem food) {
+    // Find the food by identity in _parsedItems so index shifts do not
+    // accidentally remove the wrong row.
+    final index = _parsedItems.indexWhere((item) => identical(item, food));
+    if (index < 0) return;
+
+    // Reuse the existing remove path so map / controller cleanup stays in
+    // lock-step with the plain "x" icon on the food card.
+    _removeFood(index);
+
+    // Update the recorded answer for the source question.
+    final questionId = food.sourceQuestionId;
+    if (questionId == null) return;
+
+    GuidedQuestion? sourceQuestion;
+    for (final q in _questions) {
+      if (q.id == questionId) {
+        sourceQuestion = q;
+        break;
+      }
+    }
+
+    if (sourceQuestion != null &&
+        sourceQuestion.componentType == GuidedComponentType.yesNo) {
+      // Flip yes_no answers so the question now reads "no".
+      setState(() => _walkthroughAnswers[questionId] = false);
+    } else {
+      setState(() => _walkthroughAnswers.remove(questionId));
+    }
+  }
+
+  /// Re-pushes the walkthrough pre-filled with the user's prior answers.
+  /// On return, re-applies walkthrough ops against the pre-walkthrough
+  /// snapshot so the replay is idempotent.
+  Future<void> _handleChangeAnswer() async {
+    if (_questions.isEmpty) return;
+    final initial = Map<String, dynamic>.of(_walkthroughAnswers);
+    final answers = await _pushWalkthrough(
+      _questions,
+      initialAnswers: initial,
+    );
+    if (!mounted) return;
+    if (answers == null || answers.isEmpty) return;
+
+    _walkthroughAnswers
+      ..clear()
+      ..addAll(answers);
+    _applyWalkthroughAnswers(
+      questions: _questions,
+      answers: answers,
     );
   }
 
