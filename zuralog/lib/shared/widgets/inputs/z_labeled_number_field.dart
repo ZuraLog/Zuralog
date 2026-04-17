@@ -70,6 +70,7 @@ class ZLabeledNumberField extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
 
+    // Explicit outline — part of the Phase 6 Plan 6 guarantee.
     final unfocusedBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(AppDimens.shapeSm),
       borderSide: BorderSide(color: colors.border, width: 1),

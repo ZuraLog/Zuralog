@@ -98,6 +98,7 @@ class _ZSearchBarState extends State<ZSearchBar> {
               color: colors.textPrimary,
             ),
             onChanged: widget.onChanged,
+            // Explicit outline — part of the Phase 6 Plan 6 guarantee.
             decoration: InputDecoration(
               hintText: widget.placeholder,
               hintStyle: AppTextStyles.bodyMedium.copyWith(

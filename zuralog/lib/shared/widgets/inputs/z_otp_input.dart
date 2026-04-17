@@ -200,6 +200,9 @@ class _ZOtpInputState extends State<ZOtpInput> {
                         autocorrect: false,
                         showCursor: false,
                         onSubmitted: (_) => _focusNode.unfocus(),
+                        // Deliberate InputBorder.none — this TextField is invisible. The visible
+                        // OTP chrome is the six _Slot boxes above. Phase 6 Plan 6 reviewed and
+                        // kept this exception.
                         decoration: const InputDecoration(
                           counterText: '',
                           border: InputBorder.none,
