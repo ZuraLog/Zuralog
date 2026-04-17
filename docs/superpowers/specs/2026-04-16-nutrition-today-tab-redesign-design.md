@@ -525,3 +525,143 @@ Previously open, now resolved:
 - Smart suggestions or meal templates (needs user history data)
 - Moving any files on disk — all relocations are navigation-only
 - Deleting any existing screens, providers, or tests
+
+---
+
+# Phase 6 — Post-Phase-5 Fixes and Enhancements
+
+Phase 5 shipped the Interactive Guided Walkthrough end-to-end. Once it was in users' hands we found one real bug and a handful of polish gaps. Phase 6 tackles four things: a small UX cleanup, the core fix that makes the walkthrough's answers actually change the meal, a follow-up-questions feature for when one round isn't enough, and a rule-suggestion feature that learns from repetition.
+
+## Stage 1 — UX cleanup pass
+
+Small, independent, ships first. Nothing about the parse pipeline changes here — just two rough edges noticed during real use.
+
+### What's wrong
+
+- During the walkthrough, the Back / Skip / Next buttons sit pinned to the bottom of the phone. The question card itself sits in the middle of the screen. The user has to stretch their thumb from the middle of the screen down to the bottom of the phone just to move forward.
+- When editing a food in the Meal Review screen, the number fields have no labels and no visible outlines when they aren't focused. The user sees four bare numbers (e.g. 72 / 6.0 / 0.6 / 5.0) with no hint of what they mean or that they can be tapped to edit.
+
+### Decisions
+
+| # | Decision |
+|---|----------|
+| 1 | Move Back / Skip / Next into the same vertically-centered stack as the walkthrough card. The card, the progress bar, and the buttons all travel together and land in the comfortable thumb zone. |
+| 2 | Every editable number field in the meal edit flow gets a visible label above it ("Calories", "Protein (g)", "Carbs (g)", "Fat (g)") and a visible soft outline even when the field isn't focused, so the user can see at a glance that each number is labeled and editable. |
+
+## Stage 2 — Answer-flow fix with attribution badges
+
+This is the core bug from Phase 5. The walkthrough collects answers but then throws most of them away. Stage 2 fixes that and adds a small visible signal so the user can see exactly which foods came from their answers.
+
+### What's wrong today
+
+- In `zuralog/lib/features/nutrition/presentation/meal_review_screen.dart`, the `_applyWalkthroughAnswers` method has a hardcoded `break` for yes/no answers with a "figure this out later" comment. Free-text answers hit the same dead end.
+- The backend parse endpoint (`/meals/parse`) only runs once. There is no endpoint that accepts the user's answers and returns a refined food list.
+- The parse system prompt explicitly forbids adding foods that weren't mentioned in the original description. So even when the user confirms "yes, I used oil", oil never appears on the food list.
+
+**Real example:** User types "scrambled eggs with rice". The app asks "Did you use oil or butter?" User taps Yes. The final breakdown shows the scrambled egg at 72 kcal and 5g fat — which are the numbers for a plain uncooked egg. A scrambled egg actually cooked with oil should land around 100–120 kcal with 10–12g fat. Oil never shows up as its own line item. The answer was silently dropped.
+
+### How the fix works — one-LLM-call design
+
+Instead of making a second call to the model after every answer (slow, expensive, adds a loading spinner), the initial parse response carries a small *adjustment recipe* for every possible answer to every question. When the user taps an answer, the Flutter app applies the recipe instantly. No extra AI call, no network round trip, no loading state.
+
+Every `GuidedQuestion` returned by the backend now includes an `on_answer` block. It maps each possible answer value to a deterministic operation. Example:
+
+```json
+{
+  "id": "cooking_fat_used",
+  "type": "yes_no",
+  "label": "Did you use oil or butter to cook the egg?",
+  "on_answer": {
+    "yes": {
+      "op": "add_food",
+      "food": {
+        "name": "cooking oil",
+        "serving_size": 1,
+        "serving_unit": "tsp",
+        "calories": 45,
+        "protein_g": 0,
+        "carbs_g": 0,
+        "fat_g": 5
+      }
+    },
+    "no": { "op": "no_op" }
+  }
+}
+```
+
+### Four operation types cover every question type we use today
+
+| Op | Used when | Effect |
+|----|-----------|--------|
+| `add_food` | Yes/no or button_group answers that add an ingredient | Appends a new food line item to the list |
+| `scale_food` | Slider, stepper, or size_picker answers that change an amount | Multiplies an existing food's numbers by a factor |
+| `replace_food` | Button_group answers that pick between cooking methods (grilled vs fried) | Swaps one food line item for a different one |
+| `no_op` | Answer has no effect on nutrition | Does nothing |
+
+### Food attribution — where each food came from
+
+`ParsedFoodItem` (the Pydantic model on the backend and the matching Dart model on the app) gains three optional fields:
+
+| Field | What it means |
+|-------|---------------|
+| `origin` | Either `"user"` (mentioned in the original description) or `"from_answer"` (added because of an answer in the walkthrough). Defaults to `"user"` so older responses still work. |
+| `source_question_id` | The id of the question that produced this food, when `origin` is `"from_answer"`. |
+| `source_answer_value` | The specific answer value that triggered it (e.g. `"yes"`, `"butter"`, `"large"`). |
+
+### The "From your answer" badge
+
+Same slot on each food card as the existing amber "1 rule applied" pill from Phase 5, so the layout stays consistent.
+
+| Aspect | Decision |
+|--------|----------|
+| Color | Violet accent. Distinct from the amber rule badge so users can instantly tell whether a food came from a saved rule or from an answer they just gave. |
+| Text | "From your answer" |
+| Tap action | Opens a bottom sheet showing the question that was asked, the answer the user gave, and what that answer contributed to the meal. Two buttons: **Remove this food** and **Change my answer**. |
+| Remove behavior | Tapping Remove deletes the food AND flips the recorded answer from "yes" to "no" behind the scenes. This matches user intuition — removing the oil means "I didn't actually use oil" — and keeps the signal clean for Stage 4's rule detection later. |
+
+### Backend prompt changes
+
+- **Remove** the existing rule "Do not add foods that are not mentioned in the description" from the meal parse system prompt. This rule was the original reason answers were getting dropped.
+- **Add** a new section that explains the `on_answer` contract: for every question the model generates, it must also produce a realistic per-answer adjustment with conservative nutrition estimates.
+
+## Stage 3 — Follow-up questions (Feature 1)
+
+Preview only — full spec when we pick this one up.
+
+### What's wrong
+
+The first round of questions is sometimes too generic. A plain yes/no "Did you use oil or butter?" followed by yes is still ambiguous — was it oil or butter? Free-text answers have the same problem: we can't map an open-ended sentence to a fixed adjustment recipe.
+
+### Decisions (preview)
+
+- Add a fifth operation type: `op: "needs_followup"`. When the Flutter app sees this op (or a free-text answer), it calls a new backend endpoint `POST /meals/refine` with the original parse and the question-and-answer history so far.
+- The refine endpoint makes a second AI call and returns either (a) a refined food list or (b) a new batch of follow-up questions to ask.
+- Free-text answers always route through refine, because fixed adjustment recipes cannot capture open-ended input.
+- The walkthrough can handle more than one round, but it shows a clear "asking one more thing…" message between rounds so the user never feels stuck in a loop. Hard cap at 3 rounds to prevent runaway AI costs.
+
+## Stage 4 — Rule suggestion (Feature 2)
+
+Preview only — full spec when we pick this one up.
+
+### What's wrong
+
+Users get asked the same thing over and over across different meals — "Did you use oil or butter?" every single time they log eggs. We should notice that repetition and offer to save the answer as a permanent nutrition rule.
+
+### Decisions (preview)
+
+- The server tracks `(source_question_id, source_answer_value)` pairs across a user's saved meals. Those tags are already populated by Stage 2's attribution fields, so the data is free.
+- When the same question-and-answer combination appears 3 or more times across a user's saved meals, the next meal's parse response includes a `suggested_rule` field with a proposed rule in plain language.
+- Flutter shows this as a small inline prompt at the end of the walkthrough: "Want to save 'I always use oil when cooking eggs' as a rule so we stop asking?" with Yes / No buttons.
+- Saying Yes creates a nutrition rule using the Phase 3D rules system. That question is then skipped in future walkthroughs for that user whenever the rule applies.
+- Saying No dismisses the suggestion and snoozes it for another 10 occurrences so we don't nag.
+
+## Implementation plan breakdown
+
+Phase 6 will ship as four separate plans so each piece can land and be reviewed on its own.
+
+| Plan | Scope |
+|------|-------|
+| Plan 1 — UX Cleanup Pass | Move the walkthrough's Back / Skip / Next buttons into the centered card stack, and add labels plus unfocused outlines to every editable number field in the meal edit flow. |
+| Plan 2 — Answer-Flow Fix | Wire the walkthrough's answers into the food list using `on_answer` adjustment recipes, add the `origin` / `source_question_id` / `source_answer_value` attribution fields, ship the violet "From your answer" badge with its bottom sheet, and update the backend parse prompt. |
+| Plan 3 — Follow-up Questions | Add the `needs_followup` op, build the new `POST /meals/refine` endpoint for a second AI round, and extend the walkthrough UI to support multiple question rounds with a 3-round cap. |
+| Plan 4 — Rule Suggestions | Track repeated question-and-answer pairs server-side, return a `suggested_rule` when the same pair is seen 3 or more times, and show an inline save-as-rule prompt at the end of the walkthrough that hooks into the existing Phase 3D rules system. |
