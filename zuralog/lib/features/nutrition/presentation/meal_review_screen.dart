@@ -205,18 +205,25 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
     try {
       final repo = ref.read(nutritionRepositoryProvider);
       final MealParseResult parsed;
+      final mode = args.isGuidedMode ? 'guided' : 'quick';
 
       if (args.inputType == MealReviewInputType.describe) {
         parsed = await repo.parseMealDescription(
           args.descriptionText ?? '',
-          mode: 'quick',
+          mode: mode,
         );
       } else {
         // Camera path.
-        parsed = await repo.scanFoodImage(args.imageFile!, mode: 'quick');
+        parsed = await repo.scanFoodImage(args.imageFile!, mode: mode);
       }
 
       final results = parsed.foods;
+      final parsedQuestions = parsed.questions;
+
+      // Only questions not already answered by a user rule should be shown.
+      final visibleQuestions = parsedQuestions
+          .where((q) => q.skippedByRule == null)
+          .toList();
 
       if (!mounted) return;
 
@@ -236,6 +243,29 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
 
       if (_rulesHandledEverything && mounted) {
         ZToast.success(context, 'Your rules covered everything!');
+      }
+
+      // Guided mode: if there are unskipped questions, open the walkthrough
+      // after the results phase is on screen so the user sees the parsed
+      // foods underneath once the walkthrough is dismissed.
+      if (args.isGuidedMode && visibleQuestions.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!mounted) return;
+          final answers = await context.pushNamed<Map<String, dynamic>>(
+            RouteNames.nutritionMealWalkthrough,
+            extra: MealWalkthroughArgs(
+              questions: visibleQuestions,
+              foods: _parsedItems,
+            ),
+          );
+          if (!mounted) return;
+          if (answers != null && answers.isNotEmpty) {
+            _applyWalkthroughAnswers(
+              questions: visibleQuestions,
+              answers: answers,
+            );
+          }
+        });
       }
     } catch (e) {
       if (!mounted) return;
@@ -1098,7 +1128,6 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
   /// value as the new portion_amount for that food. For button_group with
   /// cooking-method-style options, we save to _cookingMethods. For others,
   /// we apply reasonable heuristics or skip.
-  // ignore: unused_element
   void _applyWalkthroughAnswers({
     required List<GuidedQuestion> questions,
     required Map<String, dynamic> answers,
