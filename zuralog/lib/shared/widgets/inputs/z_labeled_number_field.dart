@@ -82,43 +82,65 @@ class ZLabeledNumberField extends StatelessWidget {
       ),
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: AppTextStyles.labelMedium.copyWith(
-            color: colors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: AppDimens.spaceXxs),
-        TextFormField(
-          controller: controller,
-          focusNode: focusNode,
-          textInputAction: textInputAction,
-          onChanged: onChanged,
-          cursorColor: colors.primary,
-          keyboardType: TextInputType.numberWithOptions(decimal: allowDecimal),
-          inputFormatters: allowDecimal
-              ? [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))]
-              : [FilteringTextInputFormatter.digitsOnly],
-          decoration: InputDecoration(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppDimens.spaceMd,
-              vertical: AppDimens.spaceSm,
+    return Semantics(
+      label: label,
+      textField: true,
+      container: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.labelMedium.copyWith(
+              color: colors.textSecondary,
             ),
-            border: unfocusedBorder,
-            enabledBorder: unfocusedBorder,
-            focusedBorder: focusedBorder,
-            suffixText: unit,
-            suffixStyle: unit == null
-                ? null
-                : AppTextStyles.bodySmall.copyWith(
-                    color: colors.textSecondary,
-                  ),
           ),
-        ),
-      ],
+          const SizedBox(height: AppDimens.spaceXxs),
+          TextFormField(
+            controller: controller,
+            focusNode: focusNode,
+            textInputAction: textInputAction,
+            onChanged: onChanged,
+            cursorColor: colors.primary,
+            keyboardType: TextInputType.numberWithOptions(
+              decimal: allowDecimal,
+            ),
+            inputFormatters: allowDecimal
+                ? [_singleDecimalFormatter]
+                : [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.spaceMd,
+                vertical: AppDimens.spaceSm,
+              ),
+              border: unfocusedBorder,
+              enabledBorder: unfocusedBorder,
+              focusedBorder: focusedBorder,
+              suffixText: unit,
+              suffixStyle: unit == null
+                  ? null
+                  : AppTextStyles.bodySmall.copyWith(
+                      color: colors.textSecondary,
+                    ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
+
+/// Allows digits and at most one decimal point.
+///
+/// Rejects any edit that would introduce a second `.` (e.g. typing `1.2.3`
+/// is blocked so only `1.2` survives), ensuring the resulting text always
+/// parses cleanly via `double.tryParse`.
+final TextInputFormatter _singleDecimalFormatter =
+    TextInputFormatter.withFunction((oldValue, newValue) {
+      final text = newValue.text;
+      if (text.isEmpty) return newValue;
+      if (!RegExp(r'^\d*\.?\d*$').hasMatch(text)) {
+        return oldValue;
+      }
+      return newValue;
+    });
