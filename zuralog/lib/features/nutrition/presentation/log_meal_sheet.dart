@@ -4,9 +4,12 @@
 ///
 /// - **Quick mode**: Describe food in natural language, search the database,
 ///   or pick from recently logged foods. One tap to save.
-/// - **Guided mode**: Same input paths, but parsed items get extra refinement
-///   controls — portion size (XS/S/M/L/XL) and cooking method chips that
-///   adjust calorie estimates on the fly.
+/// - **Guided mode**: Same input paths, but AI-parsed items get extra
+///   refinement controls on the Meal Review screen.
+///
+/// AI paths (describe, camera, barcode) close this sheet and open
+/// [MealReviewScreen]. Non-AI paths (search, manual, recents) stay inline
+/// with the food list and save button.
 ///
 /// Opened via [LogMealSheet.show].
 library;
@@ -19,8 +22,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import 'package:zuralog/core/storage/prefs_service.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
+import 'package:zuralog/features/nutrition/presentation/meal_review_screen.dart';
 import 'package:zuralog/features/nutrition/providers/nutrition_providers.dart';
 import 'package:zuralog/shared/widgets/buttons/z_button.dart';
 import 'package:zuralog/shared/widgets/feedback/z_alert_banner.dart';
@@ -32,6 +37,9 @@ import 'package:zuralog/shared/widgets/inputs/z_segmented_control.dart';
 import 'package:zuralog/shared/widgets/inputs/z_text_area.dart';
 import 'package:zuralog/shared/widgets/layout/section_header.dart';
 import 'package:zuralog/shared/widgets/z_divider.dart';
+
+/// SharedPreferences key for persisting the Quick/Guided mode choice.
+const _kModePrefsKey = 'nutrition_logging_mode';
 
 /// Bottom sheet for logging a meal via natural-language description, food
 /// search, or recent food shortcuts.
@@ -72,14 +80,8 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
   /// Debounce timer for search queries.
   Timer? _searchDebounce;
 
-  /// Foods the user has assembled for saving.
+  /// Foods the user has assembled for saving (non-AI paths: search, manual, recents).
   final List<MealFood> _mealFoods = [];
-
-  /// Raw AI parse results (used in Guided mode for confidence and refinement).
-  List<ParsedFoodItem> _parsedItems = [];
-
-  /// Whether the AI parser is currently running.
-  bool _isParsing = false;
 
   /// Whether the save operation is currently running.
   bool _isSaving = false;
@@ -87,32 +89,11 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
   /// Whether the user is in manual entry mode (instead of AI description).
   bool _isManualMode = false;
 
-  /// Error message from the most recent parse attempt, if any.
-  String? _parseError;
-
-  /// Whether the camera/photo scan is currently running.
-  bool _isScanning = false;
-
-  /// The image file most recently picked for scanning.
-  File? _scannedImage;
-
-  /// Error message from the most recent scan attempt, if any.
-  String? _scanError;
-
   /// Whether the barcode scanner overlay is visible.
   bool _showBarcodeScanner = false;
 
   /// Error message from the most recent barcode lookup, if any.
   String? _barcodeError;
-
-  /// Whether rules covered all parsed items (high confidence across the board).
-  bool _rulesHandledEverything = false;
-
-  /// Portion multipliers keyed by index in [_mealFoods]. Defaults to 1.0.
-  final Map<int, double> _portionMultipliers = {};
-
-  /// Cooking method overrides keyed by index in [_mealFoods].
-  final Map<int, String> _cookingMethods = {};
 
   // ── Manual entry controllers ──────────────────────────────────────────────
 
@@ -127,7 +108,8 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
   @override
   void initState() {
     super.initState();
-    _autoSuggestMealType();
+    _selectedMealType = _autoSuggestMealType();
+    _loadModePreference();
   }
 
   @override
@@ -147,18 +129,13 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
 
   bool get _canSave => _selectedMealType != null && _mealFoods.isNotEmpty;
 
-  /// Picks a meal type based on the current hour of the day.
-  void _autoSuggestMealType() {
+  /// Returns a meal type based on the current hour of the day.
+  MealType _autoSuggestMealType() {
     final hour = DateTime.now().hour;
-    if (hour < 10) {
-      _selectedMealType = MealType.breakfast;
-    } else if (hour < 14) {
-      _selectedMealType = MealType.lunch;
-    } else if (hour < 17) {
-      _selectedMealType = MealType.snack;
-    } else {
-      _selectedMealType = MealType.dinner;
-    }
+    if (hour < 10) return MealType.breakfast;
+    if (hour < 14) return MealType.lunch;
+    if (hour < 17) return MealType.snack;
+    return MealType.dinner;
   }
 
   /// Joins the first 3 food names with " + ".
@@ -167,75 +144,17 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
     return names.join(' + ');
   }
 
-  /// Returns the effective calories for a food at [index], accounting for
-  /// the Guided-mode portion multiplier and cooking method adjustment.
-  int _effectiveCalories(int index) {
-    final food = _mealFoods[index];
-    final multiplier = _portionMultipliers[index] ?? 1.0;
-    final method = _cookingMethods[index];
-    var cals = food.caloriesKcal * multiplier;
-    cals = _applyCookingMethodAdjustment(cals, method);
-    return cals.round();
+  /// Loads the persisted Quick/Guided mode preference.
+  void _loadModePreference() {
+    final prefs = ref.read(prefsProvider);
+    final savedMode = prefs.getInt(_kModePrefsKey) ?? 0;
+    if (mounted) setState(() => _modeIndex = savedMode);
   }
 
-  /// Returns the effective macros for a food at [index], accounting for
-  /// the Guided-mode portion multiplier.
-  ({double protein, double carbs, double fat}) _effectiveMacros(int index) {
-    final food = _mealFoods[index];
-    final multiplier = _portionMultipliers[index] ?? 1.0;
-    return (
-      protein: food.proteinG * multiplier,
-      carbs: food.carbsG * multiplier,
-      fat: food.fatG * multiplier,
-    );
-  }
-
-  /// Applies a cooking method calorie adjustment.
-  double _applyCookingMethodAdjustment(double calories, String? method) {
-    return switch (method) {
-      'Fried' => calories * 1.15,
-      'Steamed' => calories * 0.95,
-      'Baked' => calories * 1.05,
-      'Grilled' => calories * 1.0,
-      _ => calories,
-    };
-  }
-
-  /// Whether a food item likely needs a cooking method selector.
-  /// Skip for fruits, drinks, bread, and other items that are not "cooked"
-  /// in a way that would meaningfully change calories.
-  bool _needsCookingMethod(ParsedFoodItem item) {
-    final lower = item.foodName.toLowerCase();
-    const skipWords = [
-      'fruit',
-      'berry',
-      'berries',
-      'apple',
-      'banana',
-      'orange',
-      'grape',
-      'juice',
-      'water',
-      'milk',
-      'coffee',
-      'tea',
-      'soda',
-      'drink',
-      'smoothie',
-      'bread',
-      'toast',
-      'cereal',
-      'yogurt',
-      'cheese',
-      'salad',
-      'raw',
-      'ice cream',
-      'chocolate',
-      'candy',
-      'nuts',
-      'granola',
-    ];
-    return !skipWords.any((word) => lower.contains(word));
+  /// Saves the Quick/Guided mode preference and updates state.
+  void _onModeChanged(int index) {
+    setState(() => _modeIndex = index);
+    ref.read(prefsProvider).setInt(_kModePrefsKey, index);
   }
 
   // ── Actions ────────────────────────────────────────────────────────────────
@@ -269,96 +188,54 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
     });
   }
 
-  /// Parses the natural-language meal description via the AI endpoint.
+  /// Closes this sheet and opens the Meal Review Screen for AI text parsing.
   Future<void> _handleParse() async {
-    final text = _describeController.text.trim();
-    if (text.isEmpty) return;
+    final description = _describeController.text.trim();
+    if (description.isEmpty) return;
 
-    setState(() {
-      _isParsing = true;
-      _parseError = null;
-    });
+    // Close this sheet first.
+    Navigator.of(context).pop();
 
-    try {
-      final repo = ref.read(nutritionRepositoryProvider);
-      final results = await repo.parseMealDescription(text);
-      if (!mounted) return;
-
-      setState(() {
-        _parsedItems = results;
-        for (final item in results) {
-          _mealFoods.add(item.toMealFood());
-        }
-        _isParsing = false;
-
-        // When in Guided mode and every parsed item has high confidence,
-        // the user's rules already covered everything — no refinement needed.
-        if (_modeIndex == 1 &&
-            results.isNotEmpty &&
-            results.every((item) => item.confidence >= 0.8)) {
-          _rulesHandledEverything = true;
-        }
-      });
-
-      if (_rulesHandledEverything && mounted) {
-        ZToast.success(context, 'Your rules covered everything!');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isParsing = false;
-        _parseError = 'Could not understand the description. '
-            'Try being more specific — for example, '
-            '"grilled chicken breast 200g with steamed rice".';
-      });
-    }
+    // Open the Meal Review Screen.
+    MealReviewScreen.show(
+      context,
+      MealReviewArgs(
+        inputType: MealReviewInputType.describe,
+        descriptionText: description,
+        initialMealType: _selectedMealType ?? _autoSuggestMealType(),
+        isGuidedMode: _modeIndex == 1,
+      ),
+    );
   }
 
-  /// Picks a photo from the camera or gallery and sends it to the backend
-  /// for AI analysis. Parsed food items are added to the meal.
+  /// Picks a photo from the camera or gallery and opens the Meal Review Screen.
   Future<void> _pickAndScanImage(ImageSource source) async {
-    if (_isScanning) return;
-
     final picker = ImagePicker();
     final xFile = await picker.pickImage(source: source, imageQuality: 85);
     if (xFile == null) return;
 
     final file = File(xFile.path);
-    final fileSize = await file.length();
-    if (fileSize > 10 * 1024 * 1024) {
-      setState(() => _scanError = 'Image must be smaller than 10 MB.');
-      return;
-    }
 
-    setState(() {
-      _isScanning = true;
-      _scannedImage = file;
-      _scanError = null;
-    });
+    // Close this sheet first.
+    if (mounted) Navigator.of(context).pop();
 
-    try {
-      final results =
-          await ref.read(nutritionRepositoryProvider).scanFoodImage(file);
-      if (!mounted) return;
-      setState(() {
-        _parsedItems = results;
-        for (final item in results) {
-          _mealFoods.add(item.toMealFood());
-        }
-        _isScanning = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _scanError =
-            'Could not analyse the image. Try describing the food instead.';
-        _isScanning = false;
-      });
+    // Open the Meal Review Screen.
+    if (mounted) {
+      MealReviewScreen.show(
+        context,
+        MealReviewArgs(
+          inputType: MealReviewInputType.camera,
+          imageFile: file,
+          initialMealType: _selectedMealType ?? _autoSuggestMealType(),
+          isGuidedMode: _modeIndex == 1,
+        ),
+      );
     }
   }
 
   /// Handles a barcode detection event from the scanner overlay.
-  /// Closes the scanner, looks the product up, and adds it to the meal.
+  /// Closes the scanner, looks the product up, and opens the Meal Review
+  /// Screen on success.
   Future<void> _handleBarcodeScan(BarcodeCapture capture) async {
     final barcodes = capture.barcodes;
     if (barcodes.isEmpty) return;
@@ -372,15 +249,24 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
       final result =
           await ref.read(nutritionRepositoryProvider).lookupBarcode(code);
       if (!mounted) return;
+
       if (result != null) {
-        setState(() {
-          _mealFoods.add(result.toMealFood());
-          _barcodeError = null;
-        });
+        // Close this sheet.
+        Navigator.of(context).pop();
+        // Open Meal Review with the barcode result.
+        MealReviewScreen.show(
+          context,
+          MealReviewArgs(
+            inputType: MealReviewInputType.barcode,
+            barcodeResult: result,
+            initialMealType: _selectedMealType ?? _autoSuggestMealType(),
+            isGuidedMode: _modeIndex == 1,
+          ),
+        );
       } else {
         setState(() {
           _barcodeError =
-              'Product not found. Try taking a photo of the food instead.';
+              'Product not found. Try taking a photo instead.';
         });
       }
     } catch (e) {
@@ -411,28 +297,7 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
 
   /// Removes a food at the given index.
   void _removeFood(int index) {
-    setState(() {
-      _mealFoods.removeAt(index);
-      _portionMultipliers.remove(index);
-      _cookingMethods.remove(index);
-      // Re-key multipliers/methods above the removed index.
-      final newMultipliers = <int, double>{};
-      final newMethods = <int, String>{};
-      for (final entry in _portionMultipliers.entries) {
-        final newKey = entry.key > index ? entry.key - 1 : entry.key;
-        newMultipliers[newKey] = entry.value;
-      }
-      for (final entry in _cookingMethods.entries) {
-        final newKey = entry.key > index ? entry.key - 1 : entry.key;
-        newMethods[newKey] = entry.value;
-      }
-      _portionMultipliers
-        ..clear()
-        ..addAll(newMultipliers);
-      _cookingMethods
-        ..clear()
-        ..addAll(newMethods);
-    });
+    setState(() => _mealFoods.removeAt(index));
   }
 
   /// Saves the meal and closes the sheet.
@@ -444,31 +309,11 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
     try {
       final repo = ref.read(nutritionRepositoryProvider);
 
-      // Build the final food list with multiplier/method adjustments applied.
-      final adjustedFoods = <MealFood>[];
-      for (var i = 0; i < _mealFoods.length; i++) {
-        final food = _mealFoods[i];
-        final multiplier = _portionMultipliers[i] ?? 1.0;
-        final method = _cookingMethods[i];
-        final adjustedCals =
-            _applyCookingMethodAdjustment(food.caloriesKcal * multiplier, method);
-
-        adjustedFoods.add(MealFood(
-          name: food.name,
-          portionGrams: (food.portionGrams * multiplier).round(),
-          portionUnit: food.portionUnit,
-          caloriesKcal: adjustedCals.round(),
-          proteinG: food.proteinG * multiplier,
-          carbsG: food.carbsG * multiplier,
-          fatG: food.fatG * multiplier,
-        ));
-      }
-
       await repo.createMeal(
         mealType: _selectedMealType!.name,
         name: _generateMealName(),
         loggedAt: DateTime.now(),
-        foods: adjustedFoods,
+        foods: _mealFoods,
       );
 
       if (!mounted) return;
@@ -549,7 +394,7 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
                 const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
             child: ZSegmentedControl(
               selectedIndex: _modeIndex,
-              onChanged: (i) => setState(() => _modeIndex = i),
+              onChanged: _onModeChanged,
               segments: const ['Quick', 'Guided'],
             ),
           ),
@@ -599,39 +444,6 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
                       ),
                     ],
                   ),
-
-                  // Image preview.
-                  if (_scannedImage != null) ...[
-                    const SizedBox(height: AppDimens.spaceSm),
-                    ClipRRect(
-                      borderRadius:
-                          BorderRadius.circular(AppDimens.shapeSm),
-                      child: Image.file(
-                        _scannedImage!,
-                        height: 64,
-                        width: 64,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ],
-
-                  // Scanning loading indicator.
-                  if (_isScanning)
-                    const Padding(
-                      padding: EdgeInsets.all(AppDimens.spaceMd),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-
-                  // Scan error banner.
-                  if (_scanError != null) ...[
-                    const SizedBox(height: AppDimens.spaceSm),
-                    ZAlertBanner(
-                      variant: ZAlertVariant.error,
-                      message: _scanError!,
-                      onDismiss: () =>
-                          setState(() => _scanError = null),
-                    ),
-                  ],
 
                   // Barcode error banner.
                   if (_barcodeError != null) ...[
@@ -768,20 +580,8 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
                       icon: Icons.auto_awesome_outlined,
                       variant: ZButtonVariant.secondary,
                       size: ZButtonSize.medium,
-                      isLoading: _isParsing,
-                      onPressed: _isParsing ? null : _handleParse,
+                      onPressed: _handleParse,
                     ),
-
-                    // Parse error banner.
-                    if (_parseError != null) ...[
-                      const SizedBox(height: AppDimens.spaceSm),
-                      ZAlertBanner(
-                        variant: ZAlertVariant.error,
-                        message: _parseError!,
-                        onDismiss: () =>
-                            setState(() => _parseError = null),
-                      ),
-                    ],
                   ],
 
                   // ── Manual / AI mode toggle ────────────────────────────
@@ -985,21 +785,10 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
     );
   }
 
-  /// A single food row with name, macros, and delete button. In Guided mode,
-  /// shows extra refinement controls for AI-parsed items.
+  /// A single food row with name, macros, and delete button.
   Widget _buildFoodRow(int index) {
     final food = _mealFoods[index];
     final colors = AppColorsOf(context);
-    final cals = _effectiveCalories(index);
-    final macros = _effectiveMacros(index);
-
-    // Check if this item came from AI parsing (i.e. has a matching parsed
-    // item) and whether Guided mode is active.
-    final isGuided = _modeIndex == 1;
-    final ParsedFoodItem? parsedItem =
-        index < _parsedItems.length ? _parsedItems[index] : null;
-    final showRefinement =
-        isGuided && parsedItem != null && !_rulesHandledEverything;
 
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceSm + 4),
@@ -1042,102 +831,16 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
           // ── Portion + macros ───────────────────────────────────────────
           Text(
             '${food.portionGrams}${food.portionUnit}'
-            '  ·  $cals kcal'
-            '  ·  P ${macros.protein.toStringAsFixed(1)}g'
-            '  C ${macros.carbs.toStringAsFixed(1)}g'
-            '  F ${macros.fat.toStringAsFixed(1)}g',
+            '  ·  ${food.caloriesKcal} kcal'
+            '  ·  P ${food.proteinG.toStringAsFixed(1)}g'
+            '  C ${food.carbsG.toStringAsFixed(1)}g'
+            '  F ${food.fatG.toStringAsFixed(1)}g',
             style: AppTextStyles.bodySmall.copyWith(
               color: colors.textSecondary,
             ),
           ),
-
-          // ── Guided refinement controls ─────────────────────────────────
-          if (showRefinement) ...[
-            const SizedBox(height: AppDimens.spaceSm),
-            _buildPortionSelector(index),
-            if (parsedItem.confidence < 0.8 &&
-                _needsCookingMethod(parsedItem)) ...[
-              const SizedBox(height: AppDimens.spaceSm),
-              _buildCookingMethodSelector(index),
-            ],
-          ],
         ],
       ),
-    );
-  }
-
-  /// Row of portion-size chips (XS/S/M/L/XL) for Guided mode.
-  Widget _buildPortionSelector(int index) {
-    final colors = AppColorsOf(context);
-    const labels = ['XS', 'S', 'M', 'L', 'XL'];
-    const multipliers = [0.5, 0.75, 1.0, 1.5, 2.0];
-    final current = _portionMultipliers[index] ?? 1.0;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          'Portion size',
-          style: AppTextStyles.bodySmall.copyWith(
-            color: colors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: AppDimens.spaceXs),
-        Wrap(
-          spacing: AppDimens.spaceXs,
-          children: [
-            for (var i = 0; i < labels.length; i++)
-              ZChip(
-                label: labels[i],
-                isActive: current == multipliers[i],
-                onTap: () {
-                  setState(
-                      () => _portionMultipliers[index] = multipliers[i]);
-                },
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  /// Row of cooking-method chips for Guided mode (low-confidence items).
-  Widget _buildCookingMethodSelector(int index) {
-    final colors = AppColorsOf(context);
-    const methods = ['Grilled', 'Fried', 'Baked', 'Steamed'];
-    final current = _cookingMethods[index];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          'Cooking method',
-          style: AppTextStyles.bodySmall.copyWith(
-            color: colors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: AppDimens.spaceXs),
-        Wrap(
-          spacing: AppDimens.spaceXs,
-          children: methods.map((method) {
-            return ZChip(
-              label: method,
-              isActive: current == method,
-              onTap: () {
-                setState(() {
-                  if (current == method) {
-                    _cookingMethods.remove(index);
-                  } else {
-                    _cookingMethods[index] = method;
-                  }
-                });
-              },
-            );
-          }).toList(),
-        ),
-      ],
     );
   }
 }
