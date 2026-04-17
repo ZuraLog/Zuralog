@@ -204,14 +204,19 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
 
     try {
       final repo = ref.read(nutritionRepositoryProvider);
-      List<ParsedFoodItem> results;
+      final MealParseResult parsed;
 
       if (args.inputType == MealReviewInputType.describe) {
-        results = await repo.parseMealDescription(args.descriptionText ?? '');
+        parsed = await repo.parseMealDescription(
+          args.descriptionText ?? '',
+          mode: 'quick',
+        );
       } else {
         // Camera path.
-        results = await repo.scanFoodImage(args.imageFile!);
+        parsed = await repo.scanFoodImage(args.imageFile!, mode: 'quick');
       }
+
+      final results = parsed.foods;
 
       if (!mounted) return;
 

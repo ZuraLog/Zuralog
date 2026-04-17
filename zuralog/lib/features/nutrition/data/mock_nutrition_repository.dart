@@ -59,7 +59,13 @@ abstract interface class NutritionRepositoryInterface {
   Future<List<FoodSearchResult>> searchFoods(String query, {int limit = 10});
 
   /// Parse a natural-language meal description into structured food items.
-  Future<List<ParsedFoodItem>> parseMealDescription(String description);
+  ///
+  /// [mode] is `'quick'` for a one-shot parse (no follow-up questions) or
+  /// `'guided'` to also return guided walkthrough questions.
+  Future<MealParseResult> parseMealDescription(
+    String description, {
+    required String mode,
+  });
 
   /// Submit a correction for a food's nutrition values.
   Future<void> submitCorrection({
@@ -75,7 +81,13 @@ abstract interface class NutritionRepositoryInterface {
   });
 
   /// Analyse a food photo and return structured food items.
-  Future<List<ParsedFoodItem>> scanFoodImage(File imageFile);
+  ///
+  /// [mode] is `'quick'` for a one-shot parse or `'guided'` to also return
+  /// guided walkthrough questions.
+  Future<MealParseResult> scanFoodImage(
+    File imageFile, {
+    required String mode,
+  });
 
   /// Look up a product by its barcode (UPC/EAN).
   Future<FoodSearchResult?> lookupBarcode(String code);
@@ -181,7 +193,10 @@ final class MockNutritionRepository implements NutritionRepositoryInterface {
       throw UnimplementedError('Mock does not support searchFoods');
 
   @override
-  Future<List<ParsedFoodItem>> parseMealDescription(String description) =>
+  Future<MealParseResult> parseMealDescription(
+    String description, {
+    required String mode,
+  }) =>
       throw UnimplementedError('Mock does not support parseMealDescription');
 
   @override
@@ -199,7 +214,10 @@ final class MockNutritionRepository implements NutritionRepositoryInterface {
       throw UnimplementedError('Mock does not support submitCorrection');
 
   @override
-  Future<List<ParsedFoodItem>> scanFoodImage(File imageFile) =>
+  Future<MealParseResult> scanFoodImage(
+    File imageFile, {
+    required String mode,
+  }) =>
       throw UnimplementedError('Mock does not support scanFoodImage');
 
   @override

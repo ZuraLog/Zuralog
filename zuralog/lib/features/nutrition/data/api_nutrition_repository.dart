@@ -126,15 +126,15 @@ class ApiNutritionRepository implements NutritionRepositoryInterface {
   // ── AI Parsing ─────────────────────────────────────────────────────────────
 
   @override
-  Future<List<ParsedFoodItem>> parseMealDescription(String description) async {
+  Future<MealParseResult> parseMealDescription(
+    String description, {
+    required String mode,
+  }) async {
     final response = await _api.post(
       '/api/v1/nutrition/meals/parse',
-      data: {'description': description},
+      data: {'description': description, 'mode': mode},
     );
-    final foods = response.data['foods'] as List<dynamic>? ?? [];
-    return foods
-        .map((e) => ParsedFoodItem.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return MealParseResult.fromJson(response.data as Map<String, dynamic>);
   }
 
   // ── Corrections ────────────────────────────────────────────────────────────
@@ -167,22 +167,22 @@ class ApiNutritionRepository implements NutritionRepositoryInterface {
   // ── Camera / Barcode ──────────────────────────────────────────────────────
 
   @override
-  Future<List<ParsedFoodItem>> scanFoodImage(File imageFile) async {
+  Future<MealParseResult> scanFoodImage(
+    File imageFile, {
+    required String mode,
+  }) async {
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(
         imageFile.path,
         filename: imageFile.path.split(Platform.pathSeparator).last,
       ),
+      'mode': mode,
     });
     final response = await _api.post(
       '/api/v1/nutrition/meals/scan-image',
       data: formData,
     );
-    final data = response.data as Map<String, dynamic>;
-    final foods = data['foods'] as List<dynamic>? ?? [];
-    return foods
-        .map((e) => ParsedFoodItem.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return MealParseResult.fromJson(response.data as Map<String, dynamic>);
   }
 
   @override
