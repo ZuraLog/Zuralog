@@ -162,32 +162,13 @@ class _NutritionRulesScreenState extends ConsumerState<NutritionRulesScreen> {
                   ),
                 ),
                 const SizedBox(height: AppDimens.spaceMd),
-                TextField(
+                ZTextArea(
                   controller: controller,
-                  maxLength: 500,
+                  placeholder: 'e.g. I always use olive oil when cooking',
                   maxLines: 4,
                   minLines: 2,
+                  maxLength: 500,
                   autofocus: true,
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: colors.textPrimary,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'e.g. I always use olive oil when cooking',
-                    hintStyle: AppTextStyles.bodyMedium.copyWith(
-                      color: colors.textSecondary.withValues(alpha: 0.6),
-                    ),
-                    filled: true,
-                    fillColor: colors.surface,
-                    border: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppDimens.shapeMd),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.all(AppDimens.spaceMd),
-                    counterStyle: AppTextStyles.bodySmall.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
                 ),
                 const SizedBox(height: AppDimens.spaceLg),
                 Row(

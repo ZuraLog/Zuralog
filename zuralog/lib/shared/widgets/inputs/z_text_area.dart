@@ -24,6 +24,7 @@ class ZTextArea extends StatelessWidget {
     this.minLines = 4,
     this.maxLength,
     this.enabled = true,
+    this.autofocus = false,
   });
 
   /// Controller for reading and manipulating the text content.
@@ -50,6 +51,9 @@ class ZTextArea extends StatelessWidget {
   /// Whether the text area accepts input.
   final bool enabled;
 
+  /// Whether the text area should request focus when first built.
+  final bool autofocus;
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
@@ -69,6 +73,7 @@ class ZTextArea extends StatelessWidget {
       child: TextFormField(
         controller: controller,
         enabled: enabled,
+        autofocus: autofocus,
         maxLines: maxLines,
         minLines: minLines,
         maxLength: maxLength,
