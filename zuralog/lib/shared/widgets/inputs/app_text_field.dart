@@ -121,6 +121,12 @@ class AppTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
+    // Universal unfocused outline so every field in the app has a clearly
+    // visible border when empty — matches [ZLabeledTextField] / [ZLabeledNumberField].
+    final unfocusedBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+      borderSide: BorderSide(color: colors.border, width: 1),
+    );
     return TextFormField(
       controller: controller,
       validator: validator,
@@ -142,6 +148,8 @@ class AppTextField extends StatelessWidget {
         labelText: labelText,
         prefixIcon: prefixIcon,
         suffixIcon: suffixIcon,
+        border: unfocusedBorder,
+        enabledBorder: unfocusedBorder,
       ),
     );
   }
