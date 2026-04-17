@@ -74,6 +74,7 @@ export 'metric_grid/metric_grid.dart';
 export 'metric_grid/metric_picker_sheet.dart';
 export 'metric_grid/metric_tile.dart';
 export 'nutrition/z_answer_origin_badge.dart';
+export 'nutrition/z_meal_type_picker.dart';
 export 'nutrition/z_refine_transition_card.dart';
 export 'nutrition/z_suggested_rule_banner.dart';
 export 'sheets/z_log_grid_cell.dart';

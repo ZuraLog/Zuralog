@@ -40,6 +40,7 @@ import 'package:zuralog/shared/widgets/inputs/z_labeled_text_field.dart';
 import 'package:zuralog/shared/widgets/layout/section_header.dart';
 import 'package:zuralog/shared/widgets/animations/z_fade_slide_in.dart';
 import 'package:zuralog/shared/widgets/nutrition/z_answer_origin_badge.dart';
+import 'package:zuralog/shared/widgets/nutrition/z_meal_type_picker.dart';
 import 'package:zuralog/shared/widgets/nutrition/z_suggested_rule_banner.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 
@@ -823,7 +824,10 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
                 const SizedBox(height: AppDimens.spaceLg),
                 const SectionHeader(title: 'Meal type'),
                 const SizedBox(height: AppDimens.spaceSm),
-                _buildMealTypeDropdown(colors),
+                ZMealTypePicker(
+                  value: _selectedMealType,
+                  onChanged: (v) => setState(() => _selectedMealType = v),
+                ),
 
                 // Time picker.
                 const SizedBox(height: AppDimens.spaceLg),
@@ -1198,47 +1202,6 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
             colors: colors,
           ),
         ],
-      ),
-    );
-  }
-
-  // ── Meal type dropdown ─────────────────────────────────────────────────────
-
-  Widget _buildMealTypeDropdown(AppColorsOf colors) {
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppDimens.shapeSm),
-        border: Border.all(color: colors.border),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceSm),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<MealType>(
-          value: _selectedMealType,
-          isExpanded: true,
-          icon: Icon(Icons.expand_more, color: colors.textSecondary),
-          dropdownColor: colors.cardBackground,
-          style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
-          items: MealType.values.map((t) {
-            return DropdownMenuItem<MealType>(
-              value: t,
-              child: Row(
-                children: [
-                  Icon(
-                    t.icon,
-                    size: AppDimens.iconSm,
-                    color: AppColors.categoryNutrition,
-                  ),
-                  const SizedBox(width: AppDimens.spaceSm),
-                  Text(t.label),
-                ],
-              ),
-            );
-          }).toList(),
-          onChanged: (v) {
-            if (v != null) setState(() => _selectedMealType = v);
-          },
-        ),
       ),
     );
   }
