@@ -13,7 +13,11 @@
 /// - [RecentFood]            — recently logged food for quick re-logging
 library;
 
+export 'package:zuralog/features/nutrition/domain/guided_question.dart';
+
 import 'package:flutter/material.dart';
+
+import 'package:zuralog/features/nutrition/domain/guided_question.dart';
 
 // -- MealType -----------------------------------------------------------------
 
@@ -256,6 +260,7 @@ class ParsedFoodItem {
     required this.carbsG,
     required this.fatG,
     this.confidence = 0.5,
+    this.appliedRules = const [],
   });
 
   /// Human-readable food name.
@@ -282,8 +287,22 @@ class ParsedFoodItem {
   /// Parser confidence score (0.0–1.0). Defaults to 0.5.
   final double confidence;
 
+  /// Human-readable rule descriptions the backend applied to this food.
+  ///
+  /// Surfaced in the UI as small badges so the user can see which of their
+  /// saved rules affected the parse.
+  final List<String> appliedRules;
+
   /// Deserialises a [ParsedFoodItem] from a backend JSON map.
   factory ParsedFoodItem.fromJson(Map<String, dynamic> json) {
+    final rawApplied = json['applied_rules'];
+    final List<String> parsedApplied = rawApplied is List
+        ? rawApplied
+            .whereType<Object>()
+            .map((e) => e.toString())
+            .toList(growable: false)
+        : const <String>[];
+
     return ParsedFoodItem(
       foodName: json['food_name'] as String? ?? '',
       portionAmount: (json['portion_amount'] as num?)?.toDouble() ?? 0.0,
@@ -293,8 +312,23 @@ class ParsedFoodItem {
       carbsG: (json['carbs_g'] as num?)?.toDouble() ?? 0.0,
       fatG: (json['fat_g'] as num?)?.toDouble() ?? 0.0,
       confidence: (json['confidence'] as num?)?.toDouble() ?? 0.5,
+      appliedRules: parsedApplied,
     );
   }
+
+  /// Serialises this [ParsedFoodItem] to a JSON map matching the backend
+  /// schema. Mirrors [ParsedFoodItem.fromJson] field-for-field.
+  Map<String, dynamic> toJson() => {
+        'food_name': foodName,
+        'portion_amount': portionAmount,
+        'portion_unit': portionUnit,
+        'calories': calories,
+        'protein_g': proteinG,
+        'carbs_g': carbsG,
+        'fat_g': fatG,
+        'confidence': confidence,
+        'applied_rules': appliedRules,
+      };
 
   /// Converts this parsed result into a [MealFood] for persisting.
   MealFood toMealFood() => MealFood(
@@ -493,5 +527,45 @@ class NutritionRule {
       updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? '') ??
           DateTime.now(),
     );
+  }
+}
+
+// -- MealParseResult ----------------------------------------------------------
+
+/// Combined result from the AI parse/scan endpoints.
+///
+/// Wraps both the parsed food items and any guided follow-up questions the
+/// backend returned. Older backends that only return `foods` still deserialise
+/// cleanly — [questions] just comes back empty.
+class MealParseResult {
+  /// Creates an immutable [MealParseResult].
+  const MealParseResult({
+    required this.foods,
+    this.questions = const [],
+  });
+
+  /// Parsed food items ready to show in the review screen.
+  final List<ParsedFoodItem> foods;
+
+  /// Guided follow-up questions the AI wants the user to answer.
+  final List<GuidedQuestion> questions;
+
+  /// Deserialises a [MealParseResult] defensively from a backend JSON map.
+  factory MealParseResult.fromJson(Map<String, dynamic> json) {
+    final rawFoods = json['foods'];
+    final parsedFoods = rawFoods is List
+        ? rawFoods
+            .whereType<Map<String, dynamic>>()
+            .map(ParsedFoodItem.fromJson)
+            .toList()
+        : const <ParsedFoodItem>[];
+    final rawQuestions = json['questions'];
+    final parsedQuestions = rawQuestions is List
+        ? rawQuestions
+            .whereType<Map<String, dynamic>>()
+            .map(GuidedQuestion.fromJson)
+            .toList()
+        : const <GuidedQuestion>[];
+    return MealParseResult(foods: parsedFoods, questions: parsedQuestions);
   }
 }
