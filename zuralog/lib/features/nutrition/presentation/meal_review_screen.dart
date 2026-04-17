@@ -40,6 +40,7 @@ import 'package:zuralog/shared/widgets/inputs/z_labeled_number_field.dart';
 import 'package:zuralog/shared/widgets/layout/section_header.dart';
 import 'package:zuralog/shared/widgets/animations/z_fade_slide_in.dart';
 import 'package:zuralog/shared/widgets/nutrition/z_answer_origin_badge.dart';
+import 'package:zuralog/shared/widgets/nutrition/z_suggested_rule_banner.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 
 // ── Input types ─────────────────────────────────────────────────────────────
@@ -161,6 +162,19 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
   /// On-demand text controllers for inline editing (created only when needed).
   final Map<int, _InlineEditControllers> _editControllers = {};
 
+  /// A rule the backend suggested saving, sourced from the initial parse
+  /// response. `null` when no suggestion is active (either never offered,
+  /// already accepted, or dismissed during this session).
+  ///
+  /// Known limitation: if the user triggers a refine round via the
+  /// walkthrough, we do not currently re-pick up `suggestedRule` from the
+  /// refine result — the banner simply does not update until the next parse.
+  SuggestedRule? _suggestedRule;
+
+  /// True while the "Save rule" network call from the suggested-rule banner
+  /// is in flight. Flips the primary button to its spinner state.
+  bool _savingSuggestedRule = false;
+
   // ── Animation ──────────────────────────────────────────────────────────────
 
   late AnimationController _pulseController;
@@ -249,6 +263,9 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
         _parsedItems = results;
         _mealFoods = results.map((item) => item.toMealFood()).toList();
         _phase = _ReviewPhase.results;
+        // Adopt the backend-suggested rule (if any). Shown as a banner in
+        // the results phase above "Here's what I found".
+        _suggestedRule = parsed.suggestedRule;
 
         // When in Guided mode and every parsed item is high confidence,
         // the user's rules already covered everything.
@@ -543,6 +560,62 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
     }
   }
 
+  // ── Suggested-rule handlers ────────────────────────────────────────────────
+
+  /// Accepts the currently shown [_suggestedRule] by creating a real
+  /// [NutritionRule] on the backend and clearing the banner on success.
+  ///
+  /// The suppression fields are forwarded so the backend can delete any
+  /// active snooze row for the same question/answer pair — belt-and-braces
+  /// in case the user had previously dismissed this suggestion.
+  ///
+  /// On failure we keep the banner visible so the user can retry.
+  Future<void> _handleAcceptSuggestedRule() async {
+    final rule = _suggestedRule;
+    if (rule == null) return;
+    setState(() => _savingSuggestedRule = true);
+    try {
+      await ref.read(nutritionRepositoryProvider).createRule(
+            rule.ruleText,
+            suppressedQuestionId: rule.questionId,
+            suppressedAnswerValue: rule.answerValue,
+          );
+      if (!mounted) return;
+      ZToast.success(context, 'Rule saved — we will stop asking.');
+      setState(() {
+        _suggestedRule = null;
+        _savingSuggestedRule = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ZToast.error(context, 'Could not save rule. Try again.');
+      // Keep the banner visible so the user can retry.
+      setState(() => _savingSuggestedRule = false);
+    }
+  }
+
+  /// Dismisses the currently shown [_suggestedRule] optimistically, then
+  /// fires a fire-and-forget request to the backend so future parses will
+  /// skip this suggestion for the next few logs.
+  ///
+  /// We swallow any error — worst case the banner reappears on the next
+  /// parse, which is acceptable for a "Not now" interaction.
+  Future<void> _handleDismissSuggestedRule() async {
+    final rule = _suggestedRule;
+    if (rule == null) return;
+    // Optimistically hide the banner so the UI feels snappy.
+    setState(() => _suggestedRule = null);
+    try {
+      await ref.read(nutritionRepositoryProvider).dismissRuleSuggestion(
+            questionId: rule.questionId,
+            answerValue: rule.answerValue,
+          );
+    } catch (_) {
+      // Silent failure — banner will reappear on the next parse if the
+      // snooze didn't persist.
+    }
+  }
+
   // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
@@ -718,6 +791,20 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
                         _startAnalysis();
                       },
                     ),
+                  ),
+                ],
+
+                // Suggested-rule banner — shown once the backend spots a
+                // repeated walkthrough answer worth saving as a persistent
+                // rule. Renders above the food list so the user sees it
+                // before confirming the meal.
+                if (_suggestedRule != null) ...[
+                  const SizedBox(height: AppDimens.spaceMd),
+                  ZSuggestedRuleBanner(
+                    ruleText: _suggestedRule!.ruleText,
+                    onAccept: _handleAcceptSuggestedRule,
+                    onDismiss: _handleDismissSuggestedRule,
+                    isSaving: _savingSuggestedRule,
                   ),
                 ],
 
