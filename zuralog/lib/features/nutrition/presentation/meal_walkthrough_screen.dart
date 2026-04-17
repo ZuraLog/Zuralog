@@ -579,8 +579,11 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
             child: Center(
               child: ZFadeSlideIn(
                 key: const ValueKey('refine-transition'),
-                child: ZRefineTransitionCard(
-                  subLabel: _pendingRefineReason,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ZRefineTransitionCard(
+                    subLabel: _pendingRefineReason,
+                  ),
                 ),
               ),
             ),
@@ -622,32 +625,38 @@ class _MealWalkthroughScreenState extends State<MealWalkthroughScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    ZuralogCard(
-                      variant: ZCardVariant.feature,
-                      category: AppColors.categoryNutrition,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (foodName.isNotEmpty) ...[
-                            Text(
-                              foodName.toUpperCase(),
-                              style: AppTextStyles.labelMedium.copyWith(
-                                color: AppColors.categoryNutrition,
-                                letterSpacing: 0.8,
+                    SizedBox(
+                      width: double.infinity,
+                      child: ZuralogCard(
+                        variant: ZCardVariant.feature,
+                        category: AppColors.categoryNutrition,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 220),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (foodName.isNotEmpty) ...[
+                                Text(
+                                  foodName.toUpperCase(),
+                                  style: AppTextStyles.labelMedium.copyWith(
+                                    color: AppColors.categoryNutrition,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                                const SizedBox(height: AppDimens.spaceXs),
+                              ],
+                              Text(
+                                question.question,
+                                style: AppTextStyles.titleMedium.copyWith(
+                                  color: colors.textPrimary,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: AppDimens.spaceXs),
-                          ],
-                          Text(
-                            question.question,
-                            style: AppTextStyles.titleMedium.copyWith(
-                              color: colors.textPrimary,
-                            ),
+                              const SizedBox(height: AppDimens.spaceLg),
+                              _buildComponent(colors, question),
+                            ],
                           ),
-                          const SizedBox(height: AppDimens.spaceLg),
-                          _buildComponent(colors, question),
-                        ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: AppDimens.spaceLg),
