@@ -232,8 +232,8 @@ class _MealEditScreenState extends ConsumerState<MealEditScreen> {
         ),
         children: [
           // ── Meal name ──────────────────────────────────────────────────
-          AppTextField(
-            labelText: 'Meal name',
+          ZLabeledTextField(
+            label: 'Meal name',
             controller: _nameController,
             textInputAction: TextInputAction.done,
             onChanged: (_) => setState(() {}),
@@ -369,8 +369,8 @@ class _FoodEditCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: AppTextField(
-                  hintText: 'Food name',
+                child: ZLabeledTextField(
+                  label: 'Food name',
                   controller: entry.nameController,
                   textInputAction: TextInputAction.next,
                 ),
