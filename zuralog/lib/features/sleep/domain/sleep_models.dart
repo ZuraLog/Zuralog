@@ -48,7 +48,7 @@ class SleepingHR {
         avgBpm: (json['avg_bpm'] as num?)?.toDouble(),
         lowBpm: (json['low_bpm'] as num?)?.toDouble(),
         highBpm: (json['high_bpm'] as num?)?.toDouble(),
-        curve: (json['curve'] as List<dynamic>)
+        curve: (json['curve'] as List<dynamic>? ?? [])
             .map((e) => HRPoint.fromJson(e as Map<String, dynamic>))
             .toList(),
       );
@@ -148,14 +148,14 @@ class SleepDaySummary {
             ? SleepingHR.fromJson(
                 json['sleeping_hr'] as Map<String, dynamic>)
             : null,
-        factors: (json['factors'] as List<dynamic>).cast<String>(),
+        factors: (json['factors'] as List<dynamic>? ?? []).cast<String>(),
         interruptions: json['interruptions'] as int?,
         notes: json['notes'] as String?,
         aiSummary: json['ai_summary'] as String?,
         aiGeneratedAt: json['ai_generated_at'] != null
             ? DateTime.parse(json['ai_generated_at'] as String)
             : null,
-        sources: (json['sources'] as List<dynamic>)
+        sources: (json['sources'] as List<dynamic>? ?? [])
             .map((e) => SleepSource.fromJson(e as Map<String, dynamic>))
             .toList(),
       );
