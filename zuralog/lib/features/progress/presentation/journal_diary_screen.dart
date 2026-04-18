@@ -435,11 +435,11 @@ class _JournalBackdrop extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final bg = colors.background;
-    // Dark mode carries a heavier tint so the contrast against warm-cream
-    // text stays high; light mode uses a softer tint so the misty quality
-    // of the photo reads as airy rather than washed out.
-    final topAlpha = colors.isDark ? 0.68 : 0.50;
-    final bottomAlpha = colors.isDark ? 0.92 : 0.80;
+    // Tint intentionally light so the misty forest actually reads as a
+    // forest. The prompt band and writing card carry their own surfaces,
+    // so the tint is doing texture work, not contrast work.
+    final topAlpha = colors.isDark ? 0.20 : 0.15;
+    final bottomAlpha = colors.isDark ? 0.55 : 0.45;
     return Stack(
       children: [
         Positioned.fill(
