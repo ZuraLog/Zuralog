@@ -1,14 +1,14 @@
-// zuralog/lib/features/sleep/providers/sleep_providers.dart
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:zuralog/features/sleep/data/mock_sleep_repository.dart';
+import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/features/sleep/data/api_sleep_repository.dart';
 import 'package:zuralog/features/sleep/data/sleep_repository_interface.dart';
 import 'package:zuralog/features/sleep/domain/sleep_models.dart';
 
-final sleepRepositoryProvider = Provider<SleepRepositoryInterface>(
-  (_) => MockSleepRepository(),
-);
+final sleepRepositoryProvider = Provider<SleepRepositoryInterface>((ref) {
+  return ApiSleepRepository(apiClient: ref.read(apiClientProvider));
+});
 
 final sleepDaySummaryProvider = FutureProvider<SleepDaySummary>((ref) async {
   try {
