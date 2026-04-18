@@ -149,7 +149,7 @@ abstract interface class NutritionRepositoryInterface {
 ///
 /// Returns hardcoded fixture data after a short artificial delay so that
 /// loading skeletons and populated states are both exercisable in development.
-final class MockNutritionRepository implements NutritionRepositoryInterface {
+class MockNutritionRepository implements NutritionRepositoryInterface {
   /// Creates a const [MockNutritionRepository].
   const MockNutritionRepository();
 

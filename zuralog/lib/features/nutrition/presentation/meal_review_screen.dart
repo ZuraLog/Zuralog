@@ -675,6 +675,7 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(AppDimens.shapeLg),
                     child: Stack(
+                      key: const Key('meal-review-loading-image-stack'),
                       fit: StackFit.expand,
                       children: [
                         // Base layer: contextual food photo (fades in when

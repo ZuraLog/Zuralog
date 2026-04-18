@@ -10,11 +10,15 @@ import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
 import 'package:zuralog/features/nutrition/presentation/meal_review_screen.dart';
 import 'package:zuralog/features/nutrition/providers/nutrition_providers.dart';
 
-/// A test-only stub that delegates everything to [MockNutritionRepository]
-/// except [parseMealDescription], which hangs forever so the screen stays
-/// in the analyzing phase.
-class _AnalyzingStub implements NutritionRepositoryInterface {
-  final _delegate = const MockNutritionRepository();
+// ---------------------------------------------------------------------------
+// Slim stub — extends MockNutritionRepository, overrides only what tests need.
+// ---------------------------------------------------------------------------
+
+/// Keeps the screen permanently in the analyzing phase by hanging both
+/// [parseMealDescription] and [scanFoodImage]. Also counts how many times
+/// [fetchFoodImage] is called so tests can assert on the input-type guard.
+class _AnalyzingStub extends MockNutritionRepository {
+  int fetchFoodImageCallCount = 0;
 
   @override
   Future<MealParseResult> parseMealDescription(
@@ -23,171 +27,120 @@ class _AnalyzingStub implements NutritionRepositoryInterface {
   }) =>
       Completer<MealParseResult>().future; // never completes
 
-  // ── All other methods delegate to the mock ───────────────────────────────
-
-  @override
-  Future<List<Meal>> getTodayMeals() => _delegate.getTodayMeals();
-
-  @override
-  Future<NutritionDaySummary> getTodaySummary() => _delegate.getTodaySummary();
-
-  @override
-  Future<Meal?> getMealById(String id) => _delegate.getMealById(id);
-
-  @override
-  Future<void> deleteMeal(String id) => _delegate.deleteMeal(id);
-
-  @override
-  Future<Meal> createMeal({
-    required String mealType,
-    String? name,
-    required DateTime loggedAt,
-    required List<MealFood> foods,
-  }) =>
-      _delegate.createMeal(
-        mealType: mealType,
-        name: name,
-        loggedAt: loggedAt,
-        foods: foods,
-      );
-
-  @override
-  Future<Meal> updateMeal(
-    String id, {
-    required String mealType,
-    String? name,
-    required DateTime loggedAt,
-    required List<MealFood> foods,
-  }) =>
-      _delegate.updateMeal(
-        id,
-        mealType: mealType,
-        name: name,
-        loggedAt: loggedAt,
-        foods: foods,
-      );
-
-  @override
-  Future<List<RecentFood>> getRecentFoods() => _delegate.getRecentFoods();
-
-  @override
-  Future<List<FoodSearchResult>> searchFoods(String query, {int limit = 10}) =>
-      _delegate.searchFoods(query, limit: limit);
-
-  @override
-  Future<MealRefineResult> refineMeal({
-    required String description,
-    required List<ParsedFoodItem> foods,
-    required List<GuidedQuestion> questionsHistory,
-    required List<Map<String, dynamic>> answersHistory,
-    required int round,
-  }) =>
-      _delegate.refineMeal(
-        description: description,
-        foods: foods,
-        questionsHistory: questionsHistory,
-        answersHistory: answersHistory,
-        round: round,
-      );
-
-  @override
-  Future<void> submitCorrection({
-    required String foodName,
-    required double originalCalories,
-    required double correctedCalories,
-    required double originalProteinG,
-    required double correctedProteinG,
-    required double originalCarbsG,
-    required double correctedCarbsG,
-    required double originalFatG,
-    required double correctedFatG,
-  }) =>
-      _delegate.submitCorrection(
-        foodName: foodName,
-        originalCalories: originalCalories,
-        correctedCalories: correctedCalories,
-        originalProteinG: originalProteinG,
-        correctedProteinG: correctedProteinG,
-        originalCarbsG: originalCarbsG,
-        correctedCarbsG: correctedCarbsG,
-        originalFatG: originalFatG,
-        correctedFatG: correctedFatG,
-      );
-
   @override
   Future<MealParseResult> scanFoodImage(
     File imageFile, {
     required String mode,
   }) =>
-      _delegate.scanFoodImage(imageFile, mode: mode);
+      Completer<MealParseResult>().future; // never completes
 
   @override
-  Future<FoodSearchResult?> lookupBarcode(String code) =>
-      _delegate.lookupBarcode(code);
-
-  @override
-  Future<List<NutritionRule>> getRules() => _delegate.getRules();
-
-  @override
-  Future<NutritionRule> createRule(
-    String ruleText, {
-    String? suppressedQuestionId,
-    String? suppressedAnswerValue,
-  }) =>
-      _delegate.createRule(
-        ruleText,
-        suppressedQuestionId: suppressedQuestionId,
-        suppressedAnswerValue: suppressedAnswerValue,
-      );
-
-  @override
-  Future<NutritionRule> updateRule(String ruleId, String ruleText) =>
-      _delegate.updateRule(ruleId, ruleText);
-
-  @override
-  Future<void> deleteRule(String ruleId) => _delegate.deleteRule(ruleId);
-
-  @override
-  Future<void> dismissRuleSuggestion({
-    required String questionId,
-    required String answerValue,
-  }) =>
-      _delegate.dismissRuleSuggestion(
-        questionId: questionId,
-        answerValue: answerValue,
-      );
-
-  @override
-  Future<String?> fetchFoodImage(String query) =>
-      _delegate.fetchFoodImage(query);
+  Future<String?> fetchFoodImage(String query) {
+    fetchFoodImageCallCount++;
+    // Return a never-completing future so the image doesn't render during the
+    // test — we only need to assert the Stack exists and the call was made.
+    return Completer<String?>().future;
+  }
 }
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+Widget _wrap(Widget child, _AnalyzingStub stub) => ProviderScope(
+      overrides: [
+        nutritionRepositoryProvider.overrideWithValue(stub),
+      ],
+      child: MaterialApp(home: child),
+    );
+
+const _describeArgs = MealReviewArgs(
+  inputType: MealReviewInputType.describe,
+  descriptionText: 'eggs with toast',
+  initialMealType: MealType.breakfast,
+  isGuidedMode: false,
+);
+
+// Camera path requires a non-null imageFile to avoid the null assertion in
+// _startAnalysis. We use a placeholder path — the file is never opened.
+final _cameraArgs = MealReviewArgs(
+  inputType: MealReviewInputType.camera,
+  imageFile: File('/dev/null'),
+  initialMealType: MealType.breakfast,
+  isGuidedMode: false,
+);
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 void main() {
-  Widget wrap(Widget child) => ProviderScope(
-        overrides: [
-          nutritionRepositoryProvider.overrideWithValue(_AnalyzingStub()),
-        ],
-        child: MaterialApp(home: child),
-      );
+  // ── Test A ─────────────────────────────────────────────────────────────────
 
   testWidgets(
-    'analyzing phase renders the Stack with pulsing pattern layer',
+    'describe path: keyed image Stack is present and no Image widget is shown '
+    'while the food-image future is still in flight',
     (tester) async {
-      await tester.pumpWidget(wrap(
-        MealReviewScreen(
-          args: const MealReviewArgs(
-            inputType: MealReviewInputType.describe,
-            descriptionText: 'eggs with toast',
-            initialMealType: MealType.breakfast,
-            isGuidedMode: false,
-          ),
-        ),
-      ));
-      // parseMealDescription never completes, so the screen stays in the
-      // analyzing phase. Verify the Stack with the pulsing pattern and the
-      // FutureBuilder for the food image are present in the widget tree.
-      expect(find.byType(Stack), findsWidgets);
-      expect(find.byType(FutureBuilder<String?>), findsOneWidget);
+      final stub = _AnalyzingStub();
+
+      await tester.pumpWidget(
+        _wrap(MealReviewScreen(args: _describeArgs), stub),
+      );
+      // One pump — analyzing phase begins, futures have not resolved.
+      await tester.pump();
+
+      // The keyed Stack MUST exist — deleting the feature makes this fail.
+      expect(
+        find.byKey(const Key('meal-review-loading-image-stack')),
+        findsOneWidget,
+        reason: 'loading-image Stack should be present during analyzing phase',
+      );
+
+      // No Image widget should be visible yet (future still in flight).
+      expect(
+        find.byType(Image),
+        findsNothing,
+        reason: 'Image should not appear until the food-image future resolves',
+      );
+
+      // fetchFoodImage should have been called exactly once — confirms the
+      // feature is actually wired up for the describe path.
+      expect(
+        stub.fetchFoodImageCallCount,
+        equals(1),
+        reason: 'fetchFoodImage should be called once for the describe path',
+      );
+    },
+  );
+
+  // ── Test B ─────────────────────────────────────────────────────────────────
+
+  testWidgets(
+    'camera path: keyed image Stack is present and fetchFoodImage is NEVER '
+    'called (camera photos skip the image-lookup service)',
+    (tester) async {
+      final stub = _AnalyzingStub();
+
+      await tester.pumpWidget(
+        _wrap(MealReviewScreen(args: _cameraArgs), stub),
+      );
+      await tester.pump();
+
+      // The keyed Stack must be present on the camera path too.
+      expect(
+        find.byKey(const Key('meal-review-loading-image-stack')),
+        findsOneWidget,
+        reason: 'loading-image Stack should be present on the camera path',
+      );
+
+      // fetchFoodImage must NOT be called — the image future stays null so the
+      // Stack shows only the pulsing pattern.  If the input-type guard is
+      // removed or inverted this assertion fails.
+      expect(
+        stub.fetchFoodImageCallCount,
+        equals(0),
+        reason: 'fetchFoodImage must not be called for camera/barcode paths',
+      );
     },
   );
 }
