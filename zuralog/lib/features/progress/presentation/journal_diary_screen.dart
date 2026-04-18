@@ -18,6 +18,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
+import 'package:zuralog/features/progress/data/journal_prompts.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── JournalDiaryScreen ────────────────────────────────────────────────────────
@@ -120,7 +121,8 @@ class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
     return ZuralogScaffold(
       appBar: ZuralogAppBar(title: isEditing ? 'Edit Entry' : 'Journal'),
       addBottomNavPadding: true,
-      body: Padding(
+      body: _TimeOfDayBackdrop(
+        child: Padding(
         padding: EdgeInsets.fromLTRB(
           AppDimens.spaceMd,
           AppDimens.spaceMd,
@@ -129,6 +131,10 @@ class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
         ),
         child: Column(
           children: [
+            _PromptBand(
+              onFocusWritingArea: _contentFocus.requestFocus,
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
             // ── Text field ─────────────────────────────────────────────────
             // Chromeless writing surface — the diary field fills the entire screen top
             // to bottom; a visible outline here would be visual noise. Phase 6 Plan 6
@@ -223,6 +229,7 @@ class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
             ),
           ],
         ),
+        ),
       ),
     );
   }
@@ -272,5 +279,95 @@ class _WordCountPillState extends State<_WordCountPill> {
       '$_count words',
       style: AppTextStyles.labelSmall.copyWith(color: colors.textTertiary),
     );
+  }
+}
+
+// ── _PromptBand ─────────────────────────────────────────────────────────────
+
+class _PromptBand extends ConsumerWidget {
+  const _PromptBand({required this.onFocusWritingArea});
+
+  final VoidCallback onFocusWritingArea;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
+    final prompt = ref.watch(journalPromptProvider);
+    return GestureDetector(
+      onTap: onFocusWritingArea,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimens.spaceMd,
+          vertical: AppDimens.spaceSm,
+        ),
+        decoration: BoxDecoration(
+          color: colors.surfaceRaised.withValues(alpha: 0.45),
+          borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          border: Border.all(color: colors.border.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                prompt,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppDimens.spaceSm),
+            IconButton(
+              icon: Icon(
+                Icons.refresh_rounded,
+                size: 20,
+                color: colors.textTertiary,
+              ),
+              tooltip: 'Next prompt',
+              onPressed: () => ref
+                  .read(journalPromptIndexProvider.notifier)
+                  .update((v) => v + 1),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── _TimeOfDayBackdrop ──────────────────────────────────────────────────────
+
+class _TimeOfDayBackdrop extends StatelessWidget {
+  const _TimeOfDayBackdrop({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final hour = DateTime.now().hour;
+    final (overlay, alpha) = _overlayForHour(hour);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            overlay.withValues(alpha: alpha),
+            colors.background,
+          ],
+          stops: const [0.0, 0.6],
+        ),
+      ),
+      child: child,
+    );
+  }
+
+  /// Returns (color, alpha) for the given hour window.
+  (Color, double) _overlayForHour(int hour) {
+    if (hour >= 5 && hour < 9) return (const Color(0xFFF3E9D7), 0.18);
+    if (hour >= 9 && hour < 12) return (const Color(0xFFF5D9A1), 0.10);
+    if (hour >= 12 && hour < 17) return (Colors.transparent, 0.0);
+    if (hour >= 17 && hour < 20) return (const Color(0xFFE8A261), 0.18);
+    return (const Color(0xFF1F3A5F), 0.14);
   }
 }
