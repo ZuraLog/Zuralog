@@ -188,7 +188,7 @@ class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
     return ZuralogScaffold(
       appBar: ZuralogAppBar(title: isEditing ? 'Edit Entry' : 'Journal'),
       addBottomNavPadding: true,
-      body: _TimeOfDayBackdrop(
+      body: _JournalBackdrop(
         child: Padding(
         padding: EdgeInsets.fromLTRB(
           AppDimens.spaceMd,
@@ -418,39 +418,52 @@ class _PromptBand extends ConsumerWidget {
   }
 }
 
-// ── _TimeOfDayBackdrop ──────────────────────────────────────────────────────
+// ── _JournalBackdrop ────────────────────────────────────────────────────────
 
-class _TimeOfDayBackdrop extends StatelessWidget {
-  const _TimeOfDayBackdrop({required this.child});
+/// Calm misty-forest photographic backdrop for the journal diary.
+///
+/// The raw photo lives at `assets/journal/calm-backdrop.jpg`. On top of it
+/// we layer a heavy scaffold-background tint so the Lora serif writing and
+/// the prompt band stay crisp — the image peeks through as texture rather
+/// than as a photograph. A subtle bottom-to-top gradient on the tint keeps
+/// the horizon line soft without a hard visual seam.
+class _JournalBackdrop extends StatelessWidget {
+  const _JournalBackdrop({required this.child});
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final hour = DateTime.now().hour;
-    final (overlay, alpha) = _overlayForHour(hour);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            overlay.withValues(alpha: alpha),
-            colors.background,
-          ],
-          stops: const [0.0, 0.6],
+    final bg = colors.background;
+    // Dark mode carries a heavier tint so the contrast against warm-cream
+    // text stays high; light mode uses a softer tint so the misty quality
+    // of the photo reads as airy rather than washed out.
+    final topAlpha = colors.isDark ? 0.68 : 0.50;
+    final bottomAlpha = colors.isDark ? 0.92 : 0.80;
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Image.asset(
+            'assets/journal/calm-backdrop.jpg',
+            fit: BoxFit.cover,
+          ),
         ),
-      ),
-      child: child,
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  bg.withValues(alpha: topAlpha),
+                  bg.withValues(alpha: bottomAlpha),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Positioned.fill(child: child),
+      ],
     );
-  }
-
-  /// Returns (color, alpha) for the given hour window.
-  (Color, double) _overlayForHour(int hour) {
-    if (hour >= 5 && hour < 9) return (const Color(0xFFF3E9D7), 0.18);
-    if (hour >= 9 && hour < 12) return (const Color(0xFFF5D9A1), 0.10);
-    if (hour >= 12 && hour < 17) return (Colors.transparent, 0.0);
-    if (hour >= 17 && hour < 20) return (const Color(0xFFE8A261), 0.18);
-    return (const Color(0xFF1F3A5F), 0.14);
   }
 }
