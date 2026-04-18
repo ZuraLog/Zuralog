@@ -136,6 +136,11 @@ abstract interface class NutritionRepositoryInterface {
     required String questionId,
     required String answerValue,
   });
+
+  /// Resolves a food description to a stock-photo URL for the meal-parse
+  /// loading state. Returns `null` when no image is available or when the
+  /// request fails — the caller should show the pattern-only fallback.
+  Future<String?> fetchFoodImage(String query);
 }
 
 // -- MockNutritionRepository --------------------------------------------------
@@ -144,7 +149,7 @@ abstract interface class NutritionRepositoryInterface {
 ///
 /// Returns hardcoded fixture data after a short artificial delay so that
 /// loading skeletons and populated states are both exercisable in development.
-final class MockNutritionRepository implements NutritionRepositoryInterface {
+class MockNutritionRepository implements NutritionRepositoryInterface {
   /// Creates a const [MockNutritionRepository].
   const MockNutritionRepository();
 
@@ -231,6 +236,13 @@ final class MockNutritionRepository implements NutritionRepositoryInterface {
     required String mode,
   }) =>
       throw UnimplementedError('Mock does not support parseMealDescription');
+
+  @override
+  Future<String?> fetchFoodImage(String query) async {
+    if (query.trim().isEmpty) return null;
+    // Canned URL for snapshot tests. Use a stable public image.
+    return 'https://images.pexels.com/photos/566566/pexels-photo-566566.jpeg';
+  }
 
   @override
   Future<MealRefineResult> refineMeal({

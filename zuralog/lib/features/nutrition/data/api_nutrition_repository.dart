@@ -138,6 +138,25 @@ class ApiNutritionRepository implements NutritionRepositoryInterface {
   }
 
   @override
+  Future<String?> fetchFoodImage(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return null;
+    try {
+      final response = await _api.get(
+        '/api/v1/nutrition/food-image',
+        queryParameters: {'q': trimmed},
+      );
+      final data = response.data;
+      if (data is! Map<String, dynamic>) return null;
+      final url = data['image_url'];
+      return url is String ? url : null;
+    } catch (_) {
+      // Loading-state image is non-critical — swallow errors, caller shows pattern.
+      return null;
+    }
+  }
+
+  @override
   Future<MealRefineResult> refineMeal({
     required String description,
     required List<ParsedFoodItem> foods,

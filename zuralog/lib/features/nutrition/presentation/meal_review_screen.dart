@@ -177,6 +177,11 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
 
   // ── Animation ──────────────────────────────────────────────────────────────
 
+  /// Non-null only on the `describe` path. Completes with a stock-photo URL
+  /// for the food the user typed, or `null` on miss/error. Never awaited on
+  /// the UI critical path — the parse future still drives phase transitions.
+  Future<String?>? _imageFuture;
+
   late AnimationController _pulseController;
   int _statusTextIndex = 0;
   Timer? _statusTimer;
@@ -221,6 +226,14 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
   // ── Analysis ───────────────────────────────────────────────────────────────
 
   Future<void> _startAnalysis() async {
+    // Kick off the loading-state image fetch in parallel on the describe path.
+    final args0 = widget.args;
+    if (args0.inputType == MealReviewInputType.describe &&
+        (args0.descriptionText ?? '').trim().isNotEmpty) {
+      _imageFuture =
+          ref.read(nutritionRepositoryProvider).fetchFoodImage(args0.descriptionText!);
+    }
+
     final args = widget.args;
 
     // Barcode path: skip straight to results.
@@ -651,22 +664,48 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
 
             const SizedBox(height: AppDimens.spaceLg + AppDimens.spaceMd),
 
-            // Pulsing brand pattern animation.
+            // Pulsing brand pattern animation (with optional food image behind).
             AnimatedBuilder(
               animation: _pulseController,
               builder: (context, child) {
-                // Opacity oscillates between 0.15 and 0.40.
-                final opacity =
-                    0.15 + (_pulseController.value * 0.25);
+                final opacity = 0.15 + (_pulseController.value * 0.25);
                 return SizedBox(
                   height: 120,
                   width: 120,
                   child: ClipRRect(
-                    borderRadius:
-                        BorderRadius.circular(AppDimens.shapeLg),
-                    child: ZPatternOverlay(
-                      variant: ZPatternVariant.amber,
-                      opacity: opacity,
+                    borderRadius: BorderRadius.circular(AppDimens.shapeLg),
+                    child: Stack(
+                      key: const Key('meal-review-loading-image-stack'),
+                      fit: StackFit.expand,
+                      children: [
+                        // Base layer: contextual food photo (fades in when
+                        // the future resolves). Null future (camera path) or
+                        // null result (miss / error) => transparent layer,
+                        // only the pulsing pattern shows.
+                        FutureBuilder<String?>(
+                          future: _imageFuture,
+                          builder: (ctx, snap) {
+                            final url = snap.data;
+                            return AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              child: url == null
+                                  ? const SizedBox.shrink()
+                                  : Image.network(
+                                      url,
+                                      key: ValueKey(url),
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (ctx2, err, st) =>
+                                          const SizedBox.shrink(),
+                                    ),
+                            );
+                          },
+                        ),
+                        // Top layer: existing pulsing amber pattern, unchanged.
+                        ZPatternOverlay(
+                          variant: ZPatternVariant.amber,
+                          opacity: opacity,
+                        ),
+                      ],
                     ),
                   ),
                 );

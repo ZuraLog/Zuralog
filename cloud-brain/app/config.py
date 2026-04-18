@@ -50,6 +50,7 @@ class Settings(BaseSettings):
         supabase_anon_key: Supabase anonymous (public) key.
         supabase_service_key: Supabase service role key.
         openrouter_api_key: OpenRouter API key for all LLM calls.
+        pexels_api_key: Pexels stock-photo API key (optional).
         google_web_client_id: Google OAuth 2.0 Web Application client ID.
         google_web_client_secret: Google OAuth 2.0 Web Application client secret.
         strava_client_id: Strava application Client ID (Phase 1.6).
@@ -79,6 +80,10 @@ class Settings(BaseSettings):
     supabase_anon_key: SecretStr = SecretStr("")
     supabase_service_key: SecretStr = SecretStr("")
     openrouter_api_key: SecretStr = SecretStr("")
+    pexels_api_key: SecretStr = SecretStr("")
+    """Pexels stock-photo API key (optional). When empty, the food-image
+    endpoint returns null so the mobile client quietly falls back to the
+    pattern-only loading state."""
     openrouter_referer: str = "https://zuralog.app"
     # Comma-separated user IDs that are exempt from LLM rate limits.
     # Used for automated test accounts only. Only affects model quotas —
