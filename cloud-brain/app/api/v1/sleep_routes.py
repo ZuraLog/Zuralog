@@ -5,23 +5,23 @@ Endpoints:
   GET /trend    — daily sleep duration history for trend charting
 """
 
-import asyncio
 import logging
 from datetime import date, datetime, timedelta, timezone
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_authenticated_user_id
 from app.database import get_db
+from app.limiter import limiter
 from app.models.activity_session import ActivitySession
 from app.models.daily_summary import DailySummary
 from app.models.health_event import HealthEvent
 from app.models.insight import Insight
-from app.models.user_preferences import UserPreferences
+from app.utils.user_date import get_user_local_date
 
 logger = logging.getLogger(__name__)
 
@@ -117,21 +117,6 @@ class SleepTrendResponse(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
-async def _get_user_local_date(user_id: str, db: AsyncSession) -> date:
-    """Return user's current local date based on their timezone preference."""
-    result = await db.execute(
-        select(UserPreferences).where(UserPreferences.user_id == user_id)
-    )
-    prefs = result.scalars().first()
-    tz_str = (prefs.timezone if prefs and hasattr(prefs, "timezone") and prefs.timezone else "UTC")
-    try:
-        import zoneinfo
-        tz = zoneinfo.ZoneInfo(tz_str)
-    except Exception:
-        tz = timezone.utc
-    return datetime.now(tz).date()
-
-
 def _source_to_schema(source_name: str) -> SleepSource:
     display_name, brand_color = _SOURCE_DISPLAY.get(
         source_name, (source_name.replace("_", " ").title(), "#888888")
@@ -144,69 +129,63 @@ def _source_to_schema(source_name: str) -> SleepSource:
 # ---------------------------------------------------------------------------
 
 @router.get("/summary", response_model=SleepSummaryResponse)
+@limiter.limit("120/minute")
 async def get_sleep_summary(
+    request: Request,
     user_id: Annotated[str, Depends(get_authenticated_user_id)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> SleepSummaryResponse:
-    local_date = await _get_user_local_date(user_id, db)
+    local_date = await get_user_local_date(db, user_id)
 
-    (
-        metrics_result,
-        session_result,
-        insight_result,
-        week_avg_result,
-        sources_result,
-    ) = await asyncio.gather(
-        db.execute(
-            select(DailySummary).where(
-                DailySummary.user_id == user_id,
-                DailySummary.date == local_date,
-                DailySummary.metric_type.in_(_SLEEP_METRIC_TYPES),
-                DailySummary.is_stale.is_(False),
-            )
-        ),
-        db.execute(
-            select(ActivitySession)
-            .where(
-                ActivitySession.user_id == user_id,
-                ActivitySession.activity_type == "sleep",
-                func.date(ActivitySession.started_at) == local_date,
-            )
-            .order_by(ActivitySession.started_at.desc())
-            .limit(1)
-        ),
-        db.execute(
-            select(Insight)
-            .where(
-                Insight.user_id == user_id,
-                Insight.generation_date == local_date,
-                Insight.signal_type.in_(
-                    ["sleep_analysis", "compound_sleep_debt", "anomaly_alert"]
-                ),
-                Insight.dismissed_at.is_(None),
-            )
-            .order_by(Insight.priority.asc())
-            .limit(1)
-        ),
-        db.execute(
-            select(func.avg(DailySummary.value)).where(
-                DailySummary.user_id == user_id,
-                DailySummary.metric_type == "sleep_duration",
-                DailySummary.date >= local_date - timedelta(days=7),
-                DailySummary.date < local_date,
-                DailySummary.is_stale.is_(False),
-            )
-        ),
-        db.execute(
-            select(HealthEvent.source)
-            .distinct()
-            .where(
-                HealthEvent.user_id == user_id,
-                HealthEvent.local_date == local_date,
-                HealthEvent.metric_type.in_(_SLEEP_METRIC_TYPES),
-                HealthEvent.deleted_at.is_(None),
-            )
-        ),
+    metrics_result = await db.execute(
+        select(DailySummary).where(
+            DailySummary.user_id == user_id,
+            DailySummary.date == local_date,
+            DailySummary.metric_type.in_(_SLEEP_METRIC_TYPES),
+            DailySummary.is_stale.is_(False),
+        )
+    )
+    session_result = await db.execute(
+        select(ActivitySession)
+        .where(
+            ActivitySession.user_id == user_id,
+            ActivitySession.activity_type == "sleep",
+            func.date(ActivitySession.started_at) == local_date,
+        )
+        .order_by(ActivitySession.started_at.desc())
+        .limit(1)
+    )
+    insight_result = await db.execute(
+        select(Insight)
+        .where(
+            Insight.user_id == user_id,
+            Insight.generation_date == local_date,
+            Insight.type.in_(
+                ["sleep_analysis", "compound_sleep_debt", "anomaly_alert"]
+            ),
+            Insight.dismissed_at.is_(None),
+        )
+        .order_by(Insight.priority.asc())
+        .limit(1)
+    )
+    week_avg_result = await db.execute(
+        select(func.avg(DailySummary.value)).where(
+            DailySummary.user_id == user_id,
+            DailySummary.metric_type == "sleep_duration",
+            DailySummary.date >= local_date - timedelta(days=7),
+            DailySummary.date < local_date,
+            DailySummary.is_stale.is_(False),
+        )
+    )
+    sources_result = await db.execute(
+        select(HealthEvent.source)
+        .distinct()
+        .where(
+            HealthEvent.user_id == user_id,
+            HealthEvent.local_date == local_date,
+            HealthEvent.metric_type.in_(_SLEEP_METRIC_TYPES),
+            HealthEvent.deleted_at.is_(None),
+        )
     )
 
     metrics: dict[str, float] = {
@@ -267,6 +246,7 @@ async def get_sleep_summary(
                 HealthEvent.deleted_at.is_(None),
             )
             .order_by(HealthEvent.recorded_at)
+            .limit(720)
         )
         hr_events = hr_result.scalars().all()
         if hr_events:
@@ -323,12 +303,14 @@ async def get_sleep_summary(
 # ---------------------------------------------------------------------------
 
 @router.get("/trend", response_model=SleepTrendResponse)
+@limiter.limit("120/minute")
 async def get_sleep_trend(
+    request: Request,
     user_id: Annotated[str, Depends(get_authenticated_user_id)],
     db: Annotated[AsyncSession, Depends(get_db)],
     range: Annotated[Literal["7d", "30d"], Query()] = "7d",
 ) -> SleepTrendResponse:
-    local_date = await _get_user_local_date(user_id, db)
+    local_date = await get_user_local_date(db, user_id)
     days = 7 if range == "7d" else 30
 
     result = await db.execute(
