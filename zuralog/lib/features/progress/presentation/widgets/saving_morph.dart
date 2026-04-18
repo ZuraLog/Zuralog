@@ -44,14 +44,8 @@ class _SavingMorphState extends State<SavingMorph>
   late final AnimationController _collapse;
   late final AnimationController _check;
 
-  /// Runs concurrently with [_dismiss] once check completes. Represents the
-  /// 300 ms "hold" window where the checkmark is fully visible before fading.
-  late final AnimationController _hold;
-
-  /// Fade-out controller. Starts simultaneously with [_hold] so that the
-  /// dismiss is already in progress when the hold finishes — this lets the
-  /// whole sequence fit within the test-pump budget. Visually, the fade only
-  /// becomes visible once [_hold] reaches 1.0.
+  /// Fade-out controller. Runs after the 300 ms hold completes for a smooth 250 ms
+  /// fade + scale out.
   late final AnimationController _dismiss;
 
   _MorphPhase _phase = _MorphPhase.idle;
@@ -68,34 +62,26 @@ class _SavingMorphState extends State<SavingMorph>
       vsync: this,
       duration: const Duration(milliseconds: 250),
     );
-    _hold = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
     _dismiss = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 250),
     );
 
-    // When check animation reaches 1.0, start hold and dismiss simultaneously.
-    // Using a value listener so the chain fires in the same frame as completion
-    // (status listeners fire one pump later, which breaks the test timing).
-    _check.addListener(_onCheckTick);
-
-    // Fire onMorphComplete in the same frame that dismiss reaches 1.0.
-    _dismiss.addListener(_onDismissTick);
+    // Sequential chain: check completes → 300 ms hold → dismiss fades out.
+    _check.addStatusListener((status) {
+      if (status != AnimationStatus.completed) return;
+      _onCheckComplete();
+    });
   }
 
-  void _onCheckTick() {
-    if (_check.value >= 1.0 && _hold.status == AnimationStatus.dismissed) {
-      HapticFeedback.mediumImpact();
-      _hold.forward();
-      _dismiss.forward();
-    }
-  }
-
-  void _onDismissTick() {
-    if (_dismiss.value >= 1.0 && !_completeFired && mounted) {
+  Future<void> _onCheckComplete() async {
+    HapticFeedback.mediumImpact();
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
+    setState(() => _phase = _MorphPhase.dismissing);
+    await _dismiss.forward();
+    if (!mounted) return;
+    if (!_completeFired) {
       _completeFired = true;
       widget.onMorphComplete?.call();
     }
@@ -118,18 +104,10 @@ class _SavingMorphState extends State<SavingMorph>
 
   @override
   void dispose() {
-    _check.removeListener(_onCheckTick);
-    _dismiss.removeListener(_onDismissTick);
     _collapse.dispose();
     _check.dispose();
-    _hold.dispose();
     _dismiss.dispose();
     super.dispose();
-  }
-
-  void _handleTap() {
-    HapticFeedback.lightImpact();
-    widget.onPressed?.call();
   }
 
   @override
@@ -139,22 +117,20 @@ class _SavingMorphState extends State<SavingMorph>
         width: double.infinity,
         child: ZButton(
           label: widget.label,
-          onPressed: widget.onPressed == null ? null : _handleTap,
+          onPressed: widget.onPressed,
           isLoading: widget.isSaving,
         ),
       );
     }
 
     return AnimatedBuilder(
-      animation: Listenable.merge([_collapse, _check, _hold, _dismiss]),
+      animation: Listenable.merge([_collapse, _check, _dismiss]),
       builder: (context, _) {
         final collapseT = Curves.easeInOutCubic.transform(_collapse.value);
 
-        // The dismiss fade only becomes visible after the hold window closes.
-        // _hold.value reaches 1.0 once the 300 ms hold is done; until then
-        // dismissT stays 0 so the circle remains fully opaque.
-        final holdDone = _hold.value >= 1.0;
-        final dismissT = holdDone ? _dismiss.value : 0.0;
+        // The dismiss fade only becomes visible once the dismissing phase starts.
+        // Until then, _phase stays checking and _dismiss hasn't been forwarded.
+        final dismissT = _phase == _MorphPhase.dismissing ? _dismiss.value : 0.0;
 
         final scale = 1.0 + dismissT * 0.15;
         final opacity = (1.0 - dismissT).clamp(0.0, 1.0);
@@ -172,7 +148,7 @@ class _SavingMorphState extends State<SavingMorph>
               alignment: Alignment.center,
               child: SizedBox(
                 width: _collapsedWidth(context, collapseT),
-                height: 64,
+                height: 52,
                 child: Container(
                   decoration: const BoxDecoration(
                     color: AppColors.primary,
@@ -203,8 +179,8 @@ class _SavingMorphState extends State<SavingMorph>
   /// padding) down to 64px as the collapse progresses from 0 → 1.
   double _collapsedWidth(BuildContext context, double t) {
     final screen = MediaQuery.sizeOf(context).width;
-    final fromWidth = (screen - 32).clamp(64.0, screen); // minus screen padding
-    return fromWidth + (64 - fromWidth) * t;
+    final fromWidth = (screen - 32).clamp(52.0, screen); // minus screen padding
+    return fromWidth + (52 - fromWidth) * t;
   }
 }
 
