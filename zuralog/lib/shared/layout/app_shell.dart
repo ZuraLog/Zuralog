@@ -328,3 +328,131 @@ class _FrostedNavigationBarState extends State<_FrostedNavigationBar>
     );
   }
 }
+
+// ── Log Pill Button ───────────────────────────────────────────────────────────
+
+/// A 64×64 circular primary-filled pill hosting the `+` log icon.
+///
+/// The icon rotates 45° when [isOpen] is true and reverses back to 0° when
+/// [isOpen] flips to false. The parent owns the `isOpen` flag — this widget
+/// is a pure view over that flag plus a tap callback.
+class _LogPillButton extends StatefulWidget {
+  const _LogPillButton({
+    super.key,
+    required this.isOpen,
+    required this.onTap,
+  });
+
+  final bool isOpen;
+  final VoidCallback onTap;
+
+  @override
+  State<_LogPillButton> createState() => _LogPillButtonState();
+}
+
+class _LogPillButtonState extends State<_LogPillButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _rotation;
+  late final Animation<double> _turns;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotation = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+      value: widget.isOpen ? 1.0 : 0.0,
+    );
+    _turns = Tween<double>(begin: 0.0, end: 0.125)
+        .chain(CurveTween(curve: Curves.easeOutCubic))
+        .animate(_rotation);
+  }
+
+  @override
+  void didUpdateWidget(covariant _LogPillButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isOpen != widget.isOpen) {
+      if (widget.isOpen) {
+        _rotation.forward();
+      } else {
+        _rotation.reverse();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _rotation.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    // In dark mode: fill is Sage, icon is Deep Forest (#344E41).
+    // In light mode: fill is Deep Forest, icon is textOnSage (Warm Cream).
+    final fill = colors.primary;
+    final iconColor = colors.isDark
+        ? const Color(0xFF344E41)
+        : colors.textOnSage;
+
+    return Semantics(
+      button: true,
+      label: 'Log new entry',
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: widget.onTap,
+          customBorder: const CircleBorder(),
+          child: Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: fill,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Center(
+              child: RotationTransition(
+                turns: _turns,
+                child: Icon(
+                  Icons.add_rounded,
+                  size: 24,
+                  color: iconColor,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Test-only public alias for [_LogPillButton].
+@visibleForTesting
+class LogPillButtonForTest extends StatelessWidget {
+  const LogPillButtonForTest({
+    super.key,
+    required this.isOpen,
+    required this.onTap,
+  });
+
+  final bool isOpen;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => _LogPillButton(
+        key: const Key('bottom-nav-log-pill'),
+        isOpen: isOpen,
+        onTap: onTap,
+      );
+}
