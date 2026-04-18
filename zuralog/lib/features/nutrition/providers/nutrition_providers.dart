@@ -18,6 +18,8 @@
 /// - [recentFoodsProvider]          — async list of recently logged foods
 library;
 
+import 'dart:async' show Timer;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -39,23 +41,93 @@ final nutritionRepositoryProvider =
 
 // -- Today Meals --------------------------------------------------------------
 
-/// Async provider for the list of meals logged today.
-///
-/// Never puts the UI into an error state. All failures resolve to an empty
-/// list so the UI always reaches the `data:` branch and renders the
-/// appropriate empty state.
-///
-/// Invalidate with `ref.invalidate(todayMealsProvider)` after logging or
-/// deleting a meal to trigger a fresh fetch.
-final todayMealsProvider = FutureProvider<List<Meal>>((ref) async {
-  final repo = ref.read(nutritionRepositoryProvider);
-  try {
-    return await repo.getTodayMeals();
-  } catch (e, st) {
-    debugPrint('todayMealsProvider failed: $e\n$st');
-    return const [];
+/// Represents a meal that has been removed from the list pending a 4-second
+/// undo window. Holds the resources needed to either restore the meal (on
+/// undo) or fire the backend delete (on timer expiry).
+class _PendingDelete {
+  const _PendingDelete({
+    required this.timer,
+    required this.originalIndex,
+    required this.meal,
+  });
+
+  final Timer timer;
+  final int originalIndex;
+  final Meal meal;
+}
+
+/// Async notifier backing [todayMealsProvider]. Owns the list of today's
+/// meals and exposes optimistic-delete with 4-second undo semantics.
+class TodayMealsNotifier extends AsyncNotifier<List<Meal>> {
+  final Map<String, _PendingDelete> _pending = {};
+
+  @override
+  Future<List<Meal>> build() async {
+    final repo = ref.read(nutritionRepositoryProvider);
+    try {
+      return await repo.getTodayMeals();
+    } catch (e, st) {
+      debugPrint('todayMealsProvider failed: $e\n$st');
+      return const [];
+    }
   }
-});
+
+  /// Remove [meal] from local state immediately and schedule a backend
+  /// delete in 4 seconds. Cancel the schedule via [undoDelete] within the
+  /// window to restore the row.
+  void deleteOptimistic(Meal meal) {
+    final current = state.valueOrNull ?? const <Meal>[];
+    final index = current.indexWhere((m) => m.id == meal.id);
+    if (index < 0) return;
+
+    final next = [...current]..removeAt(index);
+    state = AsyncData(next);
+
+    final timer = Timer(const Duration(seconds: 4), () async {
+      _pending.remove(meal.id);
+      try {
+        await ref.read(nutritionRepositoryProvider).deleteMeal(meal.id);
+      } catch (e, st) {
+        debugPrint('deleteMeal failed for ${meal.id}: $e\n$st');
+        final latest = state.valueOrNull ?? const <Meal>[];
+        final restored = [...latest]
+          ..insert(index.clamp(0, latest.length), meal);
+        state = AsyncData(restored);
+      }
+    });
+
+    _pending[meal.id] = _PendingDelete(
+      timer: timer,
+      originalIndex: index,
+      meal: meal,
+    );
+  }
+
+  /// Cancel the pending delete for [mealId] and restore the meal at its
+  /// original index. Returns `true` if a pending delete existed.
+  bool undoDelete(String mealId) {
+    final pending = _pending.remove(mealId);
+    if (pending == null) return false;
+    pending.timer.cancel();
+
+    final current = state.valueOrNull ?? const <Meal>[];
+    final restored = [...current]
+      ..insert(pending.originalIndex.clamp(0, current.length), pending.meal);
+    state = AsyncData(restored);
+    return true;
+  }
+}
+
+/// Async provider for today's meals.
+///
+/// Never puts the UI into an error state — repo failures resolve to an
+/// empty list so the `data:` branch always renders a sensible empty state.
+/// Backed by [TodayMealsNotifier], which exposes [deleteOptimistic] and
+/// [undoDelete] for swipe-driven mutations on the Nutrition home screen.
+final todayMealsProvider =
+    AsyncNotifierProvider<TodayMealsNotifier, List<Meal>>(
+  TodayMealsNotifier.new,
+);
 
 // -- Day Summary --------------------------------------------------------------
 

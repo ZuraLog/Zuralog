@@ -107,6 +107,7 @@ dev_dependencies:
   url_launcher_platform_interface: ^2.3.2
   mockito: ^5.4.6
   mocktail: ^1.0.4
+  fake_async: ^1.3.2
   flutter_launcher_icons: ^0.14.3
   flutter_native_splash: ^2.4.3
 
