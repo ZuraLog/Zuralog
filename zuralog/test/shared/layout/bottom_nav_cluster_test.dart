@@ -22,14 +22,18 @@ void main() {
         find.byType(_LogPillHarness),
       );
       state.setOpen(true);
-      await tester.pumpAndSettle();
+      // Pattern overlay animates continuously — can't use pumpAndSettle.
+      // 210ms > rotation duration (200ms) guarantees the rotation completes.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 210));
 
       final rotationAtOpen = _readRotationTurns(tester);
       expect(rotationAtOpen, closeTo(0.125, 0.001));
 
       // Flip back to closed.
       state.setOpen(false);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 210));
 
       final rotationAtClose = _readRotationTurns(tester);
       expect(rotationAtClose, closeTo(0.0, 0.001));

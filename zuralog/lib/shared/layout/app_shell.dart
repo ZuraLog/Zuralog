@@ -389,35 +389,38 @@ class _LogPillButtonState extends State<_LogPillButton>
         ? const Color(0xFF344E41)
         : colors.textOnSage;
 
+    // Shadow removed so the log pill's silhouette matches the frosted nav
+    // pill's flat edge — the two sibling pills now read as the same 64pt
+    // height. Brand pattern overlay ties the log pill visually to the
+    // frosted nav and honours the "pattern never static" house rule.
     return Semantics(
       button: true,
       label: 'Log new entry',
       child: Material(
-        color: Colors.transparent,
+        color: fill,
         shape: const CircleBorder(),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: widget.onTap,
           customBorder: const CircleBorder(),
-          child: Container(
+          child: SizedBox(
             width: 64,
             height: 64,
-            decoration: BoxDecoration(
-              color: fill,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                const ZPatternOverlay(
+                  variant: ZPatternVariant.sage,
+                  opacity: 0.22,
+                  animate: true,
+                ),
+                Center(
+                  child: RotationTransition(
+                    turns: _turns,
+                    child: Icon(Icons.add_rounded, size: 24, color: iconColor),
+                  ),
                 ),
               ],
-            ),
-            child: Center(
-              child: RotationTransition(
-                turns: _turns,
-                child: Icon(Icons.add_rounded, size: 24, color: iconColor),
-              ),
             ),
           ),
         ),
