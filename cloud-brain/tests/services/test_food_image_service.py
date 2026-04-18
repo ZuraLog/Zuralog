@@ -1,7 +1,10 @@
 """Unit tests for food_image_service."""
+from unittest.mock import AsyncMock, patch
+
 import pytest
 
-from app.services.food_image_service import normalise_query
+from app.services.cache_service import CacheService
+from app.services.food_image_service import FoodImageService, normalise_query
 
 
 class TestNormaliseQuery:
@@ -25,12 +28,6 @@ class TestNormaliseQuery:
     def test_empty_returns_empty(self):
         assert normalise_query("") == ""
         assert normalise_query("   ") == ""
-
-
-from unittest.mock import AsyncMock, patch
-
-from app.services.cache_service import CacheService
-from app.services.food_image_service import FoodImageService
 
 
 @pytest.fixture
@@ -134,3 +131,22 @@ class TestFoodImageServiceFetch:
             result = await service.fetch("eggs")
         assert result == {"image_url": None, "thumb_url": None}
         client.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_pexels_non_json_body_returns_nulls_without_cache(self, service, cache):
+        def _raise():
+            raise ValueError("not json")
+        mock_response = AsyncMock()
+        mock_response.status_code = 200
+        mock_response.json = _raise
+        mock_client = AsyncMock()
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.get.return_value = mock_response
+
+        with patch(
+            "app.services.food_image_service.httpx.AsyncClient", return_value=mock_client
+        ):
+            result = await service.fetch("eggs")
+
+        assert result == {"image_url": None, "thumb_url": None}
+        assert await cache.get("food_image:eggs") is None

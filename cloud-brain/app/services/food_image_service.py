@@ -68,7 +68,11 @@ class FoodImageService:
             logger.warning("pexels returned %s for %r", resp.status_code, key_part)
             return {"image_url": None, "thumb_url": None}
 
-        photos = resp.json().get("photos", [])
+        try:
+            photos = resp.json().get("photos", [])
+        except ValueError:
+            logger.warning("pexels returned non-JSON for %r", key_part)
+            return {"image_url": None, "thumb_url": None}
         if not photos:
             negative = {"image_url": None, "thumb_url": None}
             await self._cache.set(cache_key, negative, ttl=_NEGATIVE_TTL)
