@@ -411,7 +411,7 @@ class _LogPillButtonState extends State<_LogPillButton>
               children: [
                 const ZPatternOverlay(
                   variant: ZPatternVariant.sage,
-                  opacity: 0.22,
+                  opacity: 0.38,
                   animate: true,
                 ),
                 Center(
