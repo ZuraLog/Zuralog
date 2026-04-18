@@ -9,7 +9,6 @@ export 'buttons/secondary_button.dart';
 export 'buttons/spring_button.dart';
 export 'buttons/z_button.dart';
 export 'buttons/z_icon_button.dart';
-export 'buttons/z_log_fab.dart';
 export 'cards/z_daily_goals_card.dart';
 export 'cards/z_insight_card.dart';
 export 'cards/z_selectable_tile.dart';
