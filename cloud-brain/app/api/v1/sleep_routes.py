@@ -6,7 +6,7 @@ Endpoints:
 """
 
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import timedelta
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
