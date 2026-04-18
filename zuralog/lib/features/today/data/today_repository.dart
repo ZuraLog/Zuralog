@@ -71,6 +71,7 @@ abstract interface class TodayRepositoryInterface {
     required String source,
     required DateTime recordedAt,
     DateTime? endedAt,
+    String? notes,
     required List<SessionMetricPayload> metrics,
     Map<String, dynamic>? metadata,
   });
@@ -386,6 +387,7 @@ class TodayRepository implements TodayRepositoryInterface {
     required String source,
     required DateTime recordedAt,
     DateTime? endedAt,
+    String? notes,
     required List<SessionMetricPayload> metrics,
     Map<String, dynamic>? metadata,
   }) async {
@@ -394,8 +396,9 @@ class TodayRepository implements TodayRepositoryInterface {
       'source': source,
       'started_at': _isoWithOffset(recordedAt),
       if (endedAt != null) 'ended_at': _isoWithOffset(endedAt),
+      if (notes != null) 'notes': notes,
       'metrics': metrics.map((m) => m.toJson()).toList(),
-      if (metadata != null) 'metadata': metadata,
+      if (metadata != null) 'session_metadata': metadata,
     });
     invalidateFeedCache();
     return SessionIngestResult.fromJson(resp.data as Map<String, dynamic>);
@@ -544,6 +547,11 @@ class TodayRepository implements TodayRepositoryInterface {
       source: 'manual',
       recordedAt: bedtime,
       endedAt: wakeTime,
+      notes: notes,
+      metadata: {
+        if ((interruptions ?? 0) > 0) 'interruptions': interruptions,
+        if (factors.isNotEmpty) 'factors': factors,
+      },
       metrics: [
         SessionMetricPayload(
           metricType: 'sleep_duration',
