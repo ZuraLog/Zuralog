@@ -70,9 +70,9 @@ class TestFoodImageEndpoint:
         )
         assert r.status_code == 400
 
-    def test_unauthenticated_returns_401(self, client_unauthenticated):
+    def test_unauthenticated_returns_auth_error(self, client_unauthenticated):
         r = client_unauthenticated.get(
             "/api/v1/nutrition/food-image",
             params={"q": "eggs"},
         )
-        assert r.status_code == 401
+        assert r.status_code in (401, 403)

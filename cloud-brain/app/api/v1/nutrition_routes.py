@@ -348,8 +348,9 @@ async def get_food_image(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="q too long (max 200 chars)",
         )
+    shared_cache = getattr(request.app.state, "cache_service", None) or CacheService()
     service = FoodImageService(
-        cache=CacheService(),
+        cache=shared_cache,
         api_key=settings.pexels_api_key.get_secret_value(),
     )
     return await service.fetch(query)
