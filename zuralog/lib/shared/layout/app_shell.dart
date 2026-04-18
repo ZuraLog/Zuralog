@@ -404,20 +404,21 @@ class _LogPillButtonState extends State<_LogPillButton>
           onTap: widget.onTap,
           customBorder: const CircleBorder(),
           child: SizedBox(
-            width: 64,
-            height: 64,
+            width: 56,
+            height: 56,
             child: Stack(
               fit: StackFit.expand,
               children: [
                 const ZPatternOverlay(
                   variant: ZPatternVariant.sage,
-                  opacity: 0.38,
+                  opacity: 0.45,
+                  blendMode: BlendMode.multiply,
                   animate: true,
                 ),
                 Center(
                   child: RotationTransition(
                     turns: _turns,
-                    child: Icon(Icons.add_rounded, size: 24, color: iconColor),
+                    child: Icon(Icons.add_rounded, size: 22, color: iconColor),
                   ),
                 ),
               ],
