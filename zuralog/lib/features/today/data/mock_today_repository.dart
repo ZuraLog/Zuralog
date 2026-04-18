@@ -124,6 +124,7 @@ final class MockTodayRepository implements TodayRepositoryInterface {
     required String sessionType,
     required String source,
     required DateTime recordedAt,
+    DateTime? endedAt,
     required List<SessionMetricPayload> metrics,
     Map<String, dynamic>? metadata,
   }) async {

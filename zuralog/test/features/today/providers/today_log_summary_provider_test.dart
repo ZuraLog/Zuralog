@@ -35,7 +35,7 @@ class _StubRepo implements TodayRepositoryInterface {
   @override Future<IngestResult> submitIngest({required String metricType, required double value, required String unit, required String source, required DateTime recordedAt, String? idempotencyKey, Map<String, dynamic>? metadata}) async => IngestResult(eventId: '', dailyTotal: 0, unit: unit, date: '');
   @override Future<TodayTimeline> getTodayTimeline({int limit = 50, String? before}) async => const TodayTimeline(events: []);
   @override Future<void> deleteEvent(String eventId) async {}
-  @override Future<SessionIngestResult> submitSession({required String sessionType, required String source, required DateTime recordedAt, required List<SessionMetricPayload> metrics, Map<String, dynamic>? metadata}) async => SessionIngestResult(sessionId: '', eventIds: [], date: '');
+  @override Future<SessionIngestResult> submitSession({required String sessionType, required String source, required DateTime recordedAt, DateTime? endedAt, required List<SessionMetricPayload> metrics, Map<String, dynamic>? metadata}) async => SessionIngestResult(sessionId: '', eventIds: [], date: '');
   @override Future<BulkIngestResult> bulkIngest({required String source, required List<BulkEventPayload> events}) async => BulkIngestResult(eventCount: 0, status: 'ok', taskId: '');
 }
 
@@ -159,6 +159,6 @@ class _MockRepoWithLatestValues implements TodayRepositoryInterface {
   @override Future<IngestResult> submitIngest({required String metricType, required double value, required String unit, required String source, required DateTime recordedAt, String? idempotencyKey, Map<String, dynamic>? metadata}) => _delegate.submitIngest(metricType: metricType, value: value, unit: unit, source: source, recordedAt: recordedAt, idempotencyKey: idempotencyKey, metadata: metadata);
   @override Future<TodayTimeline> getTodayTimeline({int limit = 50, String? before}) => _delegate.getTodayTimeline(limit: limit, before: before);
   @override Future<void> deleteEvent(String eventId) => _delegate.deleteEvent(eventId);
-  @override Future<SessionIngestResult> submitSession({required String sessionType, required String source, required DateTime recordedAt, required List<SessionMetricPayload> metrics, Map<String, dynamic>? metadata}) => _delegate.submitSession(sessionType: sessionType, source: source, recordedAt: recordedAt, metrics: metrics, metadata: metadata);
+  @override Future<SessionIngestResult> submitSession({required String sessionType, required String source, required DateTime recordedAt, DateTime? endedAt, required List<SessionMetricPayload> metrics, Map<String, dynamic>? metadata}) => _delegate.submitSession(sessionType: sessionType, source: source, recordedAt: recordedAt, endedAt: endedAt, metrics: metrics, metadata: metadata);
   @override Future<BulkIngestResult> bulkIngest({required String source, required List<BulkEventPayload> events}) => _delegate.bulkIngest(source: source, events: events);
 }
