@@ -186,16 +186,7 @@ class _FrostedNavigationBarState extends State<_FrostedNavigationBar>
         colors.primary.withValues(alpha: colors.isDark ? 0.12 : 1.0);
     final activeItemColor =
         colors.isDark ? colors.primary : colors.textOnSage;
-    final bottomSafeArea = MediaQuery.of(context).padding.bottom;
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppDimens.spaceMdPlus,
-        0,
-        AppDimens.spaceMdPlus,
-        bottomSafeArea + 18,
-      ),
-      child: ClipRRect(
+    return ClipRRect(
         borderRadius: BorderRadius.circular(AppDimens.shapePill),
         child: BackdropFilter(
           filter: ImageFilter.blur(
@@ -324,7 +315,6 @@ class _FrostedNavigationBarState extends State<_FrostedNavigationBar>
             ),
           ),
         ),
-      ),
     );
   }
 }
@@ -454,5 +444,79 @@ class LogPillButtonForTest extends StatelessWidget {
         key: const Key('bottom-nav-log-pill'),
         isOpen: isOpen,
         onTap: onTap,
+      );
+}
+
+// ── Bottom Nav Cluster ────────────────────────────────────────────────────────
+
+/// Groups the frosted nav pill and the log pill into a single centered row
+/// at the bottom safe-area offset. Owns the bottom-margin padding so the
+/// nav bar widget no longer has to.
+class _BottomNavCluster extends StatelessWidget {
+  const _BottomNavCluster({
+    required this.currentIndex,
+    required this.onDestinationSelected,
+    required this.isLogSheetOpen,
+    required this.onLogPressed,
+  });
+
+  final int currentIndex;
+  final ValueChanged<int> onDestinationSelected;
+  final bool isLogSheetOpen;
+  final VoidCallback onLogPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomSafeArea = MediaQuery.of(context).padding.bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppDimens.spaceMdPlus,
+        0,
+        AppDimens.spaceMdPlus,
+        bottomSafeArea + 18,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Flexible(
+            child: _FrostedNavigationBar(
+              currentIndex: currentIndex,
+              onDestinationSelected: onDestinationSelected,
+            ),
+          ),
+          const SizedBox(width: 8),
+          _LogPillButton(
+            key: const Key('bottom-nav-log-pill'),
+            isOpen: isLogSheetOpen,
+            onTap: onLogPressed,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Test-only public alias for [_BottomNavCluster].
+@visibleForTesting
+class BottomNavClusterForTest extends StatelessWidget {
+  const BottomNavClusterForTest({
+    super.key,
+    required this.currentIndex,
+    required this.onDestinationSelected,
+    required this.isLogSheetOpen,
+    required this.onLogPressed,
+  });
+
+  final int currentIndex;
+  final ValueChanged<int> onDestinationSelected;
+  final bool isLogSheetOpen;
+  final VoidCallback onLogPressed;
+
+  @override
+  Widget build(BuildContext context) => _BottomNavCluster(
+        currentIndex: currentIndex,
+        onDestinationSelected: onDestinationSelected,
+        isLogSheetOpen: isLogSheetOpen,
+        onLogPressed: onLogPressed,
       );
 }

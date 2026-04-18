@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:zuralog/shared/layout/app_shell.dart' show LogPillButtonForTest;
+import 'package:zuralog/shared/layout/app_shell.dart'
+    show BottomNavClusterForTest, LogPillButtonForTest;
 
 const _logPillKey = Key('bottom-nav-log-pill');
 
@@ -31,6 +33,55 @@ void main() {
 
       final rotationAtClose = _readRotationTurns(tester);
       expect(rotationAtClose, closeTo(0.0, 0.001));
+    });
+  });
+
+  group('_BottomNavCluster', () {
+    testWidgets('renders both pills with the log pill keyed',
+        (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              bottomNavigationBar: BottomNavClusterForTest(
+                currentIndex: 0,
+                onDestinationSelected: (_) {},
+                isLogSheetOpen: false,
+                onLogPressed: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byKey(const Key('bottom-nav-log-pill')), findsOneWidget);
+      // The 3 tab labels from the frosted nav bar are present.
+      expect(find.text('Today'), findsOneWidget);
+      expect(find.text('Data'), findsOneWidget);
+      expect(find.text('Coach'), findsOneWidget);
+    });
+
+    testWidgets('tapping the log pill invokes onLogPressed', (tester) async {
+      var tapCount = 0;
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              bottomNavigationBar: BottomNavClusterForTest(
+                currentIndex: 0,
+                onDestinationSelected: (_) {},
+                isLogSheetOpen: false,
+                onLogPressed: () => tapCount++,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('bottom-nav-log-pill')));
+      await tester.pump();
+
+      expect(tapCount, 1);
     });
   });
 }
