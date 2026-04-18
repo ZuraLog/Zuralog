@@ -217,6 +217,8 @@ async def get_sleep_summary(
     insight = insight_result.scalars().first()
     week_avg: float | None = week_avg_result.scalar()
     source_names: list[str] = [row[0] for row in sources_result.fetchall()]
+    if session and session.source and session.source not in source_names:
+        source_names.append(session.source)
 
     has_data = bool(metrics or session)
     if not has_data:
@@ -311,7 +313,7 @@ async def get_sleep_summary(
         interruptions=session_meta.get("interruptions"),
         notes=session.notes if session else None,
         ai_summary=insight.body if insight else None,
-        ai_generated_at=insight.created_at.isoformat() if insight else None,
+        ai_generated_at=insight.created_at.isoformat() if insight else None,  # type: ignore[attr-defined]
         sources=[_source_to_schema(s) for s in source_names],
     )
 
