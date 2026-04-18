@@ -64,11 +64,22 @@ def upgrade() -> None:
     op.create_index("ix_user_memories_user_id", "user_memories", ["user_id"])
 
     # 3. Rename walking_speed → walking_speed_mps to match the ORM model.
-    op.alter_column(
-        "daily_health_metrics",
-        "walking_speed",
-        new_column_name="walking_speed_mps",
-    )
+    # Conditional: the daily_health_metrics table is dropped in a later
+    # migration (v7w8x9y0z1a2). On DBs that skipped directly to the
+    # post-drop state, the table/column no longer exists and this rename
+    # becomes a no-op.
+    op.execute("""
+        DO $$ BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'daily_health_metrics'
+                  AND column_name = 'walking_speed'
+            ) THEN
+                ALTER TABLE daily_health_metrics
+                    RENAME COLUMN walking_speed TO walking_speed_mps;
+            END IF;
+        END $$;
+    """)
 
 
 def downgrade() -> None:
