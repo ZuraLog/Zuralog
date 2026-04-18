@@ -7,11 +7,13 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/features/nutrition/presentation/log_meal_sheet.dart';
+import 'package:zuralog/features/nutrition/presentation/meal_edit_screen.dart' show MealEditArgs;
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -266,7 +268,12 @@ class NutritionHomeScreen extends ConsumerWidget {
                         AppDimens.spaceMd,
                         AppDimens.spaceSm,
                       ),
-                      child: _MealCard(meal: meals[i]),
+                      child: _SlidableMealCard(
+                        meal: meals[i],
+                        onEdit: () => _handleEditMeal(context, meals[i]),
+                        onDelete: () =>
+                            _handleDeleteMeal(context, ref, meals[i]),
+                      ),
                     ),
                   ),
 
@@ -294,6 +301,32 @@ class NutritionHomeScreen extends ConsumerWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _handleEditMeal(BuildContext context, Meal meal) {
+    context.pushNamed(
+      RouteNames.nutritionMealEdit,
+      extra: MealEditArgs(meal: meal),
+    );
+  }
+
+  void _handleDeleteMeal(BuildContext context, WidgetRef ref, Meal meal) {
+    ref.read(todayMealsProvider.notifier).deleteOptimistic(meal);
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('Deleted ${meal.name}'),
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'UNDO',
+          onPressed: () {
+            ref.read(todayMealsProvider.notifier).undoDelete(meal.id);
+          },
+        ),
       ),
     );
   }
@@ -416,6 +449,56 @@ class _MealCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── _SlidableMealCard ────────────────────────────────────────────────────────
+
+/// Wraps [_MealCard] in a [Slidable] with trailing Edit + Delete actions.
+///
+/// Partial swipe reveals both buttons; full swipe past the dismissible
+/// threshold triggers delete. Both the full-swipe dismiss and the Delete
+/// button tap route through [onDelete]; the Edit button routes through
+/// [onEdit].
+class _SlidableMealCard extends StatelessWidget {
+  const _SlidableMealCard({
+    required this.meal,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final Meal meal;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Slidable(
+      key: ValueKey(meal.id),
+      endActionPane: ActionPane(
+        motion: const BehindMotion(),
+        extentRatio: 0.5,
+        dismissible: DismissiblePane(onDismissed: onDelete),
+        children: [
+          SlidableAction(
+            onPressed: (_) => onEdit(),
+            backgroundColor: colors.surfaceRaised,
+            foregroundColor: colors.textPrimary,
+            icon: Icons.edit_rounded,
+            label: 'Edit',
+          ),
+          SlidableAction(
+            onPressed: (_) => onDelete(),
+            backgroundColor: AppColors.error,
+            foregroundColor: Colors.white,
+            icon: Icons.delete_outline_rounded,
+            label: 'Delete',
+          ),
+        ],
+      ),
+      child: _MealCard(meal: meal),
     );
   }
 }
