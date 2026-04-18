@@ -13,6 +13,7 @@ import 'package:intl/intl.dart';
 
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/features/nutrition/presentation/log_meal_sheet.dart';
+import 'package:zuralog/features/nutrition/presentation/meal_edit_screen.dart' show MealEditArgs;
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -307,7 +308,7 @@ class NutritionHomeScreen extends ConsumerWidget {
   void _handleEditMeal(BuildContext context, Meal meal) {
     context.pushNamed(
       RouteNames.nutritionMealEdit,
-      pathParameters: {'id': meal.id},
+      extra: MealEditArgs(meal: meal),
     );
   }
 
@@ -479,10 +480,7 @@ class _SlidableMealCard extends StatelessWidget {
       endActionPane: ActionPane(
         motion: const BehindMotion(),
         extentRatio: 0.5,
-        dismissible: DismissiblePane(
-          onDismissed: onDelete,
-          dismissThreshold: 0.5,
-        ),
+        dismissible: DismissiblePane(onDismissed: onDelete),
         children: [
           SlidableAction(
             onPressed: (_) => onEdit(),

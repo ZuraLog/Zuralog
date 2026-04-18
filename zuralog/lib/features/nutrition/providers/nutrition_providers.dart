@@ -93,7 +93,8 @@ class TodayMealsNotifier extends AsyncNotifier<List<Meal>> {
 
     final repo = ref.read(nutritionRepositoryProvider);
     final timer = Timer(const Duration(seconds: 4), () async {
-      _pending.remove(meal.id);
+      final stillPending = _pending.remove(meal.id);
+      if (stillPending == null) return; // Already handled by dispose or undo.
       try {
         await repo.deleteMeal(meal.id);
       } catch (e, st) {
