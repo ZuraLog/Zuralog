@@ -11,6 +11,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -38,8 +39,11 @@ class JournalDiaryScreen extends ConsumerStatefulWidget {
 
 class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
   final _contentCtrl = TextEditingController();
+  final _contentFocus = FocusNode();
   final _selectedTags = <String>{};
   bool _saving = false;
+  // ignore: unused_field — reserved for Task 6 SavingMorph wiring.
+  bool _savedOnce = false; // ignore: prefer_final_fields
 
   static const _presetTags = [
     'Rest day',
@@ -60,11 +64,15 @@ class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
       _contentCtrl.text = widget.existingEntry!.content;
       _selectedTags.addAll(widget.existingEntry!.tags);
     }
+    _contentFocus.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _contentCtrl.dispose();
+    _contentFocus.dispose();
     super.dispose();
   }
 
@@ -126,20 +134,51 @@ class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
             // to bottom; a visible outline here would be visual noise. Phase 6 Plan 6
             // reviewed and kept this exception.
             Expanded(
-              child: TextField(
-                controller: _contentCtrl,
-                autofocus: true,
-                maxLines: null,
-                expands: true,
-                textAlignVertical: TextAlignVertical.top,
-                style: AppTextStyles.bodyLarge
-                    .copyWith(color: colors.textPrimary),
-                decoration: InputDecoration(
-                  hintText: "What's on your mind?",
-                  hintStyle: AppTextStyles.bodyLarge
-                      .copyWith(color: colors.textTertiary),
-                  border: InputBorder.none,
-                ),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 250),
+                        opacity: _contentFocus.hasFocus ? 0.06 : 0.0,
+                        child: const ZPatternOverlay(
+                          variant: ZPatternVariant.amber,
+                          opacity: 1.0,
+                          animate: true,
+                        ),
+                      ),
+                    ),
+                  ),
+                  TextField(
+                    controller: _contentCtrl,
+                    focusNode: _contentFocus,
+                    autofocus: true,
+                    maxLines: null,
+                    expands: true,
+                    textAlignVertical: TextAlignVertical.top,
+                    style: GoogleFonts.lora(
+                      textStyle: AppTextStyles.bodyLarge.copyWith(
+                        color: colors.textPrimary,
+                        height: 1.55,
+                      ),
+                    ),
+                    decoration: InputDecoration(
+                      hintText: "What's on your mind?",
+                      hintStyle: GoogleFonts.lora(
+                        textStyle: AppTextStyles.bodyLarge.copyWith(
+                          color: colors.textTertiary,
+                          height: 1.55,
+                        ),
+                      ),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                  Positioned(
+                    right: 16,
+                    bottom: 16,
+                    child: _WordCountPill(controller: _contentCtrl),
+                  ),
+                ],
               ),
             ),
 
@@ -185,6 +224,53 @@ class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── _WordCountPill ──────────────────────────────────────────────────────────
+
+class _WordCountPill extends StatefulWidget {
+  const _WordCountPill({required this.controller});
+  final TextEditingController controller;
+
+  @override
+  State<_WordCountPill> createState() => _WordCountPillState();
+}
+
+class _WordCountPillState extends State<_WordCountPill> {
+  int _count = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onChange);
+    _count = _compute(widget.controller.text);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onChange);
+    super.dispose();
+  }
+
+  void _onChange() {
+    final next = _compute(widget.controller.text);
+    if (next != _count) setState(() => _count = next);
+  }
+
+  static int _compute(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return 0;
+    return trimmed.split(RegExp(r'\s+')).length;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Text(
+      '$_count words',
+      style: AppTextStyles.labelSmall.copyWith(color: colors.textTertiary),
     );
   }
 }
