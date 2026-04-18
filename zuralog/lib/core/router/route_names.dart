@@ -8,26 +8,28 @@
 /// - `*Name` — the named route identifier (used with `GoRouter.go`).
 /// - `*Path` — the URL path string (registered in the router config).
 ///
-/// **Route tree (5-tab shell):**
+/// **Route tree (3-tab shell):**
 /// ```
 /// /today                          → TodayFeedScreen (tab 0)
 ///   /today/insight/:id            → InsightDetailScreen
 ///   /today/notifications          → NotificationHistoryScreen
 ///   /today/log/metric-picker      → MetricPickerScreen
- /// /data                           → HealthDashboardScreen (tab 1)
- ///   /data/category/:id            → CategoryDetailScreen
- ///   /data/metric/:id              → MetricDetailScreen
- ///   /data/score-breakdown         → ScoreBreakdownScreen
+/// /data                           → HealthDashboardScreen (tab 1)
+///   /data/category/:id            → CategoryDetailScreen
+///   /data/metric/:id              → MetricDetailScreen
+///   /data/score-breakdown         → ScoreBreakdownScreen
 /// /coach                          → NewChatScreen (tab 2)
-///   /coach/thread/:id             → ChatThreadScreen
-/// /progress                       → ProgressHomeScreen (tab 3)
+/// /progress                       → ProgressHomeScreen (pushed over shell)
 ///   /progress/goals               → GoalsScreen
 ///   /progress/goals/:id           → GoalDetailScreen
 ///   /progress/achievements        → AchievementsScreen
 ///   /progress/report              → WeeklyReportScreen
 ///   /progress/journal             → JournalScreen
 ///   /progress/journal/diary       → JournalDiaryScreen
-/// /trends                         → TrendsHomeScreen (tab 4)
+/// /trends                         → TrendsHomeScreen (pushed over shell)
+/// /nutrition                        → NutritionHomeScreen (pushed over shell)
+///   /nutrition/meal/:id             → MealDetailScreen
+///   /nutrition/meal-edit            → MealEditScreen
 /// /settings                       → SettingsHubScreen (pushed over shell)
 ///   /settings/account             → AccountSettingsScreen
 ///   /settings/account/edit-profile → EditProfileScreen
@@ -191,7 +193,7 @@ abstract final class RouteNames {
   /// Path for the New Chat screen.
   static const String coachPath = '/coach';
 
-  // ── Tab 3: Progress ───────────────────────────────────────────────────────
+  // ── Progress (pushed over shell) ───────────────────────────────────────────
 
   /// Name for the Progress Home tab root.
   static const String progress = 'progress';
@@ -235,13 +237,51 @@ abstract final class RouteNames {
   /// Path for the Journal Diary screen.
   static const String journalDiaryPath = '/progress/journal/diary';
 
-  // ── Tab 4: Trends ─────────────────────────────────────────────────────────
+  // ── Trends (pushed over shell) ─────────────────────────────────────────────
 
   /// Name for the Trends Home tab root.
   static const String trends = 'trends';
 
   /// Path for the Trends Home screen.
   static const String trendsPath = '/trends';
+
+  // ── Nutrition (pushed over shell) ────────────────────────────────────────
+
+  /// Name for the Nutrition Home screen.
+  static const String nutrition = 'nutrition';
+
+  /// Path for the Nutrition Home screen.
+  static const String nutritionPath = '/nutrition';
+
+  /// Name for the Meal Detail screen.
+  static const String nutritionMealDetail = 'nutritionMealDetail';
+
+  /// Path for the Meal Detail screen. Parameter: `:id`
+  static const String nutritionMealDetailPath = '/nutrition/meal/:id';
+
+  /// Name for the Nutrition Rules screen.
+  static const String nutritionRules = 'nutritionRules';
+
+  /// Path for the Nutrition Rules screen.
+  static const String nutritionRulesPath = '/nutrition/rules';
+
+  /// Name for the Meal Edit screen.
+  static const String nutritionMealEdit = 'nutritionMealEdit';
+
+  /// Path for the Meal Edit screen.
+  static const String nutritionMealEditPath = '/nutrition/meal-edit';
+
+  /// Name for the Meal Review screen.
+  static const String nutritionMealReview = 'nutritionMealReview';
+
+  /// Path for the Meal Review screen.
+  static const String nutritionMealReviewPath = '/nutrition/meal-review';
+
+  /// Name for the Meal Walkthrough screen.
+  static const String nutritionMealWalkthrough = 'nutritionMealWalkthrough';
+
+  /// Path for the Meal Walkthrough screen.
+  static const String nutritionMealWalkthroughPath = '/nutrition/meal-walkthrough';
 
   // ── Settings (pushed over shell) ─────────────────────────────────────────
 

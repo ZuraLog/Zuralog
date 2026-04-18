@@ -122,6 +122,9 @@ class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
         child: Column(
           children: [
             // ── Text field ─────────────────────────────────────────────────
+            // Chromeless writing surface — the diary field fills the entire screen top
+            // to bottom; a visible outline here would be visual noise. Phase 6 Plan 6
+            // reviewed and kept this exception.
             Expanded(
               child: TextField(
                 controller: _contentCtrl,

@@ -207,6 +207,10 @@ abstract final class AppTheme {
           textStyle: AppTextStyles.labelLarge,
         ),
       ),
+      // Every border state is set explicitly so no Material input anywhere in
+      // the app renders without a visible outline. Do not introduce
+      // BorderSide.none here — that was the dark-mode regression fixed by
+      // Phase 6 Plan 6.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: isLight
@@ -216,34 +220,43 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.circular(AppDimens.radiusInput),
           borderSide: BorderSide(
             color: isLight ? AppColors.borderLight : AppColors.borderDark,
+            width: 1,
           ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusInput),
-          borderSide: isLight
-              ? BorderSide(color: AppColors.borderLight)
-              : BorderSide.none,
+          borderSide: BorderSide(
+            color: isLight ? AppColors.borderLight : AppColors.borderDark,
+            width: 1,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusInput),
           borderSide: BorderSide(
-            color: isLight
-                ? AppColors.primaryOnLight
-                : AppColors.primary.withValues(alpha: 0.3),
-            width: 2,
+            color: isLight ? AppColors.primaryOnLight : AppColors.primary,
+            width: 1.5,
           ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusInput),
           borderSide: BorderSide(
             color: AppColors.error.withValues(alpha: 0.5),
+            width: 1,
           ),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusInput),
           borderSide: BorderSide(
             color: AppColors.error,
-            width: 2,
+            width: 1.5,
+          ),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDimens.radiusInput),
+          borderSide: BorderSide(
+            color: (isLight ? AppColors.borderLight : AppColors.borderDark)
+                .withValues(alpha: 0.5),
+            width: 1,
           ),
         ),
         contentPadding: const EdgeInsets.symmetric(

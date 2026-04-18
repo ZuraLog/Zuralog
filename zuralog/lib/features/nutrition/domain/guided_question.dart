@@ -1,0 +1,483 @@
+/// ZuraLog — Guided Meal Walkthrough Domain Model.
+///
+/// Defines the shapes used by the Question Walkthrough screen. The backend
+/// returns a list of [GuidedQuestion] items alongside the parsed foods.
+/// Each question specifies which visual component it wants, plus defaults
+/// and validation bounds.
+library;
+
+import 'package:zuralog/features/nutrition/data/mock_nutrition_repository.dart';
+import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
+
+// ── OnAnswerFood ────────────────────────────────────────────────────────────
+
+/// A lightweight food payload embedded in an [OnAnswerOp].
+///
+/// Mirrors the shape of [ParsedFoodItem] but only carries the fields needed
+/// for an `add_food` or `replace_food` operation. The backend emits one of
+/// these inside every `on_answer` recipe so the client can mint a new
+/// [ParsedFoodItem] locally without a network round trip.
+class OnAnswerFood {
+  /// Creates an immutable [OnAnswerFood].
+  const OnAnswerFood({
+    required this.foodName,
+    required this.portionAmount,
+    required this.portionUnit,
+    required this.calories,
+    required this.proteinG,
+    required this.carbsG,
+    required this.fatG,
+  });
+
+  /// Human-readable food name.
+  final String foodName;
+
+  /// Portion size in the given [portionUnit].
+  final double portionAmount;
+
+  /// Unit of measurement for the portion (e.g. `'g'`, `'tsp'`, `'tbsp'`).
+  final String portionUnit;
+
+  /// Energy content in kilocalories.
+  final double calories;
+
+  /// Protein content in grams.
+  final double proteinG;
+
+  /// Carbohydrate content in grams.
+  final double carbsG;
+
+  /// Fat content in grams.
+  final double fatG;
+
+  /// Deserialises an [OnAnswerFood] defensively from a backend JSON map.
+  ///
+  /// Every field tolerates null / missing values so a malformed LLM payload
+  /// never throws — the surrounding parser falls through to [NoOpOp.instance]
+  /// when this factory returns default values it cannot use.
+  factory OnAnswerFood.fromJson(Map<String, dynamic> json) {
+    return OnAnswerFood(
+      foodName: json['food_name'] as String? ?? '',
+      portionAmount: (json['portion_amount'] as num?)?.toDouble() ?? 0.0,
+      portionUnit: json['portion_unit'] as String? ?? 'g',
+      calories: (json['calories'] as num?)?.toDouble() ?? 0.0,
+      proteinG: (json['protein_g'] as num?)?.toDouble() ?? 0.0,
+      carbsG: (json['carbs_g'] as num?)?.toDouble() ?? 0.0,
+      fatG: (json['fat_g'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
+  /// Builds a [ParsedFoodItem] from this payload with attribution fields set.
+  ///
+  /// [sourceQuestionId] and [sourceAnswerValue] are persisted on the returned
+  /// [ParsedFoodItem] so the UI can show a "From your answer" badge and open
+  /// a detail sheet tracing the food back to the walkthrough question.
+  ParsedFoodItem toParsedFoodItem({
+    required String sourceQuestionId,
+    required String sourceAnswerValue,
+  }) {
+    return ParsedFoodItem(
+      foodName: foodName,
+      portionAmount: portionAmount,
+      portionUnit: portionUnit,
+      calories: calories,
+      proteinG: proteinG,
+      carbsG: carbsG,
+      fatG: fatG,
+      origin: 'from_answer',
+      sourceQuestionId: sourceQuestionId,
+      sourceAnswerValue: sourceAnswerValue,
+    );
+  }
+
+  /// Serialises this [OnAnswerFood] to a JSON map matching the backend
+  /// schema. Mirrors [OnAnswerFood.fromJson] field-for-field with snake_case
+  /// keys so it round-trips through `POST /meals/refine`.
+  Map<String, dynamic> toJson() => {
+        'food_name': foodName,
+        'portion_amount': portionAmount,
+        'portion_unit': portionUnit,
+        'calories': calories,
+        'protein_g': proteinG,
+        'carbs_g': carbsG,
+        'fat_g': fatG,
+      };
+}
+
+// ── OnAnswerOp ──────────────────────────────────────────────────────────────
+
+/// Sealed hierarchy describing one deterministic operation the client should
+/// apply when the user picks a given answer in the guided walkthrough.
+///
+/// The backend embeds a [Map<String, OnAnswerOp>] in every [GuidedQuestion]
+/// so the walkthrough screen can update its working food list instantly,
+/// without another AI call.
+sealed class OnAnswerOp {
+  const OnAnswerOp();
+
+  /// Parses an [OnAnswerOp] defensively from a backend JSON map.
+  ///
+  /// Unknown, missing, or malformed payloads always fall through to
+  /// [NoOpOp.instance] so the walkthrough never crashes on hostile input.
+  factory OnAnswerOp.fromJson(Map<String, dynamic> json) {
+    try {
+      final op = json['op'];
+      switch (op) {
+        case 'add_food':
+          final food = json['food'];
+          if (food is! Map<String, dynamic>) return NoOpOp.instance;
+          return AddFoodOp(food: OnAnswerFood.fromJson(food));
+        case 'scale_food':
+          final factor = ((json['factor'] as num?) ?? 1.0)
+              .toDouble()
+              .clamp(0.1, 10.0);
+          return ScaleFoodOp(factor: factor);
+        case 'replace_food':
+          final food = json['food'];
+          if (food is! Map<String, dynamic>) return NoOpOp.instance;
+          return ReplaceFoodOp(food: OnAnswerFood.fromJson(food));
+        case 'no_op':
+          return NoOpOp.instance;
+        case 'needs_followup':
+          final reasonRaw = json['reason'];
+          String? reason;
+          if (reasonRaw is String) {
+            final trimmed = reasonRaw.trim();
+            if (trimmed.isNotEmpty) {
+              reason = trimmed.length > 200
+                  ? trimmed.substring(0, 200)
+                  : trimmed;
+            }
+          }
+          return NeedsFollowupOp(reason: reason);
+        default:
+          return NoOpOp.instance;
+      }
+    } catch (_) {
+      // Never throw on malformed JSON — walkthrough must keep going.
+      return NoOpOp.instance;
+    }
+  }
+
+  /// Serialises this [OnAnswerOp] back to a JSON map matching the backend
+  /// schema. Each sealed subclass overrides this to emit its own shape, so
+  /// refine requests can round-trip prior rounds' questions back to the
+  /// server verbatim.
+  Map<String, dynamic> toJson();
+}
+
+/// Append a new [ParsedFoodItem] (built from [food]) to the working list.
+class AddFoodOp extends OnAnswerOp {
+  /// Creates an [AddFoodOp] carrying the food to append.
+  const AddFoodOp({required this.food});
+
+  /// The food payload to mint into a [ParsedFoodItem].
+  final OnAnswerFood food;
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'op': 'add_food',
+        'food': food.toJson(),
+      };
+}
+
+/// Scale the referenced food's portion and macros by [factor].
+///
+/// Factor is pre-clamped by [OnAnswerOp.fromJson] to the range `[0.1, 10.0]`.
+class ScaleFoodOp extends OnAnswerOp {
+  /// Creates a [ScaleFoodOp] with the given multiplier.
+  const ScaleFoodOp({required this.factor});
+
+  /// Multiplier applied to portion / calories / macros.
+  final double factor;
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'op': 'scale_food',
+        'factor': factor,
+      };
+}
+
+/// Replace the referenced food with a new [ParsedFoodItem] (built from [food]).
+class ReplaceFoodOp extends OnAnswerOp {
+  /// Creates a [ReplaceFoodOp] carrying the replacement food.
+  const ReplaceFoodOp({required this.food});
+
+  /// The food payload to mint into a [ParsedFoodItem].
+  final OnAnswerFood food;
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'op': 'replace_food',
+        'food': food.toJson(),
+      };
+}
+
+/// No-op — the answer does not change the food list.
+///
+/// Implemented as a singleton because every `no_op` is interchangeable.
+class NoOpOp extends OnAnswerOp {
+  const NoOpOp._();
+
+  /// Canonical instance — always reuse instead of constructing a new one.
+  static const NoOpOp instance = NoOpOp._();
+
+  @override
+  Map<String, dynamic> toJson() => {'op': 'no_op'};
+}
+
+/// Signals the answer needs a second AI round; emitted for free-text or
+/// ambiguous answers. The walkthrough collects the answer, pauses, calls
+/// refine, and continues with the server's response.
+///
+/// The optional [reason] is advisory — it hints the refine prompt about
+/// what's still unclear (e.g. `"was it oil or butter?"`) and is never
+/// shown to the user.
+class NeedsFollowupOp extends OnAnswerOp {
+  /// Creates a [NeedsFollowupOp] with an optional advisory [reason].
+  const NeedsFollowupOp({this.reason});
+
+  /// Advisory hint for the refine prompt — never surfaced in the UI.
+  final String? reason;
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'op': 'needs_followup',
+        'reason': reason,
+      };
+}
+
+// ── GuidedComponentType ─────────────────────────────────────────────────────
+
+/// Which interactive component a [GuidedQuestion] should render.
+///
+/// Each value carries a backend [wire] identifier used for serialising to and
+/// from JSON, so the UI and backend stay in lock-step as new components are
+/// added.
+enum GuidedComponentType {
+  /// Continuous range picker (min/max/step).
+  slider('slider'),
+
+  /// Single-select chip group.
+  buttonGroup('button_group'),
+
+  /// Integer plus/minus stepper.
+  numberStepper('number_stepper'),
+
+  /// Size chips (XS/S/M/L/XL) delegating to the button group visually.
+  sizePicker('size_picker'),
+
+  /// Binary yes/no picker.
+  yesNo('yes_no'),
+
+  /// Multi-line free-text input.
+  freeText('free_text'),
+
+  /// Fallback for component types the client does not recognise.
+  unknown('unknown');
+
+  const GuidedComponentType(this.wire);
+
+  /// Backend wire identifier for this component type.
+  final String wire;
+
+  /// Parses a component type from the backend wire identifier.
+  ///
+  /// Returns [GuidedComponentType.unknown] for null or unrecognised values so
+  /// the walkthrough can still render a safe fallback.
+  static GuidedComponentType fromWire(String? value) {
+    if (value == null) return GuidedComponentType.unknown;
+    for (final type in GuidedComponentType.values) {
+      if (type.wire == value) return type;
+    }
+    return GuidedComponentType.unknown;
+  }
+}
+
+// ── GuidedQuestion ──────────────────────────────────────────────────────────
+
+/// A single question shown during the guided meal walkthrough.
+///
+/// Defaults and bounds are all optional — the UI renders whatever the backend
+/// provides and falls back to safe defaults otherwise. [skippedByRule] is set
+/// by the backend when a user's rule already answered this question, so the
+/// client can show a small "Applied your rule" badge if desired.
+class GuidedQuestion {
+  /// Creates an immutable [GuidedQuestion].
+  const GuidedQuestion({
+    required this.id,
+    required this.foodIndex,
+    required this.question,
+    required this.componentType,
+    this.options,
+    this.defaultValue,
+    this.skippedByRule,
+    this.min,
+    this.max,
+    this.step,
+    this.unit,
+    this.onAnswer,
+  });
+
+  /// Stable identifier for this question (used as answer map key).
+  final String id;
+
+  /// Index of the food this question refers to in the parsed foods list.
+  final int foodIndex;
+
+  /// The human-readable question text shown to the user.
+  final String question;
+
+  /// Which interactive component to render.
+  final GuidedComponentType componentType;
+
+  /// Choices for [GuidedComponentType.buttonGroup] and
+  /// [GuidedComponentType.sizePicker] questions.
+  final List<String>? options;
+
+  /// The initial / skip value for this question.
+  final Object? defaultValue;
+
+  /// If non-null, this question was skipped by the backend because a user rule
+  /// already answered it. The client may display a small "Applied your rule"
+  /// label using this text.
+  final String? skippedByRule;
+
+  /// Minimum numeric value for slider / stepper questions.
+  final double? min;
+
+  /// Maximum numeric value for slider / stepper questions.
+  final double? max;
+
+  /// Step size for slider / stepper questions.
+  final double? step;
+
+  /// Optional unit label (e.g. `'g'`, `'tbsp'`).
+  final String? unit;
+
+  /// Per-answer adjustment recipe.
+  ///
+  /// Keys are answer values as strings (`"yes"`, `"no"`, a button label, a
+  /// numeric slider value rendered as a string, etc.). Values are the ops the
+  /// client should apply when the user picks that answer. `null` means the
+  /// backend did not emit a recipe for this question — the client should
+  /// fall back to its legacy heuristics.
+  final Map<String, OnAnswerOp>? onAnswer;
+
+  /// Deserialises a [GuidedQuestion] defensively from a backend JSON map.
+  ///
+  /// Every field except [id] and [question] tolerates null or missing values.
+  factory GuidedQuestion.fromJson(Map<String, dynamic> json) {
+    final rawOptions = json['options'];
+    final List<String>? parsedOptions = rawOptions is List
+        ? rawOptions
+            .whereType<Object>()
+            .map((e) => e.toString())
+            .toList(growable: false)
+        : null;
+
+    final rawOnAnswer = json['on_answer'];
+    Map<String, OnAnswerOp>? parsedOnAnswer;
+    if (rawOnAnswer is Map) {
+      final built = <String, OnAnswerOp>{};
+      rawOnAnswer.forEach((key, value) {
+        if (value is Map<String, dynamic>) {
+          built[key.toString()] = OnAnswerOp.fromJson(value);
+        } else if (value is Map) {
+          // Defensive cast for `Map<dynamic, dynamic>` coming from jsonDecode.
+          built[key.toString()] =
+              OnAnswerOp.fromJson(Map<String, dynamic>.from(value));
+        }
+        // Skip entries whose value is not a map.
+      });
+      parsedOnAnswer = built.isEmpty ? null : built;
+    }
+
+    return GuidedQuestion(
+      id: json['id'] as String? ?? '',
+      foodIndex: (json['food_index'] as num?)?.toInt() ?? 0,
+      question: json['question'] as String? ?? '',
+      componentType: GuidedComponentType.fromWire(
+        json['component_type'] as String?,
+      ),
+      options: parsedOptions,
+      defaultValue: json['default_value'],
+      skippedByRule: json['skipped_by_rule'] as String?,
+      min: (json['min'] as num?)?.toDouble(),
+      max: (json['max'] as num?)?.toDouble(),
+      step: (json['step'] as num?)?.toDouble(),
+      unit: json['unit'] as String?,
+      onAnswer: parsedOnAnswer,
+    );
+  }
+
+  /// Serialises this [GuidedQuestion] to a JSON map matching the backend
+  /// schema. Mirrors [GuidedQuestion.fromJson] field-for-field so refine
+  /// requests can round-trip prior rounds' questions back to the server.
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic>? onAnswerJson =
+        onAnswer?.map((key, value) => MapEntry(key, value.toJson()));
+    return {
+      'id': id,
+      'food_index': foodIndex,
+      'question': question,
+      'component_type': componentType.wire,
+      'options': options,
+      'default_value': defaultValue,
+      'skipped_by_rule': skippedByRule,
+      'min': min,
+      'max': max,
+      'step': step,
+      'unit': unit,
+      'on_answer': onAnswerJson,
+    };
+  }
+}
+
+// ── MealWalkthroughArgs ─────────────────────────────────────────────────────
+
+/// Arguments passed to the Meal Walkthrough screen via route navigation.
+///
+/// The screen walks through [questions] one at a time, accumulates answers,
+/// and returns them to the caller via `context.pop(...)`.
+///
+/// Plan 3 extends this with optional refine-round support:
+///
+///  - [repository] is used to call `POST /meals/refine` when an answer is
+///    either free-text or flagged `needs_followup` by the backend. When
+///    `null`, the `needs_followup` path degrades gracefully to a no-op.
+///  - [description] is the user's original text — required by the refine
+///    prompt to anchor the second LLM pass.
+///  - [initialRound] defaults to `1`. Existing Plan 2 callers continue to
+///    work unchanged because all three new fields are optional.
+class MealWalkthroughArgs {
+  /// Creates an immutable [MealWalkthroughArgs].
+  const MealWalkthroughArgs({
+    required this.questions,
+    required this.foods,
+    this.initialAnswers = const {},
+    this.repository,
+    this.description,
+    this.initialRound = 1,
+  });
+
+  /// The ordered list of questions to ask.
+  final List<GuidedQuestion> questions;
+
+  /// The parsed foods each question refers to by index.
+  final List<ParsedFoodItem> foods;
+
+  /// Optional pre-filled answers keyed by question id.
+  final Map<String, dynamic> initialAnswers;
+
+  /// Repository used for refine-round AI calls. When `null`, the walkthrough
+  /// treats every `needs_followup` op as a no-op and advances normally.
+  final NutritionRepositoryInterface? repository;
+
+  /// The user's original meal description — echoed back into the refine
+  /// prompt so the second LLM pass sees the same anchor as the first.
+  final String? description;
+
+  /// Which refine round this walkthrough starts at. Defaults to `1`.
+  final int initialRound;
+}

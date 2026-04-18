@@ -366,7 +366,12 @@ class _TagEditor extends StatelessWidget {
                     border: OutlineInputBorder(
                       borderRadius:
                           BorderRadius.circular(AppDimens.radiusInput),
-                      borderSide: BorderSide.none,
+                      borderSide: BorderSide(color: colors.border, width: 1),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppDimens.radiusInput),
+                      borderSide: BorderSide(color: colors.border, width: 1),
                     ),
                   ),
                   onSubmitted: (_) => onAdd(),
@@ -597,7 +602,11 @@ class _ContactField extends StatelessWidget {
         fillColor: colors.inputBackground,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusInput),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: colors.border, width: 1),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDimens.radiusInput),
+          borderSide: BorderSide(color: colors.border, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusInput),

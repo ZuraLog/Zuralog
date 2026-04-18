@@ -73,6 +73,7 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen> {
       addBottomNavPadding: true,
       appBar: ZuralogAppBar(
         title: 'Progress',
+        showProfileAvatar: false,
         tooltipConfig: const ZuralogAppBarTooltipConfig(
           screenKey: 'progress_home',
           tooltipKey: 'welcome',

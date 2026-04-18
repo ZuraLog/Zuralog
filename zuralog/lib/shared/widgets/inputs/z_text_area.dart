@@ -24,6 +24,7 @@ class ZTextArea extends StatelessWidget {
     this.minLines = 4,
     this.maxLength,
     this.enabled = true,
+    this.autofocus = false,
   });
 
   /// Controller for reading and manipulating the text content.
@@ -50,10 +51,20 @@ class ZTextArea extends StatelessWidget {
   /// Whether the text area accepts input.
   final bool enabled;
 
+  /// Whether the text area should request focus when first built.
+  final bool autofocus;
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final sageFocusBorder = colors.primary.withValues(alpha: 0.3);
+
+    // Visible outline when empty — matches ZLabeledTextField.
+    // Do not set BorderSide.none here.
+    final unfocusedBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+      borderSide: BorderSide(color: colors.border, width: 1),
+    );
 
     final field = IgnorePointer(
       ignoring: !enabled,
@@ -62,6 +73,7 @@ class ZTextArea extends StatelessWidget {
       child: TextFormField(
         controller: controller,
         enabled: enabled,
+        autofocus: autofocus,
         maxLines: maxLines,
         minLines: minLines,
         maxLength: maxLength,
@@ -77,14 +89,8 @@ class ZTextArea extends StatelessWidget {
           filled: true,
           fillColor: colors.surface,
           contentPadding: const EdgeInsets.all(AppDimens.spaceMd),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppDimens.shapeSm),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppDimens.shapeSm),
-            borderSide: BorderSide.none,
-          ),
+          border: unfocusedBorder,
+          enabledBorder: unfocusedBorder,
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppDimens.shapeSm),
             borderSide: BorderSide(color: sageFocusBorder, width: 1.5),

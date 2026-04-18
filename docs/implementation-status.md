@@ -1,3 +1,60 @@
+## 2026-04-17 — Nutrition Phase 6: Walkthrough Answer Pipe, Refine Rounds, and Rule Suggestions
+
+**Branch:** `feat/navigation-restructure` (31 commits, not yet pushed)
+
+Four-plan push that fixes the silent-answer bug in the meal walkthrough, rebuilds the walkthrough answer pipe end-to-end with attribution, adds multi-round follow-up questions, and introduces a rule-suggestion system mined from the user's own answer history. Analyzer is clean; 23 tests pass.
+
+**Plan 1 — UX cleanup pass:**
+
+- **Walkthrough navigation moved into the question stack** (`meal_walkthrough_screen.dart`): Back, Skip, and Next buttons were previously pinned to the bottom of the screen, far from the question. They now sit in the same centered stack as the question card, which keeps them inside the natural thumb zone.
+
+- **New shared widget `ZLabeledNumberField`** (`zuralog/lib/shared/widgets/`): A reusable numeric input with a persistent label (always visible, not a placeholder), unfocused outline, optional unit suffix, decimal-vs-integer modes, a semantic screen-reader label, and a guard against multiple decimal points. Added to the widgets barrel export.
+
+- **Meal Edit + Meal Review inline edits adopt `ZLabeledNumberField`** for Calories, Protein, Carbs, and Fat. Previously the macro inputs were bare numbers with no label — now each one shows its name and unit (`kcal`, `g`) without the user having to guess.
+
+**Plan 2 — Answer-flow fix with attribution badges:**
+
+- **Root cause fixed** (`meal_review_screen.dart`): Yes/no walkthrough answers were being silently discarded because the handler had a hardcoded `break` inside its loop. The pipe was rebuilt end-to-end instead of patching the symptom.
+
+- **Backend contract extended** (`cloud-brain/app/services/nutrition/schemas.py`, `parse.py`, `vision.py`): `GuidedQuestion` now carries an `on_answer` field — a discriminated union with four op types (`add_food`, `scale_food`, `replace_food`, `no_op`). `ParsedFoodItem` gained `origin`, `source_question_id`, and `source_answer_value` so every food can be traced back to where it came from. Parse and vision system prompts now emit the `on_answer` contract, and the old "do not add foods" rule (which was suppressing inferred ingredients like cooking oil) was removed.
+
+- **Flutter executes the ops** (`meal_review_screen.dart`): `_applyWalkthroughAnswers` was rewritten to run through a Dart 3 sealed pattern switch over op types. A new `ZAnswerOriginBadge` (violet pill) renders next to any food that was added or changed by an answer. The food-detail bottom sheet now shows the source question, the answer given, and that food's contribution — with a Remove button (deletes the food AND flips yes→no on the source question) and a Change button.
+
+**Plan 3 — Follow-up questions (multi-round walkthroughs):**
+
+- **New op: `needs_followup`** plus free-text answers always route through refine. The walkthrough can now ask a second round of questions based on what the user said in the first round.
+
+- **New endpoint `POST /api/v1/nutrition/meals/refine`** (`cloud-brain/app/api/v1/nutrition.py`, `refine.py`): Accepts the current food list and the latest round of answers, runs a dedicated system prompt that preserves attribution from earlier rounds, and returns the refined food list and (optionally) a new round of questions. Hard cap of 3 refine rounds enforced on both the server and the client. Same rate limiting and retry wrapper as the parse endpoint.
+
+- **Flutter supports multiple rounds inside one `PageView`** (`meal_walkthrough_screen.dart`): New questions are appended as they arrive from the server. A new `ZRefineTransitionCard` renders between rounds with "Asking one more thing…" copy so the user sees that a round-trip is happening. Refine failures surface a toast and the flow advances gracefully — it never crashes. Meal Review adopts the refined food list wholesale whenever refine ran; otherwise it falls back to the Plan 2 local op application.
+
+**Plan 4 — Rule suggestions:**
+
+- **Database migration** (`supabase/migrations/`): Adds `origin`, `source_question_id`, and `source_answer_value` columns to `meal_foods` (all nullable, no backfill required), plus a partial composite index for fast detection queries. A new `rule_suggestion_snooze` table with a unique constraint stores dismissals.
+
+- **Detection service** (`cloud-brain/app/services/nutrition/rule_suggestion.py`): Mines the user's last-60-days tagged `meal_foods` rows for `(source_question_id, source_answer_value)` combos with a count of 3 or more, filters out combos that already have a matching rule or an active snooze, and returns the best candidate. Runs on every parse, refine, and scan response so a suggestion can surface the moment the user hits the threshold.
+
+- **Dismiss endpoint** (`POST /api/v1/nutrition/meals/rule-suggestion/dismiss`): Rate-limited, returns 204, upserts a snooze that suppresses the same suggestion for the next 10 occurrences. `POST /rules` gained optional `suppressed_question_id` and `suppressed_answer_value` fields so that accepting a rule automatically clears the matching snooze. Each meal save decrements active snoozes by 1, so the system gently relaxes if a user says "not now" but the pattern keeps appearing.
+
+- **Flutter surface** (`meal_review_screen.dart`, `zuralog/lib/shared/widgets/`): Parse and refine results now carry a `SuggestedRule` model. A new `ZSuggestedRuleBanner` widget (lightbulb icon, "Suggested rule" eyebrow, rule text, Save rule + Not now buttons) renders directly above the "Here's what I found" list in Meal Review. Save calls `createRule` with the suppression fields set; Not now optimistically hides the banner and fires the dismiss endpoint.
+
+**Known limitations (scoped out intentionally, not regressions):**
+
+- Plan 4 Task 12 — backend integration tests for the detection and snooze logic — is not written. All existing backend tests still pass; the new logic is covered only by ad-hoc smoke tests.
+- Plan 4 Task 15 — manual emulator verification across 6 scenarios — was not run. It requires interactive emulator use, which this autonomous execution pass can't do.
+- Plan 4 Task 14's refine-path `suggestedRule` threading is not wired. If the user triggers a refine mid-flow, the banner won't refresh with an updated suggestion until the next parse.
+- The rule-text template map in `rule_suggestion.py` is intentionally empty for this release. The generic fallback ("I always answer X for this question") ships today. Once the stable question IDs are defined, the map can be populated per-question without a migration.
+
+**Open items for manual verification before merge:**
+
+- Emulator smoke test: log "scrambled eggs with rice" → Guided → yes on oil → verify the cooking oil line appears with a violet badge and totals reflect the added fat.
+- Emulator smoke test: free-text answer triggers the `ZRefineTransitionCard` and returns a refined food list.
+- Emulator smoke test: log eggs 3 times in a row answering yes → on the 4th meal, the suggested-rule banner appears above "Here's what I found".
+
+**Files changed:** Spread across `cloud-brain/app/api/v1/nutrition.py`, `cloud-brain/app/services/nutrition/` (schemas, parse, vision, refine, rule_suggestion), `supabase/migrations/`, `zuralog/lib/features/nutrition/` (meal walkthrough, meal review, meal edit, repositories, models), and `zuralog/lib/shared/widgets/` (`ZLabeledNumberField`, `ZAnswerOriginBadge`, `ZRefineTransitionCard`, `ZSuggestedRuleBanner`).
+
+---
+
 ## 2026-04-04 — Coach Tab Security Hardening (Full Audit)
 
 **Branch:** `fix/security-hardening`

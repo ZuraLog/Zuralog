@@ -121,6 +121,14 @@ class AppTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
+    // EXPLICIT unfocused border — do not delete. The inputDecorationTheme would
+    // otherwise cover this, but having it here locally protects against any
+    // future theme change that forgets the dark-mode branch. Phase 6 Plan 6
+    // locked this in.
+    final unfocusedBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+      borderSide: BorderSide(color: colors.border, width: 1),
+    );
     return TextFormField(
       controller: controller,
       validator: validator,
@@ -142,6 +150,8 @@ class AppTextField extends StatelessWidget {
         labelText: labelText,
         prefixIcon: prefixIcon,
         suffixIcon: suffixIcon,
+        border: unfocusedBorder,
+        enabledBorder: unfocusedBorder,
       ),
     );
   }

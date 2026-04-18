@@ -6,7 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
-import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/inputs/z_search_bar.dart';
 
 /// A search bar that filters integrations by name.
 ///
@@ -42,45 +42,16 @@ class _IntegrationsSearchBarState extends State<IntegrationsSearchBar> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceMd,
         vertical: AppDimens.spaceSm,
       ),
-      child: TextField(
+      child: ZSearchBar(
         controller: _controller,
+        placeholder: 'Search integrations...',
         onChanged: widget.onChanged,
-        style: AppTextStyles.body.copyWith(color: cs.onSurface),
-        decoration: InputDecoration(
-          hintText: 'Search integrations...',
-          hintStyle: AppTextStyles.body.copyWith(
-            color: cs.onSurfaceVariant.withValues(alpha: 0.6),
-          ),
-          prefixIcon: Icon(
-            Icons.search_rounded,
-            color: cs.onSurfaceVariant,
-          ),
-          suffixIcon: ListenableBuilder(
-            listenable: _controller,
-            builder: (context, _) {
-              if (_controller.text.isEmpty) return const SizedBox.shrink();
-              return IconButton(
-                icon: Icon(Icons.clear_rounded, color: cs.onSurfaceVariant),
-                onPressed: _onClear,
-              );
-            },
-          ),
-          filled: true,
-          fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-            borderSide: BorderSide.none,
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: AppDimens.spaceSm,
-          ),
-        ),
+        onClear: _onClear,
       ),
     );
   }

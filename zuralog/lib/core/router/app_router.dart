@@ -4,27 +4,29 @@
 /// [GoRouter] instance ONCE and uses [refreshListenable] to re-trigger the
 /// [redirect] callback whenever auth state or first-launch flag changes.
 ///
-/// **5-tab route tree:**
+/// **3-tab route tree:**
 /// ```
 /// /today                            → TodayFeedScreen (tab 0)
 ///   /today/insight/:id              → InsightDetailScreen
 ///   /today/notifications            → NotificationHistoryScreen
- /// /data                             → HealthDashboardScreen (tab 1)
- ///   /data/category/:id              → CategoryDetailScreen
- ///   /data/metric/:id                → MetricDetailScreen
- ///   /data/score-breakdown           → ScoreBreakdownScreen
+/// /data                             → HealthDashboardScreen (tab 1)
+///   /data/category/:id              → CategoryDetailScreen
+///   /data/metric/:id                → MetricDetailScreen
+///   /data/score-breakdown           → ScoreBreakdownScreen
 /// /coach                            → CoachScreen (tab 2)
-/// /progress                         → ProgressHomeScreen (tab 3)
+/// /progress                         → ProgressHomeScreen (pushed over shell)
 ///   /progress/goals                 → GoalsScreen
 ///   /progress/goals/:id             → GoalDetailScreen
 ///   /progress/achievements          → AchievementsScreen
 ///   /progress/report                → WeeklyReportScreen
 ///   /progress/journal               → JournalScreen
 ///   /progress/journal/diary         → JournalDiaryScreen
-/// /trends                           → TrendsHomeScreen (tab 4)
-/// /settings                         → SettingsHubScreen (pushed over shell — full-screen)
+/// /trends                           → TrendsHomeScreen (pushed over shell)
+/// /nutrition                        → NutritionHomeScreen (pushed over shell)
+///   /nutrition/meal/:id             → MealDetailScreen
+/// /settings                         → SettingsHubScreen (pushed over shell)
 ///   /settings/journal               → JournalSettingsScreen
-///   /settings/account … /settings/about  → sub-screens
+///   /settings/account ... /settings/about  → sub-screens
 /// /profile                          → ProfileScreen (pushed over shell)
 ///   /profile/emergency-card         → EmergencyCardScreen
 ///   /profile/emergency-card/edit    → EmergencyCardEditScreen
@@ -77,7 +79,7 @@ import 'package:zuralog/features/data/presentation/score_breakdown_screen.dart' 
 // ── Tab 2: Coach ──────────────────────────────────────────────────────────────
 import 'package:zuralog/features/coach/presentation/coach_screen.dart';
 
-// ── Tab 3: Progress ───────────────────────────────────────────────────────────
+// ── Progress (pushed over shell) ──────────────────────────────────────────────
 import 'package:zuralog/features/progress/presentation/progress_home_screen.dart';
 import 'package:zuralog/features/progress/presentation/goals_screen.dart';
 import 'package:zuralog/features/progress/presentation/goal_detail_screen.dart';
@@ -86,10 +88,19 @@ import 'package:zuralog/features/progress/presentation/weekly_report_screen.dart
 import 'package:zuralog/features/progress/presentation/journal_screen.dart';
 import 'package:zuralog/features/progress/presentation/journal_diary_screen.dart';
 
-// ── Tab 4: Trends ─────────────────────────────────────────────────────────────
+// ── Trends (pushed over shell) ────────────────────────────────────────────────
 import 'package:zuralog/features/trends/presentation/trends_home_screen.dart';
 
-// ── Tab 5: Settings ───────────────────────────────────────────────────────────
+// ── Nutrition (pushed over shell) ────────────────────────────────────────────
+import 'package:zuralog/features/nutrition/presentation/nutrition_home_screen.dart';
+import 'package:zuralog/features/nutrition/presentation/nutrition_rules_screen.dart';
+import 'package:zuralog/features/nutrition/presentation/meal_detail_screen.dart';
+import 'package:zuralog/features/nutrition/presentation/meal_edit_screen.dart';
+import 'package:zuralog/features/nutrition/domain/guided_question.dart';
+import 'package:zuralog/features/nutrition/presentation/meal_review_screen.dart';
+import 'package:zuralog/features/nutrition/presentation/meal_walkthrough_screen.dart';
+
+// ── Settings (pushed over shell) ──────────────────────────────────────────────
 import 'package:zuralog/features/settings/presentation/settings_hub_screen.dart';
 import 'package:zuralog/features/settings/presentation/account_settings_screen.dart';
 import 'package:zuralog/features/settings/presentation/notification_settings_screen.dart';
@@ -359,7 +370,7 @@ List<RouteBase> _buildRoutes() {
       },
     ),
 
-    // ── Main App Shell — 6-tab StatefulShellRoute ─────────────────────────
+    // ── Main App Shell — 3-tab StatefulShellRoute ─────────────────────────
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>
           AppShell(navigationShell: navigationShell),
@@ -456,90 +467,145 @@ List<RouteBase> _buildRoutes() {
           ],
         ),
 
-        // ── Tab 3: Progress ───────────────────────────────────────────────
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: RouteNames.progressPath,
-              name: RouteNames.progress,
-              builder: (context, state) => const SentryErrorBoundary(
-                module: 'progress',
-                child: ProgressHomeScreen(),
-              ),
-              routes: [
-                GoRoute(
-                  path: 'goals',
-                  name: RouteNames.goals,
-                  builder: (context, state) => const SentryErrorBoundary(
-                    module: 'progress.goals',
-                    child: GoalsScreen(),
-                  ),
-                  routes: [
-                    GoRoute(
-                      path: ':id',
-                      name: RouteNames.goalDetail,
-                      builder: (context, state) => SentryErrorBoundary(
-                        module: 'progress.goal_detail',
-                        child: GoalDetailScreen(
-                          goalId: state.pathParameters['id']!,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                GoRoute(
-                  path: 'achievements',
-                  name: RouteNames.achievements,
-                  builder: (context, state) => const SentryErrorBoundary(
-                    module: 'progress.achievements',
-                    child: AchievementsScreen(),
-                  ),
-                ),
-                GoRoute(
-                  path: 'report',
-                  name: RouteNames.weeklyReport,
-                  builder: (context, state) => const SentryErrorBoundary(
-                    module: 'progress.weekly_report',
-                    child: WeeklyReportScreen(),
-                  ),
-                ),
-                GoRoute(
-                  path: 'journal',
-                  name: RouteNames.journal,
-                  builder: (context, state) => const SentryErrorBoundary(
-                    module: 'progress.journal',
-                    child: JournalScreen(),
-                  ),
-                  routes: [
-                    GoRoute(
-                      path: 'diary',
-                      name: RouteNames.journalDiary,
-                      builder: (context, state) => const SentryErrorBoundary(
-                        module: 'progress.journal_diary',
-                        child: JournalDiaryScreen(),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
+      ],
+    ),
 
-        // ── Tab 4: Trends ─────────────────────────────────────────────────
-        StatefulShellBranch(
+    // ── Progress (pushed over shell) ─────────────────────────────────────
+    GoRoute(
+      path: RouteNames.progressPath,
+      name: RouteNames.progress,
+      builder: (context, state) => const SentryErrorBoundary(
+        module: 'progress',
+        child: ProgressHomeScreen(),
+      ),
+      routes: [
+        GoRoute(
+          path: 'goals',
+          name: RouteNames.goals,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'progress.goals',
+            child: GoalsScreen(),
+          ),
           routes: [
             GoRoute(
-              path: RouteNames.trendsPath,
-              name: RouteNames.trends,
-              builder: (context, state) => const SentryErrorBoundary(
-                module: 'trends',
-                child: TrendsHomeScreen(),
+              path: ':id',
+              name: RouteNames.goalDetail,
+              builder: (context, state) => SentryErrorBoundary(
+                module: 'progress.goal_detail',
+                child: GoalDetailScreen(
+                  goalId: state.pathParameters['id']!,
+                ),
               ),
             ),
           ],
         ),
+        GoRoute(
+          path: 'achievements',
+          name: RouteNames.achievements,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'progress.achievements',
+            child: AchievementsScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'report',
+          name: RouteNames.weeklyReport,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'progress.weekly_report',
+            child: WeeklyReportScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'journal',
+          name: RouteNames.journal,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'progress.journal',
+            child: JournalScreen(),
+          ),
+          routes: [
+            GoRoute(
+              path: 'diary',
+              name: RouteNames.journalDiary,
+              builder: (context, state) => const SentryErrorBoundary(
+                module: 'progress.journal_diary',
+                child: JournalDiaryScreen(),
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
 
+    // ── Trends (pushed over shell) ───────────────────────────────────────
+    GoRoute(
+      path: RouteNames.trendsPath,
+      name: RouteNames.trends,
+      builder: (context, state) => const SentryErrorBoundary(
+        module: 'trends',
+        child: TrendsHomeScreen(),
+      ),
+    ),
+
+    // ── Nutrition (pushed over shell) ────────────────────────────────────
+    GoRoute(
+      path: RouteNames.nutritionPath,
+      name: RouteNames.nutrition,
+      builder: (context, state) => const SentryErrorBoundary(
+        module: 'nutrition',
+        child: NutritionHomeScreen(),
+      ),
+      routes: [
+        GoRoute(
+          path: 'meal/:id',
+          name: RouteNames.nutritionMealDetail,
+          builder: (context, state) => SentryErrorBoundary(
+            module: 'nutrition.meal_detail',
+            child: MealDetailScreen(
+              mealId: state.pathParameters['id']!,
+            ),
+          ),
+        ),
+        GoRoute(
+          path: 'rules',
+          name: RouteNames.nutritionRules,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'nutrition.rules',
+            child: NutritionRulesScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'meal-edit',
+          name: RouteNames.nutritionMealEdit,
+          builder: (context, state) {
+            final args = state.extra as MealEditArgs;
+            return SentryErrorBoundary(
+              module: 'nutrition.meal_edit',
+              child: MealEditScreen(args: args),
+            );
+          },
+        ),
+        GoRoute(
+          path: 'meal-review',
+          name: RouteNames.nutritionMealReview,
+          builder: (context, state) {
+            final args = state.extra as MealReviewArgs;
+            return SentryErrorBoundary(
+              module: 'nutrition.meal_review',
+              child: MealReviewScreen(args: args),
+            );
+          },
+        ),
+        GoRoute(
+          path: 'meal-walkthrough',
+          name: RouteNames.nutritionMealWalkthrough,
+          builder: (context, state) {
+            final args = state.extra as MealWalkthroughArgs;
+            return SentryErrorBoundary(
+              module: 'nutrition.meal_walkthrough',
+              child: MealWalkthroughScreen(args: args),
+            );
+          },
+        ),
       ],
     ),
 

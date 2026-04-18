@@ -800,11 +800,11 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
       ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusInput),
-        borderSide: BorderSide.none,
+        borderSide: BorderSide(color: colors.border, width: 1),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusInput),
-        borderSide: BorderSide.none,
+        borderSide: BorderSide(color: colors.border, width: 1),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusInput),

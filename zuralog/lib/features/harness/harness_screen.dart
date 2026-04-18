@@ -1426,6 +1426,8 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                 color: _Colors.surfaceDark,
                 borderRadius: BorderRadius.circular(10),
               ),
+              // Dev harness log output — read-only, chrome comes from the outer Container's
+              // surface color. Outline intentionally omitted. Phase 6 Plan 6 reviewed and kept.
               child: TextField(
                 controller: _outputController,
                 maxLines: null,

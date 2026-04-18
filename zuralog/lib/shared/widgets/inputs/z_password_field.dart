@@ -56,6 +56,7 @@ class _ZPasswordFieldState extends State<ZPasswordField> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
+    // Inherits outline from AppTextField — see Phase 6 Plan 6.
     final field = AppTextField(
       controller: widget.controller,
       labelText: widget.label,

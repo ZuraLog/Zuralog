@@ -1,0 +1,421 @@
+/// Zuralog — Nutrition Home Screen.
+///
+/// Displays today's nutrition summary, a list of logged meals, and a
+/// call-to-action to log a new meal. Opens when the user taps the
+/// Nutrition pillar card on the Today tab.
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+
+import 'package:zuralog/core/router/route_names.dart';
+import 'package:zuralog/features/nutrition/presentation/log_meal_sheet.dart';
+import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/app_dimens.dart';
+import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
+import 'package:zuralog/features/nutrition/providers/nutrition_providers.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
+
+// ── NutritionHomeScreen ──────────────────────────────────────────────────────
+
+/// Nutrition Home — shows daily summary, meal list, and log CTA.
+class NutritionHomeScreen extends ConsumerWidget {
+  const NutritionHomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
+    final mealsAsync = ref.watch(todayMealsProvider);
+    final summaryAsync = ref.watch(nutritionDaySummaryProvider);
+    const catColor = AppColors.categoryNutrition;
+
+    return ZuralogScaffold(
+      appBar: ZuralogAppBar(
+        title: 'Nutrition',
+        showProfileAvatar: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.rule_outlined),
+            tooltip: 'My rules',
+            onPressed: () => context.pushNamed(RouteNames.nutritionRules),
+          ),
+        ],
+      ),
+      body: mealsAsync.when(
+        loading: () => ListView(
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            // Date header skeleton.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                AppDimens.spaceLg,
+                AppDimens.spaceMd,
+                0,
+              ),
+              child: ZLoadingSkeleton(
+                width: 140,
+                height: 16,
+                borderRadius: AppDimens.shapeSm,
+              ),
+            ),
+
+            // Daily summary card skeleton.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                AppDimens.spaceMd,
+                AppDimens.spaceMd,
+                0,
+              ),
+              child: ZLoadingSkeleton(
+                width: double.infinity,
+                height: 80,
+                borderRadius: AppDimens.shapeLg,
+              ),
+            ),
+
+            // Section header skeleton.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                AppDimens.spaceLg,
+                AppDimens.spaceMd,
+                AppDimens.spaceSm,
+              ),
+              child: ZLoadingSkeleton(
+                width: 120,
+                height: 16,
+                borderRadius: AppDimens.shapeSm,
+              ),
+            ),
+
+            // Meal card skeleton 1.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                0,
+                AppDimens.spaceMd,
+                AppDimens.spaceSm,
+              ),
+              child: ZLoadingSkeleton(
+                width: double.infinity,
+                height: 72,
+                borderRadius: AppDimens.shapeLg,
+              ),
+            ),
+
+            // Meal card skeleton 2.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                0,
+                AppDimens.spaceMd,
+                AppDimens.spaceSm,
+              ),
+              child: ZLoadingSkeleton(
+                width: double.infinity,
+                height: 72,
+                borderRadius: AppDimens.shapeLg,
+              ),
+            ),
+          ],
+        ),
+        error: (_, _) => ZErrorState(
+          message: 'Something went wrong loading your meals.',
+          onRetry: () {
+            ref.invalidate(todayMealsProvider);
+            ref.invalidate(nutritionDaySummaryProvider);
+          },
+        ),
+        data: (meals) {
+          final summary =
+              summaryAsync.valueOrNull ?? NutritionDaySummary.empty;
+
+          Future<void> onRefresh() async {
+            ref.invalidate(todayMealsProvider);
+            ref.invalidate(nutritionDaySummaryProvider);
+            await Future.wait([
+              ref
+                  .read(todayMealsProvider.future)
+                  .catchError((_) => <Meal>[]),
+              ref
+                  .read(nutritionDaySummaryProvider.future)
+                  .catchError((_) => NutritionDaySummary.empty),
+            ]);
+          }
+
+          if (meals.isEmpty) {
+            return ZPullToRefresh(
+              onRefresh: onRefresh,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimens.spaceMd,
+                        ),
+                        child: ZEmptyState(
+                          icon: Icons.restaurant_outlined,
+                          title: 'No meals logged yet',
+                          message:
+                              'Tap below to log your first meal of the day.',
+                          actionLabel: 'Log a meal',
+                          onAction: () => LogMealSheet.show(context),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return ZPullToRefresh(
+            onRefresh: onRefresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                // ── Date header ────────────────────────────────────────
+                ZFadeSlideIn(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppDimens.spaceMd,
+                      AppDimens.spaceLg,
+                      AppDimens.spaceMd,
+                      0,
+                    ),
+                    child: Text(
+                      DateFormat('EEEE, MMM d').format(DateTime.now()),
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ── Daily summary card ─────────────────────────────────
+                ZFadeSlideIn(
+                  delay: const Duration(milliseconds: 60),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppDimens.spaceMd,
+                      AppDimens.spaceMd,
+                      AppDimens.spaceMd,
+                      0,
+                    ),
+                    child: ZuralogCard(
+                      variant: ZCardVariant.feature,
+                      category: catColor,
+                      child: Row(
+                        children: [
+                          _SummaryStat(
+                            value: '${summary.totalCalories}',
+                            label: 'kcal',
+                            color: colors,
+                          ),
+                          _SummaryStat(
+                            value: '${summary.totalProteinG.round()}',
+                            label: 'protein',
+                            color: colors,
+                          ),
+                          _SummaryStat(
+                            value: '${summary.totalCarbsG.round()}',
+                            label: 'carbs',
+                            color: colors,
+                          ),
+                          _SummaryStat(
+                            value: '${summary.totalFatG.round()}',
+                            label: 'fat',
+                            color: colors,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ── Section header ─────────────────────────────────────
+                ZFadeSlideIn(
+                  delay: const Duration(milliseconds: 120),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppDimens.spaceMd,
+                      AppDimens.spaceLg,
+                      AppDimens.spaceMd,
+                      AppDimens.spaceSm,
+                    ),
+                    child: SectionHeader(title: "Today's Meals"),
+                  ),
+                ),
+
+                // ── Meal cards ─────────────────────────────────────────
+                for (int i = 0; i < meals.length; i++)
+                  ZFadeSlideIn(
+                    delay: Duration(milliseconds: 180 + (i * 60)),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppDimens.spaceMd,
+                        0,
+                        AppDimens.spaceMd,
+                        AppDimens.spaceSm,
+                      ),
+                      child: _MealCard(meal: meals[i]),
+                    ),
+                  ),
+
+                // ── Log a meal CTA ─────────────────────────────────────
+                ZFadeSlideIn(
+                  delay: Duration(
+                    milliseconds: 180 + (meals.length * 60) + 60,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimens.spaceMd,
+                      vertical: AppDimens.spaceLg,
+                    ),
+                    child: ZButton(
+                      label: 'Log a meal',
+                      icon: Icons.add_rounded,
+                      onPressed: () => LogMealSheet.show(context),
+                    ),
+                  ),
+                ),
+
+                // ── Bottom clearance ───────────────────────────────────
+                const SizedBox(height: AppDimens.spaceLg),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ── _SummaryStat ─────────────────────────────────────────────────────────────
+
+class _SummaryStat extends StatelessWidget {
+  const _SummaryStat({
+    required this.value,
+    required this.label,
+    required this.color,
+  });
+
+  final String value;
+  final String label;
+  final AppColorsOf color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: AppTextStyles.titleLarge.copyWith(
+              color: color.textPrimary,
+            ),
+          ),
+          const SizedBox(height: AppDimens.spaceXxs),
+          Text(
+            label,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: color.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── _MealCard ────────────────────────────────────────────────────────────────
+
+class _MealCard extends StatelessWidget {
+  const _MealCard({required this.meal});
+
+  final Meal meal;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    const catColor = AppColors.categoryNutrition;
+
+    return ZuralogCard(
+      variant: ZCardVariant.plain,
+      onTap: () => context.pushNamed(
+        RouteNames.nutritionMealDetail,
+        pathParameters: {'id': meal.id},
+      ),
+      child: Row(
+        children: [
+          // Meal type icon
+          Container(
+            width: AppDimens.iconContainerMd,
+            height: AppDimens.iconContainerMd,
+            decoration: BoxDecoration(
+              color: catColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+            ),
+            child: Center(
+              child: Icon(
+                meal.type.icon,
+                size: AppDimens.iconMd,
+                color: catColor,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppDimens.spaceMd),
+
+          // Meal info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  meal.name,
+                  style: AppTextStyles.titleMedium.copyWith(
+                    color: colors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: AppDimens.spaceXxs),
+                Text(
+                  '${meal.type.label}  ·  ${DateFormat('h:mm a').format(meal.loggedAt)}',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Calorie total
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${meal.totalCalories}',
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: catColor,
+                ),
+              ),
+              Text(
+                'kcal',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}

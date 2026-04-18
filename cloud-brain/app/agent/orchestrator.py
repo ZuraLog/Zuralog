@@ -247,6 +247,10 @@ class Orchestrator:
                     {"role": "user", "content": first_user_message[:300]},
                 ],
                 temperature=0.3,
+                # Title model is reasoning-capable; without this override the
+                # tiny output budget can be spent on hidden reasoning, leaving
+                # an empty title.
+                reasoning={"effort": "none"},
             )
             title = (response.choices[0].message.content or "").strip().strip('"').strip("'")
             # Fallback if the model returns something odd.
