@@ -70,6 +70,7 @@ abstract interface class TodayRepositoryInterface {
     required String sessionType,
     required String source,
     required DateTime recordedAt,
+    DateTime? endedAt,
     required List<SessionMetricPayload> metrics,
     Map<String, dynamic>? metadata,
   });
@@ -384,25 +385,28 @@ class TodayRepository implements TodayRepositoryInterface {
     required String sessionType,
     required String source,
     required DateTime recordedAt,
+    DateTime? endedAt,
     required List<SessionMetricPayload> metrics,
     Map<String, dynamic>? metadata,
   }) async {
-    final offset = recordedAt.timeZoneOffset;
-    final sign = offset.isNegative ? '-' : '+';
-    final hh = offset.inHours.abs().toString().padLeft(2, '0');
-    final mm = (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
-    final recordedAtStr =
-        '${recordedAt.toLocal().toIso8601String().split('.').first}$sign$hh:$mm';
-
     final resp = await _api.post('/api/v1/ingest/session', data: {
       'activity_type': sessionType,
       'source': source,
-      'started_at': recordedAtStr,
+      'started_at': _isoWithOffset(recordedAt),
+      if (endedAt != null) 'ended_at': _isoWithOffset(endedAt),
       'metrics': metrics.map((m) => m.toJson()).toList(),
       if (metadata != null) 'metadata': metadata,
     });
     invalidateFeedCache();
     return SessionIngestResult.fromJson(resp.data as Map<String, dynamic>);
+  }
+
+  static String _isoWithOffset(DateTime dt) {
+    final offset = dt.timeZoneOffset;
+    final sign = offset.isNegative ? '-' : '+';
+    final hh = offset.inHours.abs().toString().padLeft(2, '0');
+    final mm = (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
+    return '${dt.toLocal().toIso8601String().split('.').first}$sign$hh:$mm';
   }
 
   // ── Bulk Ingest ───────────────────────────────────────────────────────────
@@ -539,16 +543,19 @@ class TodayRepository implements TodayRepositoryInterface {
       sessionType: 'sleep',
       source: 'manual',
       recordedAt: bedtime,
+      endedAt: wakeTime,
       metrics: [
         SessionMetricPayload(
-            metricType: 'sleep_duration',
-            value: durationMinutes.toDouble(),
-            unit: 'min'),
+          metricType: 'sleep_duration',
+          value: durationMinutes.toDouble(),
+          unit: 'min',
+        ),
         if (qualityRating != null)
           SessionMetricPayload(
-              metricType: 'sleep_quality',
-              value: qualityRating.toDouble(),
-              unit: 'score'),
+            metricType: 'sleep_quality',
+            value: qualityRating.toDouble(),
+            unit: 'score',
+          ),
       ],
     );
   }
