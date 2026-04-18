@@ -67,12 +67,18 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   bool _prefillApplied = false;
   Timer? _draftDebounce;
 
+  // Cached in initState so dispose() can still save the draft after the
+  // Element is unmounted — ref.read() throws "Cannot use ref after the
+  // widget was disposed" at that point.
+  late final CoachDraftService _draftService;
+
   String get _draftKey =>
       _activeConversationId.startsWith('new_') ? '__pending' : _activeConversationId;
 
   @override
   void initState() {
     super.initState();
+    _draftService = _draftService;
     _activeConversationId = 'new_${DateTime.now().millisecondsSinceEpoch}';
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _prefillApplied) return;
@@ -88,7 +94,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     });
     _inputCtrl.addListener(_onInputChanged);
     if (!_prefillApplied) {
-      final saved = ref.read(coachDraftServiceProvider).loadDraft(_draftKey);
+      final saved = _draftService.loadDraft(_draftKey);
       if (saved != null && saved.isNotEmpty) {
         _inputCtrl.text = saved;
         _inputCtrl.selection = TextSelection.collapsed(offset: saved.length);
@@ -100,7 +106,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   void dispose() {
     _inputCtrl.removeListener(_onInputChanged);
     _draftDebounce?.cancel();
-    ref.read(coachDraftServiceProvider).saveDraft(_draftKey, _inputCtrl.text);
+    _draftService.saveDraft(_draftKey, _inputCtrl.text);
     _inputCtrl.dispose();
     _inputFocus.dispose();
     _stagedAttachments.dispose();
@@ -110,18 +116,18 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   void _onInputChanged() {
     _draftDebounce?.cancel();
     _draftDebounce = Timer(const Duration(milliseconds: 500), () {
-      ref.read(coachDraftServiceProvider).saveDraft(_draftKey, _inputCtrl.text);
+      _draftService.saveDraft(_draftKey, _inputCtrl.text);
     });
   }
 
   void _startNewConversation() {
     _draftDebounce?.cancel();
-    ref.read(coachDraftServiceProvider).saveDraft(_draftKey, _inputCtrl.text);
+    _draftService.saveDraft(_draftKey, _inputCtrl.text);
     setState(() {
       _activeConversationId = 'new_${DateTime.now().millisecondsSinceEpoch}';
     });
     // New conversations always map to __pending via _draftKey.
-    final saved = ref.read(coachDraftServiceProvider).loadDraft(_draftKey);
+    final saved = _draftService.loadDraft(_draftKey);
     _inputCtrl.text = saved ?? '';
     if (_inputCtrl.text.isNotEmpty) {
       _inputCtrl.selection =
@@ -131,9 +137,9 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
 
   void _loadConversation(String conversationId) {
     _draftDebounce?.cancel();
-    ref.read(coachDraftServiceProvider).saveDraft(_draftKey, _inputCtrl.text);
+    _draftService.saveDraft(_draftKey, _inputCtrl.text);
     setState(() => _activeConversationId = conversationId);
-    final saved = ref.read(coachDraftServiceProvider).loadDraft(_draftKey);
+    final saved = _draftService.loadDraft(_draftKey);
     _inputCtrl.text = saved ?? '';
     if (_inputCtrl.text.isNotEmpty) {
       _inputCtrl.selection =
@@ -190,7 +196,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
 
     _inputCtrl.clear();
     _draftDebounce?.cancel();
-    ref.read(coachDraftServiceProvider).clearDraft(_draftKey);
+    _draftService.clearDraft(_draftKey);
 
     try {
       await ref
