@@ -59,6 +59,14 @@ void main() {
       expect(find.text('Today'), findsOneWidget);
       expect(find.text('Data'), findsOneWidget);
       expect(find.text('Coach'), findsOneWidget);
+
+      // Assert the log pill and frosted nav live in the same Row —
+      // this is the whole point of the cluster.
+      final rowFinder = find.ancestor(
+        of: find.byKey(const Key('bottom-nav-log-pill')),
+        matching: find.byType(Row),
+      );
+      expect(rowFinder, findsWidgets);
     });
 
     testWidgets('tapping the log pill invokes onLogPressed', (tester) async {
