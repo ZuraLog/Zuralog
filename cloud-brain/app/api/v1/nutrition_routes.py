@@ -18,7 +18,7 @@ import logging
 import re
 import uuid
 from datetime import date, datetime, time, timezone
-from typing import Literal
+from typing import Any, Literal
 
 import httpx
 import sentry_sdk
@@ -59,6 +59,8 @@ from app.models.meal_food import MealFood
 from app.models.nutrition_daily_summary import NutritionDailySummary
 from app.models.nutrition_rule import NutritionRule
 from app.models.rule_suggestion_snooze import RuleSuggestionSnooze
+from app.services.cache_service import CacheService
+from app.services.food_image_service import FoodImageService
 from app.services.food_search_service import record_correction, search_foods
 from app.services.nutrition_service import recompute_nutrition_summary
 from app.services.rule_suggestion import detect_suggested_rule
@@ -320,6 +322,37 @@ REFINE RULES:
 """
 
 router = APIRouter(prefix="/nutrition", tags=["nutrition"])
+
+
+@limiter.limit("60/minute")
+@router.get("/food-image")
+async def get_food_image(
+    request: Request,
+    q: str = "",
+    user_id: str = Depends(get_authenticated_user_id),
+) -> dict[str, Any]:
+    """Resolve a food description to a stock photo URL.
+
+    Used by the mobile client during the meal-parse loading state to show
+    contextual imagery. Returns {"image_url": None, "thumb_url": None} when
+    no image is available; the client falls back to the pattern-only state.
+    """
+    query = q.strip()
+    if not query:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="q must be non-empty",
+        )
+    if len(query) > 200:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="q too long (max 200 chars)",
+        )
+    service = FoodImageService(
+        cache=CacheService(),
+        api_key=settings.pexels_api_key.get_secret_value(),
+    )
+    return await service.fetch(query)
 
 
 # ---------------------------------------------------------------------------
