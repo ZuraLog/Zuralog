@@ -13,6 +13,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -43,6 +45,10 @@ class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
   final _contentFocus = FocusNode();
   final _selectedTags = <String>{};
   bool _saving = false;
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  bool _sttInitialized = false;
+  bool _listening = false;
+  bool _micDenied = false;
   // ignore: unused_field — reserved for Task 6 SavingMorph wiring.
   bool _savedOnce = false; // ignore: prefer_final_fields
 
@@ -72,6 +78,7 @@ class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
 
   @override
   void dispose() {
+    _speech.stop();
     _contentCtrl.dispose();
     _contentFocus.dispose();
     super.dispose();
@@ -109,6 +116,63 @@ class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  Future<void> _toggleDictation() async {
+    if (_listening) {
+      await _speech.stop();
+      if (mounted) setState(() => _listening = false);
+      return;
+    }
+
+    if (_micDenied) {
+      _showMicDeniedSnackbar();
+      return;
+    }
+
+    if (!_sttInitialized) {
+      _sttInitialized = await _speech.initialize(
+        onError: (_) {
+          if (mounted) setState(() => _listening = false);
+        },
+        onStatus: (_) {},
+      );
+      if (!_sttInitialized) {
+        if (mounted) {
+          setState(() => _micDenied = true);
+          _showMicDeniedSnackbar();
+        }
+        return;
+      }
+    }
+
+    await _speech.listen(
+      onResult: (r) {
+        if (!r.finalResult) return;
+        final existing = _contentCtrl.text;
+        final sep = existing.isEmpty || existing.endsWith(' ') ? '' : ' ';
+        final next = '$existing$sep${r.recognizedWords}';
+        _contentCtrl.text = next;
+        _contentCtrl.selection = TextSelection.collapsed(offset: next.length);
+      },
+      localeId: 'en_US',
+      listenOptions: stt.SpeechListenOptions(
+        listenMode: stt.ListenMode.dictation,
+      ),
+    );
+    if (mounted) setState(() => _listening = true);
+  }
+
+  void _showMicDeniedSnackbar() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Microphone access is off in Settings'),
+        action: SnackBarAction(
+          label: 'Open Settings',
+          onPressed: () => launchUrl(Uri.parse('app-settings:')),
+        ),
+      ),
+    );
   }
 
   @override
@@ -177,6 +241,18 @@ class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
                         ),
                       ),
                       border: InputBorder.none,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _listening
+                              ? Icons.mic_rounded
+                              : Icons.mic_none_rounded,
+                          color: _listening
+                              ? AppColors.primary
+                              : colors.textTertiary,
+                        ),
+                        tooltip: _listening ? 'Stop dictation' : 'Dictate',
+                        onPressed: _toggleDictation,
+                      ),
                     ),
                   ),
                   Positioned(
