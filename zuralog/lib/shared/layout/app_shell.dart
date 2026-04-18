@@ -28,6 +28,7 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   DateTime? _lastSheetTap;
+  bool _isLogSheetOpen = false;
 
   @override
   void initState() {
@@ -54,6 +55,8 @@ class _AppShellState extends ConsumerState<AppShell> {
       return;
     }
     _lastSheetTap = now;
+
+    setState(() => _isLogSheetOpen = true);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -64,7 +67,9 @@ class _AppShellState extends ConsumerState<AppShell> {
           context.pushNamed(routeName);
         },
       ),
-    );
+    ).whenComplete(() {
+      if (mounted) setState(() => _isLogSheetOpen = false);
+    });
   }
 
   void _onDestinationSelected(int index) {
@@ -80,9 +85,11 @@ class _AppShellState extends ConsumerState<AppShell> {
     return Scaffold(
       extendBody: true,
       body: widget.navigationShell,
-      bottomNavigationBar: _FrostedNavigationBar(
+      bottomNavigationBar: _BottomNavCluster(
         currentIndex: widget.navigationShell.currentIndex,
         onDestinationSelected: _onDestinationSelected,
+        isLogSheetOpen: _isLogSheetOpen,
+        onLogPressed: _openLogSheet,
       ),
     );
   }
