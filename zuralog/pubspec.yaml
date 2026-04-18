@@ -132,6 +132,7 @@ flutter:
     - assets/images/
     - assets/brand/pattern/
     - assets/welcome/
+    - assets/journal/
 
 flutter_launcher_icons:
   android: true
