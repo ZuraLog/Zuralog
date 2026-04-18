@@ -78,7 +78,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   @override
   void initState() {
     super.initState();
-    _draftService = _draftService;
+    _draftService = ref.read(coachDraftServiceProvider);
     _activeConversationId = 'new_${DateTime.now().millisecondsSinceEpoch}';
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _prefillApplied) return;
