@@ -28,6 +28,7 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   DateTime? _lastSheetTap;
+  bool _isLogSheetOpen = false;
 
   @override
   void initState() {
@@ -54,6 +55,8 @@ class _AppShellState extends ConsumerState<AppShell> {
       return;
     }
     _lastSheetTap = now;
+
+    setState(() => _isLogSheetOpen = true);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -64,7 +67,9 @@ class _AppShellState extends ConsumerState<AppShell> {
           context.pushNamed(routeName);
         },
       ),
-    );
+    ).whenComplete(() {
+      if (mounted) setState(() => _isLogSheetOpen = false);
+    });
   }
 
   void _onDestinationSelected(int index) {
@@ -80,9 +85,11 @@ class _AppShellState extends ConsumerState<AppShell> {
     return Scaffold(
       extendBody: true,
       body: widget.navigationShell,
-      bottomNavigationBar: _FrostedNavigationBar(
+      bottomNavigationBar: _BottomNavCluster(
         currentIndex: widget.navigationShell.currentIndex,
         onDestinationSelected: _onDestinationSelected,
+        isLogSheetOpen: _isLogSheetOpen,
+        onLogPressed: _openLogSheet,
       ),
     );
   }
@@ -182,12 +189,284 @@ class _FrostedNavigationBarState extends State<_FrostedNavigationBar>
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final activePillBg =
-        colors.primary.withValues(alpha: colors.isDark ? 0.12 : 1.0);
-    final activeItemColor =
-        colors.isDark ? colors.primary : colors.textOnSage;
-    final bottomSafeArea = MediaQuery.of(context).padding.bottom;
+    final activePillBg = colors.primary.withValues(
+      alpha: colors.isDark ? 0.12 : 1.0,
+    );
+    final activeItemColor = colors.isDark ? colors.primary : colors.textOnSage;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppDimens.shapePill),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(
+          sigmaX: AppDimens.navBarBlurSigma,
+          sigmaY: AppDimens.navBarBlurSigma,
+        ),
+        child: Container(
+          height: 64,
+          decoration: BoxDecoration(
+            color: colors.surface.withValues(
+              alpha: AppDimens.navBarFrostOpacity,
+            ),
+            borderRadius: BorderRadius.circular(AppDimens.shapePill),
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final tabCount = _FrostedNavigationBar._tabs.length;
+              final tabWidth = constraints.maxWidth / tabCount;
 
+              return Stack(
+                children: [
+                  // Sliding pill — driven by spring physics.
+                  AnimatedBuilder(
+                    animation: _pillController,
+                    builder: (context, _) {
+                      return Positioned(
+                        left: _pillController.value * tabWidth,
+                        top: 0,
+                        bottom: 0,
+                        width: tabWidth,
+                        child: Center(
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 8,
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(
+                                AppDimens.shapePill,
+                              ),
+                              child: ColoredBox(
+                                color: activePillBg,
+                                // OverflowBox forces a wide non-square context
+                                // so BoxFit.cover creates vertical overflow,
+                                // giving the alignment drift room to move.
+                                // ClipRRect above handles the visual clipping.
+                                child: OverflowBox(
+                                  maxWidth: double.infinity,
+                                  maxHeight: double.infinity,
+                                  child: SizedBox(
+                                    width: 160,
+                                    height: 48,
+                                    child: ZPatternOverlay(
+                                      variant: ZPatternVariant.sage,
+                                      opacity: 0.35,
+                                      animate: true,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  // Tab icons and labels.
+                  Row(
+                    children: List.generate(tabCount, (index) {
+                      final isActive = index == widget.currentIndex;
+                      final tab = _FrostedNavigationBar._tabs[index];
+
+                      return Expanded(
+                        child: Semantics(
+                          label: tab.label,
+                          selected: isActive,
+                          button: true,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => widget.onDestinationSelected(index),
+                            child: SizedBox(
+                              height: 64,
+                              child: Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        isActive ? tab.activeIcon : tab.icon,
+                                        size: 22,
+                                        color: isActive
+                                            ? activeItemColor
+                                            : colors.textSecondary,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        tab.label,
+                                        style: AppTextStyles.labelMedium
+                                            .copyWith(
+                                              color: isActive
+                                                  ? activeItemColor
+                                                  : colors.textSecondary,
+                                              fontSize: 11,
+                                            ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Log Pill Button ───────────────────────────────────────────────────────────
+
+/// A 64×64 circular primary-filled pill hosting the `+` log icon.
+///
+/// The icon rotates 45° when [isOpen] is true and reverses back to 0° when
+/// [isOpen] flips to false. The parent owns the `isOpen` flag — this widget
+/// is a pure view over that flag plus a tap callback.
+class _LogPillButton extends StatefulWidget {
+  const _LogPillButton({super.key, required this.isOpen, required this.onTap});
+
+  final bool isOpen;
+  final VoidCallback onTap;
+
+  @override
+  State<_LogPillButton> createState() => _LogPillButtonState();
+}
+
+class _LogPillButtonState extends State<_LogPillButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _rotation;
+  late final Animation<double> _turns;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotation = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+      value: widget.isOpen ? 1.0 : 0.0,
+    );
+    _turns = Tween<double>(
+      begin: 0.0,
+      end: 0.125,
+    ).chain(CurveTween(curve: Curves.easeOutCubic)).animate(_rotation);
+  }
+
+  @override
+  void didUpdateWidget(covariant _LogPillButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isOpen != widget.isOpen) {
+      if (widget.isOpen) {
+        _rotation.forward();
+      } else {
+        _rotation.reverse();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _rotation.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    // In dark mode: fill is Sage, icon is Deep Forest (#344E41).
+    // In light mode: fill is Deep Forest, icon is textOnSage (Warm Cream).
+    final fill = colors.primary;
+    final iconColor = colors.isDark
+        ? const Color(0xFF344E41)
+        : colors.textOnSage;
+
+    return Semantics(
+      button: true,
+      label: 'Log new entry',
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: widget.onTap,
+          customBorder: const CircleBorder(),
+          child: Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: fill,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Center(
+              child: RotationTransition(
+                turns: _turns,
+                child: Icon(Icons.add_rounded, size: 24, color: iconColor),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Test-only public alias for [_LogPillButton].
+@visibleForTesting
+class LogPillButtonForTest extends StatelessWidget {
+  const LogPillButtonForTest({
+    super.key,
+    required this.isOpen,
+    required this.onTap,
+  });
+
+  final bool isOpen;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => _LogPillButton(
+    key: const Key('bottom-nav-log-pill'),
+    isOpen: isOpen,
+    onTap: onTap,
+  );
+}
+
+// ── Bottom Nav Cluster ────────────────────────────────────────────────────────
+
+/// Groups the frosted nav pill and the log pill into a single centered row
+/// at the bottom safe-area offset. Owns the bottom-margin padding so the
+/// nav bar widget no longer has to.
+class _BottomNavCluster extends StatelessWidget {
+  const _BottomNavCluster({
+    required this.currentIndex,
+    required this.onDestinationSelected,
+    required this.isLogSheetOpen,
+    required this.onLogPressed,
+  });
+
+  final int currentIndex;
+  final ValueChanged<int> onDestinationSelected;
+  final bool isLogSheetOpen;
+  final VoidCallback onLogPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomSafeArea = MediaQuery.of(context).padding.bottom;
     return Padding(
       padding: EdgeInsets.fromLTRB(
         AppDimens.spaceMdPlus,
@@ -195,136 +474,48 @@ class _FrostedNavigationBarState extends State<_FrostedNavigationBar>
         AppDimens.spaceMdPlus,
         bottomSafeArea + 18,
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppDimens.shapePill),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: AppDimens.navBarBlurSigma,
-            sigmaY: AppDimens.navBarBlurSigma,
-          ),
-          child: Container(
-            height: 64,
-            decoration: BoxDecoration(
-              color: colors.surface.withValues(alpha: AppDimens.navBarFrostOpacity),
-              borderRadius: BorderRadius.circular(AppDimens.shapePill),
-            ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final tabCount = _FrostedNavigationBar._tabs.length;
-                final tabWidth = constraints.maxWidth / tabCount;
-
-                return Stack(
-                  children: [
-                    // Sliding pill — driven by spring physics.
-                    AnimatedBuilder(
-                      animation: _pillController,
-                      builder: (context, _) {
-                        return Positioned(
-                          left: _pillController.value * tabWidth,
-                          top: 0,
-                          bottom: 0,
-                          width: tabWidth,
-                          child: Center(
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 8,
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(
-                                  AppDimens.shapePill,
-                                ),
-                                child: ColoredBox(
-                                  color: activePillBg,
-                                  // OverflowBox forces a wide non-square context
-                                  // so BoxFit.cover creates vertical overflow,
-                                  // giving the alignment drift room to move.
-                                  // ClipRRect above handles the visual clipping.
-                                  child: OverflowBox(
-                                    maxWidth: double.infinity,
-                                    maxHeight: double.infinity,
-                                    child: SizedBox(
-                                      width: 160,
-                                      height: 48,
-                                      child: ZPatternOverlay(
-                                        variant: ZPatternVariant.sage,
-                                        opacity: 0.35,
-                                        animate: true,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    // Tab icons and labels.
-                    Row(
-                      children: List.generate(tabCount, (index) {
-                        final isActive = index == widget.currentIndex;
-                        final tab = _FrostedNavigationBar._tabs[index];
-
-                        return Expanded(
-                          child: Semantics(
-                            label: tab.label,
-                            selected: isActive,
-                            button: true,
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () =>
-                                  widget.onDestinationSelected(index),
-                              child: SizedBox(
-                                height: 64,
-                                child: Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          isActive
-                                              ? tab.activeIcon
-                                              : tab.icon,
-                                          size: 22,
-                                          color: isActive
-                                              ? activeItemColor
-                                              : colors.textSecondary,
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          tab.label,
-                                          style: AppTextStyles.labelMedium
-                                              .copyWith(
-                                            color: isActive
-                                                ? activeItemColor
-                                                : colors.textSecondary,
-                                            fontSize: 11,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                  ],
-                );
-              },
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Flexible(
+            child: _FrostedNavigationBar(
+              currentIndex: currentIndex,
+              onDestinationSelected: onDestinationSelected,
             ),
           ),
-        ),
+          const SizedBox(width: AppDimens.spaceSm),
+          _LogPillButton(
+            key: const Key('bottom-nav-log-pill'),
+            isOpen: isLogSheetOpen,
+            onTap: onLogPressed,
+          ),
+        ],
       ),
     );
   }
+}
+
+/// Test-only public alias for [_BottomNavCluster].
+@visibleForTesting
+class BottomNavClusterForTest extends StatelessWidget {
+  const BottomNavClusterForTest({
+    super.key,
+    required this.currentIndex,
+    required this.onDestinationSelected,
+    required this.isLogSheetOpen,
+    required this.onLogPressed,
+  });
+
+  final int currentIndex;
+  final ValueChanged<int> onDestinationSelected;
+  final bool isLogSheetOpen;
+  final VoidCallback onLogPressed;
+
+  @override
+  Widget build(BuildContext context) => _BottomNavCluster(
+    currentIndex: currentIndex,
+    onDestinationSelected: onDestinationSelected,
+    isLogSheetOpen: isLogSheetOpen,
+    onLogPressed: onLogPressed,
+  );
 }

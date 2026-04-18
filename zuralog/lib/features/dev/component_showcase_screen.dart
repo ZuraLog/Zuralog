@@ -596,7 +596,10 @@ class _ComponentShowcaseScreenState
         _label('FAB', _colors!),
         Align(
           alignment: Alignment.centerRight,
-          child: ZLogFab(onPressed: () {}),
+          child: const Text(
+            'The log pill lives in the bottom nav cluster on every shell-hosted '
+            'screen. See _LogPillButton in app_shell.dart.',
+          ),
         ),
       ],
     );
