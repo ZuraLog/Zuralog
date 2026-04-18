@@ -47,12 +47,10 @@ final nutritionRepositoryProvider =
 class _PendingDelete {
   const _PendingDelete({
     required this.timer,
-    required this.originalIndex,
     required this.meal,
   });
 
   final Timer timer;
-  final int originalIndex;
   final Meal meal;
 }
 
@@ -64,6 +62,16 @@ class TodayMealsNotifier extends AsyncNotifier<List<Meal>> {
   @override
   Future<List<Meal>> build() async {
     final repo = ref.read(nutritionRepositoryProvider);
+    ref.onDispose(() {
+      for (final pending in _pending.values) {
+        pending.timer.cancel();
+        // Fire-and-forget: we're being disposed, we can't restore on failure.
+        repo.deleteMeal(pending.meal.id).catchError((Object e, StackTrace st) {
+          debugPrint('deleteMeal during dispose failed for ${pending.meal.id}: $e');
+        });
+      }
+      _pending.clear();
+    });
     try {
       return await repo.getTodayMeals();
     } catch (e, st) {
@@ -83,22 +91,22 @@ class TodayMealsNotifier extends AsyncNotifier<List<Meal>> {
     final next = [...current]..removeAt(index);
     state = AsyncData(next);
 
+    final repo = ref.read(nutritionRepositoryProvider);
     final timer = Timer(const Duration(seconds: 4), () async {
       _pending.remove(meal.id);
       try {
-        await ref.read(nutritionRepositoryProvider).deleteMeal(meal.id);
+        await repo.deleteMeal(meal.id);
       } catch (e, st) {
         debugPrint('deleteMeal failed for ${meal.id}: $e\n$st');
         final latest = state.valueOrNull ?? const <Meal>[];
-        final restored = [...latest]
-          ..insert(index.clamp(0, latest.length), meal);
+        final restored = [...latest, meal]
+          ..sort((a, b) => b.loggedAt.compareTo(a.loggedAt));
         state = AsyncData(restored);
       }
     });
 
     _pending[meal.id] = _PendingDelete(
       timer: timer,
-      originalIndex: index,
       meal: meal,
     );
   }
@@ -111,8 +119,8 @@ class TodayMealsNotifier extends AsyncNotifier<List<Meal>> {
     pending.timer.cancel();
 
     final current = state.valueOrNull ?? const <Meal>[];
-    final restored = [...current]
-      ..insert(pending.originalIndex.clamp(0, current.length), pending.meal);
+    final restored = [...current, pending.meal]
+      ..sort((a, b) => b.loggedAt.compareTo(a.loggedAt));
     state = AsyncData(restored);
     return true;
   }

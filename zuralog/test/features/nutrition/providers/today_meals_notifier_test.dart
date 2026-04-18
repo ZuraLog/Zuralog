@@ -27,11 +27,11 @@ class _TestRepo extends MockNutritionRepository {
   }
 }
 
-Meal _meal(String id, String name) => Meal(
+Meal _meal(String id, String name, {int minute = 0}) => Meal(
       id: id,
       name: name,
       type: MealType.breakfast,
-      loggedAt: DateTime(2026, 4, 18, 8, 0),
+      loggedAt: DateTime(2026, 4, 18, 8, minute),
       foods: const [],
     );
 
@@ -45,7 +45,7 @@ void main() {
   group('TodayMealsNotifier', () {
     test('deleteOptimistic removes the meal from state immediately',
         () async {
-      final repo = _TestRepo([_meal('a', 'eggs'), _meal('b', 'toast')]);
+      final repo = _TestRepo([_meal('a', 'eggs', minute: 10), _meal('b', 'toast', minute: 5)]);
       final c = _container(repo);
       addTearDown(c.dispose);
 
@@ -61,7 +61,7 @@ void main() {
 
     test('undoDelete restores the row and cancels the timer', () {
       fakeAsync((async) {
-        final repo = _TestRepo([_meal('a', 'eggs'), _meal('b', 'toast')]);
+        final repo = _TestRepo([_meal('a', 'eggs', minute: 10), _meal('b', 'toast', minute: 5)]);
         final c = _container(repo);
         addTearDown(c.dispose);
 
@@ -105,7 +105,7 @@ void main() {
 
     test('two quick deletes get independent pending entries', () {
       fakeAsync((async) {
-        final repo = _TestRepo([_meal('a', 'eggs'), _meal('b', 'toast')]);
+        final repo = _TestRepo([_meal('a', 'eggs', minute: 10), _meal('b', 'toast', minute: 5)]);
         final c = _container(repo);
         addTearDown(c.dispose);
 
@@ -131,7 +131,7 @@ void main() {
 
     test('backend failure during scheduled delete restores the meal', () {
       fakeAsync((async) {
-        final repo = _TestRepo([_meal('a', 'eggs'), _meal('b', 'toast')]);
+        final repo = _TestRepo([_meal('a', 'eggs', minute: 10), _meal('b', 'toast', minute: 5)]);
         repo.deleteShouldFail = true;
         final c = _container(repo);
         addTearDown(c.dispose);
