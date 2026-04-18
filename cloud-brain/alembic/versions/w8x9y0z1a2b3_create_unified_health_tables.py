@@ -184,29 +184,39 @@ def upgrade() -> None:
     # ------------------------------------------------------------------
     # 5. RLS Policies
     # ------------------------------------------------------------------
-    op.execute("ALTER TABLE activity_sessions ENABLE ROW LEVEL SECURITY")
-    op.execute(
-        'CREATE POLICY "users can read their own sessions" '
-        "ON activity_sessions FOR SELECT USING (user_id = auth.uid())"
+    # RLS policies reference auth.uid(), which only exists on Supabase.
+    # On plain Postgres (local dev) the auth schema is absent, so we guard
+    # the policy creation and only enable RLS on the tables. This mirrors
+    # the pattern used by every other RLS migration in this directory.
+    _has_auth = (
+        op.get_bind()
+        .execute(sa.text("SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'auth')"))
+        .scalar()
     )
 
+    op.execute("ALTER TABLE activity_sessions ENABLE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE metric_definitions ENABLE ROW LEVEL SECURITY")
+    op.execute("ALTER TABLE health_events ENABLE ROW LEVEL SECURITY")
+    op.execute("ALTER TABLE daily_summaries ENABLE ROW LEVEL SECURITY")
+
     op.execute(
         'CREATE POLICY "metric definitions are publicly readable" '
         "ON metric_definitions FOR SELECT USING (true)"
     )
 
-    op.execute("ALTER TABLE health_events ENABLE ROW LEVEL SECURITY")
-    op.execute(
-        'CREATE POLICY "users can read their own events" '
-        "ON health_events FOR SELECT USING (user_id = auth.uid())"
-    )
-
-    op.execute("ALTER TABLE daily_summaries ENABLE ROW LEVEL SECURITY")
-    op.execute(
-        'CREATE POLICY "users can read their own summaries" '
-        "ON daily_summaries FOR SELECT USING (user_id = auth.uid())"
-    )
+    if _has_auth:
+        op.execute(
+            'CREATE POLICY "users can read their own sessions" '
+            "ON activity_sessions FOR SELECT USING (user_id = auth.uid())"
+        )
+        op.execute(
+            'CREATE POLICY "users can read their own events" '
+            "ON health_events FOR SELECT USING (user_id = auth.uid())"
+        )
+        op.execute(
+            'CREATE POLICY "users can read their own summaries" '
+            "ON daily_summaries FOR SELECT USING (user_id = auth.uid())"
+        )
 
     # ------------------------------------------------------------------
     # 6. Seed metric_definitions (38 rows)

@@ -39,10 +39,20 @@ _COLUMNS = [
 
 
 def upgrade() -> None:
+    # Skip if daily_health_metrics was already dropped by v7w8x9y0z1a2 —
+    # on DBs that reached that migration on the main branch before this
+    # side branch was merged, the table no longer exists and these column
+    # adds are obsolete.
     for col in _COLUMNS:
-        op.execute(
-            f"ALTER TABLE daily_health_metrics ADD COLUMN IF NOT EXISTS {col} FLOAT"
-        )
+        op.execute(f"""
+            DO $$ BEGIN
+                IF EXISTS (SELECT 1 FROM information_schema.tables
+                           WHERE table_name = 'daily_health_metrics') THEN
+                    ALTER TABLE daily_health_metrics
+                        ADD COLUMN IF NOT EXISTS {col} FLOAT;
+                END IF;
+            END $$;
+        """)
 
 
 def downgrade() -> None:

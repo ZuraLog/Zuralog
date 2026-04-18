@@ -50,7 +50,13 @@ def upgrade() -> None:
     """)
     op.execute("CREATE INDEX IF NOT EXISTS ix_sleep_records_user_id ON sleep_records (user_id)")
 
-    op.execute("CREATE TYPE IF NOT EXISTS activitytype AS ENUM ('RUN', 'CYCLE', 'WALK', 'SWIM', 'STRENGTH', 'UNKNOWN')")
+    op.execute("""
+        DO $$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'activitytype') THEN
+                CREATE TYPE activitytype AS ENUM ('RUN', 'CYCLE', 'WALK', 'SWIM', 'STRENGTH', 'UNKNOWN');
+            END IF;
+        END $$;
+    """)
     op.execute("""
         CREATE TABLE IF NOT EXISTS unified_activities (
             id VARCHAR NOT NULL PRIMARY KEY,
@@ -68,7 +74,13 @@ def upgrade() -> None:
     """)
     op.execute("CREATE INDEX IF NOT EXISTS ix_unified_activities_user_id ON unified_activities (user_id)")
 
-    op.execute("CREATE TYPE IF NOT EXISTS goalperiod AS ENUM ('DAILY', 'WEEKLY', 'LONG_TERM')")
+    op.execute("""
+        DO $$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'goalperiod') THEN
+                CREATE TYPE goalperiod AS ENUM ('DAILY', 'WEEKLY', 'LONG_TERM');
+            END IF;
+        END $$;
+    """)
     op.execute("""
         CREATE TABLE IF NOT EXISTS user_goals (
             id VARCHAR NOT NULL PRIMARY KEY,
