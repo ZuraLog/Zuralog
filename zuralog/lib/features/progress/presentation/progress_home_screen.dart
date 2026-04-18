@@ -74,6 +74,20 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen> {
       appBar: ZuralogAppBar(
         title: 'Progress',
         showProfileAvatar: false,
+        // Progress is pushed over the shell via context.go, so the nav stack
+        // is empty and Material's automatic back button never appears. Show
+        // an explicit back that pops if possible, otherwise returns to Today.
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          tooltip: 'Back',
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(RouteNames.todayPath);
+            }
+          },
+        ),
         tooltipConfig: const ZuralogAppBarTooltipConfig(
           screenKey: 'progress_home',
           tooltipKey: 'welcome',
