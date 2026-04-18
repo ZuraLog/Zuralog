@@ -70,6 +70,9 @@ import 'package:zuralog/features/today/presentation/log_screens/supplements_log_
 import 'package:zuralog/features/today/presentation/log_screens/symptom_log_screen.dart';
 import 'package:zuralog/features/today/presentation/log_screens/metric_picker_screen.dart';
 
+// ── Sleep Detail (pushed over shell) ─────────────────────────────────────────
+import 'package:zuralog/features/sleep/presentation/sleep_detail_screen.dart';
+
 // ── Tab 1: Data ───────────────────────────────────────────────────────────────
 import 'package:zuralog/features/data/presentation/health_dashboard_screen.dart';
 import 'package:zuralog/features/data/presentation/category_detail_screen.dart' as data_screens;
@@ -368,6 +371,16 @@ List<RouteBase> _buildRoutes() {
           ),
         );
       },
+    ),
+    GoRoute(
+      path: RouteNames.sleepPath,
+      name: RouteNames.sleep,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: SentryErrorBoundary(
+          module: 'sleep.detail',
+          child: SleepDetailScreen(),
+        ),
+      ),
     ),
 
     // ── Main App Shell — 3-tab StatefulShellRoute ─────────────────────────
