@@ -66,7 +66,6 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
     });
 
     return ZuralogScaffold(
-      floatingActionButton: ZLogFab(onPressed: openSheet),
       appBar: ZuralogAppBar(
         title: 'Today',
         actions: [
