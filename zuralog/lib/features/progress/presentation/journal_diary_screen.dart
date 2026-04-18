@@ -21,6 +21,7 @@ import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/progress/data/journal_prompts.dart';
+import 'package:zuralog/features/progress/presentation/widgets/saving_morph.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── JournalDiaryScreen ────────────────────────────────────────────────────────
@@ -104,17 +105,19 @@ class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
             );
       }
       ref.invalidate(journalProvider);
-      if (mounted) context.pop();
+      if (mounted) setState(() => _savedOnce = true);
     } catch (e) {
       if (mounted) {
+        setState(() {
+          _saving = false;
+          _savedOnce = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Could not save entry. Please try again.'),
           ),
         );
       }
-    } finally {
-      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -297,10 +300,14 @@ class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
             // ── Save button ────────────────────────────────────────────────
             SizedBox(
               width: double.infinity,
-              child: ZButton(
+              child: SavingMorph(
                 label: 'Save Entry',
                 onPressed: _saving ? null : _save,
-                isLoading: _saving,
+                isSaving: _saving,
+                savedOnce: _savedOnce,
+                onMorphComplete: () {
+                  if (mounted) context.pop();
+                },
               ),
             ),
           ],
