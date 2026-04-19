@@ -9,13 +9,14 @@
 /// UI always reaches the `data:` branch and never needs an error widget.
 ///
 /// Provider inventory:
-/// - [nutritionRepositoryProvider]  — singleton repository
+/// - [nutritionRepositoryProvider]  — singleton repository (mock or API)
 /// - [todayMealsProvider]           — async list of today's meals
 /// - [nutritionDaySummaryProvider]  — async aggregated day summary
 /// - [mealDetailProvider]           — family: detail for a single meal by ID
 /// - [foodSearchQueryProvider]      — state: current search query text
 /// - [foodSearchResultsProvider]    — async search results for current query
 /// - [recentFoodsProvider]          — async list of recently logged foods
+/// - [nutritionTrendProvider]        — family: per-day calorie/protein for trend charts
 library;
 
 import 'dart:async' show Timer;
@@ -28,14 +29,17 @@ import 'package:zuralog/features/nutrition/data/api_nutrition_repository.dart';
 import 'package:zuralog/features/nutrition/data/mock_nutrition_repository.dart';
 import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
 
+const _useMock = bool.fromEnvironment('USE_MOCK_DATA', defaultValue: false);
+
 // -- Repository ---------------------------------------------------------------
 
 /// Singleton [NutritionRepositoryInterface] for the nutrition feature.
 ///
-/// Wired to the [ApiNutritionRepository] backed by Cloud Brain REST endpoints.
-/// Authentication is handled automatically by the [ApiClient] interceptor.
+/// Returns [MockNutritionRepository] when the app is compiled with
+/// `--dart-define=USE_MOCK_DATA=true`. Otherwise uses [ApiNutritionRepository].
 final nutritionRepositoryProvider =
     Provider<NutritionRepositoryInterface>((ref) {
+  if (_useMock) return const MockNutritionRepository();
   return ApiNutritionRepository(apiClient: ref.read(apiClientProvider));
 });
 
@@ -231,6 +235,23 @@ final nutritionRulesProvider =
     return await repo.getRules();
   } catch (e, st) {
     debugPrint('nutritionRulesProvider failed: $e\n$st');
+    return const [];
+  }
+});
+
+// ── Nutrition Trend ──────────────────────────────────────────────────────────
+
+/// Async family provider for per-day calorie and protein totals.
+///
+/// Keyed by the range string (`'7d'` or `'30d'`).
+/// Never puts the UI into an error state — failures resolve to an empty list.
+final nutritionTrendProvider =
+    FutureProvider.family<List<NutritionTrendDay>, String>((ref, range) async {
+  final repo = ref.read(nutritionRepositoryProvider);
+  try {
+    return await repo.getTrend(range);
+  } catch (e, st) {
+    debugPrint('nutritionTrendProvider($range) failed: $e\n$st');
     return const [];
   }
 });
