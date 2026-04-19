@@ -46,15 +46,24 @@ class _NutritionTrendSectionState extends ConsumerState<NutritionTrendSection> {
             ))
         .toList();
 
-    final avgCalories = calorieBars.isEmpty
+    // Averages exclude today's entry (it is incomplete — null in the source).
+    final avgCalories = days.isEmpty
         ? null
-        : calorieBars.fold<double>(0, (s, b) => s + b.value) /
-            calorieBars.length;
+        : () {
+            final nonNull = days.where((d) => d.calories != null).toList();
+            if (nonNull.isEmpty) return null;
+            return nonNull.fold<double>(0, (s, d) => s + d.calories!) /
+                nonNull.length;
+          }();
 
-    final avgProtein = proteinBars.isEmpty
+    final avgProtein = days.isEmpty
         ? null
-        : proteinBars.fold<double>(0, (s, b) => s + b.value) /
-            proteinBars.length;
+        : () {
+            final nonNull = days.where((d) => d.proteinG != null).toList();
+            if (nonNull.isEmpty) return null;
+            return nonNull.fold<double>(0, (s, d) => s + d.proteinG!) /
+                nonNull.length;
+          }();
 
     return ZuralogCard(
       variant: ZCardVariant.data,

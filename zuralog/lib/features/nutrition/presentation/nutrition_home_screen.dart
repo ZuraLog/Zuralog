@@ -288,31 +288,37 @@ class NutritionHomeScreen extends ConsumerWidget {
                       AppDimens.spaceMd,
                       0,
                     ),
-                    child: GestureDetector(
+                    child: InkWell(
                       onTap: () => ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('All-Data screen coming in a future update'),
                           duration: Duration(seconds: 2),
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Text(
-                            'View All Data',
-                            style: AppTextStyles.labelMedium.copyWith(
+                      borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppDimens.spaceXs,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text(
+                              'View All Data',
+                              style: AppTextStyles.labelMedium.copyWith(
+                                color: colors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(width: AppDimens.spaceXs),
+                            const ZProBadge(showLock: true),
+                            const SizedBox(width: AppDimens.spaceXs),
+                            Icon(
+                              Icons.arrow_forward_rounded,
+                              size: AppDimens.iconSm,
                               color: colors.textSecondary,
                             ),
-                          ),
-                          const SizedBox(width: AppDimens.spaceXs),
-                          const ZProBadge(showLock: true),
-                          const SizedBox(width: AppDimens.spaceXs),
-                          Icon(
-                            Icons.arrow_forward_rounded,
-                            size: AppDimens.iconSm,
-                            color: colors.textSecondary,
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
