@@ -298,4 +298,18 @@ class ApiNutritionRepository implements NutritionRepositoryInterface {
       },
     );
   }
+
+  // ── Trend ──────────────────────────────────────────────────────────────────
+
+  @override
+  Future<List<NutritionTrendDay>> getTrend(String range) async {
+    final response = await _api.get(
+      '/api/v1/nutrition/trend',
+      queryParameters: {'range': range},
+    );
+    final days = response.data['days'] as List<dynamic>? ?? [];
+    return days
+        .map((e) => NutritionTrendDay.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
 }
