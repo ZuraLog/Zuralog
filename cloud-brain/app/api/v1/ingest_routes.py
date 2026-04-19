@@ -93,6 +93,8 @@ class SessionIngestRequest(BaseModel):
     source: str = Field(max_length=100)
     started_at: str
     ended_at: str | None = None
+    notes: str | None = Field(default=None, max_length=2000)
+    session_metadata: dict | None = None
     idempotency_key: str | None = Field(default=None, max_length=200)
     metrics: list[MetricPayload] = Field(max_length=50)
 
@@ -379,6 +381,8 @@ async def ingest_session(
         started_at=datetime.fromisoformat(body.started_at),
         ended_at=datetime.fromisoformat(body.ended_at) if body.ended_at else None,
         idempotency_key=body.idempotency_key,
+        notes=body.notes,
+        metadata_=body.session_metadata,
     )
     db.add(session)
     await db.flush()

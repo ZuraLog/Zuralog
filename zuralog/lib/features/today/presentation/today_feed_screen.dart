@@ -172,7 +172,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                   horizontal: AppDimens.spaceMd,
                 ),
                 child: SleepPillarCard(
-                  onTap: () => context.go(RouteNames.dataPath),
+                  onTap: () => context.pushNamed(RouteNames.sleep),
                 ),
               ),
             ),

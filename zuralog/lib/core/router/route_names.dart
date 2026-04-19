@@ -159,6 +159,10 @@ abstract final class RouteNames {
   /// Path for the Metric Picker screen.
   static const String metricPickerPath = '/today/log/metric-picker';
 
+  // ── Sleep Detail ──────────────────────────────────────────────────────────
+  static const String sleep     = 'sleep';
+  static const String sleepPath = '/sleep';
+
   // ── Tab 1: Data ───────────────────────────────────────────────────────────
 
   /// Name for the Health Dashboard tab root.
