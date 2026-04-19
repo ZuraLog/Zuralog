@@ -8,6 +8,7 @@
 /// - [MealFood]              — a single food item with macro breakdown
 /// - [Meal]                  — a logged meal containing one or more foods
 /// - [NutritionDaySummary]   — aggregated calorie and macro totals for a day
+/// - [NutritionTrendDay]        — per-day calorie and protein totals for trend charts
 /// - [ParsedFoodItem]        — AI-parsed food item from natural-language input
 /// - [FoodSearchResult]      — food entry returned from the search endpoint
 /// - [RecentFood]            — recently logged food for quick re-logging
@@ -237,13 +238,14 @@ class Meal {
 ///
 /// Used by the nutrition dashboard to show daily calorie and macro progress.
 class NutritionDaySummary {
-  /// Creates an immutable [NutritionDaySummary].
   const NutritionDaySummary({
     required this.totalCalories,
     required this.totalProteinG,
     required this.totalCarbsG,
     required this.totalFatG,
     required this.mealCount,
+    this.aiSummary,
+    this.aiGeneratedAt,
   });
 
   /// Total kilocalories consumed today.
@@ -261,7 +263,13 @@ class NutritionDaySummary {
   /// Number of meals logged today.
   final int mealCount;
 
-  /// Deserialises a [NutritionDaySummary] from a backend JSON map.
+  /// AI-generated observation about today's nutrition. Null until the backend
+  /// has processed enough data to produce a summary.
+  final String? aiSummary;
+
+  /// When the [aiSummary] was generated. Null when [aiSummary] is null.
+  final DateTime? aiGeneratedAt;
+
   factory NutritionDaySummary.fromJson(Map<String, dynamic> json) {
     return NutritionDaySummary(
       totalCalories: (json['total_calories'] as num?)?.round() ?? 0,
@@ -269,10 +277,14 @@ class NutritionDaySummary {
       totalCarbsG: (json['total_carbs_g'] as num?)?.toDouble() ?? 0.0,
       totalFatG: (json['total_fat_g'] as num?)?.toDouble() ?? 0.0,
       mealCount: (json['meal_count'] as num?)?.toInt() ?? 0,
+      aiSummary: json['ai_summary'] as String?,
+      aiGeneratedAt: json['ai_generated_at'] != null
+          ? DateTime.tryParse(json['ai_generated_at'] as String)
+          : null,
     );
   }
 
-  /// An empty summary with all values at zero.
+  /// An empty summary with all values at zero and no AI summary.
   static const empty = NutritionDaySummary(
     totalCalories: 0,
     totalProteinG: 0,
@@ -280,6 +292,39 @@ class NutritionDaySummary {
     totalFatG: 0,
     mealCount: 0,
   );
+}
+
+// -- NutritionTrendDay --------------------------------------------------------
+
+/// A single day's nutrition totals used by the trend chart.
+class NutritionTrendDay {
+  const NutritionTrendDay({
+    required this.date,
+    required this.isToday,
+    this.calories,
+    this.proteinG,
+  });
+
+  /// ISO-8601 date string (e.g. `'2026-04-19'`).
+  final String date;
+
+  /// Whether this day is today (used by the chart renderer to highlight the bar).
+  final bool isToday;
+
+  /// Total calories for the day, or `null` if no meals were logged.
+  final double? calories;
+
+  /// Total protein (grams) for the day, or `null` if no meals were logged.
+  final double? proteinG;
+
+  factory NutritionTrendDay.fromJson(Map<String, dynamic> json) {
+    return NutritionTrendDay(
+      date: json['date'] as String? ?? '',
+      isToday: json['is_today'] as bool? ?? false,
+      calories: (json['calories'] as num?)?.toDouble(),
+      proteinG: (json['protein_g'] as num?)?.toDouble(),
+    );
+  }
 }
 
 // -- ParsedFoodItem -----------------------------------------------------------
