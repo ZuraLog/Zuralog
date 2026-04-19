@@ -303,6 +303,7 @@ class ApiNutritionRepository implements NutritionRepositoryInterface {
 
   @override
   Future<List<NutritionTrendDay>> getTrend(String range) async {
+    assert(range == '7d' || range == '30d', 'range must be "7d" or "30d"');
     final response = await _api.get(
       '/api/v1/nutrition/trend',
       queryParameters: {'range': range},

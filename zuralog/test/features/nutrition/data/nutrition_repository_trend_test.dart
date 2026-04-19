@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zuralog/features/nutrition/data/mock_nutrition_repository.dart';
-import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
 
 void main() {
   const repo = MockNutritionRepository();
