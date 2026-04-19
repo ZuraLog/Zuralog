@@ -8,7 +8,7 @@
 /// - [MealFood]              — a single food item with macro breakdown
 /// - [Meal]                  — a logged meal containing one or more foods
 /// - [NutritionDaySummary]   — aggregated calorie and macro totals for a day
-/// - [NutritionTrendDay]        — per-day calorie and protein totals for trend charts
+/// - [NutritionTrendDay]     — per-day calorie and protein totals for trend charts
 /// - [ParsedFoodItem]        — AI-parsed food item from natural-language input
 /// - [FoodSearchResult]      — food entry returned from the search endpoint
 /// - [RecentFood]            — recently logged food for quick re-logging
@@ -270,6 +270,7 @@ class NutritionDaySummary {
   /// When the [aiSummary] was generated. Null when [aiSummary] is null.
   final DateTime? aiGeneratedAt;
 
+  /// Deserialises a [NutritionDaySummary] from a backend JSON map.
   factory NutritionDaySummary.fromJson(Map<String, dynamic> json) {
     return NutritionDaySummary(
       totalCalories: (json['total_calories'] as num?)?.round() ?? 0,
@@ -317,6 +318,7 @@ class NutritionTrendDay {
   /// Total protein (grams) for the day, or `null` if no meals were logged.
   final double? proteinG;
 
+  /// Deserialises a [NutritionTrendDay] from a backend JSON map.
   factory NutritionTrendDay.fromJson(Map<String, dynamic> json) {
     return NutritionTrendDay(
       date: json['date'] as String? ?? '',
