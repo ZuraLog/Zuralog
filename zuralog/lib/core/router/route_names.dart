@@ -167,7 +167,11 @@ abstract final class RouteNames {
   static const String sleepPath = '/sleep';
 
   // ── Sleep All-Data ────────────────────────────────────────────────────────
+
+  /// Name for the Sleep All-Data screen.
   static const String sleepAllData     = 'sleepAllData';
+
+  /// Path for the Sleep All-Data screen.
   static const String sleepAllDataPath = '/sleep/all-data';
 
   // ── Tab 1: Data ───────────────────────────────────────────────────────────

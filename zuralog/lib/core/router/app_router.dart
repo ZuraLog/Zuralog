@@ -636,11 +636,9 @@ List<RouteBase> _buildRoutes() {
         GoRoute(
           path: 'all-data',
           name: RouteNames.nutritionAllData,
-          pageBuilder: (context, state) => const MaterialPage(
-            child: SentryErrorBoundary(
-              module: 'nutrition.all_data',
-              child: NutritionAllDataScreen(),
-            ),
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'nutrition.all_data',
+            child: NutritionAllDataScreen(),
           ),
         ),
       ],
