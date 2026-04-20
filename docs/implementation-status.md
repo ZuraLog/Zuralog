@@ -1,3 +1,69 @@
+## 2026-04-21 — Heart Section: Flutter Frontend
+
+**Branch:** `feat/heart-flutter` (off `feat/heart-backend`)
+
+Complete Flutter frontend for the Heart section, mirroring the Sleep section architecture.
+
+**Domain + Data Layer:**
+
+- **`HeartSource`, `HeartDaySummary`, `HeartTrendDay`** (`zuralog/lib/features/heart/domain/heart_models.dart`): Domain models for all heart metrics — resting HR, HRV, average HR, respiratory rate, VO2 max, SpO2, and blood pressure (systolic + diastolic). `HeartDaySummary` carries AI summary text, 7-day comparison deltas, and a list of data sources.
+
+- **`HeartRepositoryInterface`, `ApiHeartRepository`, `MockHeartRepository`** (`zuralog/lib/features/heart/data/`): Repository layer. API repository calls `/api/v1/heart/summary`, `/api/v1/heart/trend`, and `/api/v1/heart/all-data`. Mock repository returns realistic hardwired data for development builds.
+
+- **`heartRepositoryProvider`, `heartDaySummaryProvider`, `heartTrendProvider`** (`zuralog/lib/features/heart/providers/heart_providers.dart`): Riverpod providers. `heartDaySummaryProvider` and `heartTrendProvider` fail gracefully to empty state on any error.
+
+**Shared Component Extensions:**
+
+- **`AllDataMetricTab`** (`zuralog/lib/shared/all_data/all_data_models.dart`): Extended with two optional fields — `secondaryValueExtractor` and `secondaryLabel` — to support dual-line charts without breaking existing Sleep or Nutrition all-data screens.
+
+- **`AllDataScreen`** (`zuralog/lib/shared/all_data/all_data_screen.dart`): Extended with a dual-line rendering branch. When a tab has `secondaryValueExtractor` set, two stacked `LineRenderer` charts (180px each) are rendered instead of a single chart. Used by the Blood Pressure tab.
+
+**Screens:**
+
+- **`HeartDetailScreen`** (`zuralog/lib/features/heart/presentation/heart_detail_screen.dart`): Route `/heart`. Full-screen detail view with a `SliverAppBar`, hero card, AI summary card, trend section, and a "View All Data" link that navigates to `HeartAllDataScreen`.
+
+- **`HeartAllDataScreen`** (`zuralog/lib/features/heart/presentation/all_data/heart_all_data_screen.dart`): Route `/heart/all-data`. Seven metric tabs: Resting HR, HRV, Avg HR, Resp. Rate, VO2 Max, SpO2, and Blood Pressure. Blood Pressure tab uses the new dual-line chart (systolic + diastolic stacked).
+
+**Widgets:**
+
+- **`HeartHeroCard`** (`zuralog/lib/features/heart/presentation/widgets/heart_hero_card.dart`): RHR and HRV as the headline pair, with vs-7-day delta arrows for both, source chips, and an empty state with a "Connect wearable" CTA.
+
+- **`HeartAiSummaryCard`** (`zuralog/lib/features/heart/presentation/widgets/heart_ai_summary_card.dart`): AI-generated daily heart summary with a skeleton loading state and a relative-time "Generated X ago" footer.
+
+- **`HeartTrendSection`** (`zuralog/lib/features/heart/presentation/widgets/heart_trend_section.dart`): Two line charts (Resting HR + HRV) in a single card with a shared 7d/30d range toggle.
+
+- **`HeartPillarCard`** (`zuralog/lib/features/today/presentation/widgets/heart_pillar_card.dart`): Updated to accept a real `HeartDaySummary` parameter. Displays resting HR as the headline, HRV and vs-avg delta as secondary stats.
+
+**Routing + Today Tab:**
+
+- **Route names** (`zuralog/lib/core/router/route_names.dart`): Added `heart` / `heartPath` (`/heart`) and `heartAllData` / `heartAllDataPath` (`/heart/all-data`).
+
+- **Router** (`zuralog/lib/core/router/app_router.dart`): Heart GoRoute registered at `/heart` with nested `/heart/all-data` child, matching the Sleep section pattern.
+
+- **Today feed** (`zuralog/lib/features/today/presentation/today_feed_screen.dart`): Wired to `heartDaySummaryProvider`; `HeartPillarCard` now uses real data and navigates to `HeartDetailScreen` on tap.
+
+**Files created:**
+- `zuralog/lib/features/heart/domain/heart_models.dart`
+- `zuralog/lib/features/heart/data/heart_repository_interface.dart`
+- `zuralog/lib/features/heart/data/api_heart_repository.dart`
+- `zuralog/lib/features/heart/data/mock_heart_repository.dart`
+- `zuralog/lib/features/heart/providers/heart_providers.dart`
+- `zuralog/lib/features/heart/presentation/heart_detail_screen.dart`
+- `zuralog/lib/features/heart/presentation/all_data/heart_all_data_screen.dart`
+- `zuralog/lib/features/heart/presentation/widgets/heart_hero_card.dart`
+- `zuralog/lib/features/heart/presentation/widgets/heart_ai_summary_card.dart`
+- `zuralog/lib/features/heart/presentation/widgets/heart_trend_section.dart`
+
+**Files modified:**
+- `zuralog/lib/shared/all_data/all_data_models.dart`
+- `zuralog/lib/shared/all_data/all_data_screen.dart`
+- `zuralog/lib/core/router/route_names.dart`
+- `zuralog/lib/core/router/app_router.dart`
+- `zuralog/lib/features/today/presentation/widgets/heart_pillar_card.dart`
+- `zuralog/lib/features/today/presentation/today_feed_screen.dart`
+
+---
+
 ## 2026-04-17 — Nutrition Phase 6: Walkthrough Answer Pipe, Refine Rounds, and Rule Suggestions
 
 **Branch:** `feat/navigation-restructure` (31 commits, not yet pushed)
