@@ -62,7 +62,10 @@ from app.models.rule_suggestion_snooze import RuleSuggestionSnooze
 from app.services.cache_service import CacheService
 from app.services.food_image_service import FoodImageService
 from app.services.food_search_service import record_correction, search_foods
-from app.services.nutrition_service import recompute_nutrition_summary
+from app.services.nutrition_service import (
+    get_nutrition_ai_summary,
+    recompute_nutrition_summary,
+)
 from app.services.rule_suggestion import detect_suggested_rule
 from app.utils.sanitize import sanitize_for_llm
 
@@ -554,6 +557,24 @@ async def get_today(
             "total_carbs_g": summary_row.total_carbs_g,
             "total_fat_g": summary_row.total_fat_g,
             "meal_count": summary_row.meal_count,
+        }
+
+    # Fetch today's AI nutrition summary from the insights table.
+    ai = await get_nutrition_ai_summary(db, user_id)
+
+    if summary is not None:
+        summary["ai_summary"] = ai["ai_summary"]
+        summary["ai_generated_at"] = ai["ai_generated_at"]
+    elif ai["ai_summary"] is not None:
+        summary = {
+            "date": today.isoformat(),
+            "total_calories": 0,
+            "total_protein_g": 0,
+            "total_carbs_g": 0,
+            "total_fat_g": 0,
+            "meal_count": 0,
+            "ai_summary": ai["ai_summary"],
+            "ai_generated_at": ai["ai_generated_at"],
         }
 
     return {
