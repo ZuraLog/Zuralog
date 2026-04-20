@@ -17,6 +17,7 @@ import 'package:zuralog/features/coach/presentation/widgets/coach_suggestion_car
 import 'package:zuralog/features/coach/presentation/widgets/coach_thinking_layer.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_user_message.dart';
 import 'package:zuralog/features/data/presentation/widgets/tile_visualizations.dart';
+import 'package:zuralog/features/heart/domain/heart_models.dart';
 import 'package:zuralog/features/today/presentation/widgets/heart_pillar_card.dart';
 import 'package:zuralog/features/today/presentation/widgets/nutrition_pillar_card.dart';
 import 'package:zuralog/features/today/presentation/widgets/sleep_pillar_card.dart';
@@ -693,7 +694,7 @@ class _ComponentShowcaseScreenState
         _gap(),
         const WorkoutsPillarCard(),
         _gap(),
-        const HeartPillarCard(),
+        HeartPillarCard(summary: HeartDaySummary.empty),
       ],
     );
   }
