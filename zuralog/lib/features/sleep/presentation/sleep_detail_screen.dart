@@ -3,8 +3,11 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
+import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/sleep/domain/sleep_models.dart';
 import 'package:zuralog/features/sleep/presentation/widgets/sleep_ai_summary_card.dart';
 import 'package:zuralog/features/sleep/presentation/widgets/sleep_factors_section.dart';
@@ -13,7 +16,7 @@ import 'package:zuralog/features/sleep/presentation/widgets/sleep_hr_section.dar
 import 'package:zuralog/features/sleep/presentation/widgets/sleep_stage_section.dart';
 import 'package:zuralog/features/sleep/presentation/widgets/sleep_trend_section.dart';
 import 'package:zuralog/features/sleep/providers/sleep_providers.dart';
-import 'package:zuralog/shared/widgets/animations/z_staggered_list.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 class SleepDetailScreen extends ConsumerWidget {
   const SleepDetailScreen({super.key});
@@ -59,6 +62,35 @@ class SleepDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppDimens.spaceMd),
                   const SleepTrendSection(),
+                  const SizedBox(height: AppDimens.spaceSm),
+                  InkWell(
+                    onTap: () => context.pushNamed(RouteNames.sleepAllData),
+                    borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppDimens.spaceXs,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text(
+                            'View All Data',
+                            style: AppTextStyles.labelMedium.copyWith(
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(width: AppDimens.spaceXs),
+                          const ZProBadge(showLock: true),
+                          const SizedBox(width: AppDimens.spaceXs),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            size: AppDimens.iconSm,
+                            color: colors.textSecondary,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   if (summary.factors.isNotEmpty) ...[
                     const SizedBox(height: AppDimens.spaceMd),
                     SleepFactorsSection(factors: summary.factors),

@@ -289,12 +289,7 @@ class NutritionHomeScreen extends ConsumerWidget {
                       0,
                     ),
                     child: InkWell(
-                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('All-Data screen coming in a future update'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      ),
+                      onTap: () => context.pushNamed(RouteNames.nutritionAllData),
                       borderRadius: BorderRadius.circular(AppDimens.shapeSm),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(

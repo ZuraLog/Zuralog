@@ -27,9 +27,12 @@
 ///   /progress/journal             → JournalScreen
 ///   /progress/journal/diary       → JournalDiaryScreen
 /// /trends                         → TrendsHomeScreen (pushed over shell)
+/// /sleep                          → SleepDetailScreen (pushed over shell)
+///   /sleep/all-data               → SleepAllDataScreen
 /// /nutrition                        → NutritionHomeScreen (pushed over shell)
 ///   /nutrition/meal/:id             → MealDetailScreen
 ///   /nutrition/meal-edit            → MealEditScreen
+///   /nutrition/all-data             → NutritionAllDataScreen
 /// /settings                       → SettingsHubScreen (pushed over shell)
 ///   /settings/account             → AccountSettingsScreen
 ///   /settings/account/edit-profile → EditProfileScreen
@@ -163,6 +166,10 @@ abstract final class RouteNames {
   static const String sleep     = 'sleep';
   static const String sleepPath = '/sleep';
 
+  // ── Sleep All-Data ────────────────────────────────────────────────────────
+  static const String sleepAllData     = 'sleepAllData';
+  static const String sleepAllDataPath = '/sleep/all-data';
+
   // ── Tab 1: Data ───────────────────────────────────────────────────────────
 
   /// Name for the Health Dashboard tab root.
@@ -286,6 +293,12 @@ abstract final class RouteNames {
 
   /// Path for the Meal Walkthrough screen.
   static const String nutritionMealWalkthroughPath = '/nutrition/meal-walkthrough';
+
+  /// Name for the Nutrition All-Data screen.
+  static const String nutritionAllData     = 'nutritionAllData';
+
+  /// Path for the Nutrition All-Data screen.
+  static const String nutritionAllDataPath = '/nutrition/all-data';
 
   // ── Settings (pushed over shell) ─────────────────────────────────────────
 

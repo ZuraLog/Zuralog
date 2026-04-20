@@ -72,6 +72,7 @@ import 'package:zuralog/features/today/presentation/log_screens/metric_picker_sc
 
 // ── Sleep Detail (pushed over shell) ─────────────────────────────────────────
 import 'package:zuralog/features/sleep/presentation/sleep_detail_screen.dart';
+import 'package:zuralog/features/sleep/presentation/all_data/sleep_all_data_screen.dart';
 
 // ── Tab 1: Data ───────────────────────────────────────────────────────────────
 import 'package:zuralog/features/data/presentation/health_dashboard_screen.dart';
@@ -96,6 +97,7 @@ import 'package:zuralog/features/trends/presentation/trends_home_screen.dart';
 
 // ── Nutrition (pushed over shell) ────────────────────────────────────────────
 import 'package:zuralog/features/nutrition/presentation/nutrition_home_screen.dart';
+import 'package:zuralog/features/nutrition/presentation/all_data/nutrition_all_data_screen.dart';
 import 'package:zuralog/features/nutrition/presentation/nutrition_rules_screen.dart';
 import 'package:zuralog/features/nutrition/presentation/meal_detail_screen.dart';
 import 'package:zuralog/features/nutrition/presentation/meal_edit_screen.dart';
@@ -381,6 +383,18 @@ List<RouteBase> _buildRoutes() {
           child: SleepDetailScreen(),
         ),
       ),
+      routes: [
+        GoRoute(
+          path: 'all-data',
+          name: RouteNames.sleepAllData,
+          pageBuilder: (context, state) => const MaterialPage(
+            child: SentryErrorBoundary(
+              module: 'sleep.all_data',
+              child: SleepAllDataScreen(),
+            ),
+          ),
+        ),
+      ],
     ),
 
     // ── Main App Shell — 3-tab StatefulShellRoute ─────────────────────────
@@ -618,6 +632,16 @@ List<RouteBase> _buildRoutes() {
               child: MealWalkthroughScreen(args: args),
             );
           },
+        ),
+        GoRoute(
+          path: 'all-data',
+          name: RouteNames.nutritionAllData,
+          pageBuilder: (context, state) => const MaterialPage(
+            child: SentryErrorBoundary(
+              module: 'nutrition.all_data',
+              child: NutritionAllDataScreen(),
+            ),
+          ),
         ),
       ],
     ),
