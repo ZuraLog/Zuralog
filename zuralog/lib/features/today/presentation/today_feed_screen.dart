@@ -23,6 +23,8 @@ import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
+import 'package:zuralog/features/heart/domain/heart_models.dart';
+import 'package:zuralog/features/heart/providers/heart_providers.dart';
 import 'package:zuralog/features/today/presentation/widgets/heart_pillar_card.dart';
 import 'package:zuralog/features/today/presentation/widgets/journal_prompt_card.dart';
 import 'package:zuralog/features/today/presentation/widgets/nutrition_pillar_card.dart';
@@ -55,6 +57,8 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
     final scoreAsync = ref.watch(healthScoreProvider);
     final feedAsync = ref.watch(todayFeedProvider);
     final dataDays = scoreAsync.valueOrNull?.dataDays ?? 0;
+    final heartSummaryAsync = ref.watch(heartDaySummaryProvider);
+    final heartSummary = heartSummaryAsync.valueOrNull ?? HeartDaySummary.empty;
 
     // When the user creates, edits, or deletes a goal on the Progress tab,
     // goalsProvider gets invalidated. Listen for that and refresh the daily
@@ -209,7 +213,8 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                   horizontal: AppDimens.spaceMd,
                 ),
                 child: HeartPillarCard(
-                  onTap: () => context.go(RouteNames.dataPath),
+                  summary: heartSummary,
+                  onTap: () => context.pushNamed(RouteNames.heart),
                 ),
               ),
             ),

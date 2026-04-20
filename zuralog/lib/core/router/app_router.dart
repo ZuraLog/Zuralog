@@ -74,6 +74,10 @@ import 'package:zuralog/features/today/presentation/log_screens/metric_picker_sc
 import 'package:zuralog/features/sleep/presentation/sleep_detail_screen.dart';
 import 'package:zuralog/features/sleep/presentation/all_data/sleep_all_data_screen.dart';
 
+// ── Heart Detail (pushed over shell) ─────────────────────────────────────────
+import 'package:zuralog/features/heart/presentation/heart_detail_screen.dart';
+import 'package:zuralog/features/heart/presentation/all_data/heart_all_data_screen.dart';
+
 // ── Tab 1: Data ───────────────────────────────────────────────────────────────
 import 'package:zuralog/features/data/presentation/health_dashboard_screen.dart';
 import 'package:zuralog/features/data/presentation/category_detail_screen.dart' as data_screens;
@@ -390,6 +394,26 @@ List<RouteBase> _buildRoutes() {
           builder: (context, state) => const SentryErrorBoundary(
             module: 'sleep.all_data',
             child: SleepAllDataScreen(),
+          ),
+        ),
+      ],
+    ),
+    GoRoute(
+      path: RouteNames.heartPath,
+      name: RouteNames.heart,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: SentryErrorBoundary(
+          module: 'heart.detail',
+          child: HeartDetailScreen(),
+        ),
+      ),
+      routes: [
+        GoRoute(
+          path: 'all-data',
+          name: RouteNames.heartAllData,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'heart.all_data',
+            child: HeartAllDataScreen(),
           ),
         ),
       ],

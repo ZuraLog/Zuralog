@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/features/heart/domain/heart_models.dart';
 import 'package:zuralog/features/heart/presentation/widgets/heart_ai_summary_card.dart';
 import 'package:zuralog/features/heart/presentation/widgets/heart_hero_card.dart';
@@ -51,8 +52,7 @@ class HeartDetailScreen extends ConsumerWidget {
                   const HeartTrendSection(),
                   const SizedBox(height: AppDimens.spaceSm),
                   InkWell(
-                    // TODO(task4): replace 'heartAllData' with RouteNames.heartAllData
-                    onTap: () => context.pushNamed('heartAllData'),
+                    onTap: () => context.pushNamed(RouteNames.heartAllData),
                     borderRadius: BorderRadius.circular(AppDimens.shapeSm),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(

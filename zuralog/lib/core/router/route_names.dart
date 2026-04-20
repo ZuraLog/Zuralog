@@ -29,6 +29,8 @@
 /// /trends                         → TrendsHomeScreen (pushed over shell)
 /// /sleep                          → SleepDetailScreen (pushed over shell)
 ///   /sleep/all-data               → SleepAllDataScreen
+/// /heart                          → HeartDetailScreen (pushed over shell)
+///   /heart/all-data               → HeartAllDataScreen
 /// /nutrition                        → NutritionHomeScreen (pushed over shell)
 ///   /nutrition/meal/:id             → MealDetailScreen
 ///   /nutrition/meal-edit            → MealEditScreen
@@ -173,6 +175,18 @@ abstract final class RouteNames {
 
   /// Path for the Sleep All-Data screen.
   static const String sleepAllDataPath = '/sleep/all-data';
+
+  // ── Heart Detail (pushed over shell) ──────────────────────────────────────
+  static const String heart     = 'heart';
+  static const String heartPath = '/heart';
+
+  // ── Heart All-Data ────────────────────────────────────────────────────────
+
+  /// Name for the Heart All-Data screen.
+  static const String heartAllData     = 'heartAllData';
+
+  /// Path for the Heart All-Data screen.
+  static const String heartAllDataPath = '/heart/all-data';
 
   // ── Tab 1: Data ───────────────────────────────────────────────────────────
 
