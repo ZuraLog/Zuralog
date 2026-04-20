@@ -29,6 +29,26 @@ class ApiSleepRepository implements SleepRepositoryInterface {
   }
 
   @override
-  Future<List<AllDataDay>> getSleepAllData(String range) =>
-      throw UnimplementedError('getSleepAllData — backend not yet built');
+  Future<List<AllDataDay>> getSleepAllData(String range) async {
+    const validRanges = {'7d', '30d', '3m', '6m', '1y'};
+    if (!validRanges.contains(range)) {
+      throw ArgumentError.value(range, 'range', 'must be one of $validRanges');
+    }
+    final response = await _api.get(
+      '/api/v1/sleep/all-data',
+      queryParameters: {'range': range},
+    );
+    final days = response.data['days'] as List<dynamic>? ?? [];
+    return days.map((e) {
+      final map = e as Map<String, dynamic>;
+      final rawValues = map['values'] as Map<String, dynamic>? ?? {};
+      return AllDataDay(
+        date: map['date'] as String? ?? '',
+        isToday: map['is_today'] as bool? ?? false,
+        values: rawValues.map(
+          (key, value) => MapEntry(key, (value as num?)?.toDouble()),
+        ),
+      );
+    }).toList();
+  }
 }
