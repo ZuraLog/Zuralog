@@ -18,6 +18,8 @@ from typing import Annotated, Any, Literal, Union
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 VALID_MEAL_TYPES: set[str] = {"breakfast", "lunch", "dinner", "snack"}
+VALID_TREND_RANGES: set[str] = {"7d", "30d"}
+VALID_ALL_DATA_RANGES: set[str] = {"7d", "30d", "3m", "6m", "1y"}
 
 
 # ---------------------------------------------------------------------------
@@ -635,3 +637,40 @@ class NutritionRuleUpdate(BaseModel):
         if not v:
             raise ValueError("rule_text must not be empty")
         return v
+
+
+# ---------------------------------------------------------------------------
+# Nutrition Trend & All-Data response schemas
+# ---------------------------------------------------------------------------
+
+
+class NutritionTrendDay(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    date: str
+    calories: float | None = None
+    protein_g: float | None = None
+    is_today: bool = False
+
+
+class NutritionTrendResponse(BaseModel):
+    range: str
+    days: list[NutritionTrendDay]
+
+
+class NutritionAllDataDayValues(BaseModel):
+    calories: float | None = None
+    protein: float | None = None
+    carbs: float | None = None
+    fat: float | None = None
+    meals: float | None = None
+
+
+class NutritionAllDataDay(BaseModel):
+    date: str
+    is_today: bool = False
+    values: NutritionAllDataDayValues
+
+
+class NutritionAllDataResponse(BaseModel):
+    days: list[NutritionAllDataDay]
