@@ -317,3 +317,65 @@ class TestHeartSummary:
         assert body["spo2"] == 97.8
         assert body["bp_systolic"] == 118.0
         assert body["bp_diastolic"] == 76.0
+
+
+class TestHeartTrend:
+
+    def test_trend_7d_returns_correct_days(self, client_with_auth):
+        """Three days of data returned in chronological order with correct values."""
+        client, _, mock_db = client_with_auth
+        today = date(2026, 4, 20)
+        _mock_db_with_rows(mock_db, [
+            _make_summary_row(date(2026, 4, 18), "resting_heart_rate", 64.0),
+            _make_summary_row(date(2026, 4, 18), "hrv_ms", 52.0),
+            _make_summary_row(date(2026, 4, 19), "resting_heart_rate", 62.0),
+            _make_summary_row(date(2026, 4, 19), "hrv_ms", 55.0),
+            _make_summary_row(today, "resting_heart_rate", 60.0),
+            _make_summary_row(today, "hrv_ms", 58.0),
+        ])
+        with patch("app.api.v1.heart_routes.get_user_local_date", new_callable=AsyncMock, return_value=today):
+            resp = client.get("/api/v1/heart/trend?range=7d", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+        days = resp.json()["days"]
+        assert len(days) == 3
+        assert days[0]["date"] == "2026-04-18"
+        assert days[0]["resting_hr"] == 64.0
+        assert days[0]["hrv_ms"] == 52.0
+        assert days[0]["is_today"] is False
+        assert days[2]["date"] == "2026-04-20"
+        assert days[2]["resting_hr"] == 60.0
+        assert days[2]["hrv_ms"] == 58.0
+        assert days[2]["is_today"] is True
+
+    def test_trend_30d_accepted(self, client_with_auth):
+        client, _, mock_db = client_with_auth
+        _mock_db_with_rows(mock_db, [])
+        with patch("app.api.v1.heart_routes.get_user_local_date", new_callable=AsyncMock, return_value=date(2026, 4, 20)):
+            resp = client.get("/api/v1/heart/trend?range=30d", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+
+    def test_trend_invalid_range_rejected(self, client_with_auth):
+        """Trend only accepts 7d or 30d — 3m returns 422."""
+        client, _, _ = client_with_auth
+        resp = client.get("/api/v1/heart/trend?range=3m", headers=AUTH_HEADER)
+        assert resp.status_code == 422
+
+    def test_trend_empty_returns_empty_days(self, client_with_auth):
+        client, _, mock_db = client_with_auth
+        _mock_db_with_rows(mock_db, [])
+        with patch("app.api.v1.heart_routes.get_user_local_date", new_callable=AsyncMock, return_value=date(2026, 4, 20)):
+            resp = client.get("/api/v1/heart/trend", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+        assert resp.json()["days"] == []
+
+    def test_trend_is_today_flag(self, client_with_auth):
+        """is_today is True only for the current local date."""
+        client, _, mock_db = client_with_auth
+        today = date(2026, 4, 20)
+        _mock_db_with_rows(mock_db, [
+            _make_summary_row(today, "resting_heart_rate", 62.0),
+        ])
+        with patch("app.api.v1.heart_routes.get_user_local_date", new_callable=AsyncMock, return_value=today):
+            resp = client.get("/api/v1/heart/trend?range=7d", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+        assert resp.json()["days"][0]["is_today"] is True

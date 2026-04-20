@@ -276,6 +276,53 @@ async def get_heart_summary(
 
 
 # ---------------------------------------------------------------------------
+# GET /api/v1/heart/trend
+# ---------------------------------------------------------------------------
+
+
+@router.get("/trend", response_model=HeartTrendResponse)
+@limiter.limit("120/minute")
+async def get_heart_trend(
+    request: Request,
+    user_id: Annotated[str, Depends(get_authenticated_user_id)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    range: Annotated[Literal["7d", "30d"], Query()] = "7d",
+) -> HeartTrendResponse:
+    """Daily resting HR and HRV history for trend charting."""
+    local_date = await get_user_local_date(db, user_id)
+    days = 7 if range == "7d" else 30
+
+    result = await db.execute(
+        select(DailySummary)
+        .where(
+            DailySummary.user_id == user_id,
+            DailySummary.metric_type.in_(["resting_heart_rate", "hrv_ms"]),
+            DailySummary.date >= local_date - timedelta(days=days - 1),
+            DailySummary.date <= local_date,
+            DailySummary.is_stale.is_(False),
+        )
+        .order_by(DailySummary.date)
+    )
+    rows = result.scalars().all()
+
+    by_date: dict[str, dict[str, float]] = {}
+    for row in rows:
+        by_date.setdefault(str(row.date), {})[row.metric_type] = row.value
+
+    trend_days = [
+        HeartTrendDay(
+            date=d,
+            resting_hr=metrics.get("resting_heart_rate"),
+            hrv_ms=metrics.get("hrv_ms"),
+            is_today=(d == str(local_date)),
+        )
+        for d, metrics in sorted(by_date.items())
+    ]
+
+    return HeartTrendResponse(range=range, days=trend_days)
+
+
+# ---------------------------------------------------------------------------
 # GET /api/v1/heart/all-data
 # ---------------------------------------------------------------------------
 
