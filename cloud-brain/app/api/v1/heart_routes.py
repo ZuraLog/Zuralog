@@ -270,7 +270,7 @@ async def get_heart_summary(
         resting_hr_vs_7day=resting_hr_vs_7day,
         hrv_vs_7day=hrv_vs_7day,
         ai_summary=insight.body if insight else None,
-        ai_generated_at=insight.created_at.isoformat() if insight else None,
+        ai_generated_at=insight.created_at.isoformat() if insight else None,  # type: ignore[attr-defined]
         sources=[_source_to_schema(s) for s in source_names],
     )
 
