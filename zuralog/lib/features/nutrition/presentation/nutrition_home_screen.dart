@@ -162,20 +162,64 @@ class NutritionHomeScreen extends ConsumerWidget {
                 slivers: [
                   SliverFillRemaining(
                     hasScrollBody: false,
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppDimens.spaceMd,
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppDimens.spaceMd,
+                              ),
+                              child: ZEmptyState(
+                                icon: Icons.restaurant_outlined,
+                                title: 'No meals logged yet',
+                                message:
+                                    'Tap below to log your first meal of the day.',
+                                actionLabel: 'Log a meal',
+                                onAction: () => LogMealSheet.show(context),
+                              ),
+                            ),
+                          ),
                         ),
-                        child: ZEmptyState(
-                          icon: Icons.restaurant_outlined,
-                          title: 'No meals logged yet',
-                          message:
-                              'Tap below to log your first meal of the day.',
-                          actionLabel: 'Log a meal',
-                          onAction: () => LogMealSheet.show(context),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppDimens.spaceMd,
+                            AppDimens.spaceSm,
+                            AppDimens.spaceMd,
+                            AppDimens.spaceLg,
+                          ),
+                          child: InkWell(
+                            onTap: () =>
+                                context.pushNamed(RouteNames.nutritionAllData),
+                            borderRadius:
+                                BorderRadius.circular(AppDimens.shapeSm),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: AppDimens.spaceXs,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    'View All Data',
+                                    style: AppTextStyles.labelMedium.copyWith(
+                                      color: colors.textSecondary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppDimens.spaceXs),
+                                  const ZProBadge(showLock: true),
+                                  const SizedBox(width: AppDimens.spaceXs),
+                                  Icon(
+                                    Icons.arrow_forward_rounded,
+                                    size: AppDimens.iconSm,
+                                    color: colors.textSecondary,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ],
