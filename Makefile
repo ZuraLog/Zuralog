@@ -62,10 +62,10 @@ ADB    := $(shell ls "$$LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe" 2>/dev/
         analyze test build-apk build-appbundle build-prod build-apk-prod build-prod-ios
 
 # ---------------------------------------------------------------------------
-# Android Emulator — DEBUG (local backend, mock data active via kDebugMode)
+# Android Emulator — DEBUG (local backend, real API data)
 # ---------------------------------------------------------------------------
 ## Default dev target. Connects to local backend at http://10.0.2.2:8001.
-## Mock repositories activate automatically in debug mode (kDebugMode=true).
+## Uses real API repositories. Run `make run-mock` instead for mock data (no backend needed).
 run:
 	cd zuralog && flutter run --debug \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
