@@ -295,7 +295,6 @@ class MockNutritionRepository implements NutritionRepositoryInterface {
       final isToday = i == count - 1;
       final dateStr =
           '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-      final seed = i + 1;
       // Today: only calories and protein logged so far.
       if (isToday) {
         return AllDataDay(
@@ -310,6 +309,7 @@ class MockNutritionRepository implements NutritionRepositoryInterface {
           },
         );
       }
+      final seed = i + 1;
       return AllDataDay(
         date: dateStr,
         isToday: false,
@@ -318,7 +318,7 @@ class MockNutritionRepository implements NutritionRepositoryInterface {
           'protein': 110.0 + (seed % 4) * 5,
           'carbs': 200.0 + (seed % 5) * 10,
           'fat': 65.0 + (seed % 3) * 5,
-          'meals': (2.0 + (seed % 2)),
+          'meals': 2.0 + (seed % 2),
         },
       );
     });
