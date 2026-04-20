@@ -654,11 +654,15 @@ class NutritionTrendDay(BaseModel):
 
 
 class NutritionTrendResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     range: str
     days: list[NutritionTrendDay]
 
 
 class NutritionAllDataDayValues(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     calories: float | None = None
     protein: float | None = None
     carbs: float | None = None
@@ -667,10 +671,14 @@ class NutritionAllDataDayValues(BaseModel):
 
 
 class NutritionAllDataDay(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     date: str
     is_today: bool = False
     values: NutritionAllDataDayValues
 
 
 class NutritionAllDataResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     days: list[NutritionAllDataDay]
