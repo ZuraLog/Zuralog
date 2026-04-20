@@ -387,11 +387,9 @@ List<RouteBase> _buildRoutes() {
         GoRoute(
           path: 'all-data',
           name: RouteNames.sleepAllData,
-          pageBuilder: (context, state) => const MaterialPage(
-            child: SentryErrorBoundary(
-              module: 'sleep.all_data',
-              child: SleepAllDataScreen(),
-            ),
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'sleep.all_data',
+            child: SleepAllDataScreen(),
           ),
         ),
       ],

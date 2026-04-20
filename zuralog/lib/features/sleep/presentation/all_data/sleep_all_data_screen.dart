@@ -14,7 +14,7 @@ class SleepAllDataScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repo = ref.read(sleepRepositoryProvider);
+    final repo = ref.watch(sleepRepositoryProvider);
     final config = AllDataSectionConfig(
       sectionTitle: 'Sleep',
       categoryColor: AppColors.categorySleep,
@@ -24,7 +24,10 @@ class SleepAllDataScreen extends ConsumerWidget {
           label: 'Duration',
           chartType: AllDataChartType.bar,
           unit: 'h',
-          valueExtractor: (d) => d.values['duration'],
+          valueExtractor: (d) {
+            final mins = d.values['duration'];
+            return mins != null ? mins / 60.0 : null;
+          },
         ),
         AllDataMetricTab(
           id: 'quality',
@@ -38,7 +41,10 @@ class SleepAllDataScreen extends ConsumerWidget {
           label: 'Deep Sleep',
           chartType: AllDataChartType.bar,
           unit: 'h',
-          valueExtractor: (d) => d.values['deep_sleep'],
+          valueExtractor: (d) {
+            final mins = d.values['deep_sleep'];
+            return mins != null ? mins / 60.0 : null;
+          },
           emptyStateSource: 'Connect a wearable to see this metric',
         ),
         AllDataMetricTab(
@@ -46,7 +52,10 @@ class SleepAllDataScreen extends ConsumerWidget {
           label: 'REM',
           chartType: AllDataChartType.bar,
           unit: 'h',
-          valueExtractor: (d) => d.values['rem'],
+          valueExtractor: (d) {
+            final mins = d.values['rem'];
+            return mins != null ? mins / 60.0 : null;
+          },
           emptyStateSource: 'Connect a wearable to see this metric',
         ),
         AllDataMetricTab(
@@ -54,7 +63,10 @@ class SleepAllDataScreen extends ConsumerWidget {
           label: 'Light Sleep',
           chartType: AllDataChartType.bar,
           unit: 'h',
-          valueExtractor: (d) => d.values['light_sleep'],
+          valueExtractor: (d) {
+            final mins = d.values['light_sleep'];
+            return mins != null ? mins / 60.0 : null;
+          },
           emptyStateSource: 'Connect a wearable to see this metric',
         ),
         AllDataMetricTab(

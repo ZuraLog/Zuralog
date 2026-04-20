@@ -13,7 +13,7 @@ class NutritionAllDataScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repo = ref.read(nutritionRepositoryProvider);
+    final repo = ref.watch(nutritionRepositoryProvider);
     final config = AllDataSectionConfig(
       sectionTitle: 'Nutrition',
       categoryColor: AppColors.categoryNutrition,

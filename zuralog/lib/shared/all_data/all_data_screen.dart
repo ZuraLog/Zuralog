@@ -59,13 +59,22 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isPremium = ref.watch(isPremiumProvider);
+    if (isPremium && _showUpgradePrompt) {
+      // Schedule so we don't call setState during build.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _showUpgradePrompt = false);
+      });
+    }
     final colors = AppColorsOf(context);
     final tabs = widget.config.tabs;
     final catColor = widget.config.categoryColor;
     final tab = tabs.isNotEmpty ? tabs[_selectedTab] : null;
 
-    return CustomScrollView(
-      slivers: [
+    return Scaffold(
+      backgroundColor: colors.canvas,
+      body: CustomScrollView(
+        slivers: [
         // ── App Bar ──────────────────────────────────────────────────────────
         SliverAppBar(
           pinned: true,
@@ -141,6 +150,20 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen> {
                           return const SizedBox(
                             height: 140,
                             child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+
+                        if (snapshot.hasError) {
+                          return SizedBox(
+                            height: 120,
+                            child: Center(
+                              child: Text(
+                                'Could not load data. Try again later.',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: colors.textSecondary,
+                                ),
+                              ),
+                            ),
                           );
                         }
 
@@ -280,6 +303,7 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen> {
 
         SliverToBoxAdapter(child: SizedBox(height: AppDimens.spaceLg)),
       ],
+      ),
     );
   }
 }

@@ -3,7 +3,6 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zuralog/features/sleep/data/mock_sleep_repository.dart';
-import 'package:zuralog/shared/all_data/all_data_models.dart';
 
 void main() {
   late MockSleepRepository repo;
@@ -58,6 +57,14 @@ void main() {
     test('last entry is today', () async {
       final days = await repo.getSleepAllData('7d');
       expect(days.last.isToday, isTrue);
+    });
+
+    test('range day counts are correct', () async {
+      final cases = {'7d': 7, '30d': 30, '3m': 90, '6m': 180, '1y': 365};
+      for (final entry in cases.entries) {
+        final days = await repo.getSleepAllData(entry.key);
+        expect(days.length, entry.value, reason: 'range ${entry.key} should return ${entry.value} days');
+      }
     });
   });
 }

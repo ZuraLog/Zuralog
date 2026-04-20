@@ -2,7 +2,6 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zuralog/features/nutrition/data/mock_nutrition_repository.dart';
-import 'package:zuralog/shared/all_data/all_data_models.dart';
 
 void main() {
   late MockNutritionRepository repo;
@@ -54,6 +53,14 @@ void main() {
     test('last entry is today', () async {
       final days = await repo.getNutritionAllData('7d');
       expect(days.last.isToday, isTrue);
+    });
+
+    test('range day counts are correct', () async {
+      final cases = {'7d': 7, '30d': 30, '3m': 90, '6m': 180, '1y': 365};
+      for (final entry in cases.entries) {
+        final days = await repo.getNutritionAllData(entry.key);
+        expect(days.length, entry.value, reason: 'range ${entry.key} should return ${entry.value} days');
+      }
     });
   });
 }
