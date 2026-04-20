@@ -18,6 +18,10 @@ class ApiHeartRepository implements HeartRepositoryInterface {
 
   @override
   Future<List<HeartTrendDay>> getHeartTrend(String range) async {
+    const validRanges = {'7d', '30d'};
+    if (!validRanges.contains(range)) {
+      throw ArgumentError.value(range, 'range', 'must be one of $validRanges');
+    }
     final response = await _api.get(
       '/api/v1/heart/trend',
       queryParameters: {'range': range},

@@ -1,7 +1,5 @@
 library;
 
-import 'dart:async';
-
 import 'package:zuralog/features/heart/data/heart_repository_interface.dart';
 import 'package:zuralog/features/heart/domain/heart_models.dart';
 import 'package:zuralog/shared/all_data/all_data_models.dart';
@@ -38,15 +36,18 @@ class MockHeartRepository implements HeartRepositoryInterface {
 
   @override
   Future<List<HeartTrendDay>> getHeartTrend(String range) async {
-    const restingHrs = [66.0, 65.0, 63.0, 67.0, 64.0, 62.0, 62.0];
-    const hrvs = [42.0, 44.0, 46.0, 40.0, 45.0, 48.0, 48.0];
-    return List.generate(7, (i) {
-      final day = DateTime(2026, 4, 14 + i);
+    final dayCount = const {'7d': 7, '30d': 30}[range] ?? 7;
+    final today = DateTime.now();
+    const baseRhr = 63.0;
+    const baseHrv = 44.0;
+    return List.generate(dayCount, (i) {
+      final day = today.subtract(Duration(days: dayCount - 1 - i));
+      final seed = i % 7;
       return HeartTrendDay(
         date: day.toIso8601String().substring(0, 10),
-        restingHr: restingHrs[i],
-        hrvMs: hrvs[i],
-        isToday: i == 6,
+        restingHr: baseRhr + (seed % 3) - 1.0,
+        hrvMs: baseHrv + (seed % 4) - 1.0,
+        isToday: i == dayCount - 1,
       );
     });
   }
@@ -57,7 +58,7 @@ class MockHeartRepository implements HeartRepositoryInterface {
     final dayCount =
         const {'7d': 7, '30d': 30, '3m': 90, '6m': 180, '1y': 365}[range] ??
             7;
-    final today = DateTime(2026, 4, 20);
+    final today = DateTime.now();
     return List.generate(dayCount, (i) {
       final day = today.subtract(Duration(days: dayCount - 1 - i));
       final isToday = i == dayCount - 1;
