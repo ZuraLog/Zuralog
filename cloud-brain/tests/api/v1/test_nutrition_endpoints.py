@@ -12,6 +12,7 @@ required. All external calls are replaced with AsyncMock.
 
 from __future__ import annotations
 
+from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -165,13 +166,13 @@ class TestNutritionAllData:
         assert v["fat"] == 38.1
         assert v["meals"] == 2.0
 
-    def test_all_data_extended_ranges_accepted(self, client_with_auth):
+    @pytest.mark.parametrize("range_val", ["30d", "3m", "6m", "1y"])
+    def test_all_data_extended_ranges_accepted(self, client_with_auth, range_val):
         client, _, _ = client_with_auth
-        for r in ["30d", "3m", "6m", "1y"]:
-            with patch("app.api.v1.nutrition_routes.get_nutrition_all_data", new_callable=AsyncMock) as mock_svc:
-                mock_svc.return_value = []
-                resp = client.get(f"/api/v1/nutrition/all-data?range={r}", headers=AUTH_HEADER)
-            assert resp.status_code == 200, f"Expected 200 for range={r}, got {resp.status_code}"
+        with patch("app.api.v1.nutrition_routes.get_nutrition_all_data", new_callable=AsyncMock) as mock_svc:
+            mock_svc.return_value = []
+            resp = client.get(f"/api/v1/nutrition/all-data?range={range_val}", headers=AUTH_HEADER)
+        assert resp.status_code == 200
 
     def test_all_data_invalid_range_rejected(self, client_with_auth):
         client, _, _ = client_with_auth
@@ -208,7 +209,7 @@ class TestNutritionTodayAiSummary:
 
         # Mock DB to return empty meals list and a summary row.
         mock_summary_row = MagicMock()
-        mock_summary_row.date = __import__("datetime").date(2026, 4, 20)
+        mock_summary_row.date = date(2026, 4, 20)
         mock_summary_row.total_calories = 1200.0
         mock_summary_row.total_protein_g = 50.0
         mock_summary_row.total_carbs_g = 150.0
