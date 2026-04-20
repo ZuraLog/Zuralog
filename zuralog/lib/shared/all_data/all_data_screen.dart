@@ -26,6 +26,7 @@ class AllDataScreen extends ConsumerStatefulWidget {
 class _AllDataScreenState extends ConsumerState<AllDataScreen> {
   static final _renderCtx = ChartRenderContext.fromMode(ChartMode.tall).copyWith(
     showAxes: true,
+    showGrid: true,
     animationProgress: 1.0,
   );
 
@@ -82,6 +83,8 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen> {
           backgroundColor: colors.surface,
           surfaceTintColor: Colors.transparent,
         ),
+
+        SliverToBoxAdapter(child: SizedBox(height: AppDimens.spaceMd)),
 
         // ── Metric Tabs ───────────────────────────────────────────────────────
         SliverToBoxAdapter(
@@ -212,7 +215,7 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen> {
                               )
                               .toList();
                           return SizedBox(
-                            height: 140,
+                            height: 200,
                             child: BarRenderer(
                               config: BarChartConfig(
                                 bars: bars,
@@ -220,6 +223,7 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen> {
                               ),
                               color: catColor,
                               renderCtx: _renderCtx,
+                              unit: tab.unit,
                             ),
                           );
                         } else {
@@ -233,7 +237,7 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen> {
                               })
                               .toList();
                           return SizedBox(
-                            height: 140,
+                            height: 200,
                             child: LineRenderer(
                               config: LineChartConfig(points: points),
                               color: catColor,

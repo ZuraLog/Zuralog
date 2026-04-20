@@ -41,6 +41,11 @@ class LineRenderer extends StatefulWidget {
 }
 
 class _LineRendererState extends State<LineRenderer> {
+  static const _monthAbbrev = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
   int? _lastSpotIndex;
 
   List<ChartPoint> _downsample(List<ChartPoint> points) {
@@ -82,6 +87,12 @@ class _LineRendererState extends State<LineRenderer> {
       date: point.date,
       pixelX: event.localPosition?.dx ?? 0.0,
     );
+  }
+
+  String _formatY(double value) {
+    if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}k';
+    if (value == value.roundToDouble()) return value.round().toString();
+    return value.toStringAsFixed(1);
   }
 
   @override
@@ -126,6 +137,14 @@ class _LineRendererState extends State<LineRenderer> {
     final scrubEnabled =
         widget.scrubController != null && widget.renderCtx.showTooltip;
 
+    final textSecondary = AppColorsOf(context).textSecondary;
+
+    // Compute which x-indices should display a date label (first, ~1/3, ~2/3, last).
+    final n = points.length;
+    final Set<int> labelIndices = n <= 1
+        ? {0}
+        : {0, (n * 1 / 3).round(), (n * 2 / 3).round(), n - 1};
+
     return LineChart(
       LineChartData(
         lineBarsData: [lineBarData],
@@ -134,12 +153,63 @@ class _LineRendererState extends State<LineRenderer> {
           drawVerticalLine: false,
           horizontalInterval: null,
           getDrawingHorizontalLine: (value) => FlLine(
-            color: AppColorsOf(context).warmWhite.withValues(alpha: 0.04),
+            color: textSecondary.withValues(alpha: 0.08),
             strokeWidth: 0.5,
           ),
         ),
         borderData: FlBorderData(show: false),
-        titlesData: const FlTitlesData(show: false),
+        titlesData: !widget.renderCtx.showAxes
+            ? const FlTitlesData(show: false)
+            : FlTitlesData(
+                topTitles: const AxisTitles(),
+                rightTitles: const AxisTitles(),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 36,
+                    getTitlesWidget: (value, meta) {
+                      // Hide the extreme tick labels — they overlap the chart edge.
+                      if (value == meta.min || value == meta.max) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: Text(
+                          _formatY(value),
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: textSecondary,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 16,
+                    interval: 1,
+                    getTitlesWidget: (value, meta) {
+                      final idx = value.toInt();
+                      if (!labelIndices.contains(idx)) {
+                        return const SizedBox.shrink();
+                      }
+                      final date = points[idx].date;
+                      final label =
+                          '${_monthAbbrev[date.month - 1]} ${date.day}';
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          label,
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: textSecondary,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
         lineTouchData: scrubEnabled
             ? LineTouchData(
                 enabled: true,

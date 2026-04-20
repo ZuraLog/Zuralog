@@ -18,12 +18,20 @@ class BarRenderer extends StatelessWidget {
     required this.color,
     required this.renderCtx,
     this.onBarTap,
+    this.unit = '',
   });
 
   final BarChartConfig config;
   final Color color;
   final ChartRenderContext renderCtx;
   final void Function(int barIndex, double value, String label)? onBarTap;
+  final String unit;
+
+  String _formatY(double value) {
+    if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}k';
+    if (value == value.roundToDouble()) return value.round().toString();
+    return value.toStringAsFixed(1);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,6 +97,11 @@ class BarRenderer extends StatelessWidget {
         ),
     ];
 
+    final textSecondary = AppColorsOf(context).textSecondary;
+
+    // Only show every Nth bar label so they don't overlap in dense ranges.
+    final labelStep = bars.length > 14 ? (bars.length / 7).ceil() : 1;
+
     // ── Chart ─────────────────────────────────────────────────────────────
     return BarChart(
       BarChartData(
@@ -110,7 +123,17 @@ class BarRenderer extends StatelessWidget {
                 },
               )
             : const BarTouchData(enabled: false),
-        gridData: const FlGridData(show: false),
+        gridData: renderCtx.showGrid
+            ? FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                horizontalInterval: maxY / 4,
+                getDrawingHorizontalLine: (value) => FlLine(
+                  color: textSecondary.withValues(alpha: 0.08),
+                  strokeWidth: 0.5,
+                ),
+              )
+            : const FlGridData(show: false),
         borderData: FlBorderData(show: false),
         extraLinesData: ExtraLinesData(
           horizontalLines: horizontalLines,
@@ -118,7 +141,29 @@ class BarRenderer extends StatelessWidget {
         titlesData: FlTitlesData(
           topTitles: const AxisTitles(),
           rightTitles: const AxisTitles(),
-          leftTitles: const AxisTitles(),
+          leftTitles: renderCtx.showAxes
+              ? AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 36,
+                    interval: maxY / 4,
+                    getTitlesWidget: (value, meta) {
+                      if (value <= 0 || value >= maxY) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: Text(
+                          _formatY(value),
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: textSecondary,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                )
+              : const AxisTitles(),
           bottomTitles: renderCtx.showAxes
               ? AxisTitles(
                   sideTitles: SideTitles(
@@ -129,13 +174,17 @@ class BarRenderer extends StatelessWidget {
                       if (idx < 0 || idx >= bars.length) {
                         return const SizedBox.shrink();
                       }
+                      // Skip intermediate labels on dense datasets.
+                      if (idx % labelStep != 0 && idx != bars.length - 1) {
+                        return const SizedBox.shrink();
+                      }
                       return Padding(
                         padding: const EdgeInsets.only(top: 2),
                         child: Text(
                           bars[idx].label,
                           textAlign: TextAlign.center,
                           style: AppTextStyles.labelSmall.copyWith(
-                            color: AppColorsOf(context).textSecondary,
+                            color: textSecondary,
                           ),
                         ),
                       );
