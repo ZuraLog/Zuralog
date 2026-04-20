@@ -54,8 +54,13 @@ Widget _host(ProviderContainer container) {
 /// animation that never settles.
 ///
 /// Pumps 500ms to clear the MockNutritionRepository._readDelay (400ms) used
-/// by getTodaySummary (not overridden in _Repo).
+/// by getTodaySummary and getTrend (not overridden in _Repo).
+///
+/// Also expands the virtual surface to 1800 logical pixels tall so the AI
+/// summary card and trend charts (added above the meal list) don't push the
+/// Slidable cards off-screen inside the test viewport.
 Future<void> _load(WidgetTester tester) async {
+  await tester.binding.setSurfaceSize(const Size(400, 1800));
   await tester.pump(); // resolves immediate Future microtasks
   await tester.pump(const Duration(milliseconds: 500)); // clears 400ms mock delay
   await tester.pump(); // flush final rebuild
@@ -224,6 +229,7 @@ void main() {
       );
       addTearDown(c.dispose);
 
+      await tester.binding.setSurfaceSize(const Size(400, 1800));
       await tester.pumpWidget(MaterialApp.router(
         routerConfig: _testRouter(c),
       ));

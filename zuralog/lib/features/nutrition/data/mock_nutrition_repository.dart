@@ -141,6 +141,11 @@ abstract interface class NutritionRepositoryInterface {
   /// loading state. Returns `null` when no image is available or when the
   /// request fails — the caller should show the pattern-only fallback.
   Future<String?> fetchFoodImage(String query);
+
+  /// Returns per-day calorie and protein totals for the given [range].
+  ///
+  /// [range] is either `'7d'` (last 7 days) or `'30d'` (last 30 days).
+  Future<List<NutritionTrendDay>> getTrend(String range);
 }
 
 // -- MockNutritionRepository --------------------------------------------------
@@ -183,6 +188,11 @@ class MockNutritionRepository implements NutritionRepositoryInterface {
       totalCarbsG: totalCarbs,
       totalFatG: totalFat,
       mealCount: meals.length,
+      aiSummary:
+          "You're off to a solid start. Protein is tracking well at ${totalProtein.round()}g so far, "
+          'and your morning meal set a nutritious foundation. Consider a balanced dinner to round out '
+          'the day — you have about ${(2000 - totalCalories).clamp(0, 2000)} kcal remaining.',
+      aiGeneratedAt: DateTime.now().subtract(const Duration(minutes: 23)),
     );
   }
 
@@ -242,6 +252,25 @@ class MockNutritionRepository implements NutritionRepositoryInterface {
     if (query.trim().isEmpty) return null;
     // Canned URL for snapshot tests. Use a stable public image.
     return 'https://images.pexels.com/photos/566566/pexels-photo-566566.jpeg';
+  }
+
+  @override
+  Future<List<NutritionTrendDay>> getTrend(String range) async {
+    await Future<void>.delayed(_readDelay);
+    final count = range == '30d' ? 30 : 7;
+    final today = DateTime.now();
+    return List.generate(count, (i) {
+      final date = today.subtract(Duration(days: count - 1 - i));
+      final isToday = i == count - 1;
+      final dateStr =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      return NutritionTrendDay(
+        date: dateStr,
+        isToday: isToday,
+        calories: isToday ? null : (1600 + (i * 47) % 800).toDouble(),
+        proteinG: isToday ? null : (90 + (i * 13) % 60).toDouble(),
+      );
+    });
   }
 
   @override

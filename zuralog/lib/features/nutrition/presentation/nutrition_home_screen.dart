@@ -19,6 +19,8 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
 import 'package:zuralog/features/nutrition/providers/nutrition_providers.dart';
+import 'package:zuralog/features/nutrition/presentation/widgets/nutrition_ai_summary_card.dart';
+import 'package:zuralog/features/nutrition/presentation/widgets/nutrition_trend_section.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── NutritionHomeScreen ──────────────────────────────────────────────────────
@@ -140,6 +142,8 @@ class NutritionHomeScreen extends ConsumerWidget {
           Future<void> onRefresh() async {
             ref.invalidate(todayMealsProvider);
             ref.invalidate(nutritionDaySummaryProvider);
+            ref.invalidate(nutritionTrendProvider('7d'));
+            ref.invalidate(nutritionTrendProvider('30d'));
             await Future.wait([
               ref
                   .read(todayMealsProvider.future)
@@ -243,9 +247,86 @@ class NutritionHomeScreen extends ConsumerWidget {
                   ),
                 ),
 
-                // ── Section header ─────────────────────────────────────
+                // ── AI Summary card ─────────────────────────────────────
                 ZFadeSlideIn(
                   delay: const Duration(milliseconds: 120),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppDimens.spaceMd,
+                      AppDimens.spaceMd,
+                      AppDimens.spaceMd,
+                      0,
+                    ),
+                    child: NutritionAiSummaryCard(
+                      aiSummary: summary.aiSummary,
+                      generatedAt: summary.aiGeneratedAt,
+                    ),
+                  ),
+                ),
+
+                // ── Nutrition Trend ──────────────────────────────────────
+                ZFadeSlideIn(
+                  delay: const Duration(milliseconds: 180),
+                  child: const Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppDimens.spaceMd,
+                      AppDimens.spaceMd,
+                      AppDimens.spaceMd,
+                      0,
+                    ),
+                    child: NutritionTrendSection(),
+                  ),
+                ),
+
+                // ── View All Data row ────────────────────────────────────
+                ZFadeSlideIn(
+                  delay: const Duration(milliseconds: 240),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppDimens.spaceMd,
+                      AppDimens.spaceSm,
+                      AppDimens.spaceMd,
+                      0,
+                    ),
+                    child: InkWell(
+                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('All-Data screen coming in a future update'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      ),
+                      borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppDimens.spaceXs,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text(
+                              'View All Data',
+                              style: AppTextStyles.labelMedium.copyWith(
+                                color: colors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(width: AppDimens.spaceXs),
+                            const ZProBadge(showLock: true),
+                            const SizedBox(width: AppDimens.spaceXs),
+                            Icon(
+                              Icons.arrow_forward_rounded,
+                              size: AppDimens.iconSm,
+                              color: colors.textSecondary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ── Section header ─────────────────────────────────────
+                ZFadeSlideIn(
+                  delay: const Duration(milliseconds: 300),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(
                       AppDimens.spaceMd,
@@ -260,7 +341,7 @@ class NutritionHomeScreen extends ConsumerWidget {
                 // ── Meal cards ─────────────────────────────────────────
                 for (int i = 0; i < meals.length; i++)
                   ZFadeSlideIn(
-                    delay: Duration(milliseconds: 180 + (i * 60)),
+                    delay: Duration(milliseconds: 360 + (i * 60)),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(
                         AppDimens.spaceMd,
@@ -280,7 +361,7 @@ class NutritionHomeScreen extends ConsumerWidget {
                 // ── Log a meal CTA ─────────────────────────────────────
                 ZFadeSlideIn(
                   delay: Duration(
-                    milliseconds: 180 + (meals.length * 60) + 60,
+                    milliseconds: 360 + (meals.length * 60) + 60,
                   ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
