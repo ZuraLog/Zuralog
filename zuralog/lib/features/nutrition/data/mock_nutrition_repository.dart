@@ -14,6 +14,7 @@ library;
 import 'dart:io';
 
 import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
+import 'package:zuralog/shared/all_data/all_data_models.dart';
 
 // -- NutritionRepositoryInterface ---------------------------------------------
 
@@ -146,6 +147,10 @@ abstract interface class NutritionRepositoryInterface {
   ///
   /// [range] is either `'7d'` (last 7 days) or `'30d'` (last 30 days).
   Future<List<NutritionTrendDay>> getTrend(String range);
+
+  /// Returns per-day rows for every nutrition metric. Valid range values:
+  /// '7d', '30d', '3m', '6m', '1y'. Throws [ArgumentError] for unknown ranges.
+  Future<List<AllDataDay>> getNutritionAllData(String range);
 }
 
 // -- MockNutritionRepository --------------------------------------------------
@@ -269,6 +274,52 @@ class MockNutritionRepository implements NutritionRepositoryInterface {
         isToday: isToday,
         calories: isToday ? null : (1600 + (i * 47) % 800).toDouble(),
         proteinG: isToday ? null : (90 + (i * 13) % 60).toDouble(),
+      );
+    });
+  }
+
+  @override
+  Future<List<AllDataDay>> getNutritionAllData(String range) async {
+    await Future<void>.delayed(_readDelay);
+    final now = DateTime.now();
+    final count = switch (range) {
+      '7d' => 7,
+      '30d' => 30,
+      '3m' => 90,
+      '6m' => 180,
+      '1y' => 365,
+      _ => throw ArgumentError.value(range, 'range', 'Unknown range'),
+    };
+    return List.generate(count, (i) {
+      final date = now.subtract(Duration(days: count - 1 - i));
+      final isToday = i == count - 1;
+      final dateStr =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final seed = i + 1;
+      // Today: only calories and protein logged so far.
+      if (isToday) {
+        return AllDataDay(
+          date: dateStr,
+          isToday: true,
+          values: {
+            'calories': 840.0,
+            'protein': 38.0,
+            'carbs': null,
+            'fat': null,
+            'meals': 1.0,
+          },
+        );
+      }
+      return AllDataDay(
+        date: dateStr,
+        isToday: false,
+        values: {
+          'calories': 1800.0 + (seed % 3) * 80,
+          'protein': 110.0 + (seed % 4) * 5,
+          'carbs': 200.0 + (seed % 5) * 10,
+          'fat': 65.0 + (seed % 3) * 5,
+          'meals': (2.0 + (seed % 2)),
+        },
       );
     });
   }

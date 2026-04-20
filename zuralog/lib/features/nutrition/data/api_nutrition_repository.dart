@@ -13,6 +13,7 @@ import 'package:dio/dio.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/nutrition/data/mock_nutrition_repository.dart';
 import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
+import 'package:zuralog/shared/all_data/all_data_models.dart';
 
 /// Production implementation of [NutritionRepositoryInterface].
 ///
@@ -315,4 +316,8 @@ class ApiNutritionRepository implements NutritionRepositoryInterface {
         .map((e) => NutritionTrendDay.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  @override
+  Future<List<AllDataDay>> getNutritionAllData(String range) =>
+      throw UnimplementedError('getNutritionAllData — backend not yet built');
 }
