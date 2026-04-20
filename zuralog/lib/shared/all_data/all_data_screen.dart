@@ -24,6 +24,11 @@ class AllDataScreen extends ConsumerStatefulWidget {
 }
 
 class _AllDataScreenState extends ConsumerState<AllDataScreen> {
+  static final _renderCtx = ChartRenderContext.fromMode(ChartMode.tall).copyWith(
+    showAxes: true,
+    animationProgress: 1.0,
+  );
+
   int _selectedTab = 0;
   String _range = '7d';
   late Future<List<AllDataDay>> _dataFuture;
@@ -58,12 +63,6 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen> {
     final tabs = widget.config.tabs;
     final catColor = widget.config.categoryColor;
     final tab = tabs.isNotEmpty ? tabs[_selectedTab] : null;
-
-    final renderCtx = ChartRenderContext.fromMode(ChartMode.tall).copyWith(
-      showAxes: true,
-      showGrid: false,
-      animationProgress: 1.0,
-    );
 
     return CustomScrollView(
       slivers: [
@@ -197,20 +196,15 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen> {
                                 showAvgLine: true,
                               ),
                               color: catColor,
-                              renderCtx: renderCtx,
+                              renderCtx: _renderCtx,
                             ),
                           );
                         } else {
                           final points = days
                               .where((d) => tab.valueExtractor(d) != null)
                               .map((d) {
-                                final parts = d.date.split('-');
                                 return ChartPoint(
-                                  date: DateTime(
-                                    int.parse(parts[0]),
-                                    int.parse(parts[1]),
-                                    int.parse(parts[2]),
-                                  ),
+                                  date: DateTime.parse(d.date),
                                   value: tab.valueExtractor(d)!,
                                 );
                               })
@@ -220,7 +214,7 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen> {
                             child: LineRenderer(
                               config: LineChartConfig(points: points),
                               color: catColor,
-                              renderCtx: renderCtx,
+                              renderCtx: _renderCtx,
                               unit: tab.unit,
                             ),
                           );
@@ -266,7 +260,6 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen> {
               title: 'Personal Benchmark',
               body:
                   'Building your baseline… keep logging to see your personal range.',
-              catColor: catColor,
             ),
           ),
         ),
@@ -281,7 +274,6 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen> {
               title: 'Distribution',
               body:
                   'Building your baseline… keep logging to see your breakdown.',
-              catColor: catColor,
             ),
           ),
         ),
@@ -388,12 +380,10 @@ class _PlaceholderCard extends StatelessWidget {
   const _PlaceholderCard({
     required this.title,
     required this.body,
-    required this.catColor,
   });
 
   final String title;
   final String body;
-  final Color catColor;
 
   @override
   Widget build(BuildContext context) {
