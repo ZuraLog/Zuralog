@@ -244,9 +244,7 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen> {
                                     value: tab.secondaryValueExtractor!(d)!,
                                   ))
                               .toList();
-                          return SizedBox(
-                            height: 420,
-                            child: Column(
+                          return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Padding(
@@ -255,7 +253,7 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen> {
                                     bottom: AppDimens.spaceXs,
                                   ),
                                   child: Text(
-                                    'Systolic',
+                                    tab.label,
                                     style: AppTextStyles.labelSmall
                                         .copyWith(color: colors.textSecondary),
                                   ),
@@ -291,7 +289,6 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen> {
                                   ),
                                 ),
                               ],
-                            ),
                           );
                         } else {
                           // Single-line chart (existing code unchanged).

@@ -12,7 +12,7 @@ class HeartAllDataScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repo = ref.read(heartRepositoryProvider);
+    final repo = ref.watch(heartRepositoryProvider);
     final config = AllDataSectionConfig(
       sectionTitle: 'Heart',
       categoryColor: AppColors.categoryHeart,
