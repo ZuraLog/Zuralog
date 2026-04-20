@@ -18,11 +18,11 @@ import logging
 import re
 import uuid
 from datetime import date, datetime, time, timezone
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 import httpx
 import sentry_sdk
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, UploadFile, status
 from openai import APIError
 from pydantic import ValidationError
 from sqlalchemy import delete as sa_delete
@@ -47,6 +47,8 @@ from app.api.v1.nutrition_schemas import (
     MealUpdateRequest,
     NutritionRuleCreate,
     NutritionRuleUpdate,
+    NutritionTrendDay,
+    NutritionTrendResponse,
     ParsedFoodItem,
     RuleSuggestionDismissRequest,
 )
@@ -64,6 +66,7 @@ from app.services.food_image_service import FoodImageService
 from app.services.food_search_service import record_correction, search_foods
 from app.services.nutrition_service import (
     get_nutrition_ai_summary,
+    get_nutrition_trend,
     recompute_nutrition_summary,
 )
 from app.services.rule_suggestion import detect_suggested_rule
@@ -581,6 +584,29 @@ async def get_today(
         "meals": [_meal_to_response(m) for m in meals],
         "summary": summary,
     }
+
+
+@limiter.limit("120/minute")
+@router.get("/trend", response_model=NutritionTrendResponse)
+async def get_nutrition_trend_endpoint(
+    request: Request,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+    range: str = Query(default="7d", pattern="^(7d|30d)$"),
+) -> NutritionTrendResponse:
+    """Per-day calorie and protein totals for the nutrition trend chart.
+
+    Returns one row per day that has logged meal data. Days with no meals
+    are omitted.
+
+    Query params:
+        range: '7d' (default) or '30d'. Other values return 422.
+    """
+    trend_data = await get_nutrition_trend(db, user_id, range)
+    return NutritionTrendResponse(
+        range=range,
+        days=[NutritionTrendDay(**day) for day in trend_data],
+    )
 
 
 @limiter.limit("30/minute")
