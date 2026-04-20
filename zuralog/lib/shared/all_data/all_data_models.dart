@@ -14,6 +14,7 @@ class AllDataDay {
     required this.values,
   });
 
+  /// ISO-8601 date string, e.g. '2026-04-20'.
   final String date;
   final bool isToday;
   final Map<String, double?> values;
@@ -47,6 +48,8 @@ class AllDataMetricTab {
 
 /// All configuration that varies per section. Passed into [AllDataScreen] by
 /// each section-specific entry point (e.g. [SleepAllDataScreen]).
+///
+/// Not `const` — [fetchData] is a closure and prevents const construction.
 class AllDataSectionConfig {
   AllDataSectionConfig({
     required this.sectionTitle,

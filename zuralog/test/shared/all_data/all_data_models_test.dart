@@ -20,7 +20,8 @@ void main() {
   });
 
   group('AllDataChartType', () {
-    test('has bar and line values', () {
+    test('has exactly bar and line values', () {
+      expect(AllDataChartType.values.length, 2);
       expect(AllDataChartType.values, contains(AllDataChartType.bar));
       expect(AllDataChartType.values, contains(AllDataChartType.line));
     });
@@ -56,7 +57,7 @@ void main() {
   });
 
   group('AllDataSectionConfig', () {
-    test('holds all required fields', () {
+    test('holds all required fields and fetchData is callable', () async {
       final config = AllDataSectionConfig(
         sectionTitle: 'Sleep',
         categoryColor: Colors.indigo,
@@ -65,6 +66,8 @@ void main() {
       );
       expect(config.sectionTitle, 'Sleep');
       expect(config.tabs, isEmpty);
+      final result = await config.fetchData('7d');
+      expect(result, isEmpty);
     });
   });
 }
