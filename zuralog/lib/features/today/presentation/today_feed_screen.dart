@@ -96,6 +96,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
           ref.invalidate(todayLogSummaryProvider);
           ref.invalidate(pinnedMetricsProvider);
           ref.invalidate(dailyGoalsProvider);
+          ref.invalidate(heartDaySummaryProvider);
           await Future.wait([
             ref
                 .read(healthScoreProvider.future)

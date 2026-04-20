@@ -24,6 +24,10 @@
 /// /trends                           → TrendsHomeScreen (pushed over shell)
 /// /nutrition                        → NutritionHomeScreen (pushed over shell)
 ///   /nutrition/meal/:id             → MealDetailScreen
+/// /sleep                            → SleepDetailScreen (pushed over shell)
+///   /sleep/all-data                 → SleepAllDataScreen
+/// /heart                            → HeartDetailScreen (pushed over shell)
+///   /heart/all-data                 → HeartAllDataScreen
 /// /settings                         → SettingsHubScreen (pushed over shell)
 ///   /settings/journal               → JournalSettingsScreen
 ///   /settings/account ... /settings/about  → sub-screens
