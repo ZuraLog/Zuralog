@@ -47,6 +47,9 @@ from app.api.v1.nutrition_schemas import (
     MealUpdateRequest,
     NutritionRuleCreate,
     NutritionRuleUpdate,
+    NutritionAllDataDay,
+    NutritionAllDataDayValues,
+    NutritionAllDataResponse,
     NutritionTrendDay,
     NutritionTrendResponse,
     ParsedFoodItem,
@@ -66,6 +69,7 @@ from app.services.food_image_service import FoodImageService
 from app.services.food_search_service import record_correction, search_foods
 from app.services.nutrition_service import (
     get_nutrition_ai_summary,
+    get_nutrition_all_data,
     get_nutrition_trend,
     recompute_nutrition_summary,
 )
@@ -606,6 +610,36 @@ async def get_nutrition_trend_endpoint(
     return NutritionTrendResponse(
         range=range,
         days=[NutritionTrendDay(**day) for day in trend_data],
+    )
+
+
+@limiter.limit("60/minute")
+@router.get("/all-data", response_model=NutritionAllDataResponse)
+async def get_nutrition_all_data_endpoint(
+    request: Request,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+    range: str = Query(default="7d", pattern="^(7d|30d|3m|6m|1y)$"),
+) -> NutritionAllDataResponse:
+    """Per-day rows for every nutrition metric — powers the All-Data screen.
+
+    Returns one row per day that has logged meal data. Each row contains
+    all five metrics: calories, protein, carbs, fat, meals. Null values
+    indicate missing data for that specific metric on that day.
+
+    Query params:
+        range: '7d' (default), '30d', '3m', '6m', or '1y'. Other values return 422.
+    """
+    all_data = await get_nutrition_all_data(db, user_id, range)
+    return NutritionAllDataResponse(
+        days=[
+            NutritionAllDataDay(
+                date=day["date"],
+                is_today=day["is_today"],
+                values=NutritionAllDataDayValues(**day["values"]),
+            )
+            for day in all_data
+        ],
     )
 
 
