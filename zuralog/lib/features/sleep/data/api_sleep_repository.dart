@@ -3,6 +3,7 @@ library;
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/sleep/data/sleep_repository_interface.dart';
 import 'package:zuralog/features/sleep/domain/sleep_models.dart';
+import 'package:zuralog/shared/all_data/all_data_models.dart';
 
 class ApiSleepRepository implements SleepRepositoryInterface {
   ApiSleepRepository({required ApiClient apiClient}) : _api = apiClient;
@@ -26,4 +27,8 @@ class ApiSleepRepository implements SleepRepositoryInterface {
         .map((e) => SleepTrendDay.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  @override
+  Future<List<AllDataDay>> getSleepAllData(String range) =>
+      throw UnimplementedError('getSleepAllData — backend not yet built');
 }
