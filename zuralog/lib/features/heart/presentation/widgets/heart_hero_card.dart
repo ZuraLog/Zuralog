@@ -233,7 +233,11 @@ class _SourceChip extends StatelessWidget {
     final Color dotColor;
     try {
       final hex = source.brandColor.replaceFirst('#', '');
-      dotColor = Color(int.parse('FF$hex', radix: 16));
+      if (hex.length != 6) {
+        dotColor = AppColors.categoryHeart;
+      } else {
+        dotColor = Color(int.parse('FF$hex', radix: 16));
+      }
     } catch (_) {
       return const SizedBox.shrink();
     }
