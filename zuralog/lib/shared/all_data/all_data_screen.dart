@@ -172,7 +172,9 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen> {
 
                         final days = snapshot.data ?? [];
                         final hasValues =
-                            days.any((d) => tab.valueExtractor(d) != null);
+                            days.any((d) => tab.valueExtractor(d) != null) ||
+                            (tab.secondaryValueExtractor != null &&
+                                days.any((d) => tab.secondaryValueExtractor!(d) != null));
 
                         if (!hasValues) {
                           return SizedBox(
@@ -226,7 +228,73 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen> {
                               unit: tab.unit,
                             ),
                           );
+                        } else if (tab.secondaryValueExtractor != null) {
+                          // Dual-line chart (e.g. blood pressure systolic + diastolic).
+                          final primaryPoints = days
+                              .where((d) => tab.valueExtractor(d) != null)
+                              .map((d) => ChartPoint(
+                                    date: DateTime.parse(d.date),
+                                    value: tab.valueExtractor(d)!,
+                                  ))
+                              .toList();
+                          final secondaryPoints = days
+                              .where((d) => tab.secondaryValueExtractor!(d) != null)
+                              .map((d) => ChartPoint(
+                                    date: DateTime.parse(d.date),
+                                    value: tab.secondaryValueExtractor!(d)!,
+                                  ))
+                              .toList();
+                          return SizedBox(
+                            height: 420,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    left: AppDimens.spaceMd,
+                                    bottom: AppDimens.spaceXs,
+                                  ),
+                                  child: Text(
+                                    'Systolic',
+                                    style: AppTextStyles.labelSmall
+                                        .copyWith(color: colors.textSecondary),
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: 180,
+                                  child: LineRenderer(
+                                    config: LineChartConfig(points: primaryPoints),
+                                    color: catColor,
+                                    renderCtx: _renderCtx,
+                                    unit: tab.unit,
+                                  ),
+                                ),
+                                const SizedBox(height: AppDimens.spaceSm),
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    left: AppDimens.spaceMd,
+                                    bottom: AppDimens.spaceXs,
+                                  ),
+                                  child: Text(
+                                    tab.secondaryLabel ?? 'Diastolic',
+                                    style: AppTextStyles.labelSmall
+                                        .copyWith(color: colors.textSecondary),
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: 180,
+                                  child: LineRenderer(
+                                    config: LineChartConfig(points: secondaryPoints),
+                                    color: catColor.withValues(alpha: 0.65),
+                                    renderCtx: _renderCtx,
+                                    unit: tab.unit,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
                         } else {
+                          // Single-line chart (existing code unchanged).
                           final points = days
                               .where((d) => tab.valueExtractor(d) != null)
                               .map((d) {

@@ -29,6 +29,8 @@ class AllDataMetricTab {
     required this.unit,
     required this.valueExtractor,
     this.emptyStateSource,
+    this.secondaryValueExtractor,
+    this.secondaryLabel,
   });
 
   final String id;
@@ -44,6 +46,13 @@ class AllDataMetricTab {
   /// Human-readable data source prompt shown when the user has no data for
   /// this metric (e.g. 'Connect a wearable'). Null means generic empty state.
   final String? emptyStateSource;
+
+  /// Optional second data series for dual-line charts (e.g. blood pressure).
+  /// When non-null, [AllDataScreen] renders two line charts stacked vertically.
+  final double? Function(AllDataDay day)? secondaryValueExtractor;
+
+  /// Label for the secondary series (e.g. 'Diastolic').
+  final String? secondaryLabel;
 }
 
 /// All configuration that varies per section. Passed into [AllDataScreen] by
