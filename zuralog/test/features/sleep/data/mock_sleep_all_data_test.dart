@@ -46,5 +46,18 @@ void main() {
         throwsArgumentError,
       );
     });
+
+    test('date strings are YYYY-MM-DD formatted', () async {
+      final days = await repo.getSleepAllData('7d');
+      final iso = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+      for (final day in days) {
+        expect(day.date, matches(iso));
+      }
+    });
+
+    test('last entry is today', () async {
+      final days = await repo.getSleepAllData('7d');
+      expect(days.last.isToday, isTrue);
+    });
   });
 }

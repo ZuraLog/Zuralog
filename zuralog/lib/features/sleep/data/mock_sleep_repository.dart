@@ -5,7 +5,14 @@ import 'package:zuralog/features/sleep/data/sleep_repository_interface.dart';
 import 'package:zuralog/features/sleep/domain/sleep_models.dart';
 import 'package:zuralog/shared/all_data/all_data_models.dart';
 
+/// In-memory sleep repository for development and tests.
+///
+/// Returns fixture data for all methods. Simulates a small read delay
+/// to make loading states visible during development. Controlled via
+/// `USE_MOCK_DATA=true` at compile time.
 class MockSleepRepository implements SleepRepositoryInterface {
+  /// Simulated network latency for read operations.
+  static const Duration _readDelay = Duration(milliseconds: 400);
   @override
   Future<SleepDaySummary> getSleepSummary() async => SleepDaySummary(
         hasData: true,
@@ -91,13 +98,16 @@ class MockSleepRepository implements SleepRepositoryInterface {
 
   @override
   Future<List<AllDataDay>> getSleepAllData(String range) async {
-    if (range != '7d' && range != '30d' && range != '3m' &&
-        range != '6m' && range != '1y') {
-      throw ArgumentError.value(range, 'range', 'Unknown range');
-    }
+    await Future<void>.delayed(_readDelay);
     final now = DateTime.now();
-    // For mock purposes always return 7 days regardless of range.
-    const count = 7;
+    final count = switch (range) {
+      '7d' => 7,
+      '30d' => 30,
+      '3m' => 90,
+      '6m' => 180,
+      '1y' => 365,
+      _ => throw ArgumentError.value(range, 'range', 'Unknown range'),
+    };
     return List.generate(count, (i) {
       final date = now.subtract(Duration(days: count - 1 - i));
       final isToday = i == count - 1;
