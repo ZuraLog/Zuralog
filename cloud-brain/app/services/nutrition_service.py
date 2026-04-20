@@ -8,7 +8,7 @@ single fast query.
 """
 
 import logging
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.meal import Meal
 from app.models.nutrition_daily_summary import NutritionDailySummary
+from app.utils.user_date import get_user_local_date
 
 logger = logging.getLogger(__name__)
 
@@ -100,3 +101,161 @@ async def recompute_nutrition_summary(
         total_fat,
         len(meals),
     )
+
+
+# ---------------------------------------------------------------------------
+# Range helpers
+# ---------------------------------------------------------------------------
+
+_RANGE_TO_DAYS: dict[str, int] = {
+    "7d": 7,
+    "30d": 30,
+    "3m": 90,
+    "6m": 180,
+    "1y": 365,
+}
+
+
+def _range_to_day_count(range_str: str) -> int:
+    """Convert a range string to a day count. Raises ValueError for unknown ranges."""
+    count = _RANGE_TO_DAYS.get(range_str)
+    if count is None:
+        raise ValueError(
+            f"Unknown range: {range_str!r}. "
+            f"Must be one of {sorted(_RANGE_TO_DAYS.keys())}"
+        )
+    return count
+
+
+# ---------------------------------------------------------------------------
+# Trend query
+# ---------------------------------------------------------------------------
+
+
+async def get_nutrition_trend(
+    db: AsyncSession,
+    user_id: str,
+    range_str: str,
+) -> list[dict]:
+    """Fetch per-day nutrition totals for the trend chart.
+
+    Returns a list of dicts with keys: date, calories, protein_g, is_today.
+    Days with no logged meals are excluded.
+    """
+    days = _range_to_day_count(range_str)
+    local_date = await get_user_local_date(db, user_id)
+    start_date = local_date - timedelta(days=days - 1)
+
+    result = await db.execute(
+        select(NutritionDailySummary)
+        .where(
+            NutritionDailySummary.user_id == user_id,
+            NutritionDailySummary.date >= start_date,
+            NutritionDailySummary.date <= local_date,
+        )
+        .order_by(NutritionDailySummary.date)
+    )
+    rows = result.scalars().all()
+
+    return [
+        {
+            "date": str(row.date),
+            "calories": float(row.total_calories) if row.total_calories is not None else None,
+            "protein_g": float(row.total_protein_g) if row.total_protein_g is not None else None,
+            "is_today": row.date == local_date,
+        }
+        for row in rows
+    ]
+
+
+# ---------------------------------------------------------------------------
+# All-Data query
+# ---------------------------------------------------------------------------
+
+
+async def get_nutrition_all_data(
+    db: AsyncSession,
+    user_id: str,
+    range_str: str,
+) -> list[dict]:
+    """Fetch per-day rows for every nutrition metric for the All-Data screen.
+
+    Returns a list of dicts with keys: date, is_today, values (dict with
+    calories, protein, carbs, fat, meals). Days with no logged meals are
+    excluded.
+    """
+    days = _range_to_day_count(range_str)
+    local_date = await get_user_local_date(db, user_id)
+    start_date = local_date - timedelta(days=days - 1)
+
+    result = await db.execute(
+        select(NutritionDailySummary)
+        .where(
+            NutritionDailySummary.user_id == user_id,
+            NutritionDailySummary.date >= start_date,
+            NutritionDailySummary.date <= local_date,
+        )
+        .order_by(NutritionDailySummary.date)
+    )
+    rows = result.scalars().all()
+
+    return [
+        {
+            "date": str(row.date),
+            "is_today": row.date == local_date,
+            "values": {
+                "calories": float(row.total_calories) if row.total_calories is not None else None,
+                "protein": float(row.total_protein_g) if row.total_protein_g is not None else None,
+                "carbs": float(row.total_carbs_g) if row.total_carbs_g is not None else None,
+                "fat": float(row.total_fat_g) if row.total_fat_g is not None else None,
+                "meals": float(row.meal_count) if row.meal_count is not None else None,
+            },
+        }
+        for row in rows
+    ]
+
+
+# ---------------------------------------------------------------------------
+# AI Summary query
+# ---------------------------------------------------------------------------
+
+
+async def get_nutrition_ai_summary(
+    db: AsyncSession,
+    user_id: str,
+) -> dict:
+    """Fetch today's AI-generated nutrition summary from the insights table.
+
+    Returns a dict with keys: ai_summary (str | None), ai_generated_at (str | None).
+    Both are None when no insight exists for today.
+    """
+    from app.models.insight import Insight  # noqa: PLC0415
+
+    local_date = await get_user_local_date(db, user_id)
+
+    result = await db.execute(
+        select(Insight)
+        .where(
+            Insight.user_id == user_id,
+            Insight.type == "nutrition_summary",
+            Insight.generation_date == local_date,
+            Insight.dismissed_at.is_(None),
+        )
+        .order_by(Insight.priority.asc())
+        .limit(1)
+    )
+    insight = result.scalars().first()
+
+    if insight:
+        return {
+            "ai_summary": insight.body,
+            "ai_generated_at": (
+                insight.created_at
+                if insight.created_at
+                else None
+            ),
+        }
+    return {
+        "ai_summary": None,
+        "ai_generated_at": None,
+    }
