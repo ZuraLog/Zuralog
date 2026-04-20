@@ -10,7 +10,7 @@ from datetime import timedelta
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -51,6 +51,23 @@ _SOURCE_DISPLAY: dict[str, tuple[str, str]] = {
     "apple_health":   ("Apple Health",    "#FF375F"),
     "health_connect": ("Health Connect",  "#4CAF50"),
     "manual":         ("Manual",          "#5E5CE6"),
+}
+
+_METRIC_TO_ALL_DATA_KEY: dict[str, str] = {
+    "sleep_duration": "duration",
+    "sleep_quality": "quality",
+    "deep_sleep_minutes": "deep_sleep",
+    "rem_sleep_minutes": "rem",
+    "light_sleep_minutes": "light_sleep",
+    "sleep_efficiency": "efficiency",
+}
+
+_ALL_DATA_RANGE_DAYS: dict[str, int] = {
+    "7d": 7,
+    "30d": 30,
+    "3m": 90,
+    "6m": 180,
+    "1y": 365,
 }
 
 # ---------------------------------------------------------------------------
@@ -111,6 +128,32 @@ class SleepTrendDay(BaseModel):
 class SleepTrendResponse(BaseModel):
     range: str
     days: list[SleepTrendDay]
+
+
+class SleepAllDataDayValues(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    duration: float | None = None
+    quality: float | None = None
+    deep_sleep: float | None = None
+    rem: float | None = None
+    light_sleep: float | None = None
+    heart_rate: float | None = None
+    efficiency: float | None = None
+
+
+class SleepAllDataDay(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    date: str
+    is_today: bool = False
+    values: SleepAllDataDayValues
+
+
+class SleepAllDataResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    days: list[SleepAllDataDay]
 
 
 # ---------------------------------------------------------------------------
