@@ -56,6 +56,7 @@ from app.api.v1.metrics_routes import router as metrics_router
 from app.api.v1.notification_routes import router as notification_router
 from app.api.v1.nutrition_routes import router as nutrition_router
 from app.api.v1.sleep_routes import router as sleep_router
+from app.api.v1.heart_routes import router as heart_router
 from app.api.v1.oura_routes import router as oura_router
 from app.api.v1.oura_webhooks import webhook_router as oura_webhook_router
 from app.api.v1.polar_routes import router as polar_router
@@ -441,6 +442,7 @@ app.include_router(supplements_router, prefix="/api/v1")  # Supplements list man
 app.include_router(nutrition_router, prefix="/api/v1")  # Phase 2B — nutrition meal CRUD
 app.include_router(export_router, prefix="/api/v1")  # User data export
 app.include_router(sleep_router, prefix="/api/v1")  # Sleep detail
+app.include_router(heart_router, prefix="/api/v1")  # Heart detail
 
 
 @app.get("/health")
