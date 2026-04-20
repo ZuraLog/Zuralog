@@ -379,3 +379,38 @@ class TestHeartTrend:
             resp = client.get("/api/v1/heart/trend?range=7d", headers=AUTH_HEADER)
         assert resp.status_code == 200
         assert resp.json()["days"][0]["is_today"] is True
+
+
+class TestHeartRouteRegistration:
+
+    def test_all_data_route_exists(self, client_with_auth):
+        """GET /api/v1/heart/all-data returns 200 when router is registered."""
+        client, _, mock_db = client_with_auth
+        _mock_db_with_rows(mock_db, [])
+        with patch("app.api.v1.heart_routes.get_user_local_date", new_callable=AsyncMock, return_value=date(2026, 4, 20)):
+            resp = client.get("/api/v1/heart/all-data?range=7d", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+
+    def test_summary_route_exists(self, client_with_auth):
+        """GET /api/v1/heart/summary returns 200 and has_data=False when router is registered."""
+        client, _, mock_db = client_with_auth
+        mock_db.execute = AsyncMock(side_effect=[
+            _make_scalars_result([]),
+            _make_scalar_result(None),
+            _make_scalar_result(None),
+            _make_scalars_result([]),
+            _make_fetchall_result([]),
+        ])
+        with patch("app.api.v1.heart_routes.get_user_local_date", new_callable=AsyncMock, return_value=date(2026, 4, 20)):
+            resp = client.get("/api/v1/heart/summary", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+        assert resp.json()["has_data"] is False
+
+    def test_trend_route_exists(self, client_with_auth):
+        """GET /api/v1/heart/trend returns 200 and empty days when router is registered."""
+        client, _, mock_db = client_with_auth
+        _mock_db_with_rows(mock_db, [])
+        with patch("app.api.v1.heart_routes.get_user_local_date", new_callable=AsyncMock, return_value=date(2026, 4, 20)):
+            resp = client.get("/api/v1/heart/trend", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+        assert resp.json()["days"] == []
