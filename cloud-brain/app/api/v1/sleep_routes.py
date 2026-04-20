@@ -392,3 +392,70 @@ async def get_sleep_trend(
     ]
 
     return SleepTrendResponse(range=range, days=trend_days)
+
+
+# ---------------------------------------------------------------------------
+# GET /api/v1/sleep/all-data
+# ---------------------------------------------------------------------------
+
+
+@router.get("/all-data", response_model=SleepAllDataResponse)
+@limiter.limit("60/minute")
+async def get_sleep_all_data(
+    request: Request,
+    user_id: Annotated[str, Depends(get_authenticated_user_id)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    range: Annotated[
+        Literal["7d", "30d", "3m", "6m", "1y"], Query()
+    ] = "7d",
+) -> SleepAllDataResponse:
+    """Per-day rows for every sleep metric -- powers the All-Data screen.
+
+    Returns one row per day that has any sleep data in DailySummary.
+    Each row contains all seven metrics. heart_rate is always null
+    (no DailySummary source for sleeping HR yet). Days with no sleep
+    data are omitted.
+
+    Query params:
+        range: '7d' (default), '30d', '3m', '6m', or '1y'. Other values return 422.
+    """
+    local_date = await get_user_local_date(db, user_id)
+    day_count = _ALL_DATA_RANGE_DAYS[range]
+
+    result = await db.execute(
+        select(DailySummary)
+        .where(
+            DailySummary.user_id == user_id,
+            DailySummary.metric_type.in_(list(_METRIC_TO_ALL_DATA_KEY.keys())),
+            DailySummary.date >= local_date - timedelta(days=day_count - 1),
+            DailySummary.date <= local_date,
+            DailySummary.is_stale.is_(False),
+        )
+        .order_by(DailySummary.date)
+    )
+    rows = result.scalars().all()
+
+    by_date: dict[str, dict[str, float]] = {}
+    for row in rows:
+        key = _METRIC_TO_ALL_DATA_KEY.get(row.metric_type)
+        if key:
+            by_date.setdefault(str(row.date), {})[key] = row.value
+
+    return SleepAllDataResponse(
+        days=[
+            SleepAllDataDay(
+                date=d,
+                is_today=(d == str(local_date)),
+                values=SleepAllDataDayValues(
+                    duration=metrics.get("duration"),
+                    quality=metrics.get("quality"),
+                    deep_sleep=metrics.get("deep_sleep"),
+                    rem=metrics.get("rem"),
+                    light_sleep=metrics.get("light_sleep"),
+                    heart_rate=None,
+                    efficiency=metrics.get("efficiency"),
+                ),
+            )
+            for d, metrics in sorted(by_date.items())
+        ],
+    )
