@@ -426,7 +426,7 @@ async def get_sleep_all_data(
         select(DailySummary)
         .where(
             DailySummary.user_id == user_id,
-            DailySummary.metric_type.in_(list(_METRIC_TO_ALL_DATA_KEY.keys())),
+            DailySummary.metric_type.in_(_METRIC_TO_ALL_DATA_KEY.keys()),
             DailySummary.date >= local_date - timedelta(days=day_count - 1),
             DailySummary.date <= local_date,
             DailySummary.is_stale.is_(False),
