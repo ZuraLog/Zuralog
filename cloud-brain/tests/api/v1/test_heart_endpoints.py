@@ -166,3 +166,154 @@ class TestHeartAllData:
         assert days[2]["date"] == "2026-04-20"
         assert days[2]["is_today"] is True
         assert days[0]["is_today"] is False
+
+
+class TestHeartSummary:
+
+    def test_summary_has_data_true_when_metrics_exist(self, client_with_auth):
+        """Summary returns has_data=True and correct values when metrics exist."""
+        client, _, mock_db = client_with_auth
+        today = date(2026, 4, 20)
+        mock_db.execute = AsyncMock(side_effect=[
+            _make_scalars_result([
+                _make_summary_row(today, "resting_heart_rate", 62.0),
+                _make_summary_row(today, "hrv_ms", 58.0),
+            ]),                                          # 1. today metrics
+            _make_scalar_result(65.0),                  # 2. RHR 7-day avg
+            _make_scalar_result(55.0),                  # 3. HRV 7-day avg
+            _make_scalars_result([]),                   # 4. insight
+            _make_fetchall_result([]),                  # 5. sources
+        ])
+        with patch("app.api.v1.heart_routes.get_user_local_date", new_callable=AsyncMock, return_value=today):
+            resp = client.get("/api/v1/heart/summary", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["has_data"] is True
+        assert body["resting_hr"] == 62.0
+        assert body["hrv_ms"] == 58.0
+        assert body["resting_hr_vs_7day"] == -3.0
+        assert body["hrv_vs_7day"] == 3.0
+
+    def test_summary_has_data_false_when_no_metrics(self, client_with_auth):
+        """Empty metrics → has_data=False with all metric fields None."""
+        client, _, mock_db = client_with_auth
+        today = date(2026, 4, 20)
+        mock_db.execute = AsyncMock(side_effect=[
+            _make_scalars_result([]),    # 1. no metrics
+            _make_scalar_result(None),  # 2. no RHR avg
+            _make_scalar_result(None),  # 3. no HRV avg
+            _make_scalars_result([]),   # 4. no insight
+            _make_fetchall_result([]),  # 5. no sources
+        ])
+        with patch("app.api.v1.heart_routes.get_user_local_date", new_callable=AsyncMock, return_value=today):
+            resp = client.get("/api/v1/heart/summary", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["has_data"] is False
+        assert body["resting_hr"] is None
+        assert body["hrv_ms"] is None
+        assert body["avg_hr"] is None
+        assert body["respiratory_rate"] is None
+        assert body["vo2_max"] is None
+        assert body["spo2"] is None
+        assert body["bp_systolic"] is None
+        assert body["bp_diastolic"] is None
+        assert body["resting_hr_vs_7day"] is None
+        assert body["hrv_vs_7day"] is None
+        assert body["sources"] == []
+
+    def test_summary_vs_7day_computed_correctly(self, client_with_auth):
+        """Delta is today minus 7-day avg, rounded to 1 decimal."""
+        client, _, mock_db = client_with_auth
+        today = date(2026, 4, 20)
+        mock_db.execute = AsyncMock(side_effect=[
+            _make_scalars_result([
+                _make_summary_row(today, "resting_heart_rate", 65.0),
+            ]),
+            _make_scalar_result(68.0),  # 7d avg
+            _make_scalar_result(None),
+            _make_scalars_result([]),
+            _make_fetchall_result([]),
+        ])
+        with patch("app.api.v1.heart_routes.get_user_local_date", new_callable=AsyncMock, return_value=today):
+            resp = client.get("/api/v1/heart/summary", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+        assert resp.json()["resting_hr_vs_7day"] == -3.0
+
+    def test_summary_vs_7day_none_when_no_history(self, client_with_auth):
+        """Deltas are None when 7-day averages are missing."""
+        client, _, mock_db = client_with_auth
+        today = date(2026, 4, 20)
+        mock_db.execute = AsyncMock(side_effect=[
+            _make_scalars_result([
+                _make_summary_row(today, "resting_heart_rate", 62.0),
+                _make_summary_row(today, "hrv_ms", 55.0),
+            ]),
+            _make_scalar_result(None),  # no RHR history
+            _make_scalar_result(None),  # no HRV history
+            _make_scalars_result([]),
+            _make_fetchall_result([]),
+        ])
+        with patch("app.api.v1.heart_routes.get_user_local_date", new_callable=AsyncMock, return_value=today):
+            resp = client.get("/api/v1/heart/summary", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["resting_hr_vs_7day"] is None
+        assert body["hrv_vs_7day"] is None
+
+    def test_summary_source_attribution(self, client_with_auth):
+        """Sources are resolved via _SOURCE_DISPLAY and returned in response."""
+        client, _, mock_db = client_with_auth
+        today = date(2026, 4, 20)
+        mock_db.execute = AsyncMock(side_effect=[
+            _make_scalars_result([
+                _make_summary_row(today, "resting_heart_rate", 62.0),
+            ]),
+            _make_scalar_result(None),
+            _make_scalar_result(None),
+            _make_scalars_result([]),
+            _make_fetchall_result([("oura",), ("apple_health",)]),
+        ])
+        with patch("app.api.v1.heart_routes.get_user_local_date", new_callable=AsyncMock, return_value=today):
+            resp = client.get("/api/v1/heart/summary", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+        sources = resp.json()["sources"]
+        names = {s["name"] for s in sources}
+        colors = {s["name"]: s["brand_color"] for s in sources}
+        assert "Oura Ring" in names
+        assert "Apple Health" in names
+        assert colors["Oura Ring"] == "#EC4899"
+        assert colors["Apple Health"] == "#FF375F"
+
+    def test_summary_all_8_metrics_present(self, client_with_auth):
+        """All 8 metric fields are mapped correctly in the response."""
+        client, _, mock_db = client_with_auth
+        today = date(2026, 4, 20)
+        mock_db.execute = AsyncMock(side_effect=[
+            _make_scalars_result([
+                _make_summary_row(today, "resting_heart_rate", 62.0),
+                _make_summary_row(today, "hrv_ms", 48.0),
+                _make_summary_row(today, "heart_rate_avg", 74.0),
+                _make_summary_row(today, "respiratory_rate", 14.2),
+                _make_summary_row(today, "vo2_max", 41.5),
+                _make_summary_row(today, "spo2", 97.8),
+                _make_summary_row(today, "blood_pressure_systolic", 118.0),
+                _make_summary_row(today, "blood_pressure_diastolic", 76.0),
+            ]),
+            _make_scalar_result(None),
+            _make_scalar_result(None),
+            _make_scalars_result([]),
+            _make_fetchall_result([]),
+        ])
+        with patch("app.api.v1.heart_routes.get_user_local_date", new_callable=AsyncMock, return_value=today):
+            resp = client.get("/api/v1/heart/summary", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["resting_hr"] == 62.0
+        assert body["hrv_ms"] == 48.0
+        assert body["avg_hr"] == 74.0
+        assert body["respiratory_rate"] == 14.2
+        assert body["vo2_max"] == 41.5
+        assert body["spo2"] == 97.8
+        assert body["bp_systolic"] == 118.0
+        assert body["bp_diastolic"] == 76.0

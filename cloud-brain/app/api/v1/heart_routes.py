@@ -144,6 +144,138 @@ def _source_to_schema(source_name: str) -> HeartSource:
 
 
 # ---------------------------------------------------------------------------
+# GET /api/v1/heart/summary
+# ---------------------------------------------------------------------------
+
+
+@router.get("/summary", response_model=HeartSummaryResponse)
+@limiter.limit("120/minute")
+async def get_heart_summary(
+    request: Request,
+    user_id: Annotated[str, Depends(get_authenticated_user_id)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> HeartSummaryResponse:
+    """Today's heart summary for the authenticated user."""
+    local_date = await get_user_local_date(db, user_id)
+
+    # 1. Today's metrics
+    metrics_result = await db.execute(
+        select(DailySummary).where(
+            DailySummary.user_id == user_id,
+            DailySummary.date == local_date,
+            DailySummary.metric_type.in_(_HEART_METRIC_TYPES),
+            DailySummary.is_stale.is_(False),
+        )
+    )
+
+    # 2. RHR 7-day average (excluding today)
+    rhr_avg_result = await db.execute(
+        select(func.avg(DailySummary.value)).where(
+            DailySummary.user_id == user_id,
+            DailySummary.metric_type == "resting_heart_rate",
+            DailySummary.date >= local_date - timedelta(days=7),
+            DailySummary.date < local_date,
+            DailySummary.is_stale.is_(False),
+        )
+    )
+
+    # 3. HRV 7-day average (excluding today)
+    hrv_avg_result = await db.execute(
+        select(func.avg(DailySummary.value)).where(
+            DailySummary.user_id == user_id,
+            DailySummary.metric_type == "hrv_ms",
+            DailySummary.date >= local_date - timedelta(days=7),
+            DailySummary.date < local_date,
+            DailySummary.is_stale.is_(False),
+        )
+    )
+
+    # 4. AI summary insight
+    insight_result = await db.execute(
+        select(Insight)
+        .where(
+            Insight.user_id == user_id,
+            Insight.type == "heart_summary",
+            Insight.generation_date == local_date,
+            Insight.dismissed_at.is_(None),
+        )
+        .order_by(Insight.priority.asc())
+        .limit(1)
+    )
+
+    # 5. Distinct sources
+    sources_result = await db.execute(
+        select(HealthEvent.source)
+        .distinct()
+        .where(
+            HealthEvent.user_id == user_id,
+            HealthEvent.local_date == local_date,
+            HealthEvent.metric_type.in_(_HEART_METRIC_TYPES),
+            HealthEvent.deleted_at.is_(None),
+        )
+    )
+
+    metrics: dict[str, float] = {
+        row.metric_type: row.value
+        for row in metrics_result.scalars().all()
+    }
+    insight = insight_result.scalars().first()
+    rhr_7day_avg: float | None = rhr_avg_result.scalar()
+    hrv_7day_avg: float | None = hrv_avg_result.scalar()
+    source_names: list[str] = [row[0] for row in sources_result.fetchall()]
+
+    has_data = bool(metrics)
+    if not has_data:
+        return HeartSummaryResponse(
+            has_data=False,
+            resting_hr=None,
+            hrv_ms=None,
+            avg_hr=None,
+            respiratory_rate=None,
+            vo2_max=None,
+            spo2=None,
+            bp_systolic=None,
+            bp_diastolic=None,
+            resting_hr_vs_7day=None,
+            hrv_vs_7day=None,
+            ai_summary=None,
+            ai_generated_at=None,
+            sources=[],
+        )
+
+    resting_hr = metrics.get("resting_heart_rate")
+    hrv = metrics.get("hrv_ms")
+
+    resting_hr_vs_7day = (
+        round(resting_hr - rhr_7day_avg, 1)
+        if resting_hr is not None and rhr_7day_avg is not None
+        else None
+    )
+    hrv_vs_7day = (
+        round(hrv - hrv_7day_avg, 1)
+        if hrv is not None and hrv_7day_avg is not None
+        else None
+    )
+
+    return HeartSummaryResponse(
+        has_data=True,
+        resting_hr=resting_hr,
+        hrv_ms=hrv,
+        avg_hr=metrics.get("heart_rate_avg"),
+        respiratory_rate=metrics.get("respiratory_rate"),
+        vo2_max=metrics.get("vo2_max"),
+        spo2=metrics.get("spo2"),
+        bp_systolic=metrics.get("blood_pressure_systolic"),
+        bp_diastolic=metrics.get("blood_pressure_diastolic"),
+        resting_hr_vs_7day=resting_hr_vs_7day,
+        hrv_vs_7day=hrv_vs_7day,
+        ai_summary=insight.body if insight else None,
+        ai_generated_at=insight.created_at.isoformat() if insight else None,
+        sources=[_source_to_schema(s) for s in source_names],
+    )
+
+
+# ---------------------------------------------------------------------------
 # GET /api/v1/heart/all-data
 # ---------------------------------------------------------------------------
 
