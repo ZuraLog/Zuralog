@@ -5,6 +5,7 @@ export 'animations/z_fade_slide_in.dart';
 export 'charts/charts.dart';
 export 'charts/z_category_chart.dart';
 export 'charts/z_goal_progress_ring.dart';
+export 'charts/z_heart_zones_bar.dart';
 export 'charts/z_mini_sparkline.dart';
 export 'animations/z_staggered_list.dart';
 export 'buttons/primary_button.dart';
