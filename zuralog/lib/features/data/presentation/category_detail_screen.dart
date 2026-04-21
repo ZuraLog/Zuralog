@@ -2,9 +2,9 @@
 ///
 /// Drill-down into a specific health category (Activity, Sleep, Heart, etc.).
 ///
-/// Sleep uses a richer "magazine" body: hero duration, 7-night bar chart
-/// with 8h goal line, stage donut for last night, a 2×2 stats grid
-/// (bedtime / wake / efficiency / wakeups), and per-metric cards with
+/// Sleep and Activity use a richer "magazine" body: hero value, 7-day
+/// primary chart, a category signature visual (sleep stage donut /
+/// activity goal ring), a 2×2 stats grid, and per-metric cards with
 /// chart types matched to each sub-metric.
 ///
 /// Every other category still renders the original flat line-chart list
@@ -115,14 +115,20 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
 
           // ── Content ────────────────────────────────────────────────────────
           Expanded(
-            child: cat == HealthCategory.sleep
-                ? _SleepDetailBody(
-                    color: color,
-                    detailAsync: detailAsync,
-                    unitsSystem: unitsSystem,
-                  )
-                : _buildLegacyBody(context, colors, cat, color, unitsSystem,
-                    detailAsync),
+            child: switch (cat) {
+              HealthCategory.sleep => _SleepDetailBody(
+                  color: color,
+                  detailAsync: detailAsync,
+                  unitsSystem: unitsSystem,
+                ),
+              HealthCategory.activity => _ActivityDetailBody(
+                  color: color,
+                  detailAsync: detailAsync,
+                  unitsSystem: unitsSystem,
+                ),
+              _ => _buildLegacyBody(
+                  context, colors, cat, color, unitsSystem, detailAsync),
+            },
           ),
         ],
       ),
@@ -318,6 +324,692 @@ class _SleepDetailBody extends ConsumerWidget {
           _AiAnalysisCard(text: summary.aiSummary!, color: color),
         ],
       ],
+    );
+  }
+}
+
+// ── _ActivityDetailBody ──────────────────────────────────────────────────────
+
+/// Magazine-layout body for the Activity category detail screen.
+///
+/// Sections, top to bottom:
+///  1. Hero card (today's steps + delta vs 7-day average).
+///  2. 7-day bar chart with the 8k step goal line.
+///  3. Today's progress ring — steps vs goal (+ optional active-cal inner ring).
+///  4. 2×2 stats grid — steps / active minutes / distance / calories.
+///  5. One card per sub-metric (bars for countables, line for continuous).
+class _ActivityDetailBody extends ConsumerWidget {
+  const _ActivityDetailBody({
+    required this.color,
+    required this.detailAsync,
+    required this.unitsSystem,
+  });
+
+  final Color color;
+  final AsyncValue<CategoryDetailData> detailAsync;
+  final UnitsSystem unitsSystem;
+
+  /// Daily step target. Kept local so the Activity branch doesn't need
+  /// a new provider — tracked to move to user preferences in a follow-up.
+  static const double _stepGoal = 8000;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dashboardAsync = ref.watch(dashboardProvider);
+
+    // Locate the activity summary inside the dashboard, if present.
+    CategorySummary? activitySummary;
+    final dash = dashboardAsync.valueOrNull;
+    if (dash != null) {
+      for (final c in dash.categories) {
+        if (c.category == HealthCategory.activity) {
+          activitySummary = c;
+          break;
+        }
+      }
+    }
+
+    final metrics = detailAsync.valueOrNull?.metrics ?? const <MetricSeries>[];
+    final isLoading = dashboardAsync.isLoading && !dashboardAsync.hasValue ||
+        detailAsync.isLoading && !detailAsync.hasValue;
+
+    // ── Derive key values from metrics (with fallbacks) ───────────────────
+    final stepsSeries = _findSeries(metrics, const ['steps']);
+    final activeCaloriesSeries = _findSeries(
+      metrics,
+      const ['active_calories', 'calories_active', 'calories_burned'],
+    );
+    final distanceSeries = _findSeries(
+      metrics,
+      const ['distance', 'distance_m', 'distance_km'],
+    );
+    final activeMinutesSeries = _findSeries(
+      metrics,
+      const ['active_minutes', 'exercise_minutes'],
+    );
+
+    // Today's step count — prefer the latest raw metric point; fall back
+    // to the dashboard primary value.
+    final todaySteps = _latestValue(stepsSeries) ??
+        (activitySummary?.trend?.lastOrNull) ??
+        0.0;
+
+    // 7-day trend of steps — prefer metric data points, else dashboard trend.
+    final stepsTrend = _sevenDayValues(
+      stepsSeries?.dataPoints.map((p) => p.value).toList() ??
+          activitySummary?.trend ??
+          const <double>[],
+    );
+
+    // 7-day average for delta calculation (excludes today when possible).
+    final avgForDelta = stepsTrend.length >= 2
+        ? (stepsTrend.sublist(0, stepsTrend.length - 1).fold<double>(
+                  0,
+                  (a, b) => a + (b.isFinite ? b : 0),
+                ) /
+            (stepsTrend.length - 1))
+        : null;
+    final stepDelta =
+        avgForDelta != null ? (todaySteps - avgForDelta).round() : null;
+
+    final todayActiveCalories = _latestValue(activeCaloriesSeries);
+    final todayDistance = _latestValue(distanceSeries);
+    final todayActiveMinutes = _latestValue(activeMinutesSeries);
+
+    return ListView(
+      padding: EdgeInsets.fromLTRB(
+        0,
+        AppDimens.spaceXs,
+        0,
+        AppDimens.bottomNavHeight + AppDimens.spaceMd,
+      ),
+      children: [
+        // 1. Hero card
+        _ActivityHero(
+          color: color,
+          todaySteps: todaySteps,
+          stepDelta: stepDelta,
+          primaryValueOverride: activitySummary?.primaryValue,
+        ),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 2. 7-day primary chart (steps)
+        if (stepsTrend.where((v) => v > 0).isNotEmpty)
+          _ActivityPrimaryChart(
+            color: color,
+            values: stepsTrend,
+          )
+        else if (isLoading)
+          const _ChartSkeleton()
+        else
+          const SizedBox.shrink(),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 3. Signature visual — goal progress ring
+        _ActivityGoalRingCard(
+          color: color,
+          todaySteps: todaySteps,
+          stepGoal: _stepGoal,
+          activeMinutes: todayActiveMinutes,
+        ),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 4. Stats grid
+        _ActivityStatsGrid(
+          color: color,
+          unitsSystem: unitsSystem,
+          steps: todaySteps,
+          activeMinutes: todayActiveMinutes,
+          distanceMeters: todayDistance,
+          activeCalories: todayActiveCalories,
+        ),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 5. Per-metric cards
+        if (metrics.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimens.spaceMd,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 12),
+                  child: Text(
+                    'Activity metrics',
+                    style: AppTextStyles.titleMedium.copyWith(
+                      color: AppColorsOf(context).textPrimary,
+                    ),
+                  ),
+                ),
+                for (var i = 0; i < metrics.length; i++) ...[
+                  _ActivityMetricCard(
+                    series: metrics[i],
+                    color: color,
+                    displayUnit: displayUnit(metrics[i].unit, unitsSystem),
+                    stepGoal: _stepGoal,
+                  ),
+                  if (i != metrics.length - 1)
+                    const SizedBox(height: AppDimens.spaceMd),
+                ],
+              ],
+            ),
+          )
+        else if (isLoading) ...[
+          const SizedBox(height: AppDimens.spaceSm),
+          const _MetricListSkeleton(),
+        ],
+      ],
+    );
+  }
+
+  /// Finds the first metric series whose id matches any of [candidateIds].
+  static MetricSeries? _findSeries(
+    List<MetricSeries> metrics,
+    List<String> candidateIds,
+  ) {
+    for (final id in candidateIds) {
+      for (final s in metrics) {
+        if (s.metricId.toLowerCase() == id) return s;
+      }
+    }
+    return null;
+  }
+
+  /// Returns the latest finite value from a series, or `null`.
+  static double? _latestValue(MetricSeries? s) {
+    if (s == null) return null;
+    for (var i = s.dataPoints.length - 1; i >= 0; i--) {
+      final v = s.dataPoints[i].value;
+      if (v.isFinite) return v;
+    }
+    return null;
+  }
+
+  /// Normalises an input list to exactly 7 entries, padding the head with
+  /// 0.0 when too short and keeping the tail otherwise.
+  static List<double> _sevenDayValues(List<double> input) {
+    if (input.isEmpty) return const [0, 0, 0, 0, 0, 0, 0];
+    if (input.length >= 7) {
+      return input.sublist(input.length - 7);
+    }
+    return [
+      for (var i = 0; i < 7 - input.length; i++) 0.0,
+      ...input,
+    ];
+  }
+}
+
+// ── _ActivityHero ────────────────────────────────────────────────────────────
+
+class _ActivityHero extends StatelessWidget {
+  const _ActivityHero({
+    required this.color,
+    required this.todaySteps,
+    required this.stepDelta,
+    required this.primaryValueOverride,
+  });
+
+  final Color color;
+  final double todaySteps;
+  final int? stepDelta;
+
+  /// Pre-formatted dashboard primary value (e.g. "8,432"). When provided
+  /// this is preferred so the hero number matches the dashboard card.
+  final String? primaryValueOverride;
+
+  @override
+  Widget build(BuildContext context) {
+    final formattedValue =
+        (primaryValueOverride != null && primaryValueOverride!.trim().isNotEmpty)
+            ? primaryValueOverride!
+            : _formatSteps(todaySteps);
+
+    return InsightHeroCard(
+      eyebrow: 'Today',
+      categoryIcon: Icons.directions_walk_rounded,
+      categoryColor: color,
+      value: formattedValue,
+      deltaLabel:
+          stepDelta != null ? _formatStepsDeltaVsWeek(stepDelta!) : null,
+      // Positive delta is a good thing for steps.
+      deltaIsPositive: stepDelta != null ? stepDelta! >= 0 : null,
+    );
+  }
+}
+
+// ── _ActivityPrimaryChart ────────────────────────────────────────────────────
+
+class _ActivityPrimaryChart extends StatelessWidget {
+  const _ActivityPrimaryChart({required this.color, required this.values});
+
+  final Color color;
+  final List<double> values;
+
+  @override
+  Widget build(BuildContext context) {
+    final labels = _generateWeekLabels();
+    return InsightPrimaryChart(
+      title: "This week's steps",
+      categoryColor: color,
+      points: [
+        for (var i = 0; i < values.length; i++)
+          InsightPrimaryChartPoint(
+            label: i < labels.length ? labels[i] : '',
+            value: values[i],
+            isToday: i == values.length - 1,
+          ),
+      ],
+      goalValue: 8000,
+      goalLabel: '8k goal',
+      formatTooltip: (v) => '${v.toInt()} steps',
+    );
+  }
+}
+
+// ── _ActivityGoalRingCard ────────────────────────────────────────────────────
+
+/// Feature card that hosts [ZGoalProgressRing] — today's steps vs goal,
+/// optionally overlaid with an active-minutes inner ring.
+class _ActivityGoalRingCard extends StatelessWidget {
+  const _ActivityGoalRingCard({
+    required this.color,
+    required this.todaySteps,
+    required this.stepGoal,
+    required this.activeMinutes,
+  });
+
+  final Color color;
+  final double todaySteps;
+  final double stepGoal;
+  final double? activeMinutes;
+
+  /// Daily active minutes target — matches the WHO 30 min/day guideline.
+  static const double _activeMinutesGoal = 30;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final hasInner = activeMinutes != null && activeMinutes! > 0;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+      child: ZFadeSlideIn(
+        delay: const Duration(milliseconds: 210),
+        child: ZuralogCard(
+          variant: ZCardVariant.feature,
+          category: color,
+          padding: const EdgeInsets.all(AppDimens.spaceLg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Today's progress",
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppDimens.spaceMd),
+              Center(
+                child: ZGoalProgressRing(
+                  value: todaySteps,
+                  goal: stepGoal,
+                  color: color,
+                  size: 180,
+                  centerValue: _formatSteps(todaySteps),
+                  centerLabel: 'steps',
+                  innerValue: hasInner ? activeMinutes : null,
+                  innerGoal: hasInner ? _activeMinutesGoal : null,
+                  innerColor: hasInner ? colors.success : null,
+                ),
+              ),
+              const SizedBox(height: AppDimens.spaceMd),
+              // Legend row
+              Row(
+                children: [
+                  Expanded(
+                    child: _RingLegendRow(
+                      dotColor: color,
+                      label: 'Steps',
+                      value:
+                          '${_formatSteps(todaySteps)} / ${_formatSteps(stepGoal)}',
+                    ),
+                  ),
+                ],
+              ),
+              if (hasInner) ...[
+                const SizedBox(height: AppDimens.spaceXs),
+                _RingLegendRow(
+                  dotColor: colors.success,
+                  label: 'Active minutes',
+                  value:
+                      '${activeMinutes!.round()} / ${_activeMinutesGoal.toInt()} min',
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RingLegendRow extends StatelessWidget {
+  const _RingLegendRow({
+    required this.dotColor,
+    required this.label,
+    required this.value,
+  });
+
+  final Color dotColor;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: dotColor,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: AppDimens.spaceSm),
+        Text(
+          label,
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: colors.textSecondary,
+          ),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── _ActivityStatsGrid ───────────────────────────────────────────────────────
+
+class _ActivityStatsGrid extends StatelessWidget {
+  const _ActivityStatsGrid({
+    required this.color,
+    required this.unitsSystem,
+    required this.steps,
+    required this.activeMinutes,
+    required this.distanceMeters,
+    required this.activeCalories,
+  });
+
+  final Color color;
+  final UnitsSystem unitsSystem;
+  final double steps;
+  final double? activeMinutes;
+  final double? distanceMeters;
+  final double? activeCalories;
+
+  @override
+  Widget build(BuildContext context) {
+    // Distance: API stores in meters; convert to km/mi for display.
+    String distanceLabel() {
+      if (distanceMeters == null || !distanceMeters!.isFinite) return '—';
+      final km = distanceMeters! / 1000.0;
+      if (unitsSystem == UnitsSystem.imperial) {
+        final mi = km * 0.621371;
+        return '${mi.toStringAsFixed(1)} mi';
+      }
+      return '${km.toStringAsFixed(1)} km';
+    }
+
+    final tiles = <InsightStatTile>[
+      InsightStatTile(
+        icon: Icons.directions_walk_rounded,
+        label: 'Steps',
+        value: steps > 0 ? _formatSteps(steps) : '—',
+      ),
+      InsightStatTile(
+        icon: Icons.timer_rounded,
+        label: 'Active minutes',
+        value: activeMinutes != null
+            ? '${activeMinutes!.round()} min'
+            : '—',
+      ),
+      InsightStatTile(
+        icon: Icons.straighten_rounded,
+        label: 'Distance',
+        value: distanceLabel(),
+      ),
+      InsightStatTile(
+        icon: Icons.local_fire_department_rounded,
+        label: 'Calories',
+        value: activeCalories != null
+            ? '${activeCalories!.round()} kcal'
+            : '—',
+      ),
+    ];
+
+    return InsightStatsGrid(
+      title: 'The details',
+      categoryColor: color,
+      tiles: tiles,
+    );
+  }
+}
+
+// ── _ActivityMetricCard ──────────────────────────────────────────────────────
+
+/// Per-metric card for Activity. Picks a chart kind based on whether the
+/// metric is countable (bars) or continuous (line).
+class _ActivityMetricCard extends StatelessWidget {
+  const _ActivityMetricCard({
+    required this.series,
+    required this.color,
+    required this.displayUnit,
+    required this.stepGoal,
+  });
+
+  final MetricSeries series;
+  final Color color;
+  final String displayUnit;
+  final double stepGoal;
+
+  /// Metric IDs that are countable-per-day (bars).
+  static const _countableMetricIds = <String>{
+    'steps',
+    'active_calories',
+    'calories_active',
+    'calories_burned',
+    'distance',
+    'distance_m',
+    'distance_km',
+    'floors',
+    'floors_climbed',
+    'workouts',
+    'workouts_count',
+    'exercise_minutes',
+    'active_minutes',
+  };
+
+  /// Metric IDs that are continuous (line).
+  static const _continuousMetricIds = <String>{
+    'walking_speed',
+    'running_pace',
+    'vo2_max',
+    'cardio_fitness_level',
+  };
+
+  bool get _isCountable {
+    final id = series.metricId.toLowerCase();
+    return _countableMetricIds.contains(id);
+  }
+
+  bool get _isContinuous {
+    final id = series.metricId.toLowerCase();
+    return _continuousMetricIds.contains(id);
+  }
+
+  ZCategoryChartKind get _chartKind {
+    if (_isCountable) return ZCategoryChartKind.bars;
+    if (_isContinuous) return ZCategoryChartKind.line;
+    // Unknown metric → line (safer default for fractional values).
+    return ZCategoryChartKind.line;
+  }
+
+  double? get _goalValue {
+    if (series.metricId.toLowerCase() == 'steps') return stepGoal;
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final points = <double>[
+      for (final p in series.dataPoints) p.value,
+    ];
+    // Pad/crop to 7 for the slim chart primitive, which expects 7 labels.
+    final tail = points.length >= 7
+        ? points.sublist(points.length - 7)
+        : [
+            for (var i = 0; i < 7 - points.length; i++) double.nan,
+            ...points,
+          ];
+    final todayIndex = points.isNotEmpty ? 6 : -1;
+    final dayLabels = _generateWeekLabels();
+
+    final values = series.dataPoints.map((p) => p.value).toList();
+    final avg = values.isEmpty
+        ? null
+        : values.reduce((a, b) => a + b) / values.length;
+    final min = values.isEmpty ? null : values.reduce((a, b) => a < b ? a : b);
+    final max = values.isEmpty ? null : values.reduce((a, b) => a > b ? a : b);
+
+    return ZuralogCard(
+      variant: ZCardVariant.feature,
+      category: color,
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row: name + delta pill
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  series.displayName,
+                  style: AppTextStyles.titleMedium.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              if (series.deltaPercent != null)
+                _MetricCardDeltaPill(deltaPercent: series.deltaPercent!),
+            ],
+          ),
+          const SizedBox(height: 4),
+          // Hero value
+          if (series.currentValue != null)
+            RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: series.currentValue!,
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 22,
+                      height: 1.15,
+                    ),
+                  ),
+                  if (displayUnit.isNotEmpty)
+                    TextSpan(
+                      text: ' $displayUnit',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: colors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          const SizedBox(height: AppDimens.spaceSm),
+          // Chart slot
+          if (series.dataPoints.length >= 2)
+            SizedBox(
+              height: 110,
+              child: ZCategoryChart(
+                kind: _chartKind,
+                points: tail,
+                color: color,
+                dayLabels: dayLabels,
+                todayIndex: todayIndex,
+                goalValue: _goalValue,
+                height: 110,
+              ),
+            )
+          else
+            SizedBox(
+              height: 42,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Not enough data yet',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: colors.textTertiary,
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(height: AppDimens.spaceMd),
+          // Avg / Min / Max strip
+          Row(
+            children: [
+              Expanded(
+                child: _StatChip(
+                  label: 'Avg',
+                  value: _formatActivityMetricValue(
+                    avg,
+                    metricId: series.metricId,
+                    unit: displayUnit,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _StatChip(
+                  label: 'Min',
+                  value: _formatActivityMetricValue(
+                    min,
+                    metricId: series.metricId,
+                    unit: displayUnit,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _StatChip(
+                  label: 'Max',
+                  value: _formatActivityMetricValue(
+                    max,
+                    metricId: series.metricId,
+                    unit: displayUnit,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1203,6 +1895,60 @@ List<String> _generateWeekLabels() {
         : (todayIdx - i) % 7]);
   }
   return labels;
+}
+
+/// Formats a step count with thousands separators (e.g. `8,420`).
+String _formatSteps(double steps) {
+  if (!steps.isFinite || steps < 0) return '0';
+  final rounded = steps.round();
+  final s = rounded.toString();
+  // Insert commas every three digits from the right.
+  final buf = StringBuffer();
+  for (var i = 0; i < s.length; i++) {
+    final fromRight = s.length - i;
+    buf.write(s[i]);
+    if (fromRight > 1 && fromRight % 3 == 1) buf.write(',');
+  }
+  return buf.toString();
+}
+
+/// Formats a steps-vs-week delta as `+1,200 vs last week` / `-340 vs last week`.
+String _formatStepsDeltaVsWeek(int delta) {
+  final sign = delta >= 0 ? '+' : '-';
+  return '$sign${_formatSteps(delta.abs().toDouble())} vs last week';
+}
+
+/// Formats a raw Activity metric value for the Avg/Min/Max strip.
+///
+/// Large-count metrics (steps, distance in meters) are rendered compactly
+/// (e.g. `8.4k`) while continuous metrics fall back to one decimal place.
+String _formatActivityMetricValue(
+  double? value, {
+  required String metricId,
+  required String unit,
+}) {
+  if (value == null || !value.isFinite) return '—';
+  final id = metricId.toLowerCase();
+
+  // Step counts — render as `8.4k` when ≥1000, else integer.
+  if (id == 'steps') {
+    if (value.abs() >= 1000) {
+      return '${(value / 1000).toStringAsFixed(value % 1000 == 0 ? 0 : 1)}k';
+    }
+    return value.round().toString();
+  }
+
+  // Distance stored in meters — render as km with one decimal.
+  if (id == 'distance' || id == 'distance_m') {
+    final km = value / 1000.0;
+    return '${km.toStringAsFixed(1)} ${unit.isEmpty ? 'km' : unit}';
+  }
+
+  final rendered = value == value.roundToDouble()
+      ? value.toInt().toString()
+      : value.toStringAsFixed(1);
+  if (unit.isEmpty) return rendered;
+  return '$rendered $unit';
 }
 
 /// Formats a raw numeric metric value for the Avg/Min/Max strip.
