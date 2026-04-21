@@ -11,6 +11,8 @@
 /// until their own redesign pass lands.
 library;
 
+import 'dart:math' as math;
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,6 +21,7 @@ import 'package:go_router/go_router.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/data/domain/category_color.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/unit_converter.dart';
@@ -139,6 +142,12 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
                   color: color,
                   detailAsync: detailAsync,
                   unitsSystem: unitsSystem,
+                ),
+              HealthCategory.body => _BodyDetailBody(
+                  color: color,
+                  detailAsync: detailAsync,
+                  unitsSystem: unitsSystem,
+                  selectedRange: _selectedRange,
                 ),
               _ => _buildLegacyBody(
                   context, colors, cat, color, unitsSystem, detailAsync),
@@ -2185,6 +2194,718 @@ class _NutritionMetricCard extends StatelessWidget {
   }
 }
 
+// ── _BodyDetailBody ──────────────────────────────────────────────────────────
+
+/// Magazine-layout body for the Body category detail screen.
+///
+/// Sections, top to bottom:
+///  1. Hero card (latest weight + delta vs 7-day average).
+///  2. Weight line chart over the selected time range (title dynamic).
+///  3. BMI signature gauge — empty-state caption when height is unknown.
+///  4. 2×2 stats grid — Weight / Body fat / BMI / Body temp.
+///  5. One card per sub-metric (continuous body metrics render as lines).
+///  6. AI analysis card when a body day summary field ever exposes one
+///     (skipped today — no `aiSummary` on any body model).
+///
+/// Notes on adaptations vs the brief:
+///  - There is no `bodyDaySummaryProvider` or `BodyDaySummary` in the
+///    codebase today. Body latest values are pulled from
+///    [categoryDetailProvider]'s metric series with
+///    [dashboardProvider]'s [CategorySummary] as a fallback for the
+///    hero value.
+///  - BMI is computed from weight + height because the model doesn't
+///    expose a BMI value directly. Height comes from
+///    [userProfileProvider]'s `heightCm` field; when that is null we
+///    render the empty-state caption and skip the gauge.
+///  - Weight delta direction is neither "up good" nor "down good" — the
+///    hero pill stays neutral (`deltaIsPositive: null`).
+class _BodyDetailBody extends ConsumerWidget {
+  const _BodyDetailBody({
+    required this.color,
+    required this.detailAsync,
+    required this.unitsSystem,
+    required this.selectedRange,
+  });
+
+  final Color color;
+  final AsyncValue<CategoryDetailData> detailAsync;
+  final UnitsSystem unitsSystem;
+
+  /// The active time-range tab (7D / 30D / 90D / Custom) — drives the
+  /// dynamic primary-chart title.
+  final TimeRange selectedRange;
+
+  /// Metric ids that read best as a line in the per-metric cards — every
+  /// real body metric is continuous.
+  static const _continuousMetricIds = <String>{
+    'weight',
+    'body_fat',
+    'bmi',
+    'body_temperature',
+    'wrist_temperature',
+    'spo2',
+    'blood_glucose',
+    'lean_body_mass',
+    'waist_circumference',
+  };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dashboardAsync = ref.watch(dashboardProvider);
+    final profile = ref.watch(userProfileProvider);
+
+    // Locate the body summary inside the dashboard, if present.
+    CategorySummary? bodySummary;
+    final dash = dashboardAsync.valueOrNull;
+    if (dash != null) {
+      for (final c in dash.categories) {
+        if (c.category == HealthCategory.body) {
+          bodySummary = c;
+          break;
+        }
+      }
+    }
+
+    final metrics = detailAsync.valueOrNull?.metrics ?? const <MetricSeries>[];
+    final isLoading = dashboardAsync.isLoading && !dashboardAsync.hasValue ||
+        detailAsync.isLoading && !detailAsync.hasValue;
+
+    // Primary weight series — prefer the metric points, fall back to the
+    // dashboard trend (which is already 7 values in display units).
+    final weightSeries = _findSeries(metrics, const ['weight']);
+    final bodyFatSeries = _findSeries(metrics, const ['body_fat', 'body_fat_percent']);
+    final bodyTempSeries = _findSeries(
+      metrics,
+      const ['body_temperature', 'wrist_temperature'],
+    );
+    final bmiSeries = _findSeries(metrics, const ['bmi']);
+
+    // Latest weight — prefer raw metric value (already in API units), fall
+    // back to the dashboard primaryValue (pre-formatted). The raw value is
+    // kept in kg because metric values are stored metric and converted at
+    // display time, matching Activity's distance handling.
+    final latestWeightKg = _latestValue(weightSeries);
+    final hasTodayWeight = weightSeries != null &&
+        weightSeries.dataPoints.isNotEmpty &&
+        weightSeries.dataPoints.last.value.isFinite;
+
+    // 7-day (or selected-range) raw weight values for the chart + delta.
+    final rawWeightValues = weightSeries != null
+        ? weightSeries.dataPoints
+            .map((p) => p.value)
+            .where((v) => v.isFinite)
+            .toList()
+        : (bodySummary?.trend ?? const <double>[]);
+
+    // Average of the trend excluding the last point for delta.
+    double? avgForDelta;
+    if (rawWeightValues.length >= 2) {
+      final body = rawWeightValues.sublist(0, rawWeightValues.length - 1);
+      if (body.isNotEmpty) {
+        avgForDelta = body.reduce((a, b) => a + b) / body.length;
+      }
+    }
+
+    final weightDeltaKg = (latestWeightKg != null && avgForDelta != null)
+        ? latestWeightKg - avgForDelta
+        : null;
+
+    // Latest body fat / BMI / temp.
+    final latestBodyFat = _latestValue(bodyFatSeries);
+    final latestBodyTemp = _latestValue(bodyTempSeries);
+    final latestBmiFromMetric = _latestValue(bmiSeries);
+
+    // Compute BMI from weight + height when the metric isn't directly
+    // reported. Height is stored in cm on the user profile; skip when
+    // unknown so we never fabricate the value.
+    final heightCm = profile?.heightCm;
+    final canComputeBmi = heightCm != null &&
+        heightCm > 0 &&
+        latestWeightKg != null &&
+        latestWeightKg > 0;
+    final double? bmiValue = latestBmiFromMetric ??
+        (canComputeBmi
+            ? latestWeightKg / math.pow(heightCm / 100.0, 2)
+            : null);
+
+    // Pre-formatted dashboard weight (e.g. "78.2"). Prefer this for the
+    // hero value so the number matches the category card.
+    final dashboardWeightLabel = bodySummary?.primaryValue;
+    final dashboardWeightUnit = bodySummary?.unit;
+
+    return ListView(
+      padding: EdgeInsets.fromLTRB(
+        0,
+        AppDimens.spaceXs,
+        0,
+        AppDimens.bottomNavHeight + AppDimens.spaceMd,
+      ),
+      children: [
+        // 1. Hero card
+        _BodyHero(
+          color: color,
+          weightKg: latestWeightKg,
+          weightDeltaKg: weightDeltaKg,
+          unitsSystem: unitsSystem,
+          fallbackPrimaryValue: dashboardWeightLabel,
+          fallbackUnit: dashboardWeightUnit,
+          hasTodayWeight: hasTodayWeight,
+        ),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 2. Primary chart — weight line over the selected range.
+        if (rawWeightValues.where((v) => v > 0).length >= 2)
+          _BodyPrimaryChart(
+            color: color,
+            valuesKg: rawWeightValues,
+            selectedRange: selectedRange,
+            unitsSystem: unitsSystem,
+          )
+        else if (isLoading)
+          const _ChartSkeleton()
+        else
+          const SizedBox.shrink(),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 3. Signature visual — BMI gauge (or height-missing caption).
+        _BodyBmiCard(color: color, bmi: bmiValue),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 4. Stats grid
+        _BodyStatsGrid(
+          color: color,
+          unitsSystem: unitsSystem,
+          weightKg: latestWeightKg,
+          bodyFatPct: latestBodyFat,
+          bmi: bmiValue,
+          bodyTempC: latestBodyTemp,
+        ),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 5. Per-metric cards
+        if (metrics.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimens.spaceMd,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 12),
+                  child: Text(
+                    'Body metrics',
+                    style: AppTextStyles.titleMedium.copyWith(
+                      color: AppColorsOf(context).textPrimary,
+                    ),
+                  ),
+                ),
+                for (var i = 0; i < metrics.length; i++) ...[
+                  _BodyMetricCard(
+                    series: metrics[i],
+                    color: color,
+                    displayUnit: displayUnit(metrics[i].unit, unitsSystem),
+                    continuousMetricIds: _continuousMetricIds,
+                  ),
+                  if (i != metrics.length - 1)
+                    const SizedBox(height: AppDimens.spaceMd),
+                ],
+              ],
+            ),
+          )
+        else if (isLoading) ...[
+          const SizedBox(height: AppDimens.spaceSm),
+          const _MetricListSkeleton(),
+        ],
+      ],
+    );
+  }
+
+  /// Finds the first metric series whose id matches any of [candidateIds].
+  static MetricSeries? _findSeries(
+    List<MetricSeries> metrics,
+    List<String> candidateIds,
+  ) {
+    for (final id in candidateIds) {
+      for (final s in metrics) {
+        if (s.metricId.toLowerCase() == id) return s;
+      }
+    }
+    return null;
+  }
+
+  /// Returns the latest finite value from a series, or `null`.
+  static double? _latestValue(MetricSeries? s) {
+    if (s == null) return null;
+    for (var i = s.dataPoints.length - 1; i >= 0; i--) {
+      final v = s.dataPoints[i].value;
+      if (v.isFinite) return v;
+    }
+    return null;
+  }
+}
+
+// ── _BodyHero ────────────────────────────────────────────────────────────────
+
+class _BodyHero extends StatelessWidget {
+  const _BodyHero({
+    required this.color,
+    required this.weightKg,
+    required this.weightDeltaKg,
+    required this.unitsSystem,
+    required this.fallbackPrimaryValue,
+    required this.fallbackUnit,
+    required this.hasTodayWeight,
+  });
+
+  final Color color;
+  final double? weightKg;
+  final double? weightDeltaKg;
+  final UnitsSystem unitsSystem;
+
+  /// Dashboard primary value label (e.g. "78.2"). Used when a raw metric
+  /// weight isn't available so the hero stays in sync with the card.
+  final String? fallbackPrimaryValue;
+
+  /// Dashboard primary value unit ("kg" / "lb") — paired with the
+  /// fallback label above.
+  final String? fallbackUnit;
+
+  /// Whether the weight series has a finite value at its tail (today).
+  /// Drives the eyebrow wording ("Today" vs "Latest").
+  final bool hasTodayWeight;
+
+  @override
+  Widget build(BuildContext context) {
+    final String formattedValue;
+    if (weightKg != null && weightKg!.isFinite) {
+      formattedValue = _formatWeight(weightKg!, unitsSystem);
+    } else if (fallbackPrimaryValue != null &&
+        fallbackPrimaryValue!.trim().isNotEmpty) {
+      final unit = (fallbackUnit != null && fallbackUnit!.isNotEmpty)
+          ? ' ${displayUnit(fallbackUnit!, unitsSystem)}'
+          : '';
+      formattedValue = '$fallbackPrimaryValue$unit';
+    } else {
+      formattedValue = '—';
+    }
+
+    final deltaLabel = (weightDeltaKg != null && weightDeltaKg!.isFinite)
+        ? _formatWeightDeltaVsWeek(weightDeltaKg!, unitsSystem)
+        : null;
+
+    return InsightHeroCard(
+      eyebrow: hasTodayWeight ? 'Today' : 'Latest',
+      categoryIcon: Icons.accessibility_new_rounded,
+      categoryColor: color,
+      value: formattedValue,
+      deltaLabel: deltaLabel,
+      // Weight delta direction is direction-agnostic for the hero pill —
+      // neither gaining nor losing is universally "better".
+      deltaIsPositive: null,
+    );
+  }
+}
+
+// ── _BodyPrimaryChart ────────────────────────────────────────────────────────
+
+/// Feature-variant card wrapping a 200pt weight line chart. Styled to
+/// match [InsightPrimaryChart]'s card chrome (surface fill, title row,
+/// radiusCard, spaceLg padding) so the Body body feels cohesive with the
+/// other categories' primary charts.
+class _BodyPrimaryChart extends StatelessWidget {
+  const _BodyPrimaryChart({
+    required this.color,
+    required this.valuesKg,
+    required this.selectedRange,
+    required this.unitsSystem,
+  });
+
+  final Color color;
+  final List<double> valuesKg;
+  final TimeRange selectedRange;
+  final UnitsSystem unitsSystem;
+
+  String get _title {
+    switch (selectedRange) {
+      case TimeRange.days7:
+        return '7-day weight';
+      case TimeRange.days30:
+        return '30-day weight';
+      case TimeRange.days90:
+        return '90-day weight';
+      case TimeRange.custom:
+        return 'Weight trend';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
+    // Convert to display units for the chart axis.
+    final displayValues = [
+      for (final v in valuesKg)
+        v.isFinite ? _kgToDisplay(v, unitsSystem) : double.nan,
+    ];
+
+    // The slim chart primitive expects 7 entries. When the series is
+    // longer (30D/90D) we downsample by taking evenly-spaced indexes so
+    // the shape stays readable without invisible clutter.
+    final tail = _fitSeven(displayValues);
+    final todayIndex = tail.any((v) => v.isFinite) ? 6 : -1;
+
+    // Labels: for 7D, use weekday letters. For longer ranges we keep the
+    // labels blank — downsampled x-axis would mislabel points.
+    final labels = selectedRange == TimeRange.days7
+        ? _generateWeekLabels()
+        : const ['', '', '', '', '', '', ''];
+
+    final unitSuffix = unitsSystem == UnitsSystem.imperial ? 'lb' : 'kg';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+      child: ZFadeSlideIn(
+        delay: const Duration(milliseconds: 180),
+        child: Container(
+          decoration: BoxDecoration(
+            color: colors.cardBackground,
+            border: Border.all(
+              color: colors.border.withValues(alpha: 0.4),
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceLg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _title,
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: colors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: AppDimens.spaceMd),
+              SizedBox(
+                height: 200,
+                child: ZCategoryChart(
+                  kind: ZCategoryChartKind.line,
+                  points: tail,
+                  color: color,
+                  dayLabels: labels,
+                  todayIndex: todayIndex,
+                  formatY: (v) => '${v.toStringAsFixed(v >= 100 ? 0 : 1)} '
+                      '$unitSuffix',
+                  height: 200,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Downsamples or pads [values] to exactly seven entries. When the
+  /// series is shorter than seven the head is padded with NaN so the
+  /// line starts with the first known value.
+  static List<double> _fitSeven(List<double> values) {
+    if (values.isEmpty) {
+      return List.filled(7, double.nan);
+    }
+    if (values.length == 7) return values;
+    if (values.length < 7) {
+      return [
+        for (var i = 0; i < 7 - values.length; i++) double.nan,
+        ...values,
+      ];
+    }
+    // Evenly sample 7 indexes from a longer series.
+    final out = <double>[];
+    for (var i = 0; i < 7; i++) {
+      final idx = ((i * (values.length - 1)) / 6).round();
+      out.add(values[idx.clamp(0, values.length - 1)]);
+    }
+    return out;
+  }
+}
+
+// ── _BodyBmiCard ─────────────────────────────────────────────────────────────
+
+/// Feature card hosting [ZBmiGauge] — today's BMI with coloured bands
+/// and a needle. Falls back to an empty-state caption when height is
+/// unknown so we never fabricate the value.
+class _BodyBmiCard extends StatelessWidget {
+  const _BodyBmiCard({required this.color, required this.bmi});
+
+  final Color color;
+  final double? bmi;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+      child: ZFadeSlideIn(
+        delay: const Duration(milliseconds: 210),
+        child: ZuralogCard(
+          variant: ZCardVariant.feature,
+          category: color,
+          padding: const EdgeInsets.all(AppDimens.spaceLg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'BMI',
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppDimens.spaceMd),
+              if (bmi != null && bmi!.isFinite)
+                Center(child: ZBmiGauge(bmi: bmi!))
+              else
+                Text(
+                  'Add your height to see BMI.',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: colors.textTertiary,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── _BodyStatsGrid ───────────────────────────────────────────────────────────
+
+class _BodyStatsGrid extends StatelessWidget {
+  const _BodyStatsGrid({
+    required this.color,
+    required this.unitsSystem,
+    required this.weightKg,
+    required this.bodyFatPct,
+    required this.bmi,
+    required this.bodyTempC,
+  });
+
+  final Color color;
+  final UnitsSystem unitsSystem;
+  final double? weightKg;
+  final double? bodyFatPct;
+  final double? bmi;
+  final double? bodyTempC;
+
+  @override
+  Widget build(BuildContext context) {
+    final tiles = <InsightStatTile>[
+      InsightStatTile(
+        icon: Icons.monitor_weight_rounded,
+        label: 'Weight',
+        value: (weightKg != null && weightKg!.isFinite)
+            ? _formatWeight(weightKg!, unitsSystem)
+            : '—',
+      ),
+      InsightStatTile(
+        icon: Icons.percent_rounded,
+        label: 'Body fat',
+        value: (bodyFatPct != null && bodyFatPct!.isFinite)
+            ? '${bodyFatPct!.toStringAsFixed(bodyFatPct! >= 100 ? 0 : 1)}%'
+            : '—',
+      ),
+      InsightStatTile(
+        icon: Icons.straighten_rounded,
+        label: 'BMI',
+        value:
+            (bmi != null && bmi!.isFinite) ? bmi!.toStringAsFixed(1) : '—',
+      ),
+      InsightStatTile(
+        icon: Icons.thermostat_rounded,
+        label: 'Body temp',
+        value: (bodyTempC != null && bodyTempC!.isFinite)
+            ? _formatTemperature(bodyTempC!, unitsSystem)
+            : '—',
+      ),
+    ];
+
+    return InsightStatsGrid(
+      title: 'The details',
+      categoryColor: color,
+      tiles: tiles,
+    );
+  }
+}
+
+// ── _BodyMetricCard ──────────────────────────────────────────────────────────
+
+/// Per-metric card for Body. Every body sub-metric is continuous by
+/// nature, so all charts render as a line (a catch-all also lines).
+class _BodyMetricCard extends StatelessWidget {
+  const _BodyMetricCard({
+    required this.series,
+    required this.color,
+    required this.displayUnit,
+    required this.continuousMetricIds,
+  });
+
+  final MetricSeries series;
+  final Color color;
+  final String displayUnit;
+  final Set<String> continuousMetricIds;
+
+  ZCategoryChartKind get _chartKind {
+    // Body metrics are continuous (weight, body fat, BMI, temperatures,
+    // SpO2, glucose). Catch-all also lines — bars don't fit anything on
+    // the Body screen.
+    return ZCategoryChartKind.line;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final points = <double>[
+      for (final p in series.dataPoints) p.value,
+    ];
+    // Pad/crop to 7 for the slim chart primitive, which expects 7 labels.
+    final tail = points.length >= 7
+        ? points.sublist(points.length - 7)
+        : [
+            for (var i = 0; i < 7 - points.length; i++) double.nan,
+            ...points,
+          ];
+    final todayIndex = points.isNotEmpty ? 6 : -1;
+    final dayLabels = _generateWeekLabels();
+
+    final values = series.dataPoints.map((p) => p.value).toList();
+    final avg = values.isEmpty
+        ? null
+        : values.reduce((a, b) => a + b) / values.length;
+    final min = values.isEmpty ? null : values.reduce((a, b) => a < b ? a : b);
+    final max = values.isEmpty ? null : values.reduce((a, b) => a > b ? a : b);
+
+    return ZuralogCard(
+      variant: ZCardVariant.feature,
+      category: color,
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row: name + delta pill
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  series.displayName,
+                  style: AppTextStyles.titleMedium.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              if (series.deltaPercent != null)
+                _MetricCardDeltaPill(deltaPercent: series.deltaPercent!),
+            ],
+          ),
+          const SizedBox(height: 4),
+          // Hero value
+          if (series.currentValue != null)
+            RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: series.currentValue!,
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 22,
+                      height: 1.15,
+                    ),
+                  ),
+                  if (displayUnit.isNotEmpty)
+                    TextSpan(
+                      text: ' $displayUnit',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: colors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          const SizedBox(height: AppDimens.spaceSm),
+          // Chart slot
+          if (series.dataPoints.length >= 2)
+            SizedBox(
+              height: 110,
+              child: ZCategoryChart(
+                kind: _chartKind,
+                points: tail,
+                color: color,
+                dayLabels: dayLabels,
+                todayIndex: todayIndex,
+                height: 110,
+              ),
+            )
+          else
+            SizedBox(
+              height: 42,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Not enough data yet',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: colors.textTertiary,
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(height: AppDimens.spaceMd),
+          // Avg / Min / Max strip
+          Row(
+            children: [
+              Expanded(
+                child: _StatChip(
+                  label: 'Avg',
+                  value: _formatMetricValue(
+                    avg,
+                    metricId: series.metricId,
+                    unit: displayUnit,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _StatChip(
+                  label: 'Min',
+                  value: _formatMetricValue(
+                    min,
+                    metricId: series.metricId,
+                    unit: displayUnit,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _StatChip(
+                  label: 'Max',
+                  value: _formatMetricValue(
+                    max,
+                    metricId: series.metricId,
+                    unit: displayUnit,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── _SleepHero ────────────────────────────────────────────────────────────────
 
 class _SleepHero extends StatelessWidget {
@@ -3136,6 +3857,44 @@ String _formatActivityMetricValue(
       : value.toStringAsFixed(1);
   if (unit.isEmpty) return rendered;
   return '$rendered $unit';
+}
+
+/// Converts a weight in kilograms to the user's display unit (kg or lb).
+double _kgToDisplay(double kg, UnitsSystem system) {
+  if (system == UnitsSystem.imperial) return kg * 2.20462;
+  return kg;
+}
+
+/// Formats a weight (in kilograms) for the user's display unit, e.g.
+/// `178.4 lb` or `80.9 kg`. Returns `—` when the value is non-finite.
+String _formatWeight(double kg, UnitsSystem system) {
+  if (!kg.isFinite) return '—';
+  final v = _kgToDisplay(kg, system);
+  final unit = system == UnitsSystem.imperial ? 'lb' : 'kg';
+  return '${v.toStringAsFixed(v >= 100 ? 0 : 1)} $unit';
+}
+
+/// Formats a weight delta (kilograms) vs the 7-day average for the hero
+/// pill. Example outputs: `-0.8 lb vs last week`, `+0.4 kg vs last week`.
+String _formatWeightDeltaVsWeek(double deltaKg, UnitsSystem system) {
+  if (!deltaKg.isFinite) return '';
+  final displayDelta = _kgToDisplay(deltaKg, system);
+  final abs = displayDelta.abs();
+  final unit = system == UnitsSystem.imperial ? 'lb' : 'kg';
+  final sign = displayDelta > 0 ? '+' : (displayDelta < 0 ? '-' : '');
+  final magnitude = abs.toStringAsFixed(abs >= 100 ? 0 : 1);
+  return '$sign$magnitude $unit vs last week';
+}
+
+/// Formats a temperature (Celsius) to the user's display unit. Returns
+/// `—` for non-finite input.
+String _formatTemperature(double celsius, UnitsSystem system) {
+  if (!celsius.isFinite) return '—';
+  if (system == UnitsSystem.imperial) {
+    final f = celsius * 9 / 5 + 32;
+    return '${f.toStringAsFixed(1)}°F';
+  }
+  return '${celsius.toStringAsFixed(1)}°C';
 }
 
 /// Formats a raw numeric metric value for the Avg/Min/Max strip.
