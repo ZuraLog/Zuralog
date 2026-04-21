@@ -32,46 +32,52 @@ class ZPatternPillButton extends StatelessWidget {
     final colors = AppColorsOf(context);
     final fill = colors.primary;
     final foreground = colors.isDark
-        ? const Color(0xFF344E41)
+        ? AppColors.deepForest
         : colors.textOnSage;
 
-    return ZuralogSpringButton(
+    return Semantics(
+      button: true,
+      label: label,
       onTap: onPressed,
-      child: SizedBox(
-        width: double.infinity,
-        height: height,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(height / 2),
-          child: Material(
-            color: fill,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                const IgnorePointer(
-                  child: ZPatternOverlay(
-                    variant: ZPatternVariant.sage,
-                    opacity: 0.45,
-                    blendMode: BlendMode.multiply,
-                    animate: true,
+      excludeSemantics: true,
+      child: ZuralogSpringButton(
+        onTap: onPressed,
+        child: SizedBox(
+          width: double.infinity,
+          height: height,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(height / 2),
+            child: Material(
+              color: fill,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  const IgnorePointer(
+                    child: ZPatternOverlay(
+                      variant: ZPatternVariant.sage,
+                      opacity: 0.45,
+                      blendMode: BlendMode.multiply,
+                      animate: true,
+                    ),
                   ),
-                ),
-                Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(icon, size: 20, color: foreground),
-                      const SizedBox(width: 8),
-                      Text(
-                        label,
-                        style: AppTextStyles.labelLarge.copyWith(
-                          color: foreground,
-                          fontWeight: FontWeight.w600,
+                  Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(icon, size: 20, color: foreground),
+                        const SizedBox(width: 8),
+                        Text(
+                          label,
+                          style: AppTextStyles.labelLarge.copyWith(
+                            color: foreground,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

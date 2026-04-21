@@ -49,5 +49,26 @@ void main() {
     final overlay = tester.widget<ZPatternOverlay>(find.byType(ZPatternOverlay));
     expect(overlay.animate, isTrue);
     expect(overlay.variant, ZPatternVariant.sage);
+    expect(overlay.blendMode, BlendMode.multiply);
+  });
+
+  testWidgets('exposes a semantic button with the label', (tester) async {
+    await tester.pumpWidget(wrap(
+      ZPatternPillButton(
+        icon: Icons.chat_bubble_outline_rounded,
+        label: 'Discuss with Coach',
+        onPressed: () {},
+      ),
+    ));
+    final handle = tester.ensureSemantics();
+    expect(
+      tester.getSemantics(find.byType(ZPatternPillButton)),
+      matchesSemantics(
+        isButton: true,
+        hasTapAction: true,
+        label: 'Discuss with Coach',
+      ),
+    );
+    handle.dispose();
   });
 }

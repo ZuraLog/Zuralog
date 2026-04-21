@@ -36,6 +36,10 @@ abstract final class AppColors {
   /// remaining on-brand. Used as [ColorScheme.primary] in light theme.
   static const Color primaryOnLight = Color(0xFF344E41);
 
+  /// Deep Forest — the dark brand token used as foreground on Sage surfaces
+  /// (bottom-nav log pill, `ZPatternPillButton`, active-tab pill in light mode).
+  static const Color deepForest = Color(0xFF344E41);
+
   /// Sage Dark — Pressed states on primary elements.
   static const Color primaryDark = Color(0xFFA8C68A);
 
