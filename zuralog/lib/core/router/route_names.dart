@@ -182,6 +182,12 @@ abstract final class RouteNames {
   /// Path for the Workout History screen.
   static const String workoutHistoryPath = '/log/workout/history';
 
+  /// Name for the live Workout Session screen (pushed from overview).
+  static const String workoutSession = 'workout-session';
+
+  /// Path for the live Workout Session screen.
+  static const String workoutSessionPath = '/log/workout/session';
+
   /// Name for the Metric Picker full-screen sheet (add metrics to Today grid).
   static const String metricPicker = 'metricPicker';
 
