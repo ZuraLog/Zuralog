@@ -7,8 +7,6 @@
 /// the feed reads as a rich, at-a-glance briefing.
 library;
 
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -26,6 +24,7 @@ import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/buttons/spring_button.dart';
 import 'package:zuralog/shared/widgets/cards/zuralog_card.dart';
+import 'package:zuralog/shared/widgets/charts/z_mini_sparkline.dart';
 
 /// A tappable card displaying a single [InsightCard] in the Today feed.
 class ZInsightCard extends ConsumerWidget {
@@ -161,7 +160,7 @@ class ZInsightCard extends ConsumerWidget {
                         ],
                         if (snapshot.trend.length >= 3) ...[
                           const SizedBox(height: AppDimens.spaceSm),
-                          _MiniSparkline(
+                          ZMiniSparkline(
                             values: snapshot.trend,
                             todayIndex: snapshot.todayIndex,
                             color: categoryColor,
@@ -467,146 +466,6 @@ class _StatsDivider extends StatelessWidget {
       ),
     );
   }
-}
-
-// ── Mini sparkline ───────────────────────────────────────────────────────────
-
-class _MiniSparkline extends StatelessWidget {
-  const _MiniSparkline({
-    required this.values,
-    required this.todayIndex,
-    required this.color,
-    required this.trendLabel,
-  });
-
-  final List<double> values;
-  final int todayIndex;
-  final Color color;
-  final String trendLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          height: 36,
-          child: CustomPaint(
-            painter: _SparklinePainter(
-              values: values,
-              todayIndex: todayIndex,
-              color: color,
-            ),
-            size: Size.infinite,
-          ),
-        ),
-        if (trendLabel.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(
-            trendLabel,
-            style: AppTextStyles.labelSmall.copyWith(
-              color: colors.textTertiary,
-              fontSize: 10,
-              letterSpacing: 0.4,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _SparklinePainter extends CustomPainter {
-  _SparklinePainter({
-    required this.values,
-    required this.todayIndex,
-    required this.color,
-  });
-
-  final List<double> values;
-  final int todayIndex;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (values.length < 2) return;
-
-    final nonZero = values.where((v) => v > 0).toList();
-    if (nonZero.isEmpty) return;
-
-    final minV = nonZero.reduce(math.min);
-    final maxV = nonZero.reduce(math.max);
-    final range = (maxV - minV).abs() < 0.0001 ? 1.0 : maxV - minV;
-
-    final points = <Offset>[];
-    final step = size.width / (values.length - 1);
-    const topPad = 4.0;
-    const bottomPad = 4.0;
-    final drawHeight = size.height - topPad - bottomPad;
-    for (var i = 0; i < values.length; i++) {
-      final v = values[i];
-      final normalized = v <= 0 ? 0.0 : (v - minV) / range;
-      // Flip Y so higher values sit higher on the canvas.
-      final y = topPad + drawHeight * (1 - normalized);
-      points.add(Offset(step * i, y));
-    }
-
-    // Fill under the line — gentle gradient.
-    final fillPath = Path()..moveTo(points.first.dx, size.height);
-    for (final p in points) {
-      fillPath.lineTo(p.dx, p.dy);
-    }
-    fillPath.lineTo(points.last.dx, size.height);
-    fillPath.close();
-    final fillPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          color.withValues(alpha: 0.28),
-          color.withValues(alpha: 0.0),
-        ],
-      ).createShader(Offset.zero & size);
-    canvas.drawPath(fillPath, fillPaint);
-
-    // Line on top.
-    final linePaint = Paint()
-      ..color = color.withValues(alpha: 0.9)
-      ..strokeWidth = 1.8
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    final linePath = Path()..moveTo(points.first.dx, points.first.dy);
-    for (var i = 1; i < points.length; i++) {
-      linePath.lineTo(points[i].dx, points[i].dy);
-    }
-    canvas.drawPath(linePath, linePaint);
-
-    // Today dot — glowing.
-    if (todayIndex >= 0 && todayIndex < points.length) {
-      final p = points[todayIndex];
-      final glowPaint = Paint()
-        ..color = color.withValues(alpha: 0.35)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-      canvas.drawCircle(p, 6, glowPaint);
-      canvas.drawCircle(p, 3.5, Paint()..color = color);
-      canvas.drawCircle(
-        p,
-        3.5,
-        Paint()
-          ..color = Colors.white.withValues(alpha: 0.9)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _SparklinePainter old) =>
-      old.values != values ||
-      old.todayIndex != todayIndex ||
-      old.color != color;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
