@@ -210,6 +210,7 @@ class _WorkoutExerciseCardState extends ConsumerState<WorkoutExerciseCard> {
             controller: _notesCtrl,
             maxLines: 2,
             minLines: 1,
+            maxLength: 500,
             onChanged: (value) => ref
                 .read(workoutSessionProvider.notifier)
                 .updateExerciseNotes(ex.exerciseId, value),
@@ -224,6 +225,7 @@ class _WorkoutExerciseCardState extends ConsumerState<WorkoutExerciseCard> {
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,
               contentPadding: EdgeInsets.zero,
+              counterText: '',
             ),
           ),
           const SizedBox(height: AppDimens.spaceSm),

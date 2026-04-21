@@ -298,7 +298,10 @@ class _ExerciseBlock extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppDimens.spaceMd),
-          _SetsTable(sets: exercise.sets, unitLabel: setLabelUnit),
+          _SetsTable(
+            sets: exercise.sets.where((s) => s.isCompleted).toList(),
+            unitLabel: setLabelUnit,
+          ),
         ],
       ),
     );

@@ -131,15 +131,14 @@ class CompletedWorkout {
       final unit = ex.unitOverride ?? globalUnitSystem;
       for (final s in ex.sets) {
         if (!s.isCompleted) continue;
-        final w = s.weightValue;
         final r = s.reps;
-        if (w == null || r == null) {
-          totalSets++;
-          continue;
-        }
-        final kg = unit == 'imperial' ? lbsToKg(w) : w;
-        totalKg += kg * r;
+        if (r == null) continue;
         totalSets++;
+        final w = s.weightValue;
+        if (w != null) {
+          final kg = unit == 'imperial' ? lbsToKg(w) : w;
+          totalKg += kg * r;
+        }
       }
       return CompletedExercise(
         exerciseId: ex.exerciseId,

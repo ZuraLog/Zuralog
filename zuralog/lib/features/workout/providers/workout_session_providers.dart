@@ -45,6 +45,7 @@ class WorkoutSessionNotifier extends StateNotifier<WorkoutSession?> {
   String _globalUnitDefault;
 
   void startSession() {
+    if (state != null) return;
     final raw = _prefs.getString(kWorkoutActiveDraftKey);
     if (raw != null && raw.isNotEmpty) {
       try {
@@ -307,15 +308,21 @@ final workoutDurationProvider = StreamProvider<Duration>((ref) {
 final workoutVolumeProvider = Provider<double>((ref) {
   final session = ref.watch(workoutSessionProvider);
   if (session == null) return 0.0;
-  var total = 0.0;
+  final globalUnits = ref.watch(unitsSystemProvider);
+  final globalDefault = globalUnits == UnitsSystem.metric ? 'metric' : 'imperial';
+  var totalKg = 0.0;
   for (final ex in session.exercises) {
+    final unitSystem = effectiveUnitSystem(ex, globalDefault);
     for (final s in ex.sets) {
       if (s.isCompleted && s.weightValue != null && s.reps != null) {
-        total += s.weightValue! * s.reps!;
+        final weightKg = unitSystem == 'imperial'
+            ? lbsToKg(s.weightValue!)
+            : s.weightValue!;
+        totalKg += weightKg * s.reps!;
       }
     }
   }
-  return total;
+  return globalUnits == UnitsSystem.imperial ? kgToLbs(totalKg) : totalKg;
 });
 
 final workoutHistoryRepositoryProvider =
