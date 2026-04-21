@@ -145,6 +145,14 @@ class _WorkoutSessionScreenState
         title: Icon(Icons.timer_outlined, color: colors.textPrimary),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.history_rounded),
+            tooltip: 'Workout history',
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              context.push(RouteNames.workoutHistoryPath);
+            },
+          ),
           TextButton(
             onPressed: _finishWorkout,
             child: Text(

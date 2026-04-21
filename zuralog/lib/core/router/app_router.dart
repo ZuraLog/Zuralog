@@ -81,6 +81,7 @@ import 'package:zuralog/features/today/presentation/log_screens/metric_picker_sc
 import 'package:zuralog/features/workout/presentation/workout_session_screen.dart';
 import 'package:zuralog/features/workout/presentation/exercise_catalogue_screen.dart';
 import 'package:zuralog/features/workout/domain/completed_workout.dart';
+import 'package:zuralog/features/workout/presentation/workout_history_screen.dart';
 import 'package:zuralog/features/workout/presentation/workout_summary_screen.dart';
 
 // ── Sleep Detail (pushed over shell) ─────────────────────────────────────────
@@ -411,6 +412,16 @@ List<RouteBase> _buildRoutes() {
           ),
         );
       },
+    ),
+    GoRoute(
+      path: RouteNames.workoutHistoryPath,
+      name: RouteNames.workoutHistory,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: SentryErrorBoundary(
+          module: 'workout.history',
+          child: WorkoutHistoryScreen(),
+        ),
+      ),
     ),
     GoRoute(
       path: RouteNames.metricPickerPath,
