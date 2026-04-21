@@ -18,6 +18,7 @@ import 'package:zuralog/core/analytics/analytics_initializer.dart';
 import 'package:zuralog/core/router/app_router.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/workout/presentation/widgets/workout_resume_gate.dart';
 
 /// The root widget of the Zuralog application.
 ///
@@ -72,6 +73,12 @@ class _ZuralogAppState extends ConsumerState<ZuralogApp> {
         themeMode: themeMode,
         // GoRouter-backed declarative navigation.
         routerConfig: router,
+        // Wrap the router's child so the resume-workout prompt fires once
+        // on cold start, above the Navigator but inside Material context so
+        // [showDialog] can reach a valid Navigator.
+        builder: (context, child) => WorkoutResumeGate(
+          child: child ?? const SizedBox.shrink(),
+        ),
       ),
     );
   }
