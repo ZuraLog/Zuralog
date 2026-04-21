@@ -8,19 +8,25 @@ import 'package:zuralog/features/data/domain/metric_descriptions.dart';
 /// as a tap target opening that metric's microscope sheet.
 @immutable
 class AllDataSummarySpan {
-  const AllDataSummarySpan({required this.text, this.metricId});
+  const AllDataSummarySpan({required this.text, this.metricId, this.category});
   final String text;
   final String? metricId;
+
+  /// When [metricId] is non-null, [category] is the health category that
+  /// metric belongs to — used by the renderer to pick the right inline tint.
+  /// For plain-text spans both [metricId] and [category] are null.
+  final HealthCategory? category;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is AllDataSummarySpan &&
           other.text == text &&
-          other.metricId == metricId;
+          other.metricId == metricId &&
+          other.category == category;
 
   @override
-  int get hashCode => Object.hash(text, metricId);
+  int get hashCode => Object.hash(text, metricId, category);
 }
 
 /// One row in the expanded breakdown: category stripe + name + elaboration + delta.
@@ -217,6 +223,7 @@ class AllDataSummaryGenerator {
     out.add(AllDataSummarySpan(
       text: firstPositive.spoke.displayName.toLowerCase(),
       metricId: firstPositive.spoke.metricId,
+      category: firstPositive.wedge.category,
     ));
     out.add(AllDataSummarySpan(
       text:
@@ -233,6 +240,7 @@ class AllDataSummaryGenerator {
       out.add(AllDataSummarySpan(
         text: remainingPositives.first.spoke.displayName.toLowerCase(),
         metricId: remainingPositives.first.spoke.metricId,
+        category: remainingPositives.first.wedge.category,
       ));
       out.add(const AllDataSummarySpan(text: ' is up too'));
     }
@@ -246,6 +254,7 @@ class AllDataSummaryGenerator {
       out.add(AllDataSummarySpan(
         text: firstNegative.spoke.displayName.toLowerCase(),
         metricId: firstNegative.spoke.metricId,
+        category: firstNegative.wedge.category,
       ));
       out.add(AllDataSummarySpan(
         text:

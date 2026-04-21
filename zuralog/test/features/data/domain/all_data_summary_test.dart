@@ -106,5 +106,21 @@ void main() {
       final summary = AllDataSummaryGenerator.generate(data);
       expect(summary.referenceCount, 2);
     });
+
+    test('tagged spans in body carry the correct category', () {
+      final data = MandalaData(wedges: [
+        MandalaWedge(category: HealthCategory.activity, spokes: [
+          _spoke('steps', 'Steps', 12000, 8000),
+        ]),
+      ]);
+      final summary = AllDataSummaryGenerator.generate(data);
+      final tagged = summary.body.where((s) => s.metricId != null).toList();
+      expect(tagged, isNotEmpty);
+      for (final s in tagged) {
+        expect(s.category, isNotNull,
+            reason: 'tagged span with metricId=${s.metricId} must also carry category');
+      }
+      expect(tagged.first.category, HealthCategory.activity);
+    });
   });
 }
