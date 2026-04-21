@@ -200,7 +200,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                   horizontal: AppDimens.spaceMd,
                 ),
                 child: WorkoutsPillarCard(
-                  onTap: () => context.go(RouteNames.dataPath),
+                  onTap: () => context.push(RouteNames.workoutLogPath),
                 ),
               ),
             ),
