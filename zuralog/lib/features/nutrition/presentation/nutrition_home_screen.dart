@@ -595,8 +595,9 @@ class _SlidableMealCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    // Clip the whole Slidable to the meal-card radius so the revealed
-    // action strip's outer edge follows the same curve as the card.
+    // Clip the whole Slidable to the meal-card radius so Delete's right
+    // edge follows the card curve. Edit sits in the middle and gets its
+    // own floating rounded container since the outer clip can't reach it.
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       child: Slidable(
@@ -606,12 +607,40 @@ class _SlidableMealCard extends StatelessWidget {
           extentRatio: 0.5,
           dismissible: DismissiblePane(onDismissed: onDelete),
           children: [
-            SlidableAction(
+            CustomSlidableAction(
               onPressed: (_) => onEdit(),
-              backgroundColor: colors.surfaceRaised,
-              foregroundColor: colors.textPrimary,
-              icon: Icons.edit_rounded,
-              label: 'Edit',
+              backgroundColor: Colors.transparent,
+              padding: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Material(
+                  color: colors.surfaceRaised,
+                  borderRadius:
+                      BorderRadius.circular(AppDimens.radiusCard),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: onEdit,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.edit_rounded,
+                          color: colors.textPrimary,
+                          size: 22,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Edit',
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: colors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
             SlidableAction(
               onPressed: (_) => onDelete(),
