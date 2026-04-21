@@ -90,7 +90,7 @@ class ExerciseGridTile extends StatelessWidget {
                     Center(
                       child: Icon(
                         muscleGroupIcon(exercise.muscleGroup),
-                        size: 32,
+                        size: AppDimens.emojiMd,
                         color: groupColor,
                       ),
                     ),
@@ -128,7 +128,7 @@ class ExerciseGridTile extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: AppDimens.spaceXxs),
                     Text(
                       exercise.muscleGroup.label,
                       maxLines: 1,
