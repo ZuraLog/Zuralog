@@ -634,7 +634,25 @@ class _BottomNavCluster extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bottomSafeArea = MediaQuery.of(context).padding.bottom;
+    final mq = MediaQuery.of(context);
+    final bottomSafeArea = mq.padding.bottom;
+    // Compute the expanded nav width directly from the screen width so the
+    // bottom-nav slot can report a correct intrinsic height. LayoutBuilder
+    // was defeating the Scaffold's intrinsic-sizing pass and floating the
+    // nav into the middle of the screen.
+    final screenWidth = mq.size.width;
+    const horizontalInsets = AppDimens.spaceMdPlus * 2;
+    final expandedWidth =
+        (screenWidth - horizontalInsets - _logPillWidth - AppDimens.spaceSm)
+            .clamp(_collapsedWidth, double.infinity);
+    // Nav + gap + log pill always sums to the same total so the Row never
+    // overflows during the animation: when nav shrinks, the gap grows by
+    // the exact same amount. Both sides animate on identical duration +
+    // curve so they stay in sync.
+    final navWidth = isCollapsed ? _collapsedWidth : expandedWidth;
+    final gapWidth = expandedWidth + AppDimens.spaceSm - navWidth;
+    const animDuration = Duration(milliseconds: 280);
+    const animCurve = Curves.easeOutCubic;
     return Padding(
       padding: EdgeInsets.fromLTRB(
         AppDimens.spaceMdPlus,
@@ -642,48 +660,35 @@ class _BottomNavCluster extends StatelessWidget {
         AppDimens.spaceMdPlus,
         bottomSafeArea + 18,
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final expandedWidth =
-              (constraints.maxWidth - _logPillWidth - AppDimens.spaceSm)
-                  .clamp(_collapsedWidth, double.infinity);
-          // Nav + gap + log pill always sums to the same total so the
-          // Row never overflows during the animation: when nav shrinks,
-          // the gap grows by the exact same amount. Both sides animate
-          // on identical duration + curve so they stay in sync.
-          final navWidth =
-              isCollapsed ? _collapsedWidth : expandedWidth;
-          final gapWidth = expandedWidth + AppDimens.spaceSm - navWidth;
-          const animDuration = Duration(milliseconds: 280);
-          const animCurve = Curves.easeOutCubic;
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AnimatedContainer(
-                duration: animDuration,
-                curve: animCurve,
-                width: navWidth,
-                child: _FrostedNavigationBar(
-                  currentIndex: currentIndex,
-                  onDestinationSelected: onDestinationSelected,
-                  isCollapsed: isCollapsed,
-                  onExpandRequest: onExpandRequest,
-                  expandedWidth: expandedWidth,
-                ),
+      child: SizedBox(
+        height: _logPillWidth,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: animDuration,
+              curve: animCurve,
+              width: navWidth,
+              child: _FrostedNavigationBar(
+                currentIndex: currentIndex,
+                onDestinationSelected: onDestinationSelected,
+                isCollapsed: isCollapsed,
+                onExpandRequest: onExpandRequest,
+                expandedWidth: expandedWidth,
               ),
-              AnimatedContainer(
-                duration: animDuration,
-                curve: animCurve,
-                width: gapWidth,
-              ),
-              _LogPillButton(
-                key: const Key('bottom-nav-log-pill'),
-                isOpen: isLogSheetOpen,
-                onTap: onLogPressed,
-              ),
-            ],
-          );
-        },
+            ),
+            AnimatedContainer(
+              duration: animDuration,
+              curve: animCurve,
+              width: gapWidth,
+            ),
+            _LogPillButton(
+              key: const Key('bottom-nav-log-pill'),
+              isOpen: isLogSheetOpen,
+              onTap: onLogPressed,
+            ),
+          ],
+        ),
       ),
     );
   }
