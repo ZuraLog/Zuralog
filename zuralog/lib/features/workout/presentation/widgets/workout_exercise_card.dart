@@ -22,7 +22,7 @@ import 'package:zuralog/features/workout/domain/exercise.dart' show MuscleGroup;
 import 'package:zuralog/features/workout/domain/workout_session.dart';
 import 'package:zuralog/features/workout/presentation/widgets/exercise_grid_tile.dart'
     show muscleGroupColor, muscleGroupIcon;
-import 'package:zuralog/features/workout/presentation/widgets/rest_timer_sheet.dart';
+import 'package:zuralog/features/workout/providers/rest_timer_provider.dart';
 import 'package:zuralog/features/workout/providers/workout_session_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -595,10 +595,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
                   isCompleted: completing,
                 );
                 if (completing && widget.restTimerEnabled) {
-                  RestTimerSheet.show(
-                    context,
-                    seconds: widget.restTimerDurationSeconds,
-                  );
+                  ref.read(restTimerProvider.notifier).start(widget.restTimerDurationSeconds);
                 }
               },
             ),

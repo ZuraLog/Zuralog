@@ -17,8 +17,10 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/workout/domain/completed_workout.dart';
 import 'package:zuralog/features/workout/domain/exercise.dart';
+import 'package:zuralog/features/workout/presentation/widgets/rest_timer_sheet.dart';
 import 'package:zuralog/features/workout/presentation/widgets/workout_exercise_card.dart';
 import 'package:zuralog/features/workout/presentation/widgets/workout_stats_row.dart';
+import 'package:zuralog/features/workout/providers/rest_timer_provider.dart';
 import 'package:zuralog/features/workout/providers/workout_session_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -63,6 +65,7 @@ class _WorkoutSessionScreenState
     );
     if (confirmed == true && mounted) {
       ref.read(workoutSessionProvider.notifier).discardSession();
+      ref.read(restTimerProvider.notifier).skip();
       if (mounted && context.canPop()) context.pop();
     }
   }
@@ -90,6 +93,7 @@ class _WorkoutSessionScreenState
     ref.invalidate(workoutHistoryProvider);
 
     if (!mounted || completed == null) return;
+    ref.read(restTimerProvider.notifier).skip();
     context.pushReplacement(
       RouteNames.workoutSummaryPath,
       extra: completed,
@@ -165,26 +169,38 @@ class _WorkoutSessionScreenState
           ),
         ],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: Stack(
         children: [
-          const WorkoutStatsRow(),
-          const ZDivider(),
-          Expanded(
-            child: exercises.isEmpty
-                ? const _EmptyState()
-                : ListView.builder(
-                    padding: const EdgeInsets.only(bottom: AppDimens.spaceLg),
-                    itemCount: exercises.length,
-                    itemBuilder: (_, i) => WorkoutExerciseCard(
-                      key: ValueKey(exercises[i].exerciseId),
-                      exercise: exercises[i],
-                    ),
-                  ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const WorkoutStatsRow(),
+              const ZDivider(),
+              Expanded(
+                child: exercises.isEmpty
+                    ? const _EmptyState()
+                    : ListView.builder(
+                        padding: const EdgeInsets.only(bottom: AppDimens.spaceLg),
+                        itemCount: exercises.length,
+                        itemBuilder: (_, i) => WorkoutExerciseCard(
+                          key: ValueKey(exercises[i].exerciseId),
+                          exercise: exercises[i],
+                        ),
+                      ),
+              ),
+              const RestTimerMiniBanner(),
+              _BottomActions(
+                onAdd: _openCatalogue,
+                onMore: _showMoreMenu,
+              ),
+            ],
           ),
-          _BottomActions(
-            onAdd: _openCatalogue,
-            onMore: _showMoreMenu,
+          // Full sheet anchored to the bottom of the screen.
+          const Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: RestTimerFullSheet(),
           ),
         ],
       ),
