@@ -6,6 +6,9 @@
 /// docs/superpowers/specs/2026-04-21-all-data-redesign-design.md
 library;
 
+import 'dart:math' as math;
+
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -97,7 +100,19 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen>
   /// Reads the two integration flags from [SharedPreferences] and flips
   /// [_hasAnySource] / [_checkedSources]. Safe to re-run — used after
   /// pull-to-refresh in case the user connected a source via the CTA.
+  ///
+  /// In debug builds we skip the check entirely and treat the user as
+  /// connected so developers can see the full screen with demo-seeded data
+  /// without having to wire the prefs by hand.
   Future<void> _checkHealthSources() async {
+    if (kDebugMode) {
+      if (!mounted) return;
+      setState(() {
+        _hasAnySource = true;
+        _checkedSources = true;
+      });
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     final apple = prefs.getBool(_kAppleHealthKey) ?? false;
     final hc = prefs.getBool(_kHealthConnectKey) ?? false;
@@ -826,10 +841,10 @@ class _ShardsSection extends ConsumerWidget {
           _SpotlightHeader(onAllMetricsTap: onAllMetricsTap),
           const SizedBox(height: AppDimens.spaceXs),
           GridView.count(
-            crossAxisCount: 3,
-            crossAxisSpacing: 6,
-            mainAxisSpacing: 6,
-            childAspectRatio: 1 / 1.2,
+            crossAxisCount: 2,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 1 / 1.05,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             children: anyResolved
@@ -911,7 +926,7 @@ class _ShardFrame extends StatelessWidget {
     final colors = AppColorsOf(context);
     return ZuralogCard(
       variant: ZCardVariant.data,
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -920,9 +935,9 @@ class _ShardFrame extends StatelessWidget {
             name,
             style: AppTextStyles.labelSmall.copyWith(
               color: colors.textSecondary,
-              fontSize: 8,
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0.2,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
             ),
           ),
           Expanded(
@@ -938,7 +953,7 @@ class _ShardFrame extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: 'Lora',
                     fontWeight: FontWeight.w600,
-                    fontSize: 12,
+                    fontSize: 18,
                     height: 1,
                     color: colors.textPrimary,
                   ),
@@ -947,12 +962,12 @@ class _ShardFrame extends StatelessWidget {
                 ),
               ),
               if (unit != null) ...[
-                const SizedBox(width: 3),
+                const SizedBox(width: 4),
                 Text(
                   unit!,
                   style: AppTextStyles.labelSmall.copyWith(
                     color: colors.textTertiary,
-                    fontSize: 7,
+                    fontSize: 9,
                   ),
                 ),
               ],
@@ -1115,13 +1130,10 @@ class _MoveShard extends ConsumerWidget {
       name: 'Steps · 7d',
       chart: SizedBox(
         height: 44,
-        child: last7.length >= 3
-            ? ZCategoryChart(
-                kind: ZCategoryChartKind.bars,
-                points: last7,
+        child: last7.length >= 2
+            ? _TinyBarsChart(
+                values: last7,
                 color: categoryColor(HealthCategory.activity),
-                dayLabels: const <String>['', '', '', '', '', '', ''],
-                todayIndex: last7.length - 1,
               )
             : const SizedBox.shrink(),
       ),
@@ -1158,21 +1170,32 @@ class _HeartShard extends ConsumerWidget {
   const _HeartShard();
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // HeartDaySummary does not expose per-zone minutes yet — empty map
-    // intentional. ZHeartZonesBar renders a dim placeholder in that case.
-    const zones = <ZHeartZone, int>{};
+    // HeartDaySummary doesn't expose per-zone minutes yet. In debug builds
+    // we seed plausible demo zones so the shard reads cleanly while the
+    // backend catches up.
+    final zones = kDebugMode
+        ? const <int>[180, 28, 14, 6] // resting / fat-burn / cardio / peak
+        : const <int>[0, 0, 0, 0];
+    final activeMin = zones[1] + zones[2] + zones[3];
     return _ShardFrame(
       name: 'Heart zones',
       chart: SizedBox(
         width: double.infinity,
-        child: ZHeartZonesBar(
-          minutes: zones,
-          categoryColor: categoryColor(HealthCategory.heart),
+        height: 36,
+        child: _TinyStackedBar(
+          values: zones.map((v) => v.toDouble()).toList(),
+          colors: const [
+            Color(0xFF7EC4A1), // resting
+            Color(0xFFFFB06A), // fat burn
+            Color(0xFFFF6D7C), // cardio
+            Color(0xFFE63946), // peak
+          ],
           height: 10,
           radius: 5,
         ),
       ),
-      value: '—',
+      value: activeMin == 0 ? '—' : '$activeMin',
+      unit: activeMin == 0 ? null : 'active min',
     );
   }
 }
@@ -1246,16 +1269,20 @@ class _BodyShard extends ConsumerWidget {
       final m = heightCm / 100.0;
       bmi = weightKg / (m * m);
     }
+    // Demo fallback so the shard reads a real gauge when the demo profile
+    // is missing height or weight. Production users with no data still see
+    // the em-dash.
+    if (bmi == null && kDebugMode) bmi = 23.5;
     return _ShardFrame(
       name: 'BMI',
       chart: SizedBox(
-        width: 64,
-        height: 40,
+        width: double.infinity,
+        height: 60,
         child: bmi == null
             ? const Center(
                 child: Text('—', style: TextStyle(color: Colors.white38)),
               )
-            : ZBmiGauge(bmi: bmi, size: 64, strokeWidth: 5),
+            : _TinyBmiArc(bmi: bmi),
       ),
       value: bmi == null ? '—' : bmi.toStringAsFixed(1),
       unit: bmi == null ? null : 'healthy',
@@ -1295,12 +1322,27 @@ class _MindShard extends ConsumerWidget {
       );
     }
 
-    final mood = readLast('mood');
-    final energy = readLast('energy');
-    final stress = readLast('stress');
+    // Backend wellness metrics may come back on a 0–100 scale. Normalize
+    // anything above 10 down to a 1–10 reading so the dot strip + the avg
+    // value stay in the user's mental model.
+    int? scaleTo10(int? v) {
+      if (v == null) return null;
+      if (v <= 10) return v.clamp(1, 10);
+      return ((v / 10.0).round()).clamp(1, 10);
+    }
+
+    var mood = scaleTo10(readLast('mood'));
+    var energy = scaleTo10(readLast('energy'));
+    var stress = scaleTo10(readLast('stress'));
+    if (kDebugMode) {
+      mood ??= 8;
+      energy ??= 7;
+      stress ??= 4;
+    }
     final present = [mood, energy, stress].whereType<int>().toList();
-    final avg =
-        present.isEmpty ? null : present.reduce((a, b) => a + b) / present.length;
+    final avg = present.isEmpty
+        ? null
+        : present.reduce((a, b) => a + b) / present.length;
     return _ShardFrame(
       name: 'How you feel',
       chart: ZMoodEnergyStressDots(
@@ -1376,16 +1418,16 @@ class _EveryMetricSection extends ConsumerWidget {
           _EveryMetricHeader(count: totalCount),
           const SizedBox(height: AppDimens.spaceXs),
           GridView.count(
-            crossAxisCount: 3,
-            crossAxisSpacing: 6,
-            mainAxisSpacing: 6,
-            childAspectRatio: 0.85,
+            crossAxisCount: 2,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 1 / 1.0,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             children: showSkeleton
                 ? List<Widget>.generate(
-                    12,
-                    (_) => const _SkeletonCard(height: 82),
+                    8,
+                    (_) => const _SkeletonCard(height: 110),
                   )
                 : tiles,
           ),
@@ -1456,7 +1498,7 @@ class _EveryMetricTile extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: ZuralogCard(
         variant: ZCardVariant.data,
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1464,19 +1506,19 @@ class _EveryMetricTile extends StatelessWidget {
               metric.displayName,
               style: AppTextStyles.labelSmall.copyWith(
                 color: colors.textSecondary,
-                fontSize: 7.5,
-                fontWeight: FontWeight.w500,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
             Text(
               todayDouble == null ? '—' : _formatTileValue(todayDouble),
               style: TextStyle(
                 fontFamily: 'Lora',
                 fontWeight: FontWeight.w600,
-                fontSize: 12,
+                fontSize: 18,
                 color: colors.textPrimary,
                 height: 1,
               ),
@@ -1485,17 +1527,17 @@ class _EveryMetricTile extends StatelessWidget {
             ),
             const Spacer(),
             SizedBox(
-              height: 16,
+              height: 24,
               child: values.length >= 2
                   ? ZMiniSparkline(
                       values: values,
                       todayIndex: values.length - 1,
                       color: color,
-                      height: 16,
+                      height: 24,
                     )
                   : const SizedBox.shrink(),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -1506,7 +1548,7 @@ class _EveryMetricTile extends StatelessWidget {
                     metric.unit,
                     style: AppTextStyles.labelSmall.copyWith(
                       color: colors.textTertiary,
-                      fontSize: 6.5,
+                      fontSize: 9,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -1536,8 +1578,8 @@ class _DeltaLabel extends StatelessWidget {
         '·',
         style: AppTextStyles.labelSmall.copyWith(
           color: colors.textTertiary,
-          fontSize: 7.5,
-          fontWeight: FontWeight.w600,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
         ),
       );
     }
@@ -1547,8 +1589,8 @@ class _DeltaLabel extends StatelessWidget {
         '· 0%',
         style: AppTextStyles.labelSmall.copyWith(
           color: colors.textSecondary,
-          fontSize: 7.5,
-          fontWeight: FontWeight.w600,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
         ),
       );
     }
@@ -1583,4 +1625,204 @@ String _formatTileValue(double v) {
   if (v.abs() >= 1000) return _formatThousands(v.round());
   if (v == v.truncateToDouble()) return v.toStringAsFixed(0);
   return v.toStringAsFixed(1);
+}
+
+// ── Compact chart primitives used by the shards ─────────────────────────────
+
+/// Tiny axis-less bar chart — N evenly-spaced colored bars, max value sets
+/// the tallest. Today's bar (last in the list) draws at full opacity with a
+/// glowing dot above it; the rest fade slightly.
+class _TinyBarsChart extends StatelessWidget {
+  const _TinyBarsChart({required this.values, required this.color});
+  final List<double> values;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    if (values.isEmpty) return const SizedBox.shrink();
+    final max = values.reduce((a, b) => a > b ? a : b);
+    if (max <= 0) return const SizedBox.shrink();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final h = constraints.maxHeight;
+        final w = constraints.maxWidth;
+        final barWidth = (w - (values.length - 1) * 3) / values.length;
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            for (var i = 0; i < values.length; i++) ...[
+              _BarColumn(
+                heightFraction: (values[i] / max).clamp(0.05, 1.0),
+                width: barWidth,
+                maxHeight: h,
+                color: color,
+                isToday: i == values.length - 1,
+              ),
+              if (i < values.length - 1) const SizedBox(width: 3),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _BarColumn extends StatelessWidget {
+  const _BarColumn({
+    required this.heightFraction,
+    required this.width,
+    required this.maxHeight,
+    required this.color,
+    required this.isToday,
+  });
+  final double heightFraction;
+  final double width;
+  final double maxHeight;
+  final Color color;
+  final bool isToday;
+
+  @override
+  Widget build(BuildContext context) {
+    // Reserve a small headroom slot for the today-dot so its presence
+    // never makes today's column taller than the others.
+    const dotHeadroom = 5.0;
+    final usable = (maxHeight - dotHeadroom).clamp(1.0, maxHeight);
+    final barH = usable * heightFraction;
+    return SizedBox(
+      width: width,
+      height: maxHeight,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          Container(
+            width: width,
+            height: barH,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: isToday ? 1.0 : 0.55),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          if (isToday)
+            Positioned(
+              bottom: barH + 2,
+              child: Container(
+                width: 4,
+                height: 4,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Tiny BMI semicircle arc — four colored bands (under / healthy / over /
+/// obese) with a needle pointing at the user's reading. No surrounding
+/// chrome, no value text — the shard frame draws those.
+class _TinyBmiArc extends StatelessWidget {
+  const _TinyBmiArc({required this.bmi});
+  final double bmi;
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.expand(child: CustomPaint(painter: _BmiArcPainter(bmi: bmi)));
+  }
+}
+
+class _BmiArcPainter extends CustomPainter {
+  _BmiArcPainter({required this.bmi});
+  final double bmi;
+  static const _minBmi = 14.0;
+  static const _maxBmi = 40.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height * 0.92);
+    final radius = math.min(size.width / 2 - 6, size.height - 10);
+    final stroke = (radius * 0.22).clamp(5.0, 9.0);
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    // Bands at fractions of pi: under 0..0.18, healthy 0.18..0.45,
+    // over 0.45..0.7, obese 0.7..1.0 of the upper semicircle.
+    void band(double from, double to, Color color) {
+      canvas.drawArc(
+        rect,
+        math.pi + math.pi * from,
+        math.pi * (to - from),
+        false,
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = stroke
+          ..strokeCap = StrokeCap.butt,
+      );
+    }
+    band(0.00, 0.18, const Color(0xFF5C8FB0));
+    band(0.18, 0.45, const Color(0xFF64D2FF));
+    band(0.45, 0.70, const Color(0xFFFF9F0A));
+    band(0.70, 1.00, const Color(0xFFFF375F));
+
+    // Needle pointing at the user's BMI.
+    final t = ((bmi - _minBmi) / (_maxBmi - _minBmi)).clamp(0.0, 1.0);
+    final angle = math.pi + math.pi * t;
+    final tip = Offset(
+      center.dx + math.cos(angle) * (radius - stroke * 0.5),
+      center.dy + math.sin(angle) * (radius - stroke * 0.5),
+    );
+    canvas.drawLine(
+      center,
+      tip,
+      Paint()
+        ..color = const Color(0xFFF0EEE9)
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round,
+    );
+    canvas.drawCircle(center, 3, Paint()..color = const Color(0xFFF0EEE9));
+  }
+
+  @override
+  bool shouldRepaint(covariant _BmiArcPainter old) => old.bmi != bmi;
+}
+
+/// Tiny stacked horizontal bar — segment widths are proportional to values.
+/// No legend, no labels — caller owns the surrounding layout.
+class _TinyStackedBar extends StatelessWidget {
+  const _TinyStackedBar({
+    required this.values,
+    required this.colors,
+    required this.height,
+    required this.radius,
+  })  : assert(values.length == colors.length);
+  final List<double> values;
+  final List<Color> colors;
+  final double height;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = values.fold<double>(0, (a, b) => a + b);
+    final hasData = total > 0;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: SizedBox(
+        height: height,
+        child: hasData
+            ? Row(
+                children: [
+                  for (var i = 0; i < values.length; i++)
+                    if (values[i] > 0)
+                      Expanded(
+                        flex: (values[i] * 1000).round(),
+                        child: Container(color: colors[i]),
+                      ),
+                ],
+              )
+            : Container(
+                color: AppColorsOf(context)
+                    .elevatedSurface
+                    .withValues(alpha: 0.6),
+              ),
+      ),
+    );
+  }
 }

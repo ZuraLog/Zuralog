@@ -59,6 +59,7 @@ class _ZHealthMandalaState extends State<ZHealthMandala>
     with TickerProviderStateMixin {
   AnimationController? _entryCtrl;
   AnimationController? _breathCtrl;
+  AnimationController? _spinCtrl;
   bool _reducedMotion = false;
 
   @override
@@ -77,6 +78,11 @@ class _ZHealthMandalaState extends State<ZHealthMandala>
         vsync: this,
         duration: const Duration(seconds: 6),
       )..repeat(reverse: true);
+      // Slow continuous rotation — full revolution every 90 seconds.
+      _spinCtrl = AnimationController(
+        vsync: this,
+        duration: const Duration(seconds: 90),
+      )..repeat();
     }
   }
 
@@ -85,6 +91,8 @@ class _ZHealthMandalaState extends State<ZHealthMandala>
     _entryCtrl = null;
     _breathCtrl?.dispose();
     _breathCtrl = null;
+    _spinCtrl?.dispose();
+    _spinCtrl = null;
   }
 
   @override
@@ -112,6 +120,7 @@ class _ZHealthMandalaState extends State<ZHealthMandala>
                   animation: Listenable.merge([
                     ?_entryCtrl,
                     ?_breathCtrl,
+                    ?_spinCtrl,
                   ]),
                   builder: (context, _) {
                     final entry =
@@ -119,12 +128,17 @@ class _ZHealthMandalaState extends State<ZHealthMandala>
                     final breath = _reducedMotion
                         ? 0.55
                         : 0.4 + ((_breathCtrl?.value ?? 0.5) * 0.25);
-                    return CustomPaint(
-                      painter: _MandalaPainter(
-                        data: widget.data,
-                        colors: colors,
-                        entryProgress: entry,
-                        breathOpacity: breath,
+                    final spin =
+                        _reducedMotion ? 0.0 : (_spinCtrl?.value ?? 0.0);
+                    return Transform.rotate(
+                      angle: spin * 2 * math.pi,
+                      child: CustomPaint(
+                        painter: _MandalaPainter(
+                          data: widget.data,
+                          colors: colors,
+                          entryProgress: entry,
+                          breathOpacity: breath,
+                        ),
                       ),
                     );
                   },
@@ -152,8 +166,27 @@ class _ZHealthMandalaState extends State<ZHealthMandala>
                   ),
                 ),
               ),
-              // Spoke tap targets.
-              ..._buildSpokeTapTargets(size),
+              // Spoke tap targets — wrapped in the same rotation as the
+              // painter so taps continue to land on the visual spoke
+              // wherever the wheel happens to be in its slow turn.
+              AnimatedBuilder(
+                animation: Listenable.merge([?_spinCtrl]),
+                builder: (context, child) {
+                  final spin =
+                      _reducedMotion ? 0.0 : (_spinCtrl?.value ?? 0.0);
+                  return Transform.rotate(
+                    angle: spin * 2 * math.pi,
+                    child: child,
+                  );
+                },
+                child: SizedBox(
+                  width: size,
+                  height: size,
+                  child: Stack(
+                    children: _buildSpokeTapTargets(size),
+                  ),
+                ),
+              ),
             ],
           );
         },
