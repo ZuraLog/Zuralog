@@ -2,9 +2,9 @@
 ///
 /// Editorial one-card-per-category surface used by the Data tab.
 /// Each card presents a single health category (Sleep, Activity, Heart,
-/// Nutrition, …) with a gradient emblem, a large Lora hero value,
-/// a plain-English summary sentence, a shared 7-day sparkline, and a
-/// footer chevron that routes into the category's detail screen.
+/// Nutrition, …) with a gradient emblem, a large Lora hero value, an
+/// optional 7-day chart slot, and a footer chevron that routes into the
+/// category's detail screen.
 ///
 /// The card's shell is a [ZuralogSpringButton] wrapping a
 /// [ZuralogCard] with [ZCardVariant.feature] so the per-category pattern
@@ -18,7 +18,6 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/buttons/spring_button.dart';
 import 'package:zuralog/shared/widgets/cards/zuralog_card.dart';
-import 'package:zuralog/shared/widgets/charts/z_mini_sparkline.dart';
 
 /// Direction of a week-over-week delta shown in the hero row pill.
 ///
@@ -33,9 +32,9 @@ enum ZCategoryDelta { better, worse, flat, none }
 /// Rendering contract:
 /// 1. Top row  — 40pt gradient emblem, category name, 'Today' eyebrow.
 /// 2. Hero row — large Lora value (38pt) plus optional delta pill.
-/// 3. Summary  — single plain-English sentence, up to two lines.
-/// 4. Sparkline — rendered only when [trend] has 3+ values.
-/// 5. Footer   — 'View details' (or 'Connect a source' when [isNoData])
+/// 3. Chart slot — fixed 100pt tall. Renders [chart] when present; shows
+///    a "no data yet — connect a source" hint when [isNoData] is true.
+/// 4. Footer   — 'View details' (or 'Connect a source' when [isNoData])
 ///    followed by a chevron tinted with the category color.
 class ZCategorySummaryCard extends StatelessWidget {
   /// Creates a [ZCategorySummaryCard].
@@ -45,10 +44,8 @@ class ZCategorySummaryCard extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.heroValue,
-    required this.summaryLine,
-    required this.trend,
-    required this.todayIndex,
     required this.onTap,
+    this.chart,
     this.deltaLabel,
     this.deltaDirection = ZCategoryDelta.none,
     this.isNoData = false,
@@ -61,22 +58,17 @@ class ZCategorySummaryCard extends StatelessWidget {
   /// Flat line icon rendered inside the emblem tile.
   final IconData icon;
 
-  /// Category accent color — drives the emblem gradient, sparkline,
-  /// feature-card pattern overlay, and footer chevron.
+  /// Category accent color — drives the emblem gradient, feature-card
+  /// pattern overlay, and footer chevron.
   final Color color;
 
   /// Pre-formatted hero value ('7h 24m', '74 bpm', '—').
   final String heroValue;
 
-  /// Single plain-English sentence describing today's state.
-  final String summaryLine;
-
-  /// Seven daily values, oldest first. Pass an empty list to hide the
-  /// sparkline. Fewer than three values also hides it.
-  final List<double> trend;
-
-  /// Index of today inside [trend]; pass -1 to hide the "today" glow dot.
-  final int todayIndex;
+  /// Optional chart widget rendered in the fixed-height slot below the
+  /// hero row. When null (and [isNoData] is false) the slot stays empty
+  /// but keeps its reserved height so every card remains the same size.
+  final Widget? chart;
 
   /// Called on whole-card tap when the card has data (or when
   /// [onConnectTap] is null in the no-data state).
@@ -103,7 +95,7 @@ class ZCategorySummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final VoidCallback effectiveTap =
         (isNoData && onConnectTap != null) ? onConnectTap! : onTap;
-    final showSparkline = trend.length >= 3;
+    final colors = AppColorsOf(context);
 
     return ZuralogSpringButton(
       onTap: effectiveTap,
@@ -127,25 +119,23 @@ class ZCategorySummaryCard extends StatelessWidget {
                 deltaLabel: deltaLabel,
                 deltaDirection: deltaDirection,
               ),
-              const SizedBox(height: AppDimens.spaceSm),
-              Text(
-                summaryLine,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColorsOf(context).textSecondary,
-                  height: 1.4,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              const SizedBox(height: AppDimens.spaceMd),
+              SizedBox(
+                height: 100,
+                child: isNoData
+                    ? Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'No data yet — connect a source',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: colors.textTertiary,
+                            height: 1.4,
+                          ),
+                        ),
+                      )
+                    : (chart ?? const SizedBox.shrink()),
               ),
-              if (showSparkline) ...[
-                const SizedBox(height: AppDimens.spaceMd),
-                ZMiniSparkline(
-                  values: trend,
-                  todayIndex: todayIndex,
-                  color: color,
-                ),
-              ],
-              const SizedBox(height: AppDimens.spaceSm),
+              const SizedBox(height: AppDimens.spaceMd),
               _FooterRow(color: color, isNoData: isNoData),
             ],
           ),

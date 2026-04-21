@@ -26,7 +26,6 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/core/widgets/shimmer.dart';
 import 'package:zuralog/features/data/domain/category_color.dart';
-import 'package:zuralog/features/data/domain/category_summary.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
@@ -47,12 +46,12 @@ const List<HealthCategory> _kVisibleCategories = [
 
 // ── File-scope lookup helpers ────────────────────────────────────────────────
 //
-// These three helpers exist so both [_CategoryCard] and [_ConnectACTAIfNeeded]
-// share exactly one definition of "find this category's summary", "find this
-// category's AI headline", and "does this summary have enough data to show".
-// They also make the Riverpod `.select(...)` closures trivial — each card
-// subscribes only to the primitive value it actually renders, so a
-// single-category update no longer rebuilds every card on the screen.
+// These helpers let both [_CategoryCard] and [_ConnectACTAIfNeeded] share
+// exactly one definition of "find this category's summary" and "does this
+// summary have enough data to show". They also make the Riverpod
+// `.select(...)` closures trivial — each card subscribes only to the
+// primitive value it actually renders, so a single-category update no
+// longer rebuilds every card on the screen.
 
 /// Returns the [CategorySummary] for [category] from [dash], or `null` if
 /// [dash] hasn't loaded yet or the category isn't present.
@@ -64,16 +63,17 @@ CategorySummary? _findSummaryFor(DashboardData? dash, HealthCategory category) {
   return null;
 }
 
-/// Plain-English headline from the most recent insight matching [category],
-/// or `null` if there isn't one. Insight titles are already written in
-/// everyday language, so they're used verbatim as a card's summary line.
-String? _findInsightTitleFor(TodayFeedData? feed, HealthCategory category) {
-  if (feed == null) return null;
-  final name = category.name.toLowerCase();
-  for (final i in feed.insights) {
-    if (i.category.toLowerCase() == name) return i.title;
+/// Returns 7 short weekday labels (`['W','T',...,'T']`) with today's label at
+/// index `count - 1`.
+List<String> _lastSevenDayLabels(int count) {
+  const week = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  final todayWeekday = DateTime.now().weekday; // 1=Mon..7=Sun
+  final labels = <String>[];
+  for (int i = count - 1; i >= 0; i--) {
+    final idx = (todayWeekday - 1 - i) % 7;
+    labels.add(week[(idx + 7) % 7]);
   }
-  return null;
+  return labels;
 }
 
 /// Is a [CategorySummary] populated enough to show on a category card?
@@ -450,11 +450,11 @@ class _HeroSkeleton extends StatelessWidget {
 // ── _CategoryCard ─────────────────────────────────────────────────────────────
 
 /// Single category card — wraps [ZCategorySummaryCard] with the right
-/// category-level data pulled from [dashboardProvider] and [todayFeedProvider].
+/// category-level data pulled from [dashboardProvider].
 ///
-/// Uses `.select(...)` on both providers so each card only rebuilds when its
-/// own [CategorySummary] or its own insight title actually changes. A mutation
-/// to a single category no longer re-runs build on all six cards.
+/// Uses `.select(...)` so each card only rebuilds when its own
+/// [CategorySummary] actually changes. A mutation to a single category no
+/// longer re-runs build on all six cards.
 class _CategoryCard extends ConsumerWidget {
   const _CategoryCard({required this.category});
 
@@ -467,63 +467,107 @@ class _CategoryCard extends ConsumerWidget {
         (async) => _findSummaryFor(async.valueOrNull, category),
       ),
     );
-    final aiHeadline = ref.watch(
-      todayFeedProvider.select(
-        (async) => _findInsightTitleFor(async.valueOrNull, category),
-      ),
-    );
 
     final color = categoryColor(category);
     final icon = _iconFor(category);
     final name = category.displayName;
 
-    final trend = summary?.trend ?? const <double>[];
     final hasData = _summaryHasData(summary);
-
-    final todayValue = _lastNonNull(trend);
-    final weekAverage = _average(trend);
-
-    final summaryLine = categorySummaryFor(
-      category: category,
-      todayValue: todayValue,
-      weekAverage: weekAverage,
-      aiHeadline: aiHeadline,
-    );
 
     final deltaDirection =
         _deltaDirection(summary?.deltaPercent, category);
     final deltaLabel = _deltaLabel(summary?.deltaPercent);
+
+    final chart = _buildChart(category, summary, color);
 
     return ZCategorySummaryCard(
       categoryName: name,
       icon: icon,
       color: color,
       heroValue: hasData ? summary!.primaryValue : '—',
-      summaryLine: hasData ? summaryLine : 'No data yet.',
-      trend: trend,
-      todayIndex: trend.isNotEmpty ? trend.length - 1 : -1,
+      chart: chart,
       deltaLabel: hasData ? deltaLabel : null,
       deltaDirection: deltaDirection,
       isNoData: !hasData,
-      onTap: () => context.push('/data/category/${category.name}'),
       onConnectTap: () =>
           context.push(RouteNames.settingsIntegrationsPath),
+      onTap: () => context.pushNamed(
+        RouteNames.categoryDetail,
+        pathParameters: {'id': category.name},
+      ),
     );
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
-  static double? _lastNonNull(List<double> values) {
-    for (var i = values.length - 1; i >= 0; i--) {
-      if (values[i] > 0) return values[i];
-    }
-    return null;
-  }
+  /// Builds the per-category 7-day chart widget shown in the card's chart
+  /// slot. Returns `null` when there isn't enough data to render (fewer
+  /// than 3 points) so the slot falls back to an empty reservation.
+  Widget? _buildChart(
+    HealthCategory category,
+    CategorySummary? summary,
+    Color color,
+  ) {
+    if (summary == null) return null;
+    final trend = summary.trend;
+    if (trend == null || trend.length < 3) return null;
+    final labels = _lastSevenDayLabels(trend.length);
+    final todayIdx = trend.length - 1;
 
-  static double? _average(List<double> values) {
-    final nonZero = values.where((v) => v > 0).toList();
-    if (nonZero.isEmpty) return null;
-    return nonZero.reduce((a, b) => a + b) / nonZero.length;
+    switch (category) {
+      case HealthCategory.sleep:
+        return ZCategoryChart(
+          kind: ZCategoryChartKind.bars,
+          points: trend,
+          color: color,
+          dayLabels: labels,
+          todayIndex: todayIdx,
+        );
+      case HealthCategory.activity:
+        return ZCategoryChart(
+          kind: ZCategoryChartKind.bars,
+          points: trend,
+          color: color,
+          dayLabels: labels,
+          todayIndex: todayIdx,
+          goalValue: 8000,
+        );
+      case HealthCategory.heart:
+        return ZCategoryChart(
+          kind: ZCategoryChartKind.line,
+          points: trend,
+          color: color,
+          dayLabels: labels,
+          todayIndex: todayIdx,
+        );
+      case HealthCategory.nutrition:
+        return ZCategoryChart(
+          kind: ZCategoryChartKind.bars,
+          points: trend,
+          color: color,
+          dayLabels: labels,
+          todayIndex: todayIdx,
+          goalValue: 2000,
+        );
+      case HealthCategory.body:
+        return ZCategoryChart(
+          kind: ZCategoryChartKind.line,
+          points: trend,
+          color: color,
+          dayLabels: labels,
+          todayIndex: todayIdx,
+        );
+      case HealthCategory.wellness:
+        return ZCategoryChart(
+          kind: ZCategoryChartKind.dots,
+          points: trend,
+          color: color,
+          dayLabels: labels,
+          todayIndex: todayIdx,
+        );
+      default:
+        return null;
+    }
   }
 
   /// Resting heart rate is the one category in this six-card set where lower
