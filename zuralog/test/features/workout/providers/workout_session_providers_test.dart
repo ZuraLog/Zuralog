@@ -249,6 +249,33 @@ void main() {
       expect(container.read(workoutSessionProvider), isNull);
       expect(prefs.getString('workout_active_draft'), isNull);
     });
+
+    test('startSession with corrupt draft discards it and creates fresh session',
+        () async {
+      SharedPreferences.setMockInitialValues({
+        'workout_active_draft': 'not-valid-json',
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final container = _containerWith(prefs);
+      addTearDown(container.dispose);
+      container.read(workoutSessionProvider.notifier).startSession();
+      final session = container.read(workoutSessionProvider)!;
+      expect(session.id, isNotEmpty);
+      expect(session.exercises, isEmpty);
+      expect(prefs.getString('workout_active_draft'), isNotNull);
+    });
+
+    test('updateSet with out-of-bounds index leaves state unchanged', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final container = _containerWith(prefs);
+      addTearDown(container.dispose);
+      final notifier = container.read(workoutSessionProvider.notifier);
+      notifier.startSession();
+      notifier.addExercises([_bench]);
+      final before = container.read(workoutSessionProvider)!;
+      notifier.updateSet('bench_press', 99, weightValue: 100, reps: 5);
+      expect(container.read(workoutSessionProvider), equals(before));
+    });
   });
 
   group('derived providers', () {

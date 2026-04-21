@@ -39,7 +39,7 @@ class WorkoutSessionNotifier extends StateNotifier<WorkoutSession?> {
   WorkoutSessionNotifier(this._prefs, this._globalUnitDefault) : super(null);
 
   final SharedPreferences _prefs;
-  final String _globalUnitDefault;
+  String _globalUnitDefault;
 
   void startSession() {
     final raw = _prefs.getString(kWorkoutActiveDraftKey);
@@ -63,8 +63,31 @@ class WorkoutSessionNotifier extends StateNotifier<WorkoutSession?> {
   }
 
   void discardSession() {
+    final session = state;
+    if (session != null) {
+      for (final ex in session.exercises) {
+        unawaited(
+          _prefs
+              .remove('$kWorkoutExerciseUnitKeyPrefix${ex.exerciseId}')
+              .catchError(
+            (Object e, StackTrace st) {
+              debugPrint(
+                  '[WorkoutSessionNotifier] remove unit key failed: $e\n$st');
+              return false;
+            },
+          ),
+        );
+      }
+    }
     state = null;
-    unawaited(_prefs.remove(kWorkoutActiveDraftKey));
+    unawaited(
+      _prefs.remove(kWorkoutActiveDraftKey).catchError(
+        (Object e, StackTrace st) {
+          debugPrint('[WorkoutSessionNotifier] remove draft failed: $e\n$st');
+          return false;
+        },
+      ),
+    );
   }
 
   void addExercises(List<Exercise> exercises) {
@@ -152,6 +175,10 @@ class WorkoutSessionNotifier extends StateNotifier<WorkoutSession?> {
     });
   }
 
+  void updateGlobalDefault(String newDefault) {
+    _globalUnitDefault = newDefault;
+  }
+
   void removeExercise(String exerciseId) {
     final session = state;
     if (session == null) return;
@@ -181,19 +208,31 @@ class WorkoutSessionNotifier extends StateNotifier<WorkoutSession?> {
   void _saveDraft() {
     final session = state;
     if (session == null) {
-      unawaited(_prefs.remove(kWorkoutActiveDraftKey));
-      return;
-    }
-    try {
       unawaited(
-        _prefs.setString(
-          kWorkoutActiveDraftKey,
-          jsonEncode(session.toJson()),
+        _prefs.remove(kWorkoutActiveDraftKey).catchError(
+          (Object e, StackTrace st) {
+            debugPrint('[WorkoutSessionNotifier] remove draft failed: $e\n$st');
+            return false;
+          },
         ),
       );
-    } catch (e, st) {
-      debugPrint('[WorkoutSessionNotifier] saveDraft failed: $e\n$st');
+      return;
     }
+    String encoded;
+    try {
+      encoded = jsonEncode(session.toJson());
+    } catch (e, st) {
+      debugPrint('[WorkoutSessionNotifier] saveDraft encode failed: $e\n$st');
+      return;
+    }
+    unawaited(
+      _prefs.setString(kWorkoutActiveDraftKey, encoded).catchError(
+        (Object e, StackTrace st) {
+          debugPrint('[WorkoutSessionNotifier] saveDraft write failed: $e\n$st');
+          return false;
+        },
+      ),
+    );
   }
 }
 
@@ -202,7 +241,13 @@ final workoutSessionProvider =
   final prefs = ref.read(prefsProvider);
   final units = ref.read(unitsSystemProvider);
   final globalDefault = units == UnitsSystem.metric ? 'metric' : 'imperial';
-  return WorkoutSessionNotifier(prefs, globalDefault);
+  final notifier = WorkoutSessionNotifier(prefs, globalDefault);
+  ref.listen<UnitsSystem>(unitsSystemProvider, (_, next) {
+    notifier.updateGlobalDefault(
+      next == UnitsSystem.metric ? 'metric' : 'imperial',
+    );
+  });
+  return notifier;
 });
 
 final workoutDurationProvider = StreamProvider<Duration>((ref) {
