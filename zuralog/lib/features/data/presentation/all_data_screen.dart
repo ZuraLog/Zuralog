@@ -56,6 +56,10 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen>
     with AutomaticKeepAliveClientMixin {
   _AllDataRange _range = _AllDataRange.today;
 
+  /// Key attached to the every-metric grid so the "All metrics ↓" link can
+  /// scroll it into view.
+  final GlobalKey _gridKey = GlobalKey();
+
   @override
   bool get wantKeepAlive => true;
 
@@ -83,10 +87,47 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen>
               ),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: AppDimens.spaceSm)),
-            SliverToBoxAdapter(child: _MandalaSection(range: _range)),
-            const SliverToBoxAdapter(child: _Legend()),
-            SliverToBoxAdapter(child: _AiSummarySection(range: _range)),
-            SliverToBoxAdapter(child: _ShardsSection(range: _range)),
+            SliverToBoxAdapter(
+              child: _MandalaSection(
+                range: _range,
+                onMetricTap: _openMicroscopeById,
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: _Legend(
+                onCategoryTap: (cat) => _openMicroscopeById(
+                  _primaryMetricFor(cat),
+                  hint: cat,
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: _AiSummarySection(
+                range: _range,
+                onMetricTap: _openMicroscopeById,
+                onSectionTap: (section) => _openMicroscopeById(
+                  section.primaryMetricId,
+                  hint: section.category,
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: _ShardsSection(
+                range: _range,
+                onShardTap: (cat) => _openMicroscopeById(
+                  _primaryMetricFor(cat),
+                  hint: cat,
+                ),
+                onAllMetricsTap: _jumpToGrid,
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: _EveryMetricSection(
+                range: _range,
+                gridKey: _gridKey,
+                onTileTap: (loc) => _openMicroscope(context, loc),
+              ),
+            ),
             SliverToBoxAdapter(
               child: SizedBox(
                 height: AppDimens.bottomClearance(context) + AppDimens.spaceXl,
@@ -107,6 +148,144 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen>
         timeRange: _range.providerRange,
       )));
     }
+  }
+
+  /// Scrolls the every-metric grid into view. No-op if the grid has not
+  /// been laid out yet (for example, on the very first frame before any
+  /// category provider has resolved).
+  void _jumpToGrid() {
+    final ctx = _gridKey.currentContext;
+    if (ctx == null) return;
+    Scrollable.ensureVisible(
+      ctx,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOutCubic,
+      alignment: 0.05,
+    );
+  }
+
+  /// Resolves a metric by id from the currently-watched category providers
+  /// and opens the universal microscope sheet. If [hint] is supplied we
+  /// check that category first; otherwise we scan the full mandala order.
+  void _openMicroscopeById(String metricId, {HealthCategory? hint}) {
+    final loc = _locateMetric(ref, _range, metricId, hintCategory: hint);
+    if (loc == null) return;
+    _openMicroscope(context, loc);
+  }
+
+  /// Opens the [ZMetricMicroscopeSheet] for a located metric.
+  Future<void> _openMicroscope(
+    BuildContext context,
+    _MetricLocator loc,
+  ) async {
+    final values = loc.metric.dataPoints
+        .map((p) => p.value)
+        .where((v) => v.isFinite)
+        .toList();
+    final todayValue = values.isEmpty ? null : values.last;
+    final baseline = values.isEmpty
+        ? null
+        : values.reduce((a, b) => a + b) / values.length;
+    final lastTimestamp = loc.metric.dataPoints.isEmpty
+        ? null
+        : DateTime.tryParse(loc.metric.dataPoints.last.timestamp);
+    await showZMetricMicroscopeSheet(
+      context,
+      metricId: loc.metricId,
+      category: loc.category,
+      displayName: loc.metric.displayName,
+      unit: loc.metric.unit,
+      todayValue: todayValue,
+      baseline30d: baseline,
+      inverted: kInvertedMetricIds.contains(loc.metricId),
+      dataPoints: loc.metric.dataPoints,
+      lastReadingTime: lastTimestamp,
+      onAskCoach: () {
+        Navigator.of(context).pop();
+        // Coach navigation: push the Coach route. Pre-fill is a follow-up.
+        context.push(RouteNames.coachPath);
+      },
+    );
+  }
+}
+
+/// Locator for the microscope sheet — pairs a metric id with the enclosing
+/// category and the full [MetricSeries] so the sheet has everything it
+/// needs without re-querying the provider.
+class _MetricLocator {
+  const _MetricLocator({
+    required this.metricId,
+    required this.category,
+    required this.metric,
+  });
+  final String metricId;
+  final HealthCategory category;
+  final MetricSeries metric;
+}
+
+/// Finds a metric by id in the currently-watched category providers. We
+/// check [hintCategory] first when supplied so spoke/shard taps — which
+/// already know their own category — resolve in O(1) instead of scanning
+/// the whole mandala. Returns `null` if the metric is not present.
+_MetricLocator? _locateMetric(
+  WidgetRef ref,
+  _AllDataRange range,
+  String metricId, {
+  HealthCategory? hintCategory,
+}) {
+  final categories = <HealthCategory>[
+    ?hintCategory,
+    ...kMandalaCategoryOrder,
+  ];
+  for (final cat in categories) {
+    final detail = ref.read(categoryDetailProvider(CategoryDetailParams(
+      categoryId: cat.name,
+      timeRange: range.providerRange,
+    )));
+    final found = detail.maybeWhen(
+      data: (d) {
+        for (final m in d.metrics) {
+          if (m.metricId == metricId) {
+            return _MetricLocator(
+              metricId: metricId,
+              category: cat,
+              metric: m,
+            );
+          }
+        }
+        return null;
+      },
+      orElse: () => null,
+    );
+    if (found != null) return found;
+  }
+  return null;
+}
+
+/// Primary metric id for each mandala category — used by shard card taps
+/// and legend dot taps, which don't carry a metric of their own.
+String _primaryMetricFor(HealthCategory cat) {
+  switch (cat) {
+    case HealthCategory.sleep:
+      return 'sleep_duration';
+    case HealthCategory.activity:
+      return 'steps';
+    case HealthCategory.heart:
+      return 'resting_heart_rate';
+    case HealthCategory.nutrition:
+      return 'calories';
+    case HealthCategory.body:
+      return 'weight';
+    case HealthCategory.wellness:
+      return 'mood';
+    case HealthCategory.vitals:
+      return 'spo2';
+    case HealthCategory.cycle:
+      return 'cycle_day';
+    case HealthCategory.mobility:
+      return 'walking_speed';
+    case HealthCategory.environment:
+      return 'temperature';
   }
 }
 
@@ -243,8 +422,12 @@ class _ToggleSeg extends StatelessWidget {
 
 /// Builds the mandala from live provider data.
 class _MandalaSection extends ConsumerWidget {
-  const _MandalaSection({required this.range});
+  const _MandalaSection({
+    required this.range,
+    required this.onMetricTap,
+  });
   final _AllDataRange range;
+  final void Function(String metricId, {HealthCategory? hint}) onMetricTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -260,9 +443,7 @@ class _MandalaSection extends ConsumerWidget {
       child: ZHealthMandala(
         data: mandala,
         healthScore: (score == null || score == 0) ? null : score,
-        onSpokeTap: (id) {
-          // Microscope wiring lands in a follow-up phase.
-        },
+        onSpokeTap: (id) => onMetricTap(id),
         onCenterTap: () {
           context.push(RouteNames.dataScoreBreakdownPath);
         },
@@ -272,8 +453,12 @@ class _MandalaSection extends ConsumerWidget {
 }
 
 /// Compact legend that wraps under the mandala.
+///
+/// Each entry is tappable — tapping opens the microscope sheet on that
+/// category's primary metric via [onCategoryTap].
 class _Legend extends StatelessWidget {
-  const _Legend();
+  const _Legend({required this.onCategoryTap});
+  final ValueChanged<HealthCategory> onCategoryTap;
 
   @override
   Widget build(BuildContext context) {
@@ -295,26 +480,30 @@ class _Legend extends StatelessWidget {
         runSpacing: 8,
         children: [
           for (final e in entries)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: categoryColor(e.$2),
-                    shape: BoxShape.circle,
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onCategoryTap(e.$2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: categoryColor(e.$2),
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 5),
-                Text(
-                  e.$1,
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: colors.textSecondary,
-                    fontWeight: FontWeight.w500,
+                  const SizedBox(width: 5),
+                  Text(
+                    e.$1,
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: colors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
         ],
       ),
@@ -328,8 +517,21 @@ class _Legend extends StatelessWidget {
 /// renders. Tapping the card toggles an animated reveal of the full
 /// [ZAiBreakdownCard] directly below it — same sliver, same scroll.
 class _AiSummarySection extends ConsumerStatefulWidget {
-  const _AiSummarySection({required this.range});
+  const _AiSummarySection({
+    required this.range,
+    required this.onMetricTap,
+    required this.onSectionTap,
+  });
   final _AllDataRange range;
+
+  /// Fires when the user taps a highlighted metric span in the summary
+  /// body. Opens the microscope on that metric.
+  final void Function(String metricId, {HealthCategory? hint}) onMetricTap;
+
+  /// Fires when the user taps a section row in the expanded breakdown.
+  /// Opens the microscope on that section's primary metric.
+  final ValueChanged<AllDataSummarySection> onSectionTap;
+
   @override
   ConsumerState<_AiSummarySection> createState() => _AiSummarySectionState();
 }
@@ -354,9 +556,7 @@ class _AiSummarySectionState extends ConsumerState<_AiSummarySection> {
             summary: summary,
             generatedAtLabel: timeLabel,
             onExpand: () => setState(() => _expanded = !_expanded),
-            onMetricTap: (id) {
-              // Microscope wiring lands in a follow-up task.
-            },
+            onMetricTap: (id) => widget.onMetricTap(id),
           ),
           AnimatedSize(
             duration: const Duration(milliseconds: 350),
@@ -366,9 +566,7 @@ class _AiSummarySectionState extends ConsumerState<_AiSummarySection> {
                     padding: const EdgeInsets.only(top: AppDimens.spaceSm),
                     child: ZAiBreakdownCard(
                       summary: summary,
-                      onSectionTap: (_) {
-                        // Microscope wiring lands in a follow-up task.
-                      },
+                      onSectionTap: widget.onSectionTap,
                       onClose: () => setState(() => _expanded = false),
                     ),
                   )
@@ -397,18 +595,38 @@ String _formatAiTime(TimeOfDay t) {
 /// uses, plus the per-category day-summary providers for the subtler
 /// metrics (stages, macros, zones).
 class _ShardsSection extends ConsumerWidget {
-  const _ShardsSection({required this.range});
+  const _ShardsSection({
+    required this.range,
+    required this.onShardTap,
+    required this.onAllMetricsTap,
+  });
   final _AllDataRange range;
+
+  /// Fires when the user taps a shard card. Opens the microscope on that
+  /// category's primary metric.
+  final ValueChanged<HealthCategory> onShardTap;
+
+  /// Fires when the user taps the "All metrics ↓" link. Scrolls the
+  /// every-metric grid into view.
+  final VoidCallback onAllMetricsTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    Widget wrap(HealthCategory cat, Widget child) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => onShardTap(cat),
+        child: child,
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
           AppDimens.spaceMd, AppDimens.spaceMd, AppDimens.spaceMd, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _SpotlightHeader(),
+          _SpotlightHeader(onAllMetricsTap: onAllMetricsTap),
           const SizedBox(height: AppDimens.spaceXs),
           GridView.count(
             crossAxisCount: 3,
@@ -418,12 +636,12 @@ class _ShardsSection extends ConsumerWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             children: [
-              const _SleepShard(),
-              _MoveShard(range: range),
-              const _HeartShard(),
-              const _FoodShard(),
-              const _BodyShard(),
-              _MindShard(range: range),
+              wrap(HealthCategory.sleep, const _SleepShard()),
+              wrap(HealthCategory.activity, _MoveShard(range: range)),
+              wrap(HealthCategory.heart, const _HeartShard()),
+              wrap(HealthCategory.nutrition, const _FoodShard()),
+              wrap(HealthCategory.body, const _BodyShard()),
+              wrap(HealthCategory.wellness, _MindShard(range: range)),
             ],
           ),
         ],
@@ -432,12 +650,12 @@ class _ShardsSection extends ConsumerWidget {
   }
 }
 
-/// "TODAY'S SPOTLIGHT" eyebrow + "All metrics ↓" link.
-///
-/// The link is a no-op for now — Task 16 wires it to scroll to the
-/// every-metric grid (which doesn't exist yet).
+/// "TODAY'S SPOTLIGHT" eyebrow + tappable "All metrics ↓" link that scrolls
+/// the every-metric grid into view.
 class _SpotlightHeader extends StatelessWidget {
-  const _SpotlightHeader();
+  const _SpotlightHeader({required this.onAllMetricsTap});
+  final VoidCallback onAllMetricsTap;
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
@@ -454,12 +672,16 @@ class _SpotlightHeader extends StatelessWidget {
             ),
           ),
         ),
-        Text(
-          'All metrics ↓',
-          style: AppTextStyles.labelSmall.copyWith(
-            color: colors.primary,
-            fontSize: 9,
-            fontWeight: FontWeight.w600,
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onAllMetricsTap,
+          child: Text(
+            'All metrics ↓',
+            style: AppTextStyles.labelSmall.copyWith(
+              color: colors.primary,
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],
@@ -888,4 +1110,263 @@ class _MindShard extends ConsumerWidget {
       unit: avg == null ? null : 'avg',
     );
   }
+}
+
+// ── EVERY METRIC — full chart-only grid ─────────────────────────────────────
+
+/// 3-column SliverGrid of chart-only tiles, one per tracked metric.
+///
+/// Iterates [kMandalaCategoryOrder] so tiles appear in mandala order
+/// (Sleep → Move → Heart → Food → Body → Mind → …). Categories with zero
+/// metrics in the current range are simply skipped — the grid keeps
+/// rendering with whatever categories do have data.
+class _EveryMetricSection extends ConsumerWidget {
+  const _EveryMetricSection({
+    required this.range,
+    required this.gridKey,
+    required this.onTileTap,
+  });
+
+  final _AllDataRange range;
+  final GlobalKey gridKey;
+  final ValueChanged<_MetricLocator> onTileTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tiles = <Widget>[];
+    var totalCount = 0;
+    for (final cat in kMandalaCategoryOrder) {
+      final detail = ref.watch(categoryDetailProvider(CategoryDetailParams(
+        categoryId: cat.name,
+        timeRange: range.providerRange,
+      )));
+      final metrics = detail.maybeWhen(
+        data: (d) => d.metrics,
+        orElse: () => const <MetricSeries>[],
+      );
+      totalCount += metrics.length;
+      for (final m in metrics) {
+        tiles.add(_EveryMetricTile(
+          metric: m,
+          category: cat,
+          onTap: () => onTileTap(_MetricLocator(
+            metricId: m.metricId,
+            category: cat,
+            metric: m,
+          )),
+        ));
+      }
+    }
+    return Padding(
+      key: gridKey,
+      padding: const EdgeInsets.fromLTRB(
+          AppDimens.spaceMd, AppDimens.spaceMd, AppDimens.spaceMd, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _EveryMetricHeader(count: totalCount),
+          const SizedBox(height: AppDimens.spaceXs),
+          GridView.count(
+            crossAxisCount: 3,
+            crossAxisSpacing: 6,
+            mainAxisSpacing: 6,
+            childAspectRatio: 0.85,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            children: tiles,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "EVERY METRIC" eyebrow + `N tracked` counter.
+class _EveryMetricHeader extends StatelessWidget {
+  const _EveryMetricHeader({required this.count});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            'EVERY METRIC',
+            style: AppTextStyles.labelSmall.copyWith(
+              color: colors.textSecondary,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ),
+        Text(
+          '$count tracked',
+          style: AppTextStyles.labelSmall.copyWith(
+            color: colors.textTertiary,
+            fontSize: 10,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// One tile in the every-metric grid — name, today's value, sparkline,
+/// unit, and a simple today-vs-prior delta pill.
+class _EveryMetricTile extends StatelessWidget {
+  const _EveryMetricTile({
+    required this.metric,
+    required this.category,
+    required this.onTap,
+  });
+  final MetricSeries metric;
+  final HealthCategory category;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final color = categoryColor(category);
+    final values = metric.dataPoints
+        .map((p) => p.value)
+        .where((v) => v.isFinite)
+        .toList();
+    final todayDouble = values.isEmpty ? null : values.last;
+    final delta = _deltaPct(values);
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: ZuralogCard(
+        variant: ZCardVariant.data,
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              metric.displayName,
+              style: AppTextStyles.labelSmall.copyWith(
+                color: colors.textSecondary,
+                fontSize: 7.5,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              todayDouble == null ? '—' : _formatTileValue(todayDouble),
+              style: TextStyle(
+                fontFamily: 'Lora',
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+                color: colors.textPrimary,
+                height: 1,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const Spacer(),
+            SizedBox(
+              height: 16,
+              child: values.length >= 2
+                  ? ZMiniSparkline(
+                      values: values,
+                      todayIndex: values.length - 1,
+                      color: color,
+                      height: 16,
+                    )
+                  : const SizedBox.shrink(),
+            ),
+            const SizedBox(height: 2),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Expanded(
+                  child: Text(
+                    metric.unit,
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: colors.textTertiary,
+                      fontSize: 6.5,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                _DeltaLabel(delta: delta),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Small coloured pill showing the today-vs-prior delta percent. Renders
+/// a neutral dot when there isn't enough data to compute a delta.
+class _DeltaLabel extends StatelessWidget {
+  const _DeltaLabel({required this.delta});
+  final double? delta;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    if (delta == null || !delta!.isFinite) {
+      return Text(
+        '·',
+        style: AppTextStyles.labelSmall.copyWith(
+          color: colors.textTertiary,
+          fontSize: 7.5,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    }
+    final rounded = delta!.abs().round();
+    if (rounded == 0) {
+      return Text(
+        '· 0%',
+        style: AppTextStyles.labelSmall.copyWith(
+          color: colors.textSecondary,
+          fontSize: 7.5,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    }
+    final isUp = delta! > 0;
+    final color = isUp ? colors.success : AppColors.categoryHeart;
+    return Text(
+      '${isUp ? "↑" : "↓"} $rounded%',
+      style: AppTextStyles.labelSmall.copyWith(
+        color: color,
+        fontSize: 7.5,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+}
+
+/// Computes a simple today-vs-earlier percent. Returns null when there
+/// isn't enough data or the baseline is zero.
+double? _deltaPct(List<double> values) {
+  if (values.length < 2) return null;
+  final today = values.last;
+  final previous = values.sublist(0, values.length - 1);
+  final baseline = previous.reduce((a, b) => a + b) / previous.length;
+  if (baseline == 0 || !baseline.isFinite) return null;
+  return ((today - baseline) / baseline) * 100.0;
+}
+
+/// Formats a numeric tile value — thousands-grouped for large integers,
+/// one decimal for fractional values, no decimals otherwise.
+String _formatTileValue(double v) {
+  if (!v.isFinite) return '—';
+  if (v.abs() >= 1000) return _formatThousands(v.round());
+  if (v == v.truncateToDouble()) return v.toStringAsFixed(0);
+  return v.toStringAsFixed(1);
 }
