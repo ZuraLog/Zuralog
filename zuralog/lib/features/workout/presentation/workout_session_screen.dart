@@ -195,12 +195,12 @@ class _WorkoutSessionScreenState
               ),
             ],
           ),
-          // Full sheet anchored to the bottom of the screen.
-          const Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: RestTimerFullSheet(),
+          // Floating rest timer overlay — anchored to the bottom of the Stack.
+          // Uses Align to be sized by its child (not stretched to fill the Stack),
+          // which was the source of the red-body-tint bug.
+          const Align(
+            alignment: Alignment.bottomCenter,
+            child: RestTimerOverlay(),
           ),
         ],
       ),
