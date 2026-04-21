@@ -85,7 +85,7 @@ class _ExerciseCatalogueScreenState
           ),
           // Muscle group filter chips
           SizedBox(
-            height: 44,
+            height: AppDimens.iconContainerMd,
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
