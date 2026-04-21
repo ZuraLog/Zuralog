@@ -5,6 +5,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
+import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -29,6 +30,28 @@ class AppShell extends ConsumerStatefulWidget {
 class _AppShellState extends ConsumerState<AppShell> {
   DateTime? _lastSheetTap;
   bool _isLogSheetOpen = false;
+  bool _navCollapsed = false;
+
+  void _setNavCollapsed(bool collapsed) {
+    if (_navCollapsed == collapsed) return;
+    setState(() => _navCollapsed = collapsed);
+  }
+
+  bool _handleScrollNotification(UserScrollNotification n) {
+    // Only react to direct vertical scrolls on the primary body axis.
+    if (n.metrics.axis != Axis.vertical) return false;
+    // Ignore micro-scrolls near the top to avoid flicker at rest.
+    if (n.metrics.pixels <= 8) {
+      _setNavCollapsed(false);
+      return false;
+    }
+    if (n.direction == ScrollDirection.reverse) {
+      _setNavCollapsed(true);
+    } else if (n.direction == ScrollDirection.forward) {
+      _setNavCollapsed(false);
+    }
+    return false;
+  }
 
   @override
   void initState() {
@@ -73,6 +96,9 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   void _onDestinationSelected(int index) {
+    // Any tab switch immediately expands the nav so users never get stuck in
+    // the compact state.
+    _setNavCollapsed(false);
     ref.read(hapticServiceProvider).selectionTick();
     widget.navigationShell.goBranch(
       index,
@@ -84,12 +110,17 @@ class _AppShellState extends ConsumerState<AppShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      body: widget.navigationShell,
+      body: NotificationListener<UserScrollNotification>(
+        onNotification: _handleScrollNotification,
+        child: widget.navigationShell,
+      ),
       bottomNavigationBar: _BottomNavCluster(
         currentIndex: widget.navigationShell.currentIndex,
         onDestinationSelected: _onDestinationSelected,
         isLogSheetOpen: _isLogSheetOpen,
         onLogPressed: _openLogSheet,
+        isCollapsed: _navCollapsed,
+        onExpandRequest: () => _setNavCollapsed(false),
       ),
     );
   }
@@ -124,10 +155,14 @@ class _FrostedNavigationBar extends StatefulWidget {
   const _FrostedNavigationBar({
     required this.currentIndex,
     required this.onDestinationSelected,
+    this.isCollapsed = false,
+    this.onExpandRequest,
   });
 
   final int currentIndex;
   final ValueChanged<int> onDestinationSelected;
+  final bool isCollapsed;
+  final VoidCallback? onExpandRequest;
 
   static const List<_NavTab> _tabs = [
     _NavTab(
@@ -208,13 +243,99 @@ class _FrostedNavigationBarState extends State<_FrostedNavigationBar>
             ),
             borderRadius: BorderRadius.circular(AppDimens.shapePill),
           ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final tabCount = _FrostedNavigationBar._tabs.length;
-              final tabWidth = constraints.maxWidth / tabCount;
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: child,
+            ),
+            child: widget.isCollapsed
+                ? _buildCompact(colors, activePillBg, activeItemColor)
+                : _buildExpanded(colors, activePillBg, activeItemColor),
+          ),
+        ),
+      ),
+    );
+  }
 
-              return Stack(
+  /// Single-tab pill — shows the active tab's icon + label only. Tapping
+  /// anywhere on the pill calls [onExpandRequest] so the user can switch
+  /// tabs again without having to scroll the page.
+  Widget _buildCompact(
+    dynamic colors,
+    Color activePillBg,
+    Color activeItemColor,
+  ) {
+    final tab = _FrostedNavigationBar._tabs[widget.currentIndex];
+    return Semantics(
+      key: const ValueKey('nav-compact'),
+      button: true,
+      label: 'Expand navigation. Current: ${tab.label}',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onExpandRequest,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppDimens.shapePill),
+            child: ColoredBox(
+              color: activePillBg,
+              child: Stack(
+                fit: StackFit.expand,
                 children: [
+                  const IgnorePointer(
+                    child: ZPatternOverlay(
+                      variant: ZPatternVariant.sage,
+                      opacity: 0.35,
+                      animate: true,
+                    ),
+                  ),
+                  Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          tab.activeIcon,
+                          size: 20,
+                          color: activeItemColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          tab.label,
+                          style: AppTextStyles.labelMedium.copyWith(
+                            color: activeItemColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Original three-tab navigation with sliding sage pill.
+  Widget _buildExpanded(
+    dynamic colors,
+    Color activePillBg,
+    Color activeItemColor,
+  ) {
+    return LayoutBuilder(
+      key: const ValueKey('nav-expanded'),
+      builder: (context, constraints) {
+        final tabCount = _FrostedNavigationBar._tabs.length;
+        final tabWidth = constraints.maxWidth / tabCount;
+
+        return Stack(
+          children: [
                   // Sliding pill — driven by spring physics.
                   AnimatedBuilder(
                     animation: _pillController,
@@ -318,10 +439,7 @@ class _FrostedNavigationBarState extends State<_FrostedNavigationBar>
                 ],
               );
             },
-          ),
-        ),
-      ),
-    );
+          );
   }
 }
 
@@ -455,18 +573,33 @@ class LogPillButtonForTest extends StatelessWidget {
 /// Groups the frosted nav pill and the log pill into a single centered row
 /// at the bottom safe-area offset. Owns the bottom-margin padding so the
 /// nav bar widget no longer has to.
+///
+/// Supports a scroll-aware collapse: when [isCollapsed] is true the nav
+/// pill shrinks to a single-tab width showing only the current tab, and
+/// tapping it calls [onExpandRequest] to restore the full nav. The log
+/// pill always stays the same — it's the primary action, always tappable.
 class _BottomNavCluster extends StatelessWidget {
   const _BottomNavCluster({
     required this.currentIndex,
     required this.onDestinationSelected,
     required this.isLogSheetOpen,
     required this.onLogPressed,
+    this.isCollapsed = false,
+    this.onExpandRequest,
   });
 
   final int currentIndex;
   final ValueChanged<int> onDestinationSelected;
   final bool isLogSheetOpen;
   final VoidCallback onLogPressed;
+  final bool isCollapsed;
+  final VoidCallback? onExpandRequest;
+
+  /// Width of the nav pill when collapsed to a single tab.
+  static const double _collapsedWidth = 112;
+
+  /// Width of the log pill itself (see [_LogPillButton]).
+  static const double _logPillWidth = 56;
 
   @override
   Widget build(BuildContext context) {
@@ -478,22 +611,43 @@ class _BottomNavCluster extends StatelessWidget {
         AppDimens.spaceMdPlus,
         bottomSafeArea + 18,
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Flexible(
-            child: _FrostedNavigationBar(
-              currentIndex: currentIndex,
-              onDestinationSelected: onDestinationSelected,
-            ),
-          ),
-          const SizedBox(width: AppDimens.spaceSm),
-          _LogPillButton(
-            key: const Key('bottom-nav-log-pill'),
-            isOpen: isLogSheetOpen,
-            onTap: onLogPressed,
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final expandedWidth =
+              constraints.maxWidth - _logPillWidth - AppDimens.spaceSm;
+          final navWidth =
+              isCollapsed ? _collapsedWidth : expandedWidth.clamp(0.0, double.infinity);
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 280),
+                curve: Curves.easeOutCubic,
+                width: navWidth,
+                child: _FrostedNavigationBar(
+                  currentIndex: currentIndex,
+                  onDestinationSelected: onDestinationSelected,
+                  isCollapsed: isCollapsed,
+                  onExpandRequest: onExpandRequest,
+                ),
+              ),
+              if (!isCollapsed) const SizedBox(width: AppDimens.spaceSm),
+              // Reserve the full gap when collapsed so the log pill stays in
+              // the same horizontal spot and the nav visually "shrinks into"
+              // the left side.
+              if (isCollapsed)
+                SizedBox(
+                  width: (expandedWidth - _collapsedWidth + AppDimens.spaceSm)
+                      .clamp(AppDimens.spaceSm, double.infinity),
+                ),
+              _LogPillButton(
+                key: const Key('bottom-nav-log-pill'),
+                isOpen: isLogSheetOpen,
+                onTap: onLogPressed,
+              ),
+            ],
+          );
+        },
       ),
     );
   }
