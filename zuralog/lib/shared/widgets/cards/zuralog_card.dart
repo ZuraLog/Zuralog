@@ -140,21 +140,22 @@ class _ZuralogCardState extends State<ZuralogCard> {
     }
 
     if (widget.onTap != null) {
-      return GestureDetector(
-        onTapDown: (_) => setState(() => _isPressed = true),
-        onTapUp: (_) => setState(() => _isPressed = false),
-        onTapCancel: () => setState(() => _isPressed = false),
-        child: AnimatedScale(
-          scale: _isPressed ? 0.97 : 1.0,
-          duration: const Duration(milliseconds: 100),
-          curve: Curves.easeInOut,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: widget.onTap,
-              borderRadius: borderRadius,
-              child: ClipRRect(borderRadius: borderRadius, child: body),
-            ),
+      return AnimatedScale(
+        scale: _isPressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeInOut,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            // InkWell owns both tap delivery and press-scale state.
+            // onTapDown/onTapCancel drive the visual press animation;
+            // onTap delivers the action. No outer GestureDetector needed.
+            onTap: widget.onTap,
+            onTapDown: (_) => setState(() => _isPressed = true),
+            onTapUp: (_) => setState(() => _isPressed = false),
+            onTapCancel: () => setState(() => _isPressed = false),
+            borderRadius: borderRadius,
+            child: ClipRRect(borderRadius: borderRadius, child: body),
           ),
         ),
       );

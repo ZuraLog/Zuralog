@@ -222,7 +222,7 @@ void main() {
       expect(find.byType(AnimatedScale), findsNothing);
     });
 
-    testWidgets('tappable card has GestureDetector in widget tree', (tester) async {
+    testWidgets('tappable card has InkWell as ancestor of content', (tester) async {
       final card = ZuralogCard(
         onTap: () {},
         child: const Text('Gesture'),
@@ -230,32 +230,60 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(home: Scaffold(body: card)),
       );
-      // Scaffold may also add GestureDetectors; verify the card itself has one
-      // by checking we find the GestureDetector that is an ancestor of the card text.
+      // Press-scale and tap delivery are both owned by InkWell — no outer
+      // GestureDetector is used because it would lose the gesture arena to InkWell.
       expect(
         find.ancestor(
           of: find.text('Gesture'),
-          matching: find.byType(GestureDetector),
+          matching: find.byType(InkWell),
         ),
         findsAtLeastNWidgets(1),
       );
     });
 
-    testWidgets('non-tappable card has no GestureDetector', (tester) async {
+    testWidgets('non-tappable card has no InkWell', (tester) async {
       const card = ZuralogCard(
         child: Text('No Gesture'),
       );
       await tester.pumpWidget(
         const MaterialApp(home: Scaffold(body: card)),
       );
-      // Non-tappable card must not wrap in GestureDetector; only Scaffold's
-      // own GestureDetectors may exist, none of which are ancestors of our text.
+      // Static card has no InkWell — no interaction layer at all.
       expect(
         find.ancestor(
           of: find.text('No Gesture'),
-          matching: find.byType(GestureDetector),
+          matching: find.byType(InkWell),
         ),
         findsNothing,
+      );
+    });
+
+    testWidgets('scale is 0.97 while pressed and 1.0 after release', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ZuralogCard(
+              onTap: () {},
+              child: const Text('Press me'),
+            ),
+          ),
+        ),
+      );
+
+      final gesture = await tester.startGesture(tester.getCenter(find.text('Press me')));
+      await tester.pump();
+
+      expect(
+        tester.widget<AnimatedScale>(find.byType(AnimatedScale)).scale,
+        0.97,
+      );
+
+      await gesture.up();
+      await tester.pump();
+
+      expect(
+        tester.widget<AnimatedScale>(find.byType(AnimatedScale)).scale,
+        1.0,
       );
     });
   });
