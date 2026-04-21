@@ -22,6 +22,7 @@ import 'package:zuralog/features/workout/domain/exercise.dart' show MuscleGroup;
 import 'package:zuralog/features/workout/domain/workout_session.dart';
 import 'package:zuralog/features/workout/presentation/widgets/exercise_grid_tile.dart'
     show muscleGroupColor, muscleGroupIcon;
+import 'package:zuralog/features/workout/presentation/widgets/rest_timer_sheet.dart';
 import 'package:zuralog/features/workout/providers/workout_session_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -264,12 +265,43 @@ class _WorkoutExerciseCardState extends ConsumerState<WorkoutExerciseCard> {
                 .toggleUnit(ex.exerciseId),
           ),
           for (var i = 0; i < ex.sets.length; i++)
-            _SetRow(
-              key: ValueKey('set-${ex.exerciseId}-$i'),
-              exerciseId: ex.exerciseId,
-              setIndex: i,
-              set: ex.sets[i],
-              onSetNumberTap: () => _showSetTypeMenu(i),
+            Dismissible(
+              key: ValueKey('dismissible-set-${ex.exerciseId}-$i'),
+              direction: DismissDirection.endToStart,
+              background: _DismissBackground(),
+              confirmDismiss: (_) async {
+                // Never remove the last set.
+                if (ex.sets.length <= 1) return false;
+                // Completed sets require confirmation.
+                if (ex.sets[i].isCompleted) {
+                  final confirmed = await ZAlertDialog.show(
+                    context,
+                    title: 'Remove completed set?',
+                    body: 'This set has already been marked as done.',
+                    confirmLabel: 'Remove',
+                    cancelLabel: 'Cancel',
+                    isDestructive: true,
+                  );
+                  return confirmed == true;
+                }
+                return true;
+              },
+              onDismissed: (_) {
+                ref
+                    .read(workoutSessionProvider.notifier)
+                    .removeSet(ex.exerciseId, i);
+              },
+              child: _SetRow(
+                key: ValueKey('set-${ex.exerciseId}-$i'),
+                exerciseId: ex.exerciseId,
+                setIndex: i,
+                set: ex.sets[i],
+                restTimerEnabled: ex.restTimerEnabled,
+                restTimerDurationSeconds: ex.sets[i].type == SetType.warmUp
+                    ? ex.restTimerWarmUpSeconds
+                    : ex.restTimerWorkingSeconds,
+                onSetNumberTap: () => _showSetTypeMenu(i),
+              ),
             ),
           const SizedBox(height: AppDimens.spaceSm),
           Align(
@@ -300,6 +332,19 @@ String _formatRestSeconds(int seconds) {
   final s = seconds % 60;
   if (s == 0) return '${m}m';
   return '${m}m ${s}s';
+}
+
+/// Red background shown when swiping a set row to the left.
+class _DismissBackground extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.only(right: AppDimens.spaceMd),
+      color: Colors.red,
+      child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
+    );
+  }
 }
 
 class _SetTableHeader extends StatelessWidget {
@@ -353,12 +398,16 @@ class _SetRow extends ConsumerStatefulWidget {
     required this.exerciseId,
     required this.setIndex,
     required this.set,
+    required this.restTimerEnabled,
+    required this.restTimerDurationSeconds,
     required this.onSetNumberTap,
   });
 
   final String exerciseId;
   final int setIndex;
   final WorkoutSet set;
+  final bool restTimerEnabled;
+  final int restTimerDurationSeconds;
   final VoidCallback onSetNumberTap;
 
   @override
@@ -373,7 +422,9 @@ class _SetRowState extends ConsumerState<_SetRow> {
   void initState() {
     super.initState();
     _weightCtrl = TextEditingController(
-      text: widget.set.weightValue?.toString() ?? '',
+      text: widget.set.weightValue != null
+          ? _formatWeight(widget.set.weightValue!)
+          : '',
     );
     _repsCtrl = TextEditingController(
       text: widget.set.reps?.toString() ?? '',
@@ -387,7 +438,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
     // Only update the field when the stored value genuinely differs (e.g. unit toggle).
     final newW = widget.set.weightValue;
     if (double.tryParse(_weightCtrl.text) != newW) {
-      _weightCtrl.text = newW?.toString() ?? '';
+      _weightCtrl.text = newW != null ? _formatWeight(newW) : '';
     }
     final newR = widget.set.reps;
     if (int.tryParse(_repsCtrl.text) != newR) {
@@ -402,6 +453,18 @@ class _SetRowState extends ConsumerState<_SetRow> {
     super.dispose();
   }
 
+  /// Formats a weight value: omits the decimal when it's a whole number.
+  String _formatWeight(double value) {
+    return value % 1 == 0 ? value.toInt().toString() : value.toString();
+  }
+
+  /// Hint text for the weight field — the previous session's value, if any.
+  String? get _weightHint {
+    final prev = widget.set.previousWeightValue;
+    if (prev == null) return null;
+    return _formatWeight(prev);
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
@@ -409,6 +472,21 @@ class _SetRowState extends ConsumerState<_SetRow> {
     final setNumberStyle = AppTextStyles.labelLarge.copyWith(
       color: colors.textPrimary,
       fontWeight: FontWeight.w600,
+    );
+
+    final hintStyle = AppTextStyles.bodyMedium.copyWith(
+      color: colors.textSecondary.withValues(alpha: 0.5),
+    );
+
+    final inactiveBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+      borderSide: BorderSide(
+        color: colors.textSecondary.withValues(alpha: 0.25),
+      ),
+    );
+    final focusedBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+      borderSide: BorderSide(color: colors.primary),
     );
 
     return Padding(
@@ -445,15 +523,24 @@ class _SetRowState extends ConsumerState<_SetRow> {
                   weightValue: parsed,
                 );
               },
-              decoration: const InputDecoration(
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: colors.textPrimary,
+              ),
+              decoration: InputDecoration(
                 isDense: true,
-                hintText: '-',
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
+                hintText: _weightHint ?? '-',
+                hintStyle: hintStyle,
+                border: inactiveBorder,
+                enabledBorder: inactiveBorder,
+                focusedBorder: focusedBorder,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceXs,
+                  vertical: AppDimens.spaceXs,
+                ),
               ),
             ),
           ),
+          const SizedBox(width: AppDimens.spaceXs),
           Expanded(
             flex: 2,
             child: TextField(
@@ -467,12 +554,20 @@ class _SetRowState extends ConsumerState<_SetRow> {
                   reps: parsed,
                 );
               },
-              decoration: const InputDecoration(
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: colors.textPrimary,
+              ),
+              decoration: InputDecoration(
                 isDense: true,
-                hintText: '-',
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
+                hintText: widget.set.previousReps?.toString() ?? '-',
+                hintStyle: hintStyle,
+                border: inactiveBorder,
+                enabledBorder: inactiveBorder,
+                focusedBorder: focusedBorder,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceXs,
+                  vertical: AppDimens.spaceXs,
+                ),
               ),
             ),
           ),
@@ -489,11 +584,18 @@ class _SetRowState extends ConsumerState<_SetRow> {
               ),
               onPressed: () {
                 HapticFeedback.selectionClick();
+                final completing = !widget.set.isCompleted;
                 notifier.updateSet(
                   widget.exerciseId,
                   widget.setIndex,
-                  isCompleted: !widget.set.isCompleted,
+                  isCompleted: completing,
                 );
+                if (completing && widget.restTimerEnabled) {
+                  RestTimerSheet.show(
+                    context,
+                    seconds: widget.restTimerDurationSeconds,
+                  );
+                }
               },
             ),
           ),
