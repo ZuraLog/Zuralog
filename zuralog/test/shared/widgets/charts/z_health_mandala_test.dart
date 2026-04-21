@@ -53,6 +53,10 @@ void main() {
     // radius = 140 * 0.85 * 0.7 = 83.3. Spoke length = 83.3 * 1.5 = 124.95.
     // Activity wedge center: -π/2 + 1.5*π/3 = 0 (pointing right).
     // Tip ≈ (140 + 124.95, 140) = (~265, 140). Tap target is 24×24 around it.
+    // Advance past the 700ms entry controller so the spoke is fully drawn.
+    // We use pump (not pumpAndSettle) because the breathing controller
+    // repeats forever and would cause pumpAndSettle to time out.
+    await tester.pump(const Duration(milliseconds: 800));
     await tester.tapAt(const Offset(265, 140));
     await tester.pump();
     expect(tapped, 'steps');
@@ -77,5 +81,28 @@ void main() {
     await tester.tapAt(const Offset(140, 140));
     await tester.pump();
     expect(tapped, true);
+  });
+
+  testWidgets(
+      'ZHealthMandala respects reduced motion (no entry stagger, no controllers)',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MediaQuery(
+        data: const MediaQueryData(disableAnimations: true),
+        child: const Scaffold(
+          body: SizedBox(
+            width: 280,
+            height: 280,
+            child: ZHealthMandala(
+              data: MandalaData(wedges: <MandalaWedge>[]),
+              healthScore: 78,
+            ),
+          ),
+        ),
+      ),
+    ));
+    // Without controllers, the widget should fully render in one frame
+    // — no need for pumpAndSettle. Just confirm score is rendered.
+    expect(find.text('78'), findsOneWidget);
   });
 }

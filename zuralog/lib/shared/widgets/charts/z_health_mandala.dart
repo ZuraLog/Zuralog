@@ -32,7 +32,7 @@ typedef SpokeTapCallback = void Function(String metricId);
 /// Callback when the user taps the center disc.
 typedef CenterTapCallback = void Function();
 
-class ZHealthMandala extends StatelessWidget {
+class ZHealthMandala extends StatefulWidget {
   const ZHealthMandala({
     super.key,
     required this.data,
@@ -52,6 +52,48 @@ class ZHealthMandala extends StatelessWidget {
   final CenterTapCallback? onCenterTap;
 
   @override
+  State<ZHealthMandala> createState() => _ZHealthMandalaState();
+}
+
+class _ZHealthMandalaState extends State<ZHealthMandala>
+    with TickerProviderStateMixin {
+  AnimationController? _entryCtrl;
+  AnimationController? _breathCtrl;
+  bool _reducedMotion = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduced = MediaQuery.disableAnimationsOf(context);
+    if (reduced == _reducedMotion && (_entryCtrl != null || reduced)) return;
+    _reducedMotion = reduced;
+    _disposeControllers();
+    if (!reduced) {
+      _entryCtrl = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 700),
+      )..forward();
+      _breathCtrl = AnimationController(
+        vsync: this,
+        duration: const Duration(seconds: 6),
+      )..repeat(reverse: true);
+    }
+  }
+
+  void _disposeControllers() {
+    _entryCtrl?.dispose();
+    _entryCtrl = null;
+    _breathCtrl?.dispose();
+    _breathCtrl = null;
+  }
+
+  @override
+  void dispose() {
+    _disposeControllers();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
 
@@ -66,8 +108,26 @@ class ZHealthMandala extends StatelessWidget {
               SizedBox(
                 width: size,
                 height: size,
-                child: CustomPaint(
-                  painter: _MandalaPainter(data: data, colors: colors),
+                child: AnimatedBuilder(
+                  animation: Listenable.merge([
+                    ?_entryCtrl,
+                    ?_breathCtrl,
+                  ]),
+                  builder: (context, _) {
+                    final entry =
+                        _reducedMotion ? 1.0 : (_entryCtrl?.value ?? 1.0);
+                    final breath = _reducedMotion
+                        ? 0.55
+                        : 0.4 + ((_breathCtrl?.value ?? 0.5) * 0.25);
+                    return CustomPaint(
+                      painter: _MandalaPainter(
+                        data: widget.data,
+                        colors: colors,
+                        entryProgress: entry,
+                        breathOpacity: breath,
+                      ),
+                    );
+                  },
                 ),
               ),
               // Center tap target (disc).
@@ -76,10 +136,10 @@ class ZHealthMandala extends StatelessWidget {
                 height: size * 0.27,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: onCenterTap,
+                  onTap: widget.onCenterTap,
                   child: Center(
                     child: Text(
-                      healthScore?.toString() ?? '—',
+                      widget.healthScore?.toString() ?? '—',
                       textAlign: TextAlign.center,
                       style: AppTextStyles.displayLarge.copyWith(
                         fontFamily: 'Lora',
@@ -112,7 +172,7 @@ class ZHealthMandala extends StatelessWidget {
 
     for (var w = 0; w < kMandalaCategoryOrder.length; w++) {
       final cat = kMandalaCategoryOrder[w];
-      final wedge = data.wedges.firstWhere(
+      final wedge = widget.data.wedges.firstWhere(
         (wd) => wd.category == cat,
         orElse: () => MandalaWedge(category: cat, spokes: const []),
       );
@@ -144,7 +204,7 @@ class ZHealthMandala extends StatelessWidget {
           height: 24,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () => onSpokeTap?.call(s.metricId),
+            onTap: () => widget.onSpokeTap?.call(s.metricId),
             child: const SizedBox.expand(),
           ),
         ));
@@ -155,10 +215,17 @@ class ZHealthMandala extends StatelessWidget {
 }
 
 class _MandalaPainter extends CustomPainter {
-  _MandalaPainter({required this.data, required this.colors});
+  _MandalaPainter({
+    required this.data,
+    required this.colors,
+    required this.entryProgress,
+    required this.breathOpacity,
+  });
 
   final MandalaData data;
   final AppColorsOf colors;
+  final double entryProgress;
+  final double breathOpacity;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -217,7 +284,7 @@ class _MandalaPainter extends CustomPainter {
 
   void _paintBaselineRing(Canvas canvas, Offset center, double r) {
     final paint = Paint()
-      ..color = colors.textSecondary.withValues(alpha: 0.55)
+      ..color = colors.textSecondary.withValues(alpha: breathOpacity)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
     _drawDashedCircle(canvas, center, r, paint, dash: 3, gap: 4);
@@ -252,6 +319,11 @@ class _MandalaPainter extends CustomPainter {
       );
       if (wedge.spokes.isEmpty) continue;
 
+      // Stagger: 40ms / 700ms ≈ 0.057 per category, each spoke 220ms ≈ 0.31.
+      final categoryProgress =
+          ((entryProgress - w * 0.057) / 0.31).clamp(0.0, 1.0);
+      if (categoryProgress <= 0) continue; // not yet animating in
+
       final wedgeStart = -math.pi / 2 + (w * wedgeArc);
       final usable = wedgeArc - 2 * wedgePad;
       final spokes = wedge.spokes;
@@ -269,7 +341,7 @@ class _MandalaPainter extends CustomPainter {
             : wedgeStart +
                 wedgePad +
                 (usable * (i / (spokes.length - 1)));
-        final length = baselineRadius * ratio;
+        final length = baselineRadius * ratio * categoryProgress;
         final tip = center +
             Offset(math.cos(angle) * length, math.sin(angle) * length);
         final atOrAbove = ratio >= 1.0;
@@ -331,5 +403,8 @@ class _MandalaPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _MandalaPainter old) =>
-      old.data != data || old.colors != colors;
+      old.data != data ||
+      old.colors != colors ||
+      old.entryProgress != entryProgress ||
+      old.breathOpacity != breathOpacity;
 }
