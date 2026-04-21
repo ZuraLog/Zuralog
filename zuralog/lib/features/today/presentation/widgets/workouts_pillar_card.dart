@@ -28,7 +28,16 @@ class WorkoutsPillarCard extends ConsumerWidget {
         ? kgToLbs(summary.totalVolumeKg)
         : summary.totalVolumeKg;
     final volumeUnit = units == UnitsSystem.imperial ? 'lbs' : 'kg';
-    final hasData = summary.workoutsThisWeek > 0;
+    if (summary.workoutsThisWeek == 0) {
+      return ZPillarCard(
+        icon: Icons.fitness_center_rounded,
+        categoryColor: AppColors.categoryActivity,
+        label: 'Workouts',
+        headline: 'No workouts yet',
+        contextStat: 'No data yet',
+        onTap: onTap,
+      );
+    }
 
     return ZPillarCard(
       icon: Icons.fitness_center_rounded,
@@ -37,17 +46,14 @@ class WorkoutsPillarCard extends ConsumerWidget {
       headline: '${summary.workoutsThisWeek}',
       contextStat: 'This week',
       secondaryStats: [
-        PillarStat(
-          label: 'Sets',
-          value: hasData ? '${summary.totalSets}' : '—',
-        ),
+        PillarStat(label: 'Sets', value: '${summary.totalSets}'),
         PillarStat(
           label: 'Volume',
-          value: hasData ? _formatVolume(displayVolume, volumeUnit) : '—',
+          value: _formatVolume(displayVolume, volumeUnit),
         ),
         PillarStat(
           label: 'Time',
-          value: hasData ? _formatDuration(summary.totalDurationSeconds) : '—',
+          value: _formatDuration(summary.totalDurationSeconds),
         ),
       ],
       onTap: onTap,
