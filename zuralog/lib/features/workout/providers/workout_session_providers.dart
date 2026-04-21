@@ -71,13 +71,15 @@ class WorkoutSessionNotifier extends StateNotifier<WorkoutSession?> {
   /// Builds a fresh list of [WorkoutSet]s pre-populated with the previous
   /// session's data as hint values. The sets are empty (ready for new input)
   /// but carry `previousWeightValue`, `previousReps`, and `previousRecord`.
+  /// Falls back to the default 2-set structure if the previous exercise
+  /// had zero sets (e.g., user added and immediately finished).
   List<WorkoutSet> _setsFromHistory(
     CompletedExercise prev,
     String currentUnitSystem,
   ) {
     final prevUnit = prev.unitOverride ?? _globalUnitDefault;
     final needsConversion = prevUnit != currentUnitSystem;
-    return [
+    final result = [
       for (var i = 0; i < prev.sets.length; i++)
         () {
           final s = prev.sets[i];
@@ -99,6 +101,13 @@ class WorkoutSessionNotifier extends StateNotifier<WorkoutSession?> {
           );
         }(),
     ];
+    if (result.isEmpty) {
+      return const [
+        WorkoutSet(setNumber: 1, type: SetType.warmUp),
+        WorkoutSet(setNumber: 2, type: SetType.working),
+      ];
+    }
+    return result;
   }
 
   /// Formats a previous-record string like `"20 kg × 8"` for display.

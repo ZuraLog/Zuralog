@@ -144,7 +144,12 @@ class CompletedWorkout {
         exerciseId: ex.exerciseId,
         exerciseName: ex.exerciseName,
         muscleGroup: ex.muscleGroup,
-        sets: List<WorkoutSet>.unmodifiable(ex.sets),
+        sets: List<WorkoutSet>.unmodifiable(
+          ex.sets.map((s) => s.copyWith(
+            clearPreviousWeightValue: true,
+            clearPreviousReps: true,
+          )).toList(growable: false),
+        ),
         unitOverride: ex.unitOverride,
       );
     }).toList(growable: false);
