@@ -3,25 +3,31 @@
 /// Editorial card for a single AI-generated insight in the Today feed.
 /// Each card is category-aware: the left gradient strip, the emblem,
 /// the icon, and the category · type chip all pick up the matching
-/// health-category color so the feed has strong visual variety.
+/// health-category color. Cards also render a compact at-a-glance
+/// stats row pulled from the matching domain provider so the briefing
+/// reads like a real snapshot, not just a headline.
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/core/theme/category_colors.dart';
+import 'package:zuralog/features/heart/domain/heart_models.dart';
+import 'package:zuralog/features/heart/providers/heart_providers.dart';
+import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
+import 'package:zuralog/features/nutrition/providers/nutrition_providers.dart';
+import 'package:zuralog/features/sleep/domain/sleep_models.dart';
+import 'package:zuralog/features/sleep/providers/sleep_providers.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
+import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/buttons/spring_button.dart';
 import 'package:zuralog/shared/widgets/cards/zuralog_card.dart';
 
 /// A tappable card displaying a single [InsightCard] in the Today feed.
-///
-/// [onTap] is called when the card is tapped. The caller is responsible
-/// for triggering analytics and navigation — this widget is a pure
-/// display component.
-class ZInsightCard extends StatelessWidget {
+class ZInsightCard extends ConsumerWidget {
   const ZInsightCard({
     super.key,
     required this.insight,
@@ -32,7 +38,7 @@ class ZInsightCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
     final categoryColor = categoryColorFromString(
       insight.category,
@@ -40,22 +46,17 @@ class ZInsightCard extends StatelessWidget {
     );
     final isUnread = !insight.isRead;
     final categoryIcon = _categoryIcon(insight.category, insight.type);
+    final stats = _statsForCategory(insight.category, ref);
 
     return ZuralogSpringButton(
       onTap: onTap,
       child: ZuralogCard(
         variant: ZCardVariant.feature,
         category: categoryColor,
-        padding: const EdgeInsets.fromLTRB(
-          AppDimens.spaceMd,
-          AppDimens.spaceMd,
-          AppDimens.spaceMd,
-          AppDimens.spaceMd,
-        ),
+        padding: const EdgeInsets.all(AppDimens.spaceMd),
         child: Stack(
           children: [
-            // Category-colour radial glow (unread only). Softer than before
-            // so it reads as a halo rather than a flashlight.
+            // Soft category halo — unread cards glow from the upper-left.
             if (isUnread)
               Positioned.fill(
                 child: IgnorePointer(
@@ -73,13 +74,11 @@ class ZInsightCard extends StatelessWidget {
                   ),
                 ),
               ),
-            // Card content.
             IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Gradient category strip — 4pt wide, tapered to transparent
-                  // at top and bottom so it reads like a bookmark ribbon.
+                  // Tapered bookmark ribbon.
                   Container(
                     width: 4,
                     margin: const EdgeInsets.only(right: AppDimens.spaceMd),
@@ -88,23 +87,18 @@ class ZInsightCard extends StatelessWidget {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          categoryColor.withValues(
-                            alpha: isUnread ? 0.0 : 0.0,
-                          ),
+                          categoryColor.withValues(alpha: 0.0),
                           categoryColor.withValues(
                             alpha: isUnread ? 1.0 : 0.5,
                           ),
-                          categoryColor.withValues(
-                            alpha: isUnread ? 0.0 : 0.0,
-                          ),
+                          categoryColor.withValues(alpha: 0.0),
                         ],
                         stops: const [0.0, 0.5, 1.0],
                       ),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  // Category emblem — 48pt circle with tinted fill, subtle
-                  // ring, and the category's domain icon.
+                  // Category emblem.
                   _CategoryEmblem(
                     icon: categoryIcon,
                     color: categoryColor,
@@ -114,7 +108,7 @@ class ZInsightCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Title row — title + unread dot inline.
+                        // Title + unread dot.
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -153,6 +147,7 @@ class ZInsightCard extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: AppDimens.spaceXs),
+                        // Body.
                         Text(
                           insight.summary,
                           style: AppTextStyles.bodyMedium.copyWith(
@@ -162,8 +157,15 @@ class ZInsightCard extends StatelessWidget {
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        // At-a-glance stats row.
+                        if (stats.isNotEmpty) ...[
+                          const SizedBox(height: AppDimens.spaceSm),
+                          _StatsDivider(color: categoryColor),
+                          const SizedBox(height: AppDimens.spaceSm),
+                          _StatsRow(stats: stats, color: categoryColor),
+                        ],
                         const SizedBox(height: AppDimens.spaceSm),
-                        // Footer — category · type chip, time ago, chevron.
+                        // Footer — category · type + time ago + chevron.
                         Row(
                           children: [
                             _CategoryTypeChip(
@@ -199,6 +201,68 @@ class ZInsightCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Resolves up to three at-a-glance stat pairs for the card, sourced
+  /// from the matching domain provider. Returns an empty list when the
+  /// category has no provider wired up or when the provider has no data
+  /// yet — the stats row is hidden in that case.
+  List<_Stat> _statsForCategory(String category, WidgetRef ref) {
+    switch (category.toLowerCase()) {
+      case 'sleep':
+        final s = ref.watch(sleepDaySummaryProvider).valueOrNull ??
+            SleepDaySummary.empty;
+        if (!s.hasData) return const [];
+        return [
+          if (s.durationMinutes != null)
+            _Stat('Duration', _formatDuration(s.durationMinutes!)),
+          if (s.sleepEfficiencyPct != null)
+            _Stat('Efficiency', '${s.sleepEfficiencyPct!.round()}%'),
+          if (s.avgVs7DayMinutes != null)
+            _Stat('vs avg', _formatDelta(s.avgVs7DayMinutes!, 'm')),
+        ];
+      case 'heart':
+        final h = ref.watch(heartDaySummaryProvider).valueOrNull ??
+            HeartDaySummary.empty;
+        if (!h.hasData) return const [];
+        return [
+          if (h.restingHr != null)
+            _Stat('Resting', '${h.restingHr!.round()} bpm'),
+          if (h.hrvMs != null) _Stat('HRV', '${h.hrvMs!.round()} ms'),
+          if (h.restingHrVs7Day != null)
+            _Stat(
+              'vs avg',
+              _formatDelta(h.restingHrVs7Day!.round(), 'bpm',
+                  lowerIsBetter: true),
+            ),
+        ];
+      case 'nutrition':
+        final n = ref.watch(nutritionDaySummaryProvider).valueOrNull ??
+            NutritionDaySummary.empty;
+        if (n.totalCalories <= 0 &&
+            n.totalProteinG <= 0 &&
+            n.totalCarbsG <= 0) {
+          return const [];
+        }
+        return [
+          _Stat('Calories', '${n.totalCalories} kcal'),
+          _Stat('Protein', '${n.totalProteinG.round()}g'),
+          _Stat('Carbs', '${n.totalCarbsG.round()}g'),
+        ];
+      case 'streak':
+      case 'engagement':
+        final feed = ref.watch(todayFeedProvider).valueOrNull;
+        final streak = feed?.streak;
+        if (streak == null) return const [];
+        return [
+          _Stat('Current', '${streak.currentStreak} days'),
+          if (streak.longestStreak != null)
+            _Stat('Longest', '${streak.longestStreak} days'),
+          _Stat('Status', streak.isFrozen ? 'Frozen' : 'Active'),
+        ];
+      default:
+        return const [];
+    }
   }
 }
 
@@ -274,10 +338,91 @@ class _CategoryTypeChip extends StatelessWidget {
   }
 }
 
+// ── Stats row ────────────────────────────────────────────────────────────────
+
+class _Stat {
+  const _Stat(this.label, this.value);
+  final String label;
+  final String value;
+}
+
+class _StatsRow extends StatelessWidget {
+  const _StatsRow({required this.stats, required this.color});
+  final List<_Stat> stats;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < stats.length; i++) ...[
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  stats[i].value,
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    height: 1.1,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  stats[i].label,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: colors.textTertiary,
+                    fontSize: 10,
+                    letterSpacing: 0.4,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          if (i < stats.length - 1)
+            Container(
+              width: 1,
+              height: 28,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              color: color.withValues(alpha: 0.18),
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+class _StatsDivider extends StatelessWidget {
+  const _StatsDivider({required this.color});
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 1,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            color.withValues(alpha: 0.0),
+            color.withValues(alpha: 0.22),
+            color.withValues(alpha: 0.0),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-/// Picks the right domain icon for a category, falling back to an
-/// insight-type icon when the category is generic.
 IconData _categoryIcon(String category, InsightType type) {
   switch (category.toLowerCase()) {
     case 'sleep':
@@ -339,6 +484,24 @@ String _typeLabel(InsightType type) {
     InsightType.achievement => 'Achievement',
     InsightType.unknown => 'Insight',
   };
+}
+
+String _formatDuration(int minutes) {
+  if (minutes <= 0) return '—';
+  final h = minutes ~/ 60;
+  final m = minutes % 60;
+  if (h == 0) return '${m}m';
+  if (m == 0) return '${h}h';
+  return '${h}h ${m}m';
+}
+
+/// Formats a delta with a sign and a unit. When [lowerIsBetter] is true
+/// (e.g. resting heart rate), a negative value gets a "+" prefix since
+/// the change was favourable — but we keep the actual number in the
+/// "vs avg" line so the user reads the real movement, not a flipped one.
+String _formatDelta(int v, String unit, {bool lowerIsBetter = false}) {
+  final sign = v > 0 ? '+' : (v < 0 ? '-' : '');
+  return '$sign${v.abs()}$unit';
 }
 
 String _relativeTime(DateTime dt) {
