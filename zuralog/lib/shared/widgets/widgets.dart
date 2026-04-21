@@ -3,6 +3,7 @@ library;
 
 export 'animations/z_fade_slide_in.dart';
 export 'charts/charts.dart';
+export 'charts/z_bmi_gauge.dart';
 export 'charts/z_category_chart.dart';
 export 'charts/z_goal_progress_ring.dart';
 export 'charts/z_heart_zones_bar.dart';
