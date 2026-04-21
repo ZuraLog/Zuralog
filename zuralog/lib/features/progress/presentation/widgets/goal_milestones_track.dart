@@ -15,6 +15,11 @@ class GoalMilestonesTrack extends StatelessWidget {
 
   final Goal goal;
 
+  /// Width allotted to each pin's centered column (dot + label + date).
+  /// Sized to fit "~ Apr 27" without wrapping at fontSize 8.
+  static const double _pinWidth = 56;
+  static const double _pinHalfWidth = _pinWidth / 2;
+
   @override
   Widget build(BuildContext context) {
     final visuals = goalVisuals(goal);
@@ -28,11 +33,14 @@ class GoalMilestonesTrack extends StatelessWidget {
         height: 60,
         child: LayoutBuilder(builder: (context, constraints) {
           final width = constraints.maxWidth;
+          // Inset the track and pin range so pins don't overflow the card edges.
+          final trackWidth = (width - _pinWidth).clamp(0.0, width);
           return Stack(
             children: [
+              // Background track — runs between pin centers (inset).
               Positioned(
-                left: 0,
-                right: 0,
+                left: _pinHalfWidth,
+                right: _pinHalfWidth,
                 top: 18,
                 child: Container(
                   height: 4,
@@ -42,10 +50,11 @@ class GoalMilestonesTrack extends StatelessWidget {
                   ),
                 ),
               ),
+              // Filled portion — proportional to current progress, anchored at the START pin's center.
               Positioned(
-                left: 0,
+                left: _pinHalfWidth,
                 top: 18,
-                width: width * pct,
+                width: trackWidth * pct,
                 child: Container(
                   height: 4,
                   decoration: BoxDecoration(
@@ -59,10 +68,12 @@ class GoalMilestonesTrack extends StatelessWidget {
                   ),
                 ),
               ),
+              // Pins — each in a fixed-width column so labels stay centered and inside the card.
               for (final pin in _pins(visuals, reached, projected))
                 Positioned(
-                  left: pin.fraction * width - 12,
+                  left: pin.fraction * trackWidth,
                   top: 8,
+                  width: _pinWidth,
                   child: _Pin(data: pin),
                 ),
             ],
