@@ -9,11 +9,14 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/widgets/shimmer.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/data/domain/all_data_summary.dart';
 import 'package:zuralog/features/data/domain/category_color.dart';
@@ -60,8 +63,50 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen>
   /// scroll it into view.
   final GlobalKey _gridKey = GlobalKey();
 
+  /// SharedPreferences key for the last successful sync timestamp.
+  static const _kLastSyncKey = 'health_last_sync_at';
+
+  /// SharedPreferences key for the Apple Health integration connection flag.
+  /// Mirrors the key used by `health_dashboard_screen.dart` — do not change.
+  static const _kAppleHealthKey = 'integration_connected_apple_health';
+
+  /// SharedPreferences key for the Google Health Connect integration flag.
+  /// Mirrors the key used by `health_dashboard_screen.dart` — do not change.
+  static const _kHealthConnectKey =
+      'integration_connected_google_health_connect';
+
+  /// Optimistic "at least one source is connected" flag. Flipped by
+  /// [_checkHealthSources] after the first [SharedPreferences] read. Starts
+  /// `true` so the page renders normally during the first frame instead of
+  /// flashing the empty-state CTA.
+  bool _hasAnySource = true;
+
+  /// `true` once the first [_checkHealthSources] call completes. The empty
+  /// state renders only when this is `true` AND [_hasAnySource] is `false`.
+  bool _checkedSources = false;
+
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkHealthSources();
+  }
+
+  /// Reads the two integration flags from [SharedPreferences] and flips
+  /// [_hasAnySource] / [_checkedSources]. Safe to re-run — used after
+  /// pull-to-refresh in case the user connected a source via the CTA.
+  Future<void> _checkHealthSources() async {
+    final prefs = await SharedPreferences.getInstance();
+    final apple = prefs.getBool(_kAppleHealthKey) ?? false;
+    final hc = prefs.getBool(_kHealthConnectKey) ?? false;
+    if (!mounted) return;
+    setState(() {
+      _hasAnySource = apple || hc;
+      _checkedSources = true;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -101,33 +146,37 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen>
                 ),
               ),
             ),
-            SliverToBoxAdapter(
-              child: _AiSummarySection(
-                range: _range,
-                onMetricTap: _openMicroscopeById,
-                onSectionTap: (section) => _openMicroscopeById(
-                  section.primaryMetricId,
-                  hint: section.category,
+            if (_checkedSources && !_hasAnySource)
+              _buildEmptyStateSliver(context)
+            else ...[
+              SliverToBoxAdapter(
+                child: _AiSummarySection(
+                  range: _range,
+                  onMetricTap: _openMicroscopeById,
+                  onSectionTap: (section) => _openMicroscopeById(
+                    section.primaryMetricId,
+                    hint: section.category,
+                  ),
                 ),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: _ShardsSection(
-                range: _range,
-                onShardTap: (cat) => _openMicroscopeById(
-                  _primaryMetricFor(cat),
-                  hint: cat,
+              SliverToBoxAdapter(
+                child: _ShardsSection(
+                  range: _range,
+                  onShardTap: (cat) => _openMicroscopeById(
+                    _primaryMetricFor(cat),
+                    hint: cat,
+                  ),
+                  onAllMetricsTap: _jumpToGrid,
                 ),
-                onAllMetricsTap: _jumpToGrid,
               ),
-            ),
-            SliverToBoxAdapter(
-              child: _EveryMetricSection(
-                range: _range,
-                gridKey: _gridKey,
-                onTileTap: (loc) => _openMicroscope(context, loc),
+              SliverToBoxAdapter(
+                child: _EveryMetricSection(
+                  range: _range,
+                  gridKey: _gridKey,
+                  onTileTap: (loc) => _openMicroscope(context, loc),
+                ),
               ),
-            ),
+            ],
             SliverToBoxAdapter(
               child: SizedBox(
                 height: AppDimens.bottomClearance(context) + AppDimens.spaceXl,
@@ -139,7 +188,82 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen>
     );
   }
 
+  /// Single-sliver "Connect a source" feature card shown in place of the AI
+  /// summary / shards / every-metric grid when the user has no health
+  /// integration connected. The wheel above stays visible as an outline so
+  /// the user still sees how the data would be laid out.
+  Widget _buildEmptyStateSliver(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+            AppDimens.spaceMd, AppDimens.spaceMd, AppDimens.spaceMd, 0),
+        child: ZuralogCard(
+          variant: ZCardVariant.feature,
+          padding: const EdgeInsets.all(AppDimens.spaceMd),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Connect a source',
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppDimens.spaceXs),
+              Text(
+                'Link Apple Health, Health Connect, or a wearable so we can '
+                'fill in your picture — every category, every day.',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppDimens.spaceMd),
+              ZPatternPillButton(
+                icon: Icons.add_rounded,
+                label: 'Connect a source',
+                onPressed: () =>
+                    context.push(RouteNames.settingsIntegrationsPath),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Pull-to-refresh handler. Mirrors the pattern used by
+  /// `_HealthDashboardScreenState._onRefresh` in `health_dashboard_screen.dart`
+  /// so both screens stay in lock-step: syncs connected sources, priming the
+  /// server cache, then invalidates every provider the screen reads. Also
+  /// re-checks the integration flags so the empty-state CTA can unlock if
+  /// the user connected a source mid-session.
   Future<void> _onRefresh() async {
+    final prefs = await SharedPreferences.getInstance();
+    final appleConnected = prefs.getBool(_kAppleHealthKey) ?? false;
+    final hcConnected = prefs.getBool(_kHealthConnectKey) ?? false;
+
+    if (appleConnected || hcConnected) {
+      final syncService = ref.read(healthSyncServiceProvider);
+      final synced = await syncService.syncToCloud(days: 7);
+      if (synced) {
+        await prefs.setInt(
+            _kLastSyncKey, DateTime.now().millisecondsSinceEpoch);
+      }
+      if (!synced && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Couldn't refresh — pull down to try again."),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      // Prime the server cache with fresh data before invalidating the
+      // providers so the next read sees post-sync data.
+      await ref.read(dataRepositoryProvider).getDashboard(forceRefresh: true);
+    }
+
     ref.invalidate(dashboardProvider);
     ref.invalidate(healthScoreProvider);
     for (final cat in kMandalaCategoryOrder) {
@@ -147,6 +271,12 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen>
         categoryId: cat.name,
         timeRange: _range.providerRange,
       )));
+    }
+
+    // Re-check the integration flags so the empty-state CTA can clear
+    // itself if the user just connected a source from the CTA button.
+    if (mounted) {
+      await _checkHealthSources();
     }
   }
 
@@ -511,6 +641,39 @@ class _Legend extends StatelessWidget {
   }
 }
 
+/// Reusable shimmer card used as a loading placeholder for the AI summary,
+/// shard slots, and every-metric tiles.
+///
+/// Renders as an opaque rounded surface with a smaller inner rectangle
+/// wrapped in [AppShimmer] so the sweep shows as a soft highlight bar
+/// rather than over the full card edge. [height] controls the outer card;
+/// the inner shimmer rectangle fills whatever space the card provides
+/// minus `AppDimens.spaceMd` of margin.
+class _SkeletonCard extends StatelessWidget {
+  const _SkeletonCard({required this.height});
+  final double height;
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: AppShimmer(
+        child: Container(
+          margin: const EdgeInsets.all(AppDimens.spaceMd),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// AI summary card with inline expandable breakdown.
 ///
 /// Sits below the legend and summarises the same mandala data the wheel
@@ -541,6 +704,27 @@ class _AiSummarySectionState extends ConsumerState<_AiSummarySection> {
 
   @override
   Widget build(BuildContext context) {
+    // Loading skeleton: render a shimmer card while NONE of the six
+    // mandala-category detail providers have resolved yet. Without this
+    // gate, [AllDataSummaryGenerator] sees zero spokes and emits the
+    // "not enough data yet — connect a tracker" copy, which is wrong on
+    // first load when the provider just hasn't answered yet.
+    final anyResolved = kMandalaCategoryOrder.any((cat) {
+      return ref
+          .watch(categoryDetailProvider(CategoryDetailParams(
+            categoryId: cat.name,
+            timeRange: widget.range.providerRange,
+          )))
+          .hasValue;
+    });
+    if (!anyResolved) {
+      return const Padding(
+        padding: EdgeInsets.fromLTRB(
+            AppDimens.spaceMd, AppDimens.spaceMd, AppDimens.spaceMd, 0),
+        child: _SkeletonCard(height: 100),
+      );
+    }
+
     final mandala = _readMandalaData(ref, widget.range);
     final summary = AllDataSummaryGenerator.generate(mandala);
     final now = TimeOfDay.now();
@@ -620,6 +804,19 @@ class _ShardsSection extends ConsumerWidget {
       );
     }
 
+    // Loading skeleton: same 3×2 grid footprint, but each tile is a
+    // `_SkeletonCard` while none of the category detail providers have
+    // resolved yet. Keeps the spotlight header visible so the page doesn't
+    // jump when the real shards swap in.
+    final anyResolved = kMandalaCategoryOrder.any((cat) {
+      return ref
+          .watch(categoryDetailProvider(CategoryDetailParams(
+            categoryId: cat.name,
+            timeRange: range.providerRange,
+          )))
+          .hasValue;
+    });
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
           AppDimens.spaceMd, AppDimens.spaceMd, AppDimens.spaceMd, 0),
@@ -635,14 +832,19 @@ class _ShardsSection extends ConsumerWidget {
             childAspectRatio: 1 / 1.2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            children: [
-              wrap(HealthCategory.sleep, const _SleepShard()),
-              wrap(HealthCategory.activity, _MoveShard(range: range)),
-              wrap(HealthCategory.heart, const _HeartShard()),
-              wrap(HealthCategory.nutrition, const _FoodShard()),
-              wrap(HealthCategory.body, const _BodyShard()),
-              wrap(HealthCategory.wellness, _MindShard(range: range)),
-            ],
+            children: anyResolved
+                ? [
+                    wrap(HealthCategory.sleep, const _SleepShard()),
+                    wrap(HealthCategory.activity, _MoveShard(range: range)),
+                    wrap(HealthCategory.heart, const _HeartShard()),
+                    wrap(HealthCategory.nutrition, const _FoodShard()),
+                    wrap(HealthCategory.body, const _BodyShard()),
+                    wrap(HealthCategory.wellness, _MindShard(range: range)),
+                  ]
+                : List<Widget>.generate(
+                    6,
+                    (_) => const _SkeletonCard(height: 96),
+                  ),
           ),
         ],
       ),
@@ -1135,11 +1337,13 @@ class _EveryMetricSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tiles = <Widget>[];
     var totalCount = 0;
+    var anyResolved = false;
     for (final cat in kMandalaCategoryOrder) {
       final detail = ref.watch(categoryDetailProvider(CategoryDetailParams(
         categoryId: cat.name,
         timeRange: range.providerRange,
       )));
+      if (detail.hasValue) anyResolved = true;
       final metrics = detail.maybeWhen(
         data: (d) => d.metrics,
         orElse: () => const <MetricSeries>[],
@@ -1157,6 +1361,11 @@ class _EveryMetricSection extends ConsumerWidget {
         ));
       }
     }
+    // Loading skeleton: 12 shimmer tiles in the same 3-column grid while
+    // none of the category detail providers have resolved. Once ANY
+    // category resolves we fall through to the live grid — missing
+    // categories simply contribute zero tiles.
+    final showSkeleton = !anyResolved;
     return Padding(
       key: gridKey,
       padding: const EdgeInsets.fromLTRB(
@@ -1173,7 +1382,12 @@ class _EveryMetricSection extends ConsumerWidget {
             childAspectRatio: 0.85,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            children: tiles,
+            children: showSkeleton
+                ? List<Widget>.generate(
+                    12,
+                    (_) => const _SkeletonCard(height: 82),
+                  )
+                : tiles,
           ),
         ],
       ),
