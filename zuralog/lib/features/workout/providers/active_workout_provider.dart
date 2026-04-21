@@ -14,6 +14,7 @@ import 'dart:async';
 import 'package:clock/clock.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/features/workout/background/workout_service_controller.dart';
 import 'package:zuralog/features/workout/providers/rest_timer_provider.dart';
 import 'package:zuralog/features/workout/providers/workout_session_providers.dart';
 
@@ -125,5 +126,67 @@ final activeWorkoutSnapshotProvider = Provider<ActiveWorkoutSnapshot>((ref) {
     workoutStartedAt: session?.startedAt,
     workoutElapsed: elapsed,
     rest: rest,
+  );
+});
+
+// ── Background-service bridge ────────────────────────────────────────────────
+
+/// Bridges Riverpod state mutations to the Android foreground service.
+///
+/// Read this provider once from the app root (e.g. `ZuralogApp.build`) so it
+/// stays alive for the process lifetime. On every workout start/stop, the
+/// bridge starts or stops the foreground service. On every rest-timer change
+/// it nudges the service isolate so the ongoing notification updates
+/// promptly. It also receives notification-button actions that the service
+/// isolate forwards back here and dispatches them to the appropriate notifier.
+///
+/// On iOS, web, and desktop the underlying controller is a no-op; the
+/// listeners still run but perform no platform work.
+final workoutServiceBridgeProvider = Provider<void>((ref) {
+  final controller = ref.watch(workoutServiceControllerProvider);
+
+  // Translate notification-button actions that the foreground-service isolate
+  // forwards back to us into Riverpod mutations. Keep a stable reference so
+  // we can detach on dispose.
+  void handleTaskData(Object data) {
+    if (data is! Map) return;
+    final action = data['action'];
+    if (action is! String) return;
+    switch (action) {
+      case 'rest_skip':
+        ref.read(restTimerProvider.notifier).skip();
+        break;
+      case 'rest_add30':
+        ref.read(restTimerProvider.notifier).addTime(30);
+        break;
+      case 'workout_finish':
+        // Wired in Phase 5 — the finish flow needs notification scheduling
+        // that isn't implemented yet. Leaving this branch explicit so the
+        // action round-trip is visible in logs once Phase 5 lands.
+        break;
+    }
+  }
+
+  controller.attachMainReceiver(handleTaskData);
+  ref.onDispose(() => controller.detachMainReceiver(handleTaskData));
+
+  ref.listen<bool>(isWorkoutActiveProvider, (prev, next) {
+    if (prev == next) return;
+    if (next) {
+      controller.start();
+    } else {
+      controller.stop();
+    }
+  }, fireImmediately: true);
+
+  // Nudge the service on rest changes so its SharedPreferences re-reads
+  // happen promptly (rather than waiting for the next 1 Hz tick).
+  ref.listen(
+    restTimerProvider.select((s) => s.restStartedAt),
+    (_, _) => controller.nudge(),
+  );
+  ref.listen(
+    restTimerProvider.select((s) => s.addedSeconds),
+    (_, _) => controller.nudge(),
   );
 });

@@ -19,6 +19,7 @@ import 'package:zuralog/core/router/app_router.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/workout/presentation/widgets/workout_resume_gate.dart';
+import 'package:zuralog/features/workout/providers/active_workout_provider.dart';
 
 /// The root widget of the Zuralog application.
 ///
@@ -55,6 +56,11 @@ class _ZuralogAppState extends ConsumerState<ZuralogApp> {
 
   @override
   Widget build(BuildContext context) {
+    // Keep the Android foreground-service bridge alive for the full app
+    // lifetime. No-ops on iOS / web / desktop. See Phase 4 of
+    // docs/superpowers/plans/2026-04-22-workout-background-system.md.
+    ref.watch(workoutServiceBridgeProvider);
+
     // valueOrNull falls back to ThemeMode.system while the async preference
     // loads from SharedPreferences/API — no flash of wrong theme.
     final themeMode =

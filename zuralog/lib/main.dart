@@ -5,10 +5,13 @@
 /// Riverpod [ProviderScope] for dependency injection.
 library;
 
+import 'dart:io' show Platform;
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
@@ -90,6 +93,14 @@ Future<void> _initAndRun() async {
   }
 
   final prefs = await SharedPreferences.getInstance();
+
+  // Phase 4 — workout-background-system: Android-only. Opens the receive
+  // port that the foreground-service isolate uses to push data back to the
+  // UI isolate (notification button taps, tick heartbeats). Safe to call
+  // even when no workout is active; the port just stays quiet.
+  if (!kIsWeb && Platform.isAndroid) {
+    FlutterForegroundTask.initCommunicationPort();
+  }
 
   runApp(
     ProviderScope(
