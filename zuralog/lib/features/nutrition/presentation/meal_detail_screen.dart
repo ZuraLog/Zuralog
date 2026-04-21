@@ -15,6 +15,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
 import 'package:zuralog/features/nutrition/presentation/meal_edit_screen.dart';
+import 'package:zuralog/features/nutrition/presentation/widgets/food_icon.dart';
 import 'package:zuralog/features/nutrition/providers/nutrition_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -359,6 +360,8 @@ class _FoodRow extends StatelessWidget {
       variant: ZCardVariant.data,
       child: Row(
         children: [
+          FoodIcon(foodName: food.name),
+          const SizedBox(width: AppDimens.spaceMd),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
