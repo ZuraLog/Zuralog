@@ -595,63 +595,84 @@ class _SlidableMealCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    // Clip the whole Slidable to the meal-card radius so Delete's right
-    // edge follows the card curve. Edit sits in the middle and gets its
-    // own floating rounded container since the outer clip can't reach it.
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-      child: Slidable(
-        key: ValueKey(meal.id),
-        endActionPane: ActionPane(
-          motion: const BehindMotion(),
-          extentRatio: 0.5,
-          dismissible: DismissiblePane(onDismissed: onDelete),
-          children: [
-            CustomSlidableAction(
-              onPressed: (_) => onEdit(),
-              backgroundColor: Colors.transparent,
-              padding: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Material(
-                  color: colors.surfaceRaised,
-                  borderRadius:
-                      BorderRadius.circular(AppDimens.radiusCard),
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    onTap: onEdit,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.edit_rounded,
-                          color: colors.textPrimary,
-                          size: 22,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Edit',
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: colors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
+    return Slidable(
+      key: ValueKey(meal.id),
+      endActionPane: ActionPane(
+        motion: const BehindMotion(),
+        extentRatio: 0.5,
+        dismissible: DismissiblePane(onDismissed: onDelete),
+        children: [
+          _SwipeChip(
+            onPressed: onEdit,
+            icon: Icons.edit_rounded,
+            label: 'Edit',
+            backgroundColor: colors.surfaceRaised,
+            foregroundColor: colors.textPrimary,
+          ),
+          _SwipeChip(
+            onPressed: onDelete,
+            icon: Icons.delete_outline_rounded,
+            label: 'Delete',
+            backgroundColor: AppColors.error,
+            foregroundColor: Colors.white,
+          ),
+        ],
+      ),
+      child: _MealCard(meal: meal),
+    );
+  }
+}
+
+/// Rounded floating chip used for swipe-pane actions. Both chips use the
+/// same radius and padding so they sit as a symmetric pair next to the
+/// meal card.
+class _SwipeChip extends StatelessWidget {
+  const _SwipeChip({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+    required this.backgroundColor,
+    required this.foregroundColor,
+  });
+
+  final VoidCallback onPressed;
+  final IconData icon;
+  final String label;
+  final Color backgroundColor;
+  final Color foregroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomSlidableAction(
+      onPressed: (_) => onPressed(),
+      backgroundColor: Colors.transparent,
+      padding: EdgeInsets.zero,
+      child: Padding(
+        // Small uniform inset so the chip floats inside its slot
+        // without looking like a tall capsule.
+        padding: const EdgeInsets.all(6),
+        child: Material(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(14),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onPressed,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: foregroundColor, size: 22),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: foregroundColor,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
+              ],
             ),
-            SlidableAction(
-              onPressed: (_) => onDelete(),
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-              icon: Icons.delete_outline_rounded,
-              label: 'Delete',
-            ),
-          ],
+          ),
         ),
-        child: _MealCard(meal: meal),
       ),
     );
   }
