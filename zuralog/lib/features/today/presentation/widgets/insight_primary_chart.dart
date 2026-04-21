@@ -39,6 +39,7 @@ class InsightPrimaryChart extends StatelessWidget {
     this.goalValue,
     this.goalLabel,
     this.delay = const Duration(milliseconds: 180),
+    this.formatYAxis,
   });
 
   /// Card title, e.g. "Last 7 nights", "This week's steps".
@@ -61,6 +62,19 @@ class InsightPrimaryChart extends StatelessWidget {
 
   /// Stagger delay when the chart appears.
   final Duration delay;
+
+  /// Formats a grid-line value for the y-axis label. When null, the
+  /// axis labels fall back to a compact integer formatter so every
+  /// chart gets useful scale labels even without explicit wiring.
+  final String Function(double value)? formatYAxis;
+
+  String _defaultYAxisFormat(double v) {
+    if (v.abs() >= 1000) {
+      return '${(v / 1000).toStringAsFixed(v % 1000 == 0 ? 0 : 1)}k';
+    }
+    if (v == v.roundToDouble()) return v.toInt().toString();
+    return v.toStringAsFixed(1);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -139,8 +153,33 @@ class InsightPrimaryChart extends StatelessWidget {
                     ),
                     borderData: FlBorderData(show: false),
                     titlesData: FlTitlesData(
-                      leftTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 34,
+                          interval: maxY / 4,
+                          getTitlesWidget: (value, meta) {
+                            // Skip the top-most label (duplicates the max)
+                            // and the zero label to keep the axis quiet.
+                            if (value <= 0) return const SizedBox.shrink();
+                            if ((value - maxY).abs() < 0.01) {
+                              return const SizedBox.shrink();
+                            }
+                            final fmt = formatYAxis ?? _defaultYAxisFormat;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: Text(
+                                fmt(value),
+                                textAlign: TextAlign.right,
+                                style: AppTextStyles.labelSmall.copyWith(
+                                  color: colors.textTertiary,
+                                  fontSize: 10,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                       rightTitles: const AxisTitles(
                         sideTitles: SideTitles(showTitles: false),
