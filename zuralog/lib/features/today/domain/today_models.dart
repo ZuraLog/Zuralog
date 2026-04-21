@@ -196,12 +196,19 @@ class InsightCard {
 
   /// Deserializes from a JSON map.
   factory InsightCard.fromJson(Map<String, dynamic> json) {
+    final typeStr = json['type'] as String?;
+    final rawCategory = json['category'] as String?;
     return InsightCard(
       id: json['id'] as String,
       title: json['title'] as String,
       summary: json['body'] as String? ?? '',
-      type: _insightTypeFromString(json['type'] as String?),
-      category: json['category'] as String? ?? 'general',
+      type: _insightTypeFromString(typeStr),
+      // Prefer the explicit category from the API; when the backend omits
+      // it or returns the placeholder "general", derive the real category
+      // from the `type` string so card colors and icons still read right.
+      category: (rawCategory == null || rawCategory == 'general')
+          ? _categoryFromType(typeStr)
+          : rawCategory,
       isRead: json['read_at'] != null,
       priorityScore: (json['priority_score'] as num?)?.toDouble(),
       createdAt: json['created_at'] != null
