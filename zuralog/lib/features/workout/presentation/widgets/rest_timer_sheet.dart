@@ -122,6 +122,9 @@ class _RestTimerSheetState extends State<RestTimerSheet> {
                 onPressed: () {
                   HapticFeedback.selectionClick();
                   setState(() => _remaining += 30);
+                  if (_timer == null || !_timer!.isActive) {
+                    _startTimer();
+                  }
                 },
                 child: Text(
                   '+30s',
@@ -141,7 +144,7 @@ class _RestTimerSheetState extends State<RestTimerSheet> {
                 child: Text(
                   'Skip',
                   style: AppTextStyles.labelLarge
-                      .copyWith(color: Colors.white),
+                      .copyWith(color: colors.textOnSage),
                 ),
               ),
             ],
