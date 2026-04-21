@@ -36,6 +36,8 @@ import 'package:zuralog/features/progress/presentation/widgets/progress_skeleton
 import 'package:zuralog/features/progress/presentation/widgets/streak_flame_hero.dart';
 import 'package:zuralog/features/progress/presentation/widgets/streak_freeze_dialog.dart';
 import 'package:zuralog/features/progress/presentation/widgets/this_week_snapshot_card.dart';
+import 'package:zuralog/features/progress/presentation/widgets/weekly_report_card.dart'
+    as weekly_report_widget;
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
@@ -276,8 +278,19 @@ class _ContentView extends ConsumerWidget {
           const SizedBox(height: AppDimens.spaceLg),
         ],
 
-        // Weekly Report CTA — Pro users navigate, free users see locked overlay.
-        wrap(_WeeklyReportCard(isPremium: isPremium), 4),
+        // Weekly Report CTA — Pro users navigate, free users see PRO pill.
+        wrap(
+          weekly_report_widget.WeeklyReportCard(
+            isPremium: isPremium,
+            onTap: () {
+              ref.read(hapticServiceProvider).light();
+              if (isPremium) {
+                context.push(RouteNames.weeklyReportPath);
+              }
+            },
+          ),
+          4,
+        ),
         const SizedBox(height: AppDimens.spaceLg),
 
         // Goals section (with empty state CTA when no goals)
@@ -620,96 +633,6 @@ class _MilestoneCelebrationCardState
           ),
         ),
       ),
-    );
-  }
-}
-
-// ── _WeeklyReportCard ────────────────────────────────────────────────────────
-
-/// Surface card that links to the weekly report for Pro users, or shows
-/// a locked overlay for free users prompting them to upgrade.
-class _WeeklyReportCard extends ConsumerWidget {
-  const _WeeklyReportCard({required this.isPremium});
-
-  final bool isPremium;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColorsOf(context);
-
-    final card = Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: colors.progressSurface,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        border: Border.all(color: colors.progressBorderDefault),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: AppDimens.iconContainerSm,
-            height: AppDimens.iconContainerSm,
-            decoration: BoxDecoration(
-              color: colors.progressSage.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-              border: Border.all(
-                color: colors.progressSage.withValues(alpha: 0.2),
-              ),
-            ),
-            child: Center(
-              child: Icon(
-                Icons.calendar_view_week_rounded,
-                size: AppDimens.iconSm,
-                color: colors.progressSage,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppDimens.spaceMd),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Weekly Report',
-                  style: AppTextStyles.titleMedium.copyWith(
-                    color: colors.progressTextPrimary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Your week at a glance',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: colors.progressTextSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            Icons.chevron_right_rounded,
-            color: colors.progressTextMuted,
-          ),
-        ],
-      ),
-    );
-
-    if (!isPremium) {
-      return ZLockedOverlay(
-        headline: 'Your weekly summary',
-        body: 'Upgrade to Pro to get a personalized weekly report with '
-            'your key metrics, trends, and AI insights.',
-        icon: Icons.calendar_view_week_rounded,
-        child: card,
-      );
-    }
-
-    return GestureDetector(
-      onTap: () {
-        ref.read(hapticServiceProvider).light();
-        context.push(RouteNames.weeklyReportPath);
-      },
-      child: card,
     );
   }
 }
