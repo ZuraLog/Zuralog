@@ -16,6 +16,7 @@ export 'cards/z_daily_goals_card.dart';
 export 'cards/z_insight_card.dart';
 export 'cards/z_category_summary_card.dart';
 export 'cards/z_selectable_tile.dart';
+export 'cards/z_sleep_stage_breakdown_card.dart';
 export 'cards/z_snapshot_card.dart';
 export 'cards/zuralog_card.dart';
 export 'cards/z_pillar_card.dart';

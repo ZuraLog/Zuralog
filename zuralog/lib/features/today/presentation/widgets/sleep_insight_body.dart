@@ -5,13 +5,10 @@
 /// existing sleep providers.
 library;
 
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
-import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/sleep/domain/sleep_models.dart';
 import 'package:zuralog/features/sleep/providers/sleep_providers.dart';
 import 'package:zuralog/features/today/presentation/widgets/insight_hero_card.dart';
@@ -25,7 +22,7 @@ List<Widget> sleepInsightSlivers(BuildContext context, WidgetRef ref) {
   return const [
     SliverToBoxAdapter(child: _SleepHero()),
     SliverToBoxAdapter(child: SizedBox(height: AppDimens.spaceMd)),
-    SliverToBoxAdapter(child: _StageBreakdownCard()),
+    SliverToBoxAdapter(child: _StageBreakdown()),
     SliverToBoxAdapter(child: SizedBox(height: AppDimens.spaceMd)),
     SliverToBoxAdapter(child: _SleepTrendChart()),
     SliverToBoxAdapter(child: SizedBox(height: AppDimens.spaceMd)),
@@ -148,12 +145,11 @@ class _SleepStats extends ConsumerWidget {
 
 // ── Stage donut (bespoke to Sleep) ───────────────────────────────────────────
 
-class _StageBreakdownCard extends ConsumerWidget {
-  const _StageBreakdownCard();
+class _StageBreakdown extends ConsumerWidget {
+  const _StageBreakdown();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColorsOf(context);
     final summary = ref.watch(sleepDaySummaryProvider).valueOrNull ??
         SleepDaySummary.empty;
     final stages = summary.stages;
@@ -161,182 +157,15 @@ class _StageBreakdownCard extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    final total = stages.totalMinutes;
-    final segments = <_StageSegment>[
-      _StageSegment('Deep', stages.deepMinutes ?? 0, const Color(0xFF2F4A3A)),
-      _StageSegment('REM', stages.remMinutes ?? 0, const Color(0xFF6D9A7A)),
-      _StageSegment('Light', stages.lightMinutes ?? 0, const Color(0xFFCFE1B9)),
-      _StageSegment('Awake', stages.awakeMinutes ?? 0, const Color(0xFFE07A5F)),
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-      child: ZFadeSlideIn(
-        delay: const Duration(milliseconds: 120),
-        child: Container(
-          decoration: BoxDecoration(
-            color: colors.cardBackground,
-            border: Border.all(
-              color: colors.border.withValues(alpha: 0.4),
-              width: 1,
-            ),
-            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-          ),
-          padding: const EdgeInsets.all(AppDimens.spaceLg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Sleep stages',
-                style: AppTextStyles.titleMedium.copyWith(
-                  color: colors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: AppDimens.spaceMd),
-              Row(
-                children: [
-                  SizedBox(
-                    width: 120,
-                    height: 120,
-                    child: CustomPaint(
-                      painter: _StageRingPainter(
-                        segments: segments,
-                        trackColor: colors.border.withValues(alpha: 0.3),
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              _formatDuration(total),
-                              style: AppTextStyles.titleMedium.copyWith(
-                                color: colors.textPrimary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            Text(
-                              'total',
-                              style: AppTextStyles.labelSmall.copyWith(
-                                color: colors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppDimens.spaceLg),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        for (final s in segments)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 10,
-                                  height: 10,
-                                  decoration: BoxDecoration(
-                                    color: s.color,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    s.label,
-                                    style: AppTextStyles.bodySmall.copyWith(
-                                      color: colors.textPrimary,
-                                    ),
-                                  ),
-                                ),
-                                Text(
-                                  total > 0
-                                      ? '${((s.minutes / total) * 100).round()}%'
-                                      : '—',
-                                  style: AppTextStyles.bodySmall.copyWith(
-                                    color: colors.textSecondary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                SizedBox(
-                                  width: 44,
-                                  child: Text(
-                                    _formatDuration(s.minutes),
-                                    textAlign: TextAlign.right,
-                                    style: AppTextStyles.labelSmall.copyWith(
-                                      color: colors.textTertiary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+    return ZSleepStageBreakdownCard(
+      deepMinutes: stages.deepMinutes ?? 0,
+      remMinutes: stages.remMinutes ?? 0,
+      lightMinutes: stages.lightMinutes ?? 0,
+      awakeMinutes: stages.awakeMinutes ?? 0,
+      categoryColor: AppColors.categorySleep,
+      title: 'Sleep stages',
     );
   }
-}
-
-class _StageSegment {
-  const _StageSegment(this.label, this.minutes, this.color);
-  final String label;
-  final int minutes;
-  final Color color;
-}
-
-class _StageRingPainter extends CustomPainter {
-  _StageRingPainter({required this.segments, required this.trackColor});
-  final List<_StageSegment> segments;
-  final Color trackColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final center = rect.center;
-    final radius = math.min(size.width, size.height) / 2 - 6;
-    const stroke = 12.0;
-    final track = Paint()
-      ..color = trackColor
-      ..strokeWidth = stroke
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawCircle(center, radius, track);
-    final total = segments.fold<int>(0, (a, s) => a + s.minutes);
-    if (total <= 0) return;
-    const gap = 0.04;
-    double start = -math.pi / 2;
-    for (final s in segments) {
-      if (s.minutes <= 0) continue;
-      final sweep = (s.minutes / total) * (math.pi * 2);
-      final paint = Paint()
-        ..color = s.color
-        ..strokeWidth = stroke
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round;
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        start + gap / 2,
-        sweep - gap,
-        false,
-        paint,
-      );
-      start += sweep;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _StageRingPainter old) =>
-      old.segments != segments || old.trackColor != trackColor;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
