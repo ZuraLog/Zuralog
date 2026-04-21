@@ -6,6 +6,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
+import 'package:zuralog/features/progress/presentation/widgets/goal_visuals.dart';
 import 'package:zuralog/features/progress/presentation/widgets/pressable_card.dart';
 import 'package:zuralog/shared/widgets/cards/z_feature_card.dart';
 import 'package:zuralog/shared/widgets/feedback/z_progress_bar.dart';
@@ -21,21 +22,10 @@ class GoalTrajectoryCard extends StatelessWidget {
   final Goal goal;
   final VoidCallback onTap;
 
-  static const Map<GoalType, IconData> _iconFor = {
-    GoalType.weightTarget: Icons.gps_fixed_rounded,
-    GoalType.weeklyRunCount: Icons.directions_run_rounded,
-    GoalType.dailyCalorieLimit: Icons.restaurant_rounded,
-    GoalType.sleepDuration: Icons.bedtime_rounded,
-    GoalType.stepCount: Icons.directions_walk_rounded,
-    GoalType.waterIntake: Icons.water_drop_rounded,
-  };
-
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final iconData = _iconFor[goal.type] ?? Icons.auto_awesome_rounded;
-    final categoryColor = goal.type.categoryColor;
-    final variant = goal.type.patternVariant;
+    final visuals = goalVisuals(goal);
     final pct = goal.progressFraction;
     final pctInt = (pct * 100).round();
 
@@ -43,15 +33,15 @@ class GoalTrajectoryCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: AppDimens.shapeLg,
       child: ZFeatureCard(
-        variant: variant,
+        variant: visuals.variant,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 ZCategoryIconTile(
-                  color: categoryColor,
-                  icon: iconData,
+                  color: visuals.color,
+                  icon: visuals.icon,
                 ),
                 const SizedBox(width: AppDimens.spaceMd),
                 Expanded(
