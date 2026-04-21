@@ -286,6 +286,14 @@ class _ContentView extends ConsumerWidget {
               ref.read(hapticServiceProvider).light();
               if (isPremium) {
                 context.push(RouteNames.weeklyReportPath);
+              } else {
+                ZPremiumGateSheet.show(
+                  context,
+                  headline: 'Your week at a glance',
+                  body: 'Upgrade to Pro for an AI-generated story of your '
+                      'week, every week.',
+                  icon: Icons.calendar_month_rounded,
+                );
               }
             },
           ),
