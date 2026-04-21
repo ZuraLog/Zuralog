@@ -12,6 +12,8 @@
 ///                       Failure, AMRAP).
 library;
 
+import 'package:flutter/foundation.dart' show listEquals;
+
 enum SetType {
   warmUp(label: 'Warm-Up'),
   working(label: 'Working'),
@@ -193,7 +195,7 @@ class WorkoutExercise {
         exerciseName: json['exerciseName'] as String? ?? '',
         muscleGroup: json['muscleGroup'] as String? ?? 'other',
         sets: ((json['sets'] as List<dynamic>?) ?? const [])
-            .cast<Map<String, dynamic>>()
+            .whereType<Map<String, dynamic>>()
             .map(WorkoutSet.fromJson)
             .toList(growable: false),
         notes: json['notes'] as String? ?? '',
@@ -203,6 +205,33 @@ class WorkoutExercise {
         restTimerWorkingSeconds:
             (json['restTimerWorkingSeconds'] as num?)?.toInt() ?? 90,
         unitOverride: json['unitOverride'] as String?,
+      );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WorkoutExercise &&
+          other.exerciseId == exerciseId &&
+          other.exerciseName == exerciseName &&
+          other.muscleGroup == muscleGroup &&
+          listEquals(other.sets, sets) &&
+          other.notes == notes &&
+          other.restTimerEnabled == restTimerEnabled &&
+          other.restTimerWarmUpSeconds == restTimerWarmUpSeconds &&
+          other.restTimerWorkingSeconds == restTimerWorkingSeconds &&
+          other.unitOverride == unitOverride);
+
+  @override
+  int get hashCode => Object.hash(
+        exerciseId,
+        exerciseName,
+        muscleGroup,
+        Object.hashAll(sets),
+        notes,
+        restTimerEnabled,
+        restTimerWarmUpSeconds,
+        restTimerWorkingSeconds,
+        unitOverride,
       );
 }
 
@@ -243,10 +272,21 @@ class WorkoutSession {
                 ?.toLocal() ??
             DateTime.now(),
         exercises: ((json['exercises'] as List<dynamic>?) ?? const [])
-            .cast<Map<String, dynamic>>()
+            .whereType<Map<String, dynamic>>()
             .map(WorkoutExercise.fromJson)
             .toList(growable: false),
       );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WorkoutSession &&
+          other.id == id &&
+          other.startedAt == startedAt &&
+          listEquals(other.exercises, exercises));
+
+  @override
+  int get hashCode => Object.hash(id, startedAt, Object.hashAll(exercises));
 }
 
 /// Returns the effective unit system for [exercise]: the per-exercise
