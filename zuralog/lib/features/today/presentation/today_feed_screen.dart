@@ -15,7 +15,6 @@ import 'package:zuralog/core/constants/app_constants.dart';
 import 'package:zuralog/core/haptics/haptic_providers.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/state/log_sheet_provider.dart';
-import 'package:zuralog/features/nutrition/presentation/log_meal_sheet.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -190,7 +189,6 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                 ),
                 child: NutritionPillarCard(
                   onTap: () => context.pushNamed(RouteNames.nutrition),
-                  onAddMeal: () => LogMealSheet.show(context),
                 ),
               ),
             ),

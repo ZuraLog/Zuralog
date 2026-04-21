@@ -17,13 +17,10 @@ import 'package:zuralog/shared/widgets/cards/z_pillar_card.dart';
 
 /// Nutrition pillar card wired to live provider data.
 class NutritionPillarCard extends ConsumerWidget {
-  const NutritionPillarCard({super.key, this.onTap, this.onAddMeal});
+  const NutritionPillarCard({super.key, this.onTap});
 
   /// Called when the card body is tapped (navigates to Nutrition Home).
   final VoidCallback? onTap;
-
-  /// Called when the "+" add-meal chip is tapped.
-  final VoidCallback? onAddMeal;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -42,39 +39,8 @@ class NutritionPillarCard extends ConsumerWidget {
         icon: Icons.restaurant_rounded,
         categoryColor: catColor,
         label: 'Nutrition',
-        headline: 'Log a meal',
-        contextStat: 'No meals yet',
+        headline: 'No meals yet',
         onTap: onTap,
-        bottomChild: GestureDetector(
-          onTap: onAddMeal,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppDimens.spaceSm,
-              vertical: AppDimens.spaceXs,
-            ),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppDimens.shapeXs),
-              border: Border.all(
-                color: catColor.withValues(alpha: 0.30),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.add_rounded,
-                  size: AppDimens.iconSm,
-                  color: catColor,
-                ),
-                const SizedBox(width: AppDimens.spaceXs),
-                Text(
-                  'Add meal',
-                  style: AppTextStyles.bodySmall.copyWith(color: catColor),
-                ),
-              ],
-            ),
-          ),
-        ),
       );
     }
 
@@ -123,26 +89,6 @@ class NutritionPillarCard extends ConsumerWidget {
                 ),
               ),
             ),
-          GestureDetector(
-            onTap: onAddMeal,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDimens.spaceSm,
-                vertical: AppDimens.spaceXs,
-              ),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppDimens.shapeXs),
-                border: Border.all(
-                  color: catColor.withValues(alpha: 0.30),
-                ),
-              ),
-              child: Icon(
-                Icons.add_rounded,
-                size: AppDimens.iconSm,
-                color: catColor,
-              ),
-            ),
-          ),
         ],
       ),
     );
