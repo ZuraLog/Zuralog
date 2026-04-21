@@ -8,7 +8,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:zuralog/core/storage/prefs_service.dart';
 import 'package:zuralog/features/workout/presentation/exercise_catalogue_screen.dart';
 
 // ── Minimal valid 1×1 RGB PNG ─────────────────────────────────────────────────
@@ -107,7 +109,7 @@ void _removeAssetMocks() {
 
 // ── Test harness ───────────────────────────────────────────────────────────────
 
-Widget _harness() {
+Widget _harness(SharedPreferences prefs) {
   final router = GoRouter(
     initialLocation: '/catalogue',
     routes: [
@@ -124,6 +126,9 @@ Widget _harness() {
     redirect: (context, state) => null,
   );
   return ProviderScope(
+    overrides: [
+      prefsProvider.overrideWithValue(prefs),
+    ],
     child: MaterialApp.router(routerConfig: router),
   );
 }
@@ -146,11 +151,15 @@ Future<void> _pump(WidgetTester tester) async {
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
 void main() {
-  setUpAll(() {
+  late SharedPreferences prefs;
+
+  setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
     // Prevent google_fonts from loading fonts over the network or from assets
     // during tests — it falls back to the system font silently.
     GoogleFonts.config.allowRuntimeFetching = false;
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
   });
 
   setUp(() {
@@ -169,7 +178,7 @@ void main() {
   Future<void> pumpHarness(WidgetTester tester) async {
     tester.view.physicalSize = const Size(2400, 1920);
     tester.view.devicePixelRatio = 1.0;
-    await tester.pumpWidget(_harness());
+    await tester.pumpWidget(_harness(prefs));
     await _pump(tester);
   }
 

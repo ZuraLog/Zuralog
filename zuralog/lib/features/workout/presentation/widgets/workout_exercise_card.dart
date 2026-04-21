@@ -346,7 +346,7 @@ class _DismissBackground extends StatelessWidget {
       alignment: Alignment.centerRight,
       padding: const EdgeInsets.only(right: AppDimens.spaceMd),
       color: colors.error,
-      child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
+      child: Icon(Icons.delete_outline_rounded, color: colors.surface),
     );
   }
 }
