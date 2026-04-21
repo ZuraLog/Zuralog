@@ -16,6 +16,15 @@ What shipped:
 - Workout tile in `ZLogGridSheet` wired to navigate to `/log/workout` (was "coming soon")
 - 26 tests pass; zero new analyzer issues vs main
 
+### Plan 5: Rest Timer Redesign — complete (2026-04-22)
+
+**Status:** Shipped on `fix/rest-timer-redesign`
+
+- Rest timer state moved to Riverpod provider (survives navigation, no Scaffold context issues)
+- Full sheet overlay + mini banner UI with drag-to-minimize gesture
+- Urgency color at ≤10s, auto-dismiss 3s after expiry
+- Persists across app backgrounding, clears on discard/finish
+
 ### Plan 2: Active Session Tracking — complete (2026-04-21)
 
 Branch: `feat/workout-plan-1-foundation`

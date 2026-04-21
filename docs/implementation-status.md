@@ -1,3 +1,25 @@
+## 2026-04-22 — Workout Rest Timer Redesign
+
+**Branch:** `fix/rest-timer-redesign`
+
+Completely redesigned the workout rest timer from the ground up with Riverpod state management and a polished bottom sheet + mini banner UI.
+
+**What was built:**
+
+- **`rest_timer_provider.dart`** — Riverpod `StateNotifier<RestTimerState>` managing all timer logic (countdown, expiry, pause/resume, skip). Persists timer state to SharedPreferences so it survives app backgrounding and navigation. Auto-dismisses 3 seconds after expiry.
+
+- **Full sheet overlay** (`WorkoutSessionScreen` Stack) — slides in from bottom showing mm:ss countdown, progress bar, +30s button, Skip, and Minimize actions. Urgency color (red) kicks in at ≤10s. "Time to work!" message on expiry. Drag-to-minimize gesture support.
+
+- **Mini banner** — compact pill-shaped widget shown between exercise list and bottom actions when timer is minimized. Displays countdown, alerts user when rest is over. Tap to expand back to full sheet.
+
+- **Rendered as Stack overlays** — never uses `showBottomSheet` or `showModalBottomSheet`, avoiding Scaffold context issues and enabling survival across navigation.
+
+- **Auto-skip on discard/finish** — timer is cleared when the user discards or finishes the workout session.
+
+- 2 new tests; all workout tests pass; zero new analyzer issues.
+
+---
+
 ## 2026-04-21 — Workout Plan 4: Overview Screen + Input Focus Fix
 
 **Branch:** `feat/workout-overview-screen`
