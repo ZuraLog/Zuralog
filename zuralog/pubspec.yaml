@@ -43,6 +43,13 @@ dependencies:
   # Activities (Phases 5 and 6).
   flutter_foreground_task: ^9.1.0
 
+  # Cross-platform local notifications (Phase 5 — workout-background-system).
+  # Used to schedule the rest-end alert on iOS (where we have no foreground
+  # service) and as a fallback on Android. Includes action buttons (Skip /
+  # +30s / Finish) wired back into Riverpod via the service bridge.
+  flutter_local_notifications: ^19.4.2
+  timezone: ^0.10.1
+
   # UUID generation (idempotency keys for ingest API)
   uuid: ^4.5.1
 

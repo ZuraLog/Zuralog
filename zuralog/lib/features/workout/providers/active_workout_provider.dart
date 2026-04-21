@@ -14,6 +14,7 @@ import 'dart:async';
 import 'package:clock/clock.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/features/workout/background/workout_notifications.dart';
 import 'package:zuralog/features/workout/background/workout_service_controller.dart';
 import 'package:zuralog/features/workout/providers/rest_timer_provider.dart';
 import 'package:zuralog/features/workout/providers/workout_session_providers.dart';
@@ -144,6 +145,29 @@ final activeWorkoutSnapshotProvider = Provider<ActiveWorkoutSnapshot>((ref) {
 /// listeners still run but perform no platform work.
 final workoutServiceBridgeProvider = Provider<void>((ref) {
   final controller = ref.watch(workoutServiceControllerProvider);
+  final notifications = ref.watch(workoutNotificationsProvider);
+
+  // Dispatch a notification-button action (whether it came from the
+  // Android foreground service or from an iOS scheduled notification)
+  // into the appropriate Riverpod mutation. Kept in one function so the
+  // two platforms stay in lock-step.
+  void dispatchAction(String action) {
+    switch (action) {
+      case WorkoutNotificationActions.restSkip:
+        ref.read(restTimerProvider.notifier).skip();
+        break;
+      case WorkoutNotificationActions.restAdd30:
+        ref.read(restTimerProvider.notifier).addTime(30);
+        break;
+      case WorkoutNotificationActions.workoutFinish:
+        // Phase 5 scope: treat Finish-from-notification as "skip rest".
+        // The full workout-finish flow (log the session, dismiss the
+        // screen, etc.) stays a deliberate user action in the UI so we
+        // don't discard progress on an accidental notification tap.
+        ref.read(restTimerProvider.notifier).skip();
+        break;
+    }
+  }
 
   // Translate notification-button actions that the foreground-service isolate
   // forwards back to us into Riverpod mutations. Keep a stable reference so
@@ -151,24 +175,23 @@ final workoutServiceBridgeProvider = Provider<void>((ref) {
   void handleTaskData(Object data) {
     if (data is! Map) return;
     final action = data['action'];
-    if (action is! String) return;
-    switch (action) {
-      case 'rest_skip':
-        ref.read(restTimerProvider.notifier).skip();
-        break;
-      case 'rest_add30':
-        ref.read(restTimerProvider.notifier).addTime(30);
-        break;
-      case 'workout_finish':
-        // Wired in Phase 5 — the finish flow needs notification scheduling
-        // that isn't implemented yet. Leaving this branch explicit so the
-        // action round-trip is visible in logs once Phase 5 lands.
-        break;
-    }
+    if (action is String) dispatchAction(action);
   }
 
   controller.attachMainReceiver(handleTaskData);
-  ref.onDispose(() => controller.detachMainReceiver(handleTaskData));
+
+  // Wire iOS scheduled-notification action taps. `null` actionId means the
+  // user tapped the notification body; we let the OS handle launch and
+  // don't dispatch a mutation.
+  notifications.onAction = (actionId) {
+    if (actionId == null) return;
+    dispatchAction(actionId);
+  };
+
+  ref.onDispose(() {
+    controller.detachMainReceiver(handleTaskData);
+    notifications.onAction = null;
+  });
 
   ref.listen<bool>(isWorkoutActiveProvider, (prev, next) {
     if (prev == next) return;
@@ -176,17 +199,45 @@ final workoutServiceBridgeProvider = Provider<void>((ref) {
       controller.start();
     } else {
       controller.stop();
+      // No active workout → nothing should be queued to alert.
+      notifications.cancelRestEnd();
     }
   }, fireImmediately: true);
 
+  // Schedule (or cancel) the iOS-facing rest-end notification whenever the
+  // rest state changes. On Android the ongoing foreground-service notification
+  // carries the UX; this scheduled notification is harmless there and acts
+  // as a safety net if the service is ever killed unexpectedly.
+  void rescheduleRestEnd() {
+    final rest = ref.read(restTimerProvider);
+    final startedAt = rest.restStartedAt;
+    if (startedAt == null) {
+      notifications.cancelRestEnd();
+      return;
+    }
+    final fireAt = startedAt.add(
+      Duration(
+        seconds: rest.plannedDurationSeconds + rest.addedSeconds,
+      ),
+    );
+    notifications.scheduleRestEnd(fireAt: fireAt);
+  }
+
   // Nudge the service on rest changes so its SharedPreferences re-reads
-  // happen promptly (rather than waiting for the next 1 Hz tick).
+  // happen promptly (rather than waiting for the next 1 Hz tick), and
+  // reschedule the rest-end notification to reflect the new end time.
   ref.listen(
     restTimerProvider.select((s) => s.restStartedAt),
-    (_, _) => controller.nudge(),
+    (_, _) {
+      controller.nudge();
+      rescheduleRestEnd();
+    },
   );
   ref.listen(
     restTimerProvider.select((s) => s.addedSeconds),
-    (_, _) => controller.nudge(),
+    (_, _) {
+      controller.nudge();
+      rescheduleRestEnd();
+    },
   );
 });

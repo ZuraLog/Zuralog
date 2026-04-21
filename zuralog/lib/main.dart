@@ -22,6 +22,7 @@ import 'package:zuralog/app.dart';
 import 'package:zuralog/core/monitoring/sentry_riverpod_observer.dart';
 import 'package:zuralog/core/network/fcm_service.dart';
 import 'package:zuralog/core/storage/prefs_service.dart';
+import 'package:zuralog/features/workout/background/workout_notifications.dart';
 
 /// RevenueCat public API key (dev key by default).
 ///
@@ -100,6 +101,17 @@ Future<void> _initAndRun() async {
   // even when no workout is active; the port just stays quiet.
   if (!kIsWeb && Platform.isAndroid) {
     FlutterForegroundTask.initCommunicationPort();
+  }
+
+  // Phase 5 — workout-background-system: cross-platform local notifications.
+  // Runs in the ROOT isolate only. Initializes the plugin, registers the
+  // iOS notification category (Skip / +30s / Finish), primes the timezone
+  // database used for scheduled notifications, and requests permissions.
+  try {
+    await WorkoutNotifications.instance.initialize();
+  } catch (e, stackTrace) {
+    Sentry.captureException(e, stackTrace: stackTrace);
+    debugPrint('Workout notifications init skipped: $e');
   }
 
   runApp(

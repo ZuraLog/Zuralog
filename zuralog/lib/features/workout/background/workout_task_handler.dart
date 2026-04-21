@@ -19,6 +19,8 @@ library;
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:zuralog/features/workout/background/workout_notifications.dart';
+
 /// Entry point for the foreground-service isolate.
 ///
 /// MUST be a top-level function and decorated with `@pragma('vm:entry-point')`
@@ -139,9 +141,35 @@ class WorkoutTaskHandler extends TaskHandler {
   }
 
   void _updateNotification() {
+    // Action buttons:
+    // • While resting → expose Skip and +30s so the user can control the
+    //   countdown without opening the app.
+    // • While only the workout timer is running → expose Finish so the
+    //   user can end the session quickly from the shade.
+    // IDs must match [WorkoutNotificationActions] — the UI-isolate bridge
+    // switches on these strings to dispatch Riverpod mutations.
+    final buttons = _restStartedAt != null
+        ? const <NotificationButton>[
+            NotificationButton(
+              id: WorkoutNotificationActions.restSkip,
+              text: 'Skip',
+            ),
+            NotificationButton(
+              id: WorkoutNotificationActions.restAdd30,
+              text: '+30s',
+            ),
+          ]
+        : const <NotificationButton>[
+            NotificationButton(
+              id: WorkoutNotificationActions.workoutFinish,
+              text: 'Finish',
+            ),
+          ];
+
     FlutterForegroundTask.updateService(
       notificationTitle: 'Workout in progress',
       notificationText: _buildText(),
+      notificationButtons: buttons,
     );
   }
 
