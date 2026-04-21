@@ -2,11 +2,12 @@
 ///
 /// Editorial card for a single AI-generated insight in the Today feed.
 /// Each card is category-aware: the left gradient strip, the emblem,
-/// the icon, and the category · type chip all pick up the matching
-/// health-category color. Cards also render a compact at-a-glance
-/// stats row pulled from the matching domain provider so the briefing
-/// reads like a real snapshot, not just a headline.
+/// the icon, the category · type chip, the stats row, and the compact
+/// 7-day sparkline all pick up the matching health-category color so
+/// the feed reads as a rich, at-a-glance briefing.
 library;
+
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,7 +47,7 @@ class ZInsightCard extends ConsumerWidget {
     );
     final isUnread = !insight.isRead;
     final categoryIcon = _categoryIcon(insight.category, insight.type);
-    final stats = _statsForCategory(insight.category, ref);
+    final snapshot = _snapshotForCategory(insight.category, ref);
 
     return ZuralogSpringButton(
       onTap: onTap,
@@ -56,7 +57,6 @@ class ZInsightCard extends ConsumerWidget {
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         child: Stack(
           children: [
-            // Soft category halo — unread cards glow from the upper-left.
             if (isUnread)
               Positioned.fill(
                 child: IgnorePointer(
@@ -78,7 +78,6 @@ class ZInsightCard extends ConsumerWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Tapered bookmark ribbon.
                   Container(
                     width: 4,
                     margin: const EdgeInsets.only(right: AppDimens.spaceMd),
@@ -98,17 +97,12 @@ class ZInsightCard extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  // Category emblem.
-                  _CategoryEmblem(
-                    icon: categoryIcon,
-                    color: categoryColor,
-                  ),
+                  _CategoryEmblem(icon: categoryIcon, color: categoryColor),
                   const SizedBox(width: AppDimens.spaceMd),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Title + unread dot.
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -147,7 +141,6 @@ class ZInsightCard extends ConsumerWidget {
                           ],
                         ),
                         const SizedBox(height: AppDimens.spaceXs),
-                        // Body.
                         Text(
                           insight.summary,
                           style: AppTextStyles.bodyMedium.copyWith(
@@ -157,15 +150,25 @@ class ZInsightCard extends ConsumerWidget {
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        // At-a-glance stats row.
-                        if (stats.isNotEmpty) ...[
+                        if (snapshot.stats.isNotEmpty) ...[
                           const SizedBox(height: AppDimens.spaceSm),
                           _StatsDivider(color: categoryColor),
                           const SizedBox(height: AppDimens.spaceSm),
-                          _StatsRow(stats: stats, color: categoryColor),
+                          _StatsRow(
+                            stats: snapshot.stats,
+                            color: categoryColor,
+                          ),
+                        ],
+                        if (snapshot.trend.length >= 3) ...[
+                          const SizedBox(height: AppDimens.spaceSm),
+                          _MiniSparkline(
+                            values: snapshot.trend,
+                            todayIndex: snapshot.todayIndex,
+                            color: categoryColor,
+                            trendLabel: snapshot.trendLabel,
+                          ),
                         ],
                         const SizedBox(height: AppDimens.spaceSm),
-                        // Footer — category · type + time ago + chevron.
                         Row(
                           children: [
                             _CategoryTypeChip(
@@ -203,67 +206,116 @@ class ZInsightCard extends ConsumerWidget {
     );
   }
 
-  /// Resolves up to three at-a-glance stat pairs for the card, sourced
-  /// from the matching domain provider. Returns an empty list when the
-  /// category has no provider wired up or when the provider has no data
-  /// yet — the stats row is hidden in that case.
-  List<_Stat> _statsForCategory(String category, WidgetRef ref) {
+  /// Resolves stats + 7-day trend data for the card, sourced from the
+  /// matching domain provider.
+  _CategorySnapshot _snapshotForCategory(String category, WidgetRef ref) {
     switch (category.toLowerCase()) {
       case 'sleep':
         final s = ref.watch(sleepDaySummaryProvider).valueOrNull ??
             SleepDaySummary.empty;
-        if (!s.hasData) return const [];
-        return [
-          if (s.durationMinutes != null)
-            _Stat('Duration', _formatDuration(s.durationMinutes!)),
-          if (s.sleepEfficiencyPct != null)
-            _Stat('Efficiency', '${s.sleepEfficiencyPct!.round()}%'),
-          if (s.avgVs7DayMinutes != null)
-            _Stat('vs avg', _formatDelta(s.avgVs7DayMinutes!, 'm')),
-        ];
+        final days = ref.watch(sleepTrendProvider('7d')).valueOrNull ??
+            const <SleepTrendDay>[];
+        if (!s.hasData && days.isEmpty) return _CategorySnapshot.empty;
+        return _CategorySnapshot(
+          stats: [
+            if (s.durationMinutes != null)
+              _Stat('Duration', _formatDuration(s.durationMinutes!)),
+            if (s.sleepEfficiencyPct != null)
+              _Stat('Efficiency', '${s.sleepEfficiencyPct!.round()}%'),
+            if (s.avgVs7DayMinutes != null)
+              _Stat('vs avg', _formatDelta(s.avgVs7DayMinutes!, 'm')),
+          ],
+          trend: [
+            for (final d in days) (d.durationMinutes ?? 0).toDouble(),
+          ],
+          todayIndex: days.indexWhere((d) => d.isToday),
+          trendLabel: '7-night duration',
+        );
       case 'heart':
         final h = ref.watch(heartDaySummaryProvider).valueOrNull ??
             HeartDaySummary.empty;
-        if (!h.hasData) return const [];
-        return [
-          if (h.restingHr != null)
-            _Stat('Resting', '${h.restingHr!.round()} bpm'),
-          if (h.hrvMs != null) _Stat('HRV', '${h.hrvMs!.round()} ms'),
-          if (h.restingHrVs7Day != null)
-            _Stat(
-              'vs avg',
-              _formatDelta(h.restingHrVs7Day!.round(), 'bpm',
-                  lowerIsBetter: true),
-            ),
-        ];
+        final days = ref.watch(heartTrendProvider('7d')).valueOrNull ??
+            const <HeartTrendDay>[];
+        if (!h.hasData && days.isEmpty) return _CategorySnapshot.empty;
+        return _CategorySnapshot(
+          stats: [
+            if (h.restingHr != null)
+              _Stat('Resting', '${h.restingHr!.round()} bpm'),
+            if (h.hrvMs != null) _Stat('HRV', '${h.hrvMs!.round()} ms'),
+            if (h.restingHrVs7Day != null)
+              _Stat(
+                'vs avg',
+                _formatDelta(h.restingHrVs7Day!.round(), 'bpm'),
+              ),
+          ],
+          trend: [
+            for (final d in days) (d.restingHr ?? 0).toDouble(),
+          ],
+          todayIndex: days.indexWhere((d) => d.isToday),
+          trendLabel: '7-day RHR',
+        );
       case 'nutrition':
         final n = ref.watch(nutritionDaySummaryProvider).valueOrNull ??
             NutritionDaySummary.empty;
-        if (n.totalCalories <= 0 &&
-            n.totalProteinG <= 0 &&
-            n.totalCarbsG <= 0) {
-          return const [];
-        }
-        return [
-          _Stat('Calories', '${n.totalCalories} kcal'),
-          _Stat('Protein', '${n.totalProteinG.round()}g'),
-          _Stat('Carbs', '${n.totalCarbsG.round()}g'),
-        ];
+        final days = ref.watch(nutritionTrendProvider('7d')).valueOrNull ??
+            const <NutritionTrendDay>[];
+        final hasDay = n.totalCalories > 0 ||
+            n.totalProteinG > 0 ||
+            n.totalCarbsG > 0;
+        if (!hasDay && days.isEmpty) return _CategorySnapshot.empty;
+        return _CategorySnapshot(
+          stats: [
+            _Stat('Calories', '${n.totalCalories} kcal'),
+            _Stat('Protein', '${n.totalProteinG.round()}g'),
+            _Stat('Carbs', '${n.totalCarbsG.round()}g'),
+          ],
+          trend: [for (final d in days) (d.calories ?? 0).toDouble()],
+          todayIndex: days.indexWhere((d) => d.isToday),
+          trendLabel: '7-day calories',
+        );
       case 'streak':
       case 'engagement':
         final feed = ref.watch(todayFeedProvider).valueOrNull;
         final streak = feed?.streak;
-        if (streak == null) return const [];
-        return [
-          _Stat('Current', '${streak.currentStreak} days'),
-          if (streak.longestStreak != null)
-            _Stat('Longest', '${streak.longestStreak} days'),
-          _Stat('Status', streak.isFrozen ? 'Frozen' : 'Active'),
-        ];
+        if (streak == null) return _CategorySnapshot.empty;
+        return _CategorySnapshot(
+          stats: [
+            _Stat('Current', '${streak.currentStreak} days'),
+            if (streak.longestStreak != null)
+              _Stat('Longest', '${streak.longestStreak} days'),
+            _Stat('Status', streak.isFrozen ? 'Frozen' : 'Active'),
+          ],
+          trend: const [],
+          todayIndex: -1,
+          trendLabel: '',
+        );
       default:
-        return const [];
+        return _CategorySnapshot.empty;
     }
   }
+}
+
+// ── Snapshot payload ─────────────────────────────────────────────────────────
+
+class _CategorySnapshot {
+  const _CategorySnapshot({
+    required this.stats,
+    required this.trend,
+    required this.todayIndex,
+    required this.trendLabel,
+  });
+
+  final List<_Stat> stats;
+  final List<double> trend;
+  final int todayIndex;
+  final String trendLabel;
+
+  static const _CategorySnapshot empty = _CategorySnapshot(
+    stats: [],
+    trend: [],
+    todayIndex: -1,
+    trendLabel: '',
+  );
 }
 
 // ── Category emblem ──────────────────────────────────────────────────────────
@@ -294,11 +346,7 @@ class _CategoryEmblem extends StatelessWidget {
           width: 1,
         ),
       ),
-      child: Icon(
-        icon,
-        color: color,
-        size: 22,
-      ),
+      child: Icon(icon, color: color, size: 22),
     );
   }
 }
@@ -421,6 +469,146 @@ class _StatsDivider extends StatelessWidget {
   }
 }
 
+// ── Mini sparkline ───────────────────────────────────────────────────────────
+
+class _MiniSparkline extends StatelessWidget {
+  const _MiniSparkline({
+    required this.values,
+    required this.todayIndex,
+    required this.color,
+    required this.trendLabel,
+  });
+
+  final List<double> values;
+  final int todayIndex;
+  final Color color;
+  final String trendLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 36,
+          child: CustomPaint(
+            painter: _SparklinePainter(
+              values: values,
+              todayIndex: todayIndex,
+              color: color,
+            ),
+            size: Size.infinite,
+          ),
+        ),
+        if (trendLabel.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            trendLabel,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: colors.textTertiary,
+              fontSize: 10,
+              letterSpacing: 0.4,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _SparklinePainter extends CustomPainter {
+  _SparklinePainter({
+    required this.values,
+    required this.todayIndex,
+    required this.color,
+  });
+
+  final List<double> values;
+  final int todayIndex;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.length < 2) return;
+
+    final nonZero = values.where((v) => v > 0).toList();
+    if (nonZero.isEmpty) return;
+
+    final minV = nonZero.reduce(math.min);
+    final maxV = nonZero.reduce(math.max);
+    final range = (maxV - minV).abs() < 0.0001 ? 1.0 : maxV - minV;
+
+    final points = <Offset>[];
+    final step = size.width / (values.length - 1);
+    const topPad = 4.0;
+    const bottomPad = 4.0;
+    final drawHeight = size.height - topPad - bottomPad;
+    for (var i = 0; i < values.length; i++) {
+      final v = values[i];
+      final normalized = v <= 0 ? 0.0 : (v - minV) / range;
+      // Flip Y so higher values sit higher on the canvas.
+      final y = topPad + drawHeight * (1 - normalized);
+      points.add(Offset(step * i, y));
+    }
+
+    // Fill under the line — gentle gradient.
+    final fillPath = Path()..moveTo(points.first.dx, size.height);
+    for (final p in points) {
+      fillPath.lineTo(p.dx, p.dy);
+    }
+    fillPath.lineTo(points.last.dx, size.height);
+    fillPath.close();
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          color.withValues(alpha: 0.28),
+          color.withValues(alpha: 0.0),
+        ],
+      ).createShader(Offset.zero & size);
+    canvas.drawPath(fillPath, fillPaint);
+
+    // Line on top.
+    final linePaint = Paint()
+      ..color = color.withValues(alpha: 0.9)
+      ..strokeWidth = 1.8
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final linePath = Path()..moveTo(points.first.dx, points.first.dy);
+    for (var i = 1; i < points.length; i++) {
+      linePath.lineTo(points[i].dx, points[i].dy);
+    }
+    canvas.drawPath(linePath, linePaint);
+
+    // Today dot — glowing.
+    if (todayIndex >= 0 && todayIndex < points.length) {
+      final p = points[todayIndex];
+      final glowPaint = Paint()
+        ..color = color.withValues(alpha: 0.35)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+      canvas.drawCircle(p, 6, glowPaint);
+      canvas.drawCircle(p, 3.5, Paint()..color = color);
+      canvas.drawCircle(
+        p,
+        3.5,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.9)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SparklinePainter old) =>
+      old.values != values ||
+      old.todayIndex != todayIndex ||
+      old.color != color;
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 IconData _categoryIcon(String category, InsightType type) {
@@ -495,11 +683,7 @@ String _formatDuration(int minutes) {
   return '${h}h ${m}m';
 }
 
-/// Formats a delta with a sign and a unit. When [lowerIsBetter] is true
-/// (e.g. resting heart rate), a negative value gets a "+" prefix since
-/// the change was favourable — but we keep the actual number in the
-/// "vs avg" line so the user reads the real movement, not a flipped one.
-String _formatDelta(int v, String unit, {bool lowerIsBetter = false}) {
+String _formatDelta(int v, String unit) {
   final sign = v > 0 ? '+' : (v < 0 ? '-' : '');
   return '$sign${v.abs()}$unit';
 }
