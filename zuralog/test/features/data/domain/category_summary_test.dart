@@ -97,6 +97,32 @@ void main() {
       );
     });
 
+    test('exact +5% boundary lands in "Slightly better than your usual."', () {
+      // 8400/8000 - 1 == 0.05 exactly. Positive edge is inclusive of the
+      // higher bucket — tie-break favors the more-extreme phrase.
+      expect(
+        categorySummaryFor(
+          category: HealthCategory.activity,
+          todayValue: 8400,
+          weekAverage: 8000,
+        ),
+        'Slightly better than your usual.',
+      );
+    });
+
+    test('exact -5% boundary lands in "A bit below lately."', () {
+      // 7600/8000 - 1 == -0.05 exactly. Negative edge drops through to the
+      // lower bucket — same "favor the more-extreme bucket" rule as +5%.
+      expect(
+        categorySummaryFor(
+          category: HealthCategory.activity,
+          todayValue: 7600,
+          weekAverage: 8000,
+        ),
+        'A bit below lately.',
+      );
+    });
+
     test('heart: lower resting heart rate is treated as better', () {
       expect(
         categorySummaryFor(

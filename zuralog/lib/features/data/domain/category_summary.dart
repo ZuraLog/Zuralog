@@ -30,6 +30,8 @@ String categorySummaryFor({
   var delta = (todayValue - weekAverage) / weekAverage;
   if (_lowerIsBetter(category)) delta = -delta;
 
+  // Edge values fall into the more-extreme bucket on ties: a delta of exactly
+  // +0.05 lands in "Slightly better" and exactly -0.05 lands in "A bit below".
   if (delta >= 0.15) return 'Best this week.';
   if (delta >= 0.05) return 'Slightly better than your usual.';
   if (delta > -0.05) return 'Right on your usual.';
