@@ -2,7 +2,8 @@ library;
 
 import 'dart:convert';
 
-import 'package:flutter/services.dart';
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zuralog/features/workout/domain/exercise.dart';
@@ -10,7 +11,8 @@ import 'package:zuralog/features/workout/providers/exercise_providers.dart';
 
 Future<void> _stubAsset(String assetKey, String payload) async {
   TestWidgetsFlutterBinding.ensureInitialized();
-  ServicesBinding.instance.defaultBinaryMessenger.setMockMessageHandler(
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMessageHandler(
     'flutter/assets',
     (ByteData? message) async {
       final key = utf8.decode(message!.buffer.asUint8List());
@@ -34,7 +36,7 @@ void main() {
   });
 
   tearDown(() {
-    ServicesBinding.instance.defaultBinaryMessenger
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMessageHandler('flutter/assets', null);
   });
 
