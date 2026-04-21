@@ -5,7 +5,6 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
-import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -37,18 +36,27 @@ class _AppShellState extends ConsumerState<AppShell> {
     setState(() => _navCollapsed = collapsed);
   }
 
-  bool _handleScrollNotification(UserScrollNotification n) {
-    // Only react to direct vertical scrolls on the primary body axis.
+  // Position-based collapse with hysteresis:
+  //  • pixels ≤ [_kExpandAt]  → expand (at or near top)
+  //  • pixels ≥ [_kCollapseAt] → collapse (clearly scrolled down)
+  //  • in the dead band in between → no change (prevents jitter)
+  //
+  // We listen to the base [ScrollNotification] (not just [UserScrollNotification])
+  // so momentum-flick scrolls past the top also expand the nav, which fixes
+  // the "scrolled all the way up but it didn't expand" bug.
+  static const double _kExpandAt = 8;
+  static const double _kCollapseAt = 48;
+
+  bool _handleScrollNotification(ScrollNotification n) {
+    // Only react to the primary vertical scrollable (ignore nested horizontal
+    // carousels, inner bottom-sheet scrollables, etc.).
+    if (n.depth != 0) return false;
     if (n.metrics.axis != Axis.vertical) return false;
-    // Expand ONLY when the user scrolls all the way back to the top.
-    // Partial upward scrolls in the middle of the list leave the nav
-    // collapsed — tapping the compact pill is the other way to expand.
-    if (n.metrics.pixels <= 4) {
+
+    final pixels = n.metrics.pixels - n.metrics.minScrollExtent;
+    if (pixels <= _kExpandAt) {
       _setNavCollapsed(false);
-      return false;
-    }
-    // Collapse on any downward scroll past the top threshold.
-    if (n.direction == ScrollDirection.reverse) {
+    } else if (pixels >= _kCollapseAt) {
       _setNavCollapsed(true);
     }
     return false;
@@ -111,7 +119,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      body: NotificationListener<UserScrollNotification>(
+      body: NotificationListener<ScrollNotification>(
         onNotification: _handleScrollNotification,
         child: widget.navigationShell,
       ),
