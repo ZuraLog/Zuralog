@@ -14,6 +14,7 @@ import 'package:zuralog/core/theme/app_colors.dart' show AppColorsOf;
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_motion.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/workout/presentation/widgets/active_workout_global_pill.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 import 'package:zuralog/shared/widgets/sheets/z_log_grid_sheet.dart';
 
@@ -123,13 +124,23 @@ class _AppShellState extends ConsumerState<AppShell> {
         onNotification: _handleScrollNotification,
         child: widget.navigationShell,
       ),
-      bottomNavigationBar: _BottomNavCluster(
-        currentIndex: widget.navigationShell.currentIndex,
-        onDestinationSelected: _onDestinationSelected,
-        isLogSheetOpen: _isLogSheetOpen,
-        onLogPressed: _openLogSheet,
-        isCollapsed: _navCollapsed,
-        onExpandRequest: () => _setNavCollapsed(false),
+      // The bottom slot stacks the active-workout pill directly above the
+      // nav cluster. The pill collapses to zero height when no workout is
+      // active (see [ActiveWorkoutGlobalPill] / [AnimatedSize]), so on the
+      // non-workout default the layout is identical to the prior shell.
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const ActiveWorkoutGlobalPill(),
+          _BottomNavCluster(
+            currentIndex: widget.navigationShell.currentIndex,
+            onDestinationSelected: _onDestinationSelected,
+            isLogSheetOpen: _isLogSheetOpen,
+            onLogPressed: _openLogSheet,
+            isCollapsed: _navCollapsed,
+            onExpandRequest: () => _setNavCollapsed(false),
+          ),
+        ],
       ),
     );
   }
