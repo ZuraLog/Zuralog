@@ -14,9 +14,11 @@ import 'dart:async';
 import 'package:clock/clock.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/features/workout/background/live_activity_bridge.dart';
 import 'package:zuralog/features/workout/background/workout_notifications.dart';
 import 'package:zuralog/features/workout/background/workout_service_controller.dart';
+import 'package:zuralog/features/workout/companion/workout_companion_bridge.dart';
 import 'package:zuralog/features/workout/providers/rest_timer_provider.dart';
 import 'package:zuralog/features/workout/providers/workout_session_providers.dart';
 
@@ -148,6 +150,11 @@ final workoutServiceBridgeProvider = Provider<void>((ref) {
   final controller = ref.watch(workoutServiceControllerProvider);
   final notifications = ref.watch(workoutNotificationsProvider);
   final liveActivity = ref.watch(liveActivityBridgeProvider);
+  // Phase 10: scaffold for future Apple Watch / Wear OS companion apps.
+  // The native sides are stubs today — `broadcast` is a no-op until those
+  // apps ship. Wiring it in now keeps the event graph stable.
+  final companion = ref.watch(workoutCompanionBridgeProvider);
+  final analytics = ref.watch(analyticsServiceProvider);
 
   // Dispatch a notification-button action (whether it came from the
   // Android foreground service or from an iOS scheduled notification)
@@ -190,10 +197,50 @@ final workoutServiceBridgeProvider = Provider<void>((ref) {
     dispatchAction(actionId);
   };
 
+  // Phase 10: route companion (watch) actions through the same dispatcher.
+  // The companion action ids are intentionally aligned with the notification
+  // ids so the same switch in `dispatchAction` handles both.
+  companion.onAction = (actionId) => dispatchAction(actionId);
+
   ref.onDispose(() {
     controller.detachMainReceiver(handleTaskData);
     notifications.onAction = null;
+    companion.onAction = null;
   });
+
+  // Phase 10: forward the latest workout + rest state to a paired companion
+  // (Apple Watch / Wear OS) when one ships. Native sides are stubs today —
+  // the call short-circuits to success without transmitting anything. Fires
+  // a PostHog event so we can confirm the scaffold runs as state mutates.
+  //
+  // Declared here (above the isWorkoutActiveProvider listener) so it's in
+  // scope when that listener fires immediately on provider creation.
+  void broadcastToCompanion() {
+    final session = ref.read(workoutSessionProvider);
+    if (session == null) return;
+    final rest = ref.read(restTimerProvider);
+    companion.broadcast(
+      CompanionPayload(
+        workoutStartedAt: session.startedAt,
+        restStartedAt: rest.restStartedAt,
+        plannedRestDurationSeconds: rest.plannedDurationSeconds,
+        addedRestSeconds: rest.addedSeconds,
+        // Exercise/set labels are not yet threaded through the session
+        // model — parity with Live Activity, left blank for now.
+        exerciseName: '',
+        setLabel: '',
+      ),
+    );
+    // Fire-and-forget; analytics service already swallows internal errors
+    // and is a no-op in debug builds unless ENABLE_ANALYTICS is set.
+    analytics.capture(
+      event: 'workout.companion.broadcast',
+      properties: {
+        'is_resting': rest.isActive,
+        'added_seconds': rest.addedSeconds,
+      },
+    );
+  }
 
   ref.listen<bool>(isWorkoutActiveProvider, (prev, next) {
     if (prev == next) return;
@@ -215,6 +262,9 @@ final workoutServiceBridgeProvider = Provider<void>((ref) {
       // foreground service + scheduled notification.
       liveActivity.end();
     }
+    // Phase 10: broadcast the new active-state transition to a paired
+    // companion (watch). No-op today; stubbed on both platforms.
+    if (next) broadcastToCompanion();
   }, fireImmediately: true);
 
   // Schedule (or cancel) the iOS-facing rest-end notification whenever the
@@ -270,6 +320,7 @@ final workoutServiceBridgeProvider = Provider<void>((ref) {
       controller.nudge();
       rescheduleRestEnd();
       syncLiveActivity();
+      broadcastToCompanion();
     },
   );
   ref.listen(
@@ -278,6 +329,7 @@ final workoutServiceBridgeProvider = Provider<void>((ref) {
       controller.nudge();
       rescheduleRestEnd();
       syncLiveActivity();
+      broadcastToCompanion();
     },
   );
 });
