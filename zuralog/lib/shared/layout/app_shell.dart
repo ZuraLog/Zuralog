@@ -164,6 +164,7 @@ class _FrostedNavigationBar extends StatefulWidget {
   const _FrostedNavigationBar({
     required this.currentIndex,
     required this.onDestinationSelected,
+    required this.expandedWidth,
     this.isCollapsed = false,
     this.onExpandRequest,
   });
@@ -172,6 +173,13 @@ class _FrostedNavigationBar extends StatefulWidget {
   final ValueChanged<int> onDestinationSelected;
   final bool isCollapsed;
   final VoidCallback? onExpandRequest;
+
+  /// Natural full width of the expanded nav. The expanded content is
+  /// always laid out at this width regardless of the current animated
+  /// container width — the outer ClipRRect clips visually while the
+  /// width animation runs, preventing Flutter's overflow indicator
+  /// from painting during the collapse/expand transition.
+  final double expandedWidth;
 
   static const List<_NavTab> _tabs = [
     _NavTab(
@@ -331,14 +339,26 @@ class _FrostedNavigationBarState extends State<_FrostedNavigationBar>
     );
   }
 
-  /// Original three-tab navigation with sliding sage pill.
+  /// Original three-tab navigation with sliding sage pill. Always
+  /// renders at [widget.expandedWidth] regardless of the animated
+  /// parent container width — the outer ClipRRect clips to the
+  /// current pill width during the collapse transition, which avoids
+  /// the overflow markers that appear when the inner Row is asked to
+  /// render in an intermediate narrow space.
   Widget _buildExpanded(
     dynamic colors,
     Color activePillBg,
     Color activeItemColor,
   ) {
-    return LayoutBuilder(
+    return OverflowBox(
       key: const ValueKey('nav-expanded'),
+      alignment: Alignment.centerLeft,
+      minWidth: 0,
+      maxWidth: double.infinity,
+      child: SizedBox(
+        width: widget.expandedWidth,
+        height: 64,
+        child: LayoutBuilder(
       builder: (context, constraints) {
         final tabCount = _FrostedNavigationBar._tabs.length;
         final tabWidth = constraints.maxWidth / tabCount;
@@ -448,7 +468,9 @@ class _FrostedNavigationBarState extends State<_FrostedNavigationBar>
                 ],
               );
             },
-          );
+          ),
+        ),
+      );
   }
 }
 
@@ -623,9 +645,10 @@ class _BottomNavCluster extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final expandedWidth =
-              constraints.maxWidth - _logPillWidth - AppDimens.spaceSm;
+              (constraints.maxWidth - _logPillWidth - AppDimens.spaceSm)
+                  .clamp(_collapsedWidth, double.infinity);
           final navWidth =
-              isCollapsed ? _collapsedWidth : expandedWidth.clamp(0.0, double.infinity);
+              isCollapsed ? _collapsedWidth : expandedWidth;
           return Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -638,6 +661,7 @@ class _BottomNavCluster extends StatelessWidget {
                   onDestinationSelected: onDestinationSelected,
                   isCollapsed: isCollapsed,
                   onExpandRequest: onExpandRequest,
+                  expandedWidth: expandedWidth,
                 ),
               ),
               if (!isCollapsed) const SizedBox(width: AppDimens.spaceSm),
