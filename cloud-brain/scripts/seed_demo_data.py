@@ -1250,11 +1250,19 @@ def seed_insights(cur):
             None,
         ),
     ]
+    # Sleep / body / heart detail screens query insights by `generation_date`
+    # matching the user's local date — so every insight needs it set to today
+    # for the widgets to render. Stamp all rows with TODAY.
+    rows = [
+        (*r, TODAY) for r in rows
+    ]
     execute_values(
         cur,
         """
-        INSERT INTO insights (id, user_id, type, title, body, data, priority, created_at, read_at, dismissed_at)
-        VALUES %s ON CONFLICT (id) DO NOTHING
+        INSERT INTO insights (id, user_id, type, title, body, data, priority, created_at, read_at, dismissed_at, generation_date)
+        VALUES %s ON CONFLICT (id) DO UPDATE SET
+          generation_date = EXCLUDED.generation_date,
+          dismissed_at = EXCLUDED.dismissed_at
     """,
         rows,
     )
