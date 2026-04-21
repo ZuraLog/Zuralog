@@ -5,7 +5,7 @@
 /// Nutrition → Body → Wellness). Shows a Connect-a-source CTA only when
 /// fewer than three of the visible categories have data.
 ///
-/// Keeps two behaviors from the previous masonry version:
+/// Keeps two behaviors from the earlier implementation:
 /// - Pull-to-refresh runs an Apple Health / Health Connect sync and then
 ///   invalidates the three providers this screen reads.
 /// - A throttled app-launch auto-sync fires once per screen lifecycle via
