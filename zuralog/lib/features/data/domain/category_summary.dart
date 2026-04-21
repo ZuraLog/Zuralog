@@ -31,9 +31,9 @@ String categorySummaryFor({
   if (_lowerIsBetter(category)) delta = -delta;
 
   if (delta >= 0.15) return 'Best this week.';
-  if (delta >= 0.02) return 'Slightly better than your usual.';
-  if (delta >= -0.02) return 'Right on your usual.';
-  if (delta >= -0.15) return 'A bit below lately.';
+  if (delta >= 0.05) return 'Slightly better than your usual.';
+  if (delta > -0.05) return 'Right on your usual.';
+  if (delta > -0.15) return 'A bit below lately.';
   return 'Lower than your usual.';
 }
 

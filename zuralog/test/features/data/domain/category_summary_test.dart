@@ -17,7 +17,7 @@ void main() {
     test('falls through when AI headline is whitespace only', () {
       final result = categorySummaryFor(
         category: HealthCategory.sleep,
-        todayValue: 440,
+        todayValue: 450,
         weekAverage: 420,
         aiHeadline: '   ',
       );
@@ -79,7 +79,7 @@ void main() {
       expect(
         categorySummaryFor(
           category: HealthCategory.activity,
-          todayValue: 7600,
+          todayValue: 7200,
           weekAverage: 8000,
         ),
         'A bit below lately.',
