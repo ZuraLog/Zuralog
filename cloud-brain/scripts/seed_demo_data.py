@@ -75,8 +75,11 @@ EMPTY_ID = "a0000000-0000-0000-0000-000000000002"
 FULL_EMAIL = "demo-full@zuralog.dev"
 EMPTY_EMAIL = "demo-empty@zuralog.dev"
 
-TODAY = date.today()
+# Use UTC's "today" so seeded rows align with the backend's CURRENT_DATE
+# (Postgres runs in UTC). Without this, seed data stops a day short when
+# run from a non-UTC host timezone (e.g. EDT evening == UTC tomorrow).
 NOW = datetime.now(timezone.utc)
+TODAY = NOW.date()
 
 
 def days_ago(n: int) -> date:
@@ -325,7 +328,7 @@ def seed_goals(cur):
     # start_date is NOT NULL in the current schema (migration b3c4d5e6f7a9
     # converted the column from String to Date and enforced the constraint).
     # Seed every goal with today as the start date.
-    today = date.today()
+    today = TODAY
     rows = [
         ("goal-demo-steps", FULL_ID, "steps", 10000.0, "DAILY", True, today),
         ("goal-demo-sleep", FULL_ID, "sleep_hours", 8.0, "DAILY", True, today),
