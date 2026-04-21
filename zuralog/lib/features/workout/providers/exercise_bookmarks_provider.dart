@@ -5,6 +5,8 @@
 /// persist across app sessions.
 library;
 
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -34,7 +36,12 @@ class ExerciseBookmarksNotifier extends StateNotifier<Set<String>> {
   static Set<String> _loadFromPrefs(SharedPreferences prefs) {
     final raw = prefs.getString(_key) ?? '';
     if (raw.isEmpty) return {};
-    return raw.split(',').where((s) => s.isNotEmpty).toSet();
+    try {
+      final list = json.decode(raw) as List<dynamic>;
+      return list.whereType<String>().where((s) => s.isNotEmpty).toSet();
+    } catch (_) {
+      return {};
+    }
   }
 
   /// Toggles the bookmark status of an exercise.
@@ -60,7 +67,7 @@ class ExerciseBookmarksNotifier extends StateNotifier<Set<String>> {
 
   /// Persists the current state to SharedPreferences.
   void _persist() {
-    _prefs.setString(_key, state.join(','));
+    _prefs.setString(_key, json.encode(state.toList(growable: false)));
   }
 }
 

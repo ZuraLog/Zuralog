@@ -352,6 +352,10 @@ class AuthStateNotifier extends Notifier<AuthState> {
     // Dismissed trend suggestions.
     await prefs.remove('dismissed_correlation_suggestions');
 
+    // Workout: bookmarked exercises and active session draft.
+    await prefs.remove('workout_bookmarked_exercises');
+    await prefs.remove('workout_active_draft');
+
     // ── 2. Repository in-memory caches ────────────────────────────────────
     ref.read(todayRepositoryProvider).invalidateFeedCache();
     ref.read(dataRepositoryProvider).invalidateAll();
