@@ -265,6 +265,8 @@ class _WorkoutExerciseCardState extends ConsumerState<WorkoutExerciseCard> {
                 .toggleUnit(ex.exerciseId),
           ),
           for (var i = 0; i < ex.sets.length; i++)
+            // Key uses index — safe for single-swipe use; rapid double-swipe before
+            // rebuild could target the wrong set. Stable set IDs would fix this.
             Dismissible(
               key: ValueKey('dismissible-set-${ex.exerciseId}-$i'),
               direction: DismissDirection.endToStart,
@@ -282,6 +284,7 @@ class _WorkoutExerciseCardState extends ConsumerState<WorkoutExerciseCard> {
                     cancelLabel: 'Cancel',
                     isDestructive: true,
                   );
+                  if (!mounted) return false;
                   return confirmed == true;
                 }
                 return true;
@@ -338,10 +341,11 @@ String _formatRestSeconds(int seconds) {
 class _DismissBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       alignment: Alignment.centerRight,
       padding: const EdgeInsets.only(right: AppDimens.spaceMd),
-      color: Colors.red,
+      color: colors.error,
       child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
     );
   }
