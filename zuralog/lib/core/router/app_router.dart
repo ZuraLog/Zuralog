@@ -24,6 +24,9 @@
 /// /trends                           → TrendsHomeScreen (pushed over shell)
 /// /nutrition                        → NutritionHomeScreen (pushed over shell)
 ///   /nutrition/meal/:id             → MealDetailScreen
+/// /log/workout                      → WorkoutSessionScreen (pushed over shell)
+///   /log/workout/exercises          → ExerciseCatalogueScreen
+///   /log/workout/summary            → WorkoutSummaryScreen
 /// /sleep                            → SleepDetailScreen (pushed over shell)
 ///   /sleep/all-data                 → SleepAllDataScreen
 /// /heart                            → HeartDetailScreen (pushed over shell)

@@ -176,7 +176,7 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
       case _TileBehaviour.comingSoon:
         (widget.parentMessenger ?? ScaffoldMessenger.of(context)).showSnackBar(
           SnackBar(
-            content: const Text('Workout tracking is coming soon — stay tuned!'),
+            content: const Text('This feature is coming soon — stay tuned!'),
             backgroundColor: AppColorsOf(context).primary,
             duration: const Duration(seconds: 3),
           ),
