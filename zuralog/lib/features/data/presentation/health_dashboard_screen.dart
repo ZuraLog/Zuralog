@@ -45,6 +45,59 @@ const List<HealthCategory> _kVisibleCategories = [
   HealthCategory.wellness,
 ];
 
+// ── File-scope lookup helpers ────────────────────────────────────────────────
+//
+// These three helpers exist so both [_CategoryCard] and [_ConnectACTAIfNeeded]
+// share exactly one definition of "find this category's summary", "find this
+// category's AI headline", and "does this summary have enough data to show".
+// They also make the Riverpod `.select(...)` closures trivial — each card
+// subscribes only to the primitive value it actually renders, so a
+// single-category update no longer rebuilds every card on the screen.
+
+/// Returns the [CategorySummary] for [category] from [dash], or `null` if
+/// [dash] hasn't loaded yet or the category isn't present.
+CategorySummary? _findSummaryFor(DashboardData? dash, HealthCategory category) {
+  if (dash == null) return null;
+  for (final s in dash.categories) {
+    if (s.category == category) return s;
+  }
+  return null;
+}
+
+/// Plain-English headline from the most recent insight matching [category],
+/// or `null` if there isn't one. Insight titles are already written in
+/// everyday language, so they're used verbatim as a card's summary line.
+String? _findInsightTitleFor(TodayFeedData? feed, HealthCategory category) {
+  if (feed == null) return null;
+  final name = category.name.toLowerCase();
+  for (final i in feed.insights) {
+    if (i.category.toLowerCase() == name) return i.title;
+  }
+  return null;
+}
+
+/// Is a [CategorySummary] populated enough to show on a category card?
+/// A card only renders real data when it has a trend of at least three points
+/// AND a non-empty, non-placeholder primary value.
+bool _summaryHasData(CategorySummary? s) {
+  if (s == null) return false;
+  final hasTrend = s.trend != null && s.trend!.length >= 3;
+  final hasValue = s.primaryValue.trim().isNotEmpty && s.primaryValue != '—';
+  return hasTrend && hasValue;
+}
+
+/// Counts how many of the six visible categories have data. Runs on a single
+/// `.select` tick so the Connect-a-source CTA only rebuilds when the count
+/// itself actually changes.
+int _countCategoriesWithData(DashboardData? dash) {
+  if (dash == null) return 0;
+  var count = 0;
+  for (final cat in _kVisibleCategories) {
+    if (_summaryHasData(_findSummaryFor(dash, cat))) count++;
+  }
+  return count;
+}
+
 // ── HealthDashboardScreen ─────────────────────────────────────────────────────
 
 /// Data tab root — editorial category briefing.
@@ -398,6 +451,10 @@ class _HeroSkeleton extends StatelessWidget {
 
 /// Single category card — wraps [ZCategorySummaryCard] with the right
 /// category-level data pulled from [dashboardProvider] and [todayFeedProvider].
+///
+/// Uses `.select(...)` on both providers so each card only rebuilds when its
+/// own [CategorySummary] or its own insight title actually changes. A mutation
+/// to a single category no longer re-runs build on all six cards.
 class _CategoryCard extends ConsumerWidget {
   const _CategoryCard({required this.category});
 
@@ -405,20 +462,23 @@ class _CategoryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dashAsync = ref.watch(dashboardProvider);
-    final feedAsync = ref.watch(todayFeedProvider);
+    final summary = ref.watch(
+      dashboardProvider.select(
+        (async) => _findSummaryFor(async.valueOrNull, category),
+      ),
+    );
+    final aiHeadline = ref.watch(
+      todayFeedProvider.select(
+        (async) => _findInsightTitleFor(async.valueOrNull, category),
+      ),
+    );
 
-    final summary = _findSummary(dashAsync.valueOrNull, category);
-    final insight = _findInsight(feedAsync.valueOrNull, category);
     final color = categoryColor(category);
     final icon = _iconFor(category);
     final name = category.displayName;
 
     final trend = summary?.trend ?? const <double>[];
-    final hasData = summary != null &&
-        trend.length >= 3 &&
-        summary.primaryValue.trim().isNotEmpty &&
-        summary.primaryValue != '—';
+    final hasData = _summaryHasData(summary);
 
     final todayValue = _lastNonNull(trend);
     final weekAverage = _average(trend);
@@ -427,18 +487,18 @@ class _CategoryCard extends ConsumerWidget {
       category: category,
       todayValue: todayValue,
       weekAverage: weekAverage,
-      aiHeadline: insight?.title,
+      aiHeadline: aiHeadline,
     );
 
     final deltaDirection =
-        _deltaDirection(category, summary?.deltaPercent);
+        _deltaDirection(summary?.deltaPercent, category);
     final deltaLabel = _deltaLabel(summary?.deltaPercent);
 
     return ZCategorySummaryCard(
       categoryName: name,
       icon: icon,
       color: color,
-      heroValue: hasData ? summary.primaryValue : '—',
+      heroValue: hasData ? summary!.primaryValue : '—',
       summaryLine: hasData ? summaryLine : 'No data yet.',
       trend: trend,
       todayIndex: trend.isNotEmpty ? trend.length - 1 : -1,
@@ -452,27 +512,6 @@ class _CategoryCard extends ConsumerWidget {
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
-
-  static CategorySummary? _findSummary(
-      DashboardData? dash, HealthCategory cat) {
-    if (dash == null) return null;
-    for (final s in dash.categories) {
-      if (s.category == cat) return s;
-    }
-    return null;
-  }
-
-  /// Returns the first insight whose category slug matches [cat.name].
-  /// Insight titles are already plain-English, so we use them verbatim as the
-  /// summary line when available.
-  static InsightCard? _findInsight(TodayFeedData? feed, HealthCategory cat) {
-    if (feed == null) return null;
-    final slug = cat.name;
-    for (final insight in feed.insights) {
-      if (insight.category.toLowerCase() == slug) return insight;
-    }
-    return null;
-  }
 
   static double? _lastNonNull(List<double> values) {
     for (var i = values.length - 1; i >= 0; i--) {
@@ -488,19 +527,26 @@ class _CategoryCard extends ConsumerWidget {
   }
 
   /// Resting heart rate is the one category in this six-card set where lower
-  /// is better, so we flip the direction there.
+  /// is better, so we flip the direction there. Returns [ZCategoryDelta.none]
+  /// if the upstream delta is missing or non-finite (NaN / Infinity) so a bad
+  /// upstream number can never crash the pill.
   static ZCategoryDelta _deltaDirection(
-      HealthCategory cat, double? deltaPercent) {
-    if (deltaPercent == null) return ZCategoryDelta.none;
-    final lowerIsBetter = cat == HealthCategory.heart;
+      double? deltaPercent, HealthCategory category) {
+    if (deltaPercent == null || !deltaPercent.isFinite) {
+      return ZCategoryDelta.none;
+    }
+    final lowerIsBetter = category == HealthCategory.heart;
     if (deltaPercent.abs() < 1.0) return ZCategoryDelta.flat;
     final isUp = deltaPercent > 0;
     final isBetter = lowerIsBetter ? !isUp : isUp;
     return isBetter ? ZCategoryDelta.better : ZCategoryDelta.worse;
   }
 
+  /// Builds the "↑ 4% vs last week" pill label. Returns `null` if the upstream
+  /// delta is missing or non-finite (NaN / Infinity) so a bad upstream number
+  /// can never crash the pill.
   static String? _deltaLabel(double? deltaPercent) {
-    if (deltaPercent == null) return null;
+    if (deltaPercent == null || !deltaPercent.isFinite) return null;
     final arrow = deltaPercent > 0
         ? '↑'
         : (deltaPercent < 0 ? '↓' : '·');
@@ -542,15 +588,20 @@ class _CategoryCard extends ConsumerWidget {
 /// Renders a "Connect a source" feature card only when fewer than three of
 /// the six visible categories have usable data. Hidden once the user has
 /// enough data flowing to fill out the page.
+///
+/// Uses `.select(...)` to watch only the integer count of populated
+/// categories, so the CTA only rebuilds when that count actually changes —
+/// not on every per-category mutation.
 class _ConnectACTAIfNeeded extends ConsumerWidget {
   const _ConnectACTAIfNeeded();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dashAsync = ref.watch(dashboardProvider);
-    final dash = dashAsync.valueOrNull;
-    final withData = _countWithData(dash);
-    if (withData >= 3) return const SizedBox.shrink();
+    final withDataCount = ref.watch(
+      dashboardProvider
+          .select((async) => _countCategoriesWithData(async.valueOrNull)),
+    );
+    if (withDataCount >= 3) return const SizedBox.shrink();
 
     final colors = AppColorsOf(context);
     return ZuralogCard(
@@ -583,25 +634,5 @@ class _ConnectACTAIfNeeded extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  static int _countWithData(DashboardData? dash) {
-    if (dash == null) return 0;
-    var count = 0;
-    for (final cat in _kVisibleCategories) {
-      final summary = dash.categories.firstWhere(
-        (s) => s.category == cat,
-        orElse: () => const CategorySummary(
-          category: HealthCategory.activity,
-          primaryValue: '',
-          trend: null,
-        ),
-      );
-      final trend = summary.trend ?? const <double>[];
-      final hasValue = summary.primaryValue.trim().isNotEmpty &&
-          summary.primaryValue != '—';
-      if (trend.length >= 3 && hasValue) count++;
-    }
-    return count;
   }
 }
