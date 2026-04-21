@@ -74,6 +74,11 @@ import 'package:zuralog/features/today/presentation/log_screens/supplements_log_
 import 'package:zuralog/features/today/presentation/log_screens/symptom_log_screen.dart';
 import 'package:zuralog/features/today/presentation/log_screens/metric_picker_screen.dart';
 
+// ── Workout (pushed over shell) ───────────────────────────────────────────────
+import 'package:zuralog/features/workout/presentation/workout_session_screen.dart';
+import 'package:zuralog/features/workout/presentation/exercise_catalogue_screen.dart';
+import 'package:zuralog/features/workout/presentation/workout_summary_screen.dart';
+
 // ── Sleep Detail (pushed over shell) ─────────────────────────────────────────
 import 'package:zuralog/features/sleep/presentation/sleep_detail_screen.dart';
 import 'package:zuralog/features/sleep/presentation/all_data/sleep_all_data_screen.dart';
@@ -366,6 +371,36 @@ List<RouteBase> _buildRoutes() {
       name: RouteNames.symptomLog,
       pageBuilder: (context, state) => const MaterialPage(
         child: SentryErrorBoundary(module: 'today.symptom_log', child: SymptomLogScreen()),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.workoutLogPath,
+      name: RouteNames.workoutLog,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: SentryErrorBoundary(
+          module: 'workout.session',
+          child: WorkoutSessionScreen(),
+        ),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.workoutExercisesPath,
+      name: RouteNames.workoutExercises,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: SentryErrorBoundary(
+          module: 'workout.exercises',
+          child: ExerciseCatalogueScreen(),
+        ),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.workoutSummaryPath,
+      name: RouteNames.workoutSummary,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: SentryErrorBoundary(
+          module: 'workout.summary',
+          child: WorkoutSummaryScreen(),
+        ),
       ),
     ),
     GoRoute(
