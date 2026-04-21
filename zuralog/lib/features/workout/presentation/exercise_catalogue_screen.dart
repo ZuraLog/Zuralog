@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/workout/domain/exercise.dart';
 import 'package:zuralog/features/workout/presentation/widgets/exercise_grid_tile.dart';
+import 'package:zuralog/features/workout/providers/exercise_bookmarks_provider.dart';
 import 'package:zuralog/features/workout/providers/exercise_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -55,7 +56,7 @@ class _ExerciseCatalogueScreenState
     final colors = AppColorsOf(context);
     final resultsAsync = ref.watch(exerciseSearchProvider);
     final currentFilter = ref.watch(exerciseMuscleGroupFilterProvider);
-    final bottomPad = MediaQuery.of(context).padding.bottom;
+    final bookmarksOnly = ref.watch(exerciseBookmarksOnlyFilterProvider);
 
     return ZuralogScaffold(
       appBar: AppBar(
@@ -90,12 +91,35 @@ class _ExerciseCatalogueScreenState
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
               children: [
+                // Bookmarks chip — first in row
+                Padding(
+                  padding: const EdgeInsets.only(right: AppDimens.spaceSm),
+                  child: ZChip(
+                    label: 'Bookmarks',
+                    icon: Icons.bookmark_rounded,
+                    isActive: bookmarksOnly,
+                    onTap: () {
+                      ref
+                          .read(exerciseBookmarksOnlyFilterProvider.notifier)
+                          .state = !bookmarksOnly;
+                      if (!bookmarksOnly) {
+                        // Activating bookmarks — clear muscle group filter.
+                        ref
+                            .read(exerciseMuscleGroupFilterProvider.notifier)
+                            .state = null;
+                      }
+                    },
+                  ),
+                ),
                 Padding(
                   padding: const EdgeInsets.only(right: AppDimens.spaceSm),
                   child: ZChip(
                     label: 'All',
-                    isActive: currentFilter == null,
+                    isActive: currentFilter == null && !bookmarksOnly,
                     onTap: () {
+                      ref
+                          .read(exerciseBookmarksOnlyFilterProvider.notifier)
+                          .state = false;
                       ref
                           .read(exerciseMuscleGroupFilterProvider.notifier)
                           .state = null;
@@ -110,6 +134,9 @@ class _ExerciseCatalogueScreenState
                       label: group.label,
                       isActive: currentFilter == group,
                       onTap: () {
+                        ref
+                            .read(exerciseBookmarksOnlyFilterProvider.notifier)
+                            .state = false;
                         ref
                             .read(exerciseMuscleGroupFilterProvider.notifier)
                             .state = currentFilter == group ? null : group;
@@ -131,10 +158,16 @@ class _ExerciseCatalogueScreenState
               data: (results) {
                 if (results.isEmpty) {
                   return Center(
-                    child: Text(
-                      'No exercises match your search.',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: colors.textSecondary,
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppDimens.spaceLg),
+                      child: Text(
+                        bookmarksOnly
+                            ? 'No bookmarked exercises yet.\nTap the bookmark icon on any exercise to save it.'
+                            : 'No exercises match your search.',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: colors.textSecondary,
+                        ),
                       ),
                     ),
                   );
@@ -164,17 +197,26 @@ class _ExerciseCatalogueScreenState
               },
             ),
           ),
-          // Add button
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppDimens.spaceMd,
-              AppDimens.spaceSm,
-              AppDimens.spaceMd,
-              AppDimens.spaceSm + bottomPad,
-            ),
-            child: ZButton(
-              label: _buttonLabel,
-              onPressed: _selected.isEmpty ? null : _submit,
+          // Add button — tight bottom bar
+          SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimens.spaceMd,
+                    AppDimens.spaceXs,
+                    AppDimens.spaceMd,
+                    AppDimens.spaceXs,
+                  ),
+                  child: ZButton(
+                    label: _buttonLabel,
+                    onPressed: _selected.isEmpty ? null : _submit,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

@@ -2,9 +2,11 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/workout/domain/exercise.dart';
+import 'package:zuralog/features/workout/providers/exercise_bookmarks_provider.dart';
 
 Color muscleGroupColor(MuscleGroup group) {
   switch (group) {
@@ -42,7 +44,7 @@ IconData muscleGroupIcon(MuscleGroup group) {
   }
 }
 
-class ExerciseGridTile extends StatelessWidget {
+class ExerciseGridTile extends ConsumerWidget {
   const ExerciseGridTile({
     super.key,
     required this.exercise,
@@ -55,9 +57,10 @@ class ExerciseGridTile extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
     final groupColor = muscleGroupColor(exercise.muscleGroup);
+    final isBookmarked = ref.watch(isBookmarkedProvider(exercise.id));
 
     return Semantics(
       button: true,
@@ -92,6 +95,28 @@ class ExerciseGridTile extends StatelessWidget {
                         muscleGroupIcon(exercise.muscleGroup),
                         size: AppDimens.emojiMd,
                         color: groupColor,
+                      ),
+                    ),
+                    // Bookmark icon — top-left
+                    Positioned(
+                      top: AppDimens.spaceSm,
+                      left: AppDimens.spaceSm,
+                      child: GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          ref
+                              .read(exerciseBookmarksProvider.notifier)
+                              .toggle(exercise.id);
+                        },
+                        child: Icon(
+                          isBookmarked
+                              ? Icons.bookmark_rounded
+                              : Icons.bookmark_border_rounded,
+                          size: 20,
+                          color: isBookmarked
+                              ? colors.primary
+                              : colors.textSecondary.withValues(alpha: 0.6),
+                        ),
                       ),
                     ),
                     if (isSelected)
