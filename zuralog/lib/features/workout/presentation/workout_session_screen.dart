@@ -196,10 +196,12 @@ class _WorkoutSessionScreenState
             ],
           ),
           // Floating rest timer overlay — anchored to the bottom of the Stack.
-          // Uses Align to be sized by its child (not stretched to fill the Stack),
-          // which was the source of the red-body-tint bug.
-          const Align(
-            alignment: Alignment.bottomCenter,
+          // Positioned(left:0, right:0, bottom:0) without a top/height constraint
+          // sizes the child to its intrinsic height, which is what we want.
+          const Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
             child: RestTimerOverlay(),
           ),
         ],
