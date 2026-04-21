@@ -94,7 +94,7 @@ class RestTimerNotifier extends StateNotifier<RestTimerState> {
     _autoDismiss = null;
     final current = state.remainingSeconds ?? 0;
     final next = current + seconds;
-    state = state.copyWith(remainingSeconds: next);
+    state = state.copyWith(remainingSeconds: next, totalSeconds: next);
     if (_ticker == null || !_ticker!.isActive) {
       _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
         if (!mounted) return;

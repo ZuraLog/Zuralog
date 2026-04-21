@@ -53,6 +53,13 @@ class _RestTimerFullSheetState extends ConsumerState<RestTimerFullSheet>
 
   @override
   Widget build(BuildContext context) {
+    // Replay slide-in animation each time the timer becomes active.
+    ref.listen<RestTimerState>(restTimerProvider, (prev, next) {
+      if (prev?.isVisible == false && next.isVisible && !next.isMinimized) {
+        _slideCtrl.forward(from: 0.0);
+      }
+    });
+
     final timer = ref.watch(restTimerProvider);
     final colors = AppColorsOf(context);
 
