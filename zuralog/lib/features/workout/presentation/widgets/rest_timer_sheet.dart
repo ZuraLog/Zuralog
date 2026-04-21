@@ -59,7 +59,14 @@ class _FullSheetBody extends ConsumerWidget {
         ? (remaining / timer.totalSeconds).clamp(0.0, 1.0)
         : 0.0;
 
-    return Material(
+    return GestureDetector(
+      onVerticalDragEnd: (details) {
+        if ((details.primaryVelocity ?? 0) > 200) {
+          HapticFeedback.selectionClick();
+          ref.read(restTimerProvider.notifier).minimize();
+        }
+      },
+      child: Material(
       color: colors.surfaceOverlay,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
@@ -137,32 +144,35 @@ class _FullSheetBody extends ConsumerWidget {
               ),
               const SizedBox(height: AppDimens.spaceLg),
               Row(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  OutlinedButton(
-                    onPressed: () {
-                      HapticFeedback.selectionClick();
-                      ref.read(restTimerProvider.notifier).addTime(30);
-                    },
-                    child: Text(
-                      '+30s',
-                      style: AppTextStyles.labelLarge
-                          .copyWith(color: colors.primary),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        HapticFeedback.selectionClick();
+                        ref.read(restTimerProvider.notifier).addTime(30);
+                      },
+                      child: Text(
+                        '+30s',
+                        style: AppTextStyles.labelLarge
+                            .copyWith(color: colors.primary),
+                      ),
                     ),
                   ),
                   const SizedBox(width: AppDimens.spaceMd),
-                  FilledButton(
-                    onPressed: () {
-                      HapticFeedback.selectionClick();
-                      ref.read(restTimerProvider.notifier).skip();
-                    },
-                    style: FilledButton.styleFrom(
-                      backgroundColor: colors.primary,
-                    ),
-                    child: Text(
-                      'Skip',
-                      style: AppTextStyles.labelLarge
-                          .copyWith(color: colors.textOnSage),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () {
+                        HapticFeedback.selectionClick();
+                        ref.read(restTimerProvider.notifier).skip();
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: colors.primary,
+                      ),
+                      child: Text(
+                        'Skip',
+                        style: AppTextStyles.labelLarge
+                            .copyWith(color: colors.textOnSage),
+                      ),
                     ),
                   ),
                 ],
@@ -171,7 +181,8 @@ class _FullSheetBody extends ConsumerWidget {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }
 
@@ -219,12 +230,14 @@ class _MiniBannerBody extends ConsumerWidget {
     final textColor = expired ? colors.primary : colors.textPrimary;
     final iconColor = expired ? colors.primary : colors.textSecondary;
 
-    return Padding(
+    return SafeArea(
+      top: false,
+      child: Padding(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceMd,
         AppDimens.spaceXs,
         AppDimens.spaceMd,
-        AppDimens.spaceXs,
+        AppDimens.spaceSm,
       ),
       child: Material(
         color: bgColor,
@@ -271,6 +284,7 @@ class _MiniBannerBody extends ConsumerWidget {
             ),
           ),
         ),
+      ),
       ),
     );
   }
