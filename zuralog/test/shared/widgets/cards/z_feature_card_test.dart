@@ -66,5 +66,25 @@ void main() {
       final overlay = tester.widget<ZPatternOverlay>(find.byType(ZPatternOverlay));
       expect(overlay.variant, ZPatternVariant.green);
     });
+
+    testWidgets('uses light-mode surface color when theme is light',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          themeMode: ThemeMode.light,
+          home: const Scaffold(
+            body: Center(
+              child: ZFeatureCard(child: SizedBox(width: 100, height: 50)),
+            ),
+          ),
+        ),
+      );
+      final container = tester.widgetList<Container>(find.byType(Container)).firstWhere(
+        (c) => c.decoration is BoxDecoration && (c.decoration as BoxDecoration).color != null,
+      );
+      final dec = container.decoration as BoxDecoration;
+      expect(dec.color, AppColors.surfaceLightNew);
+    });
   });
 }

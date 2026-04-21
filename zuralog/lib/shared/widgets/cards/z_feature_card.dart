@@ -20,7 +20,6 @@ class ZFeatureCard extends StatelessWidget {
     super.key,
     required this.child,
     this.variant = ZPatternVariant.original,
-    this.opacity = 0.07,
     this.padding = const EdgeInsets.all(AppDimens.spaceMd),
     this.borderRadius = AppDimens.shapeLg,
   });
@@ -31,9 +30,6 @@ class ZFeatureCard extends StatelessWidget {
   /// category variant (e.g. [ZPatternVariant.green]) for category-bearing
   /// cards like goal trajectory cards.
   final ZPatternVariant variant;
-
-  /// Pattern opacity. Defaults to 0.07 — the bible's feature-card spec.
-  final double opacity;
 
   /// Inner padding. Defaults to MD (16px).
   final EdgeInsetsGeometry padding;
@@ -58,11 +54,11 @@ class ZFeatureCard extends StatelessWidget {
               ),
             ),
           ),
-          // Animated pattern overlay.
+          // Animated pattern overlay — locked at the bible's 7% feature-card spec.
           Positioned.fill(
             child: ZPatternOverlay(
               variant: variant,
-              opacity: opacity,
+              opacity: 0.07,
               animate: true,
             ),
           ),
