@@ -38,6 +38,12 @@ import UIKit
             }
             self.handleMethodCall(call: call, result: result)
         }
+
+        // Register Live Activity platform channel (Phase 6 of the workout
+        // background plan). Bridge is self-contained — the static `register`
+        // method wires its own FlutterMethodChannel + handler. Holds no
+        // reference to `self`, so re-registration across hot-restart is safe.
+        WorkoutLiveActivityBridge.register(with: engineBridge.applicationRegistrar)
     }
 
     // MARK: - Timestamp Helpers

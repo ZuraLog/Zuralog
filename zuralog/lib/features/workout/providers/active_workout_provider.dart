@@ -14,6 +14,7 @@ import 'dart:async';
 import 'package:clock/clock.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/features/workout/background/live_activity_bridge.dart';
 import 'package:zuralog/features/workout/background/workout_notifications.dart';
 import 'package:zuralog/features/workout/background/workout_service_controller.dart';
 import 'package:zuralog/features/workout/providers/rest_timer_provider.dart';
@@ -146,6 +147,7 @@ final activeWorkoutSnapshotProvider = Provider<ActiveWorkoutSnapshot>((ref) {
 final workoutServiceBridgeProvider = Provider<void>((ref) {
   final controller = ref.watch(workoutServiceControllerProvider);
   final notifications = ref.watch(workoutNotificationsProvider);
+  final liveActivity = ref.watch(liveActivityBridgeProvider);
 
   // Dispatch a notification-button action (whether it came from the
   // Android foreground service or from an iOS scheduled notification)
@@ -197,10 +199,21 @@ final workoutServiceBridgeProvider = Provider<void>((ref) {
     if (prev == next) return;
     if (next) {
       controller.start();
+      // Phase 6: surface an iOS Live Activity / Dynamic Island entry as
+      // soon as the workout begins. No-op on Android and on iOS < 16.1.
+      final session = ref.read(workoutSessionProvider);
+      if (session != null) {
+        liveActivity.start(
+          LiveActivityPayload(workoutStartedAt: session.startedAt),
+        );
+      }
     } else {
       controller.stop();
       // No active workout → nothing should be queued to alert.
       notifications.cancelRestEnd();
+      // Phase 6: tear down the Live Activity in lock-step with the
+      // foreground service + scheduled notification.
+      liveActivity.end();
     }
   }, fireImmediately: true);
 
@@ -223,6 +236,31 @@ final workoutServiceBridgeProvider = Provider<void>((ref) {
     notifications.scheduleRestEnd(fireAt: fireAt);
   }
 
+  // Phase 6: push the latest rest state to the iOS Live Activity so the
+  // lock-screen + Dynamic Island countdown matches what the user sees in
+  // the app. No-op on Android and on iOS < 16.1.
+  void syncLiveActivity() {
+    final session = ref.read(workoutSessionProvider);
+    if (session == null) {
+      liveActivity.end();
+      return;
+    }
+    final rest = ref.read(restTimerProvider);
+    liveActivity.update(
+      LiveActivityPayload(
+        workoutStartedAt: session.startedAt,
+        restStartedAt: rest.restStartedAt,
+        plannedRestDurationSeconds: rest.plannedDurationSeconds,
+        addedRestSeconds: rest.addedSeconds,
+        // Exercise/set labels are not yet threaded through the
+        // session model; left blank for now — the Live Activity
+        // falls back to the "Zuralog" header + timer.
+        exerciseName: '',
+        setLabel: '',
+      ),
+    );
+  }
+
   // Nudge the service on rest changes so its SharedPreferences re-reads
   // happen promptly (rather than waiting for the next 1 Hz tick), and
   // reschedule the rest-end notification to reflect the new end time.
@@ -231,6 +269,7 @@ final workoutServiceBridgeProvider = Provider<void>((ref) {
     (_, _) {
       controller.nudge();
       rescheduleRestEnd();
+      syncLiveActivity();
     },
   );
   ref.listen(
@@ -238,6 +277,7 @@ final workoutServiceBridgeProvider = Provider<void>((ref) {
     (_, _) {
       controller.nudge();
       rescheduleRestEnd();
+      syncLiveActivity();
     },
   );
 });

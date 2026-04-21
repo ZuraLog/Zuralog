@@ -101,6 +101,10 @@
 			<string>strava</string>
 			<string>calai</string>
 		</array>
+		<!-- Phase 6: enables ActivityKit Live Activities + Dynamic Island.
+		     Required flag; without it Activity.request(...) throws unsupported. -->
+		<key>NSSupportsLiveActivities</key>
+		<true/>
 		<key>NSHealthShareUsageDescription</key>
 		<string>Zuralog needs access to your health data (steps, workouts, nutrition, sleep, heart rate, HRV, VO2 max, and other vitals) to provide personalized AI coaching and track your fitness goals.</string>
 		<key>NSHealthUpdateUsageDescription</key>
