@@ -177,7 +177,7 @@ class _WorkoutSessionScreenState
                     padding: const EdgeInsets.only(bottom: AppDimens.spaceLg),
                     itemCount: exercises.length,
                     itemBuilder: (_, i) => WorkoutExerciseCard(
-                      key: ValueKey('exercise-$i'),
+                      key: ValueKey(exercises[i].exerciseId),
                       exercise: exercises[i],
                     ),
                   ),

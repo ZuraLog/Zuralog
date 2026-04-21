@@ -35,6 +35,7 @@ import 'package:zuralog/features/workout/domain/workout_session.dart';
 
 const String kWorkoutActiveDraftKey = 'workout_active_draft';
 const String kWorkoutExerciseUnitKeyPrefix = 'workout_exercise_unit_';
+const Object _kNotSet = Object();
 const _uuid = Uuid();
 
 class WorkoutSessionNotifier extends StateNotifier<WorkoutSession?> {
@@ -128,19 +129,26 @@ class WorkoutSessionNotifier extends StateNotifier<WorkoutSession?> {
   void updateSet(
     String exerciseId,
     int setIndex, {
-    double? weightValue,
-    int? reps,
+    Object? weightValue = _kNotSet,
+    Object? reps = _kNotSet,
     bool? isCompleted,
     SetType? type,
   }) {
     _mutateExercise(exerciseId, (ex) {
       if (setIndex < 0 || setIndex >= ex.sets.length) return ex;
       final sets = [...ex.sets];
-      sets[setIndex] = sets[setIndex].copyWith(
-        weightValue: weightValue,
-        reps: reps,
-        isCompleted: isCompleted,
-        type: type,
+      final s = sets[setIndex];
+      sets[setIndex] = WorkoutSet(
+        setNumber: s.setNumber,
+        type: type ?? s.type,
+        weightValue: identical(weightValue, _kNotSet)
+            ? s.weightValue
+            : (weightValue as num?)?.toDouble(),
+        reps: identical(reps, _kNotSet)
+            ? s.reps
+            : (reps as num?)?.toInt(),
+        isCompleted: isCompleted ?? s.isCompleted,
+        previousRecord: s.previousRecord,
       );
       return ex.copyWith(sets: sets);
     });
@@ -277,12 +285,14 @@ final workoutSessionProvider =
 });
 
 final workoutDurationProvider = StreamProvider<Duration>((ref) {
-  final session = ref.watch(workoutSessionProvider);
-  if (session == null) {
+  // Only watch startedAt — set updates must not restart the timer.
+  final started = ref.watch(
+    workoutSessionProvider.select((s) => s?.startedAt),
+  );
+  if (started == null) {
     return Stream<Duration>.value(Duration.zero);
   }
-  final started = session.startedAt;
-  final controller = StreamController<Duration>();
+  final controller = StreamController<Duration>(sync: true);
   controller.add(DateTime.now().difference(started));
   final timer = Timer.periodic(const Duration(seconds: 1), (_) {
     controller.add(DateTime.now().difference(started));

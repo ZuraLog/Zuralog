@@ -381,10 +381,16 @@ class _SetRowState extends ConsumerState<_SetRow> {
   @override
   void didUpdateWidget(covariant _SetRow old) {
     super.didUpdateWidget(old);
-    final w = widget.set.weightValue?.toString() ?? '';
-    if (_weightCtrl.text != w) _weightCtrl.text = w;
-    final r = widget.set.reps?.toString() ?? '';
-    if (_repsCtrl.text != r) _repsCtrl.text = r;
+    // Compare numerically so typing "100" doesn't get overwritten with "100.0".
+    // Only update the field when the stored value genuinely differs (e.g. unit toggle).
+    final newW = widget.set.weightValue;
+    if (double.tryParse(_weightCtrl.text) != newW) {
+      _weightCtrl.text = newW?.toString() ?? '';
+    }
+    final newR = widget.set.reps;
+    if (int.tryParse(_repsCtrl.text) != newR) {
+      _repsCtrl.text = newR?.toString() ?? '';
+    }
   }
 
   @override
