@@ -1,19 +1,15 @@
-/// Insight Detail Screen — pushed from Today Feed.
+/// Insight Detail Screen — editorial full-screen view of a single AI insight.
 ///
-/// Full-screen explanation of a single AI insight: charts, data sources,
-/// AI reasoning, and "Discuss with Coach" action.
-///
-/// Full implementation: Phase 3, Task 3.2.
-/// Design elevation: Phase 3 elevation pass — editorial animations & micro-interactions.
+/// The screen is a thin composition: editorial header → category body
+/// slivers (dispatched on `detail.category`) → AI reasoning → data
+/// sources → Discuss-with-Coach pill. Category-specific bodies live in
+/// `widgets/<category>_insight_body.dart`.
 library;
 
-import 'dart:math' as math;
-
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/analytics/analytics_events.dart';
@@ -26,20 +22,17 @@ import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/core/theme/category_colors.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
+import 'package:zuralog/features/today/presentation/widgets/activity_insight_body.dart';
+import 'package:zuralog/features/today/presentation/widgets/generic_insight_body.dart';
+import 'package:zuralog/features/today/presentation/widgets/heart_insight_body.dart';
+import 'package:zuralog/features/today/presentation/widgets/nutrition_insight_body.dart';
+import 'package:zuralog/features/today/presentation/widgets/sleep_insight_body.dart';
+import 'package:zuralog/features/today/presentation/widgets/streak_insight_body.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
-// ── InsightDetailScreen ───────────────────────────────────────────────────────
-
-/// Full-screen insight detail with charts, AI reasoning, and sources.
-///
-/// Navigated to via a named push route; uses a slide-up transition defined
-/// in [AppRouter]. The [insightId] is read from the route path parameter.
 class InsightDetailScreen extends ConsumerStatefulWidget {
-  /// Creates an [InsightDetailScreen] for the given [insightId].
   const InsightDetailScreen({super.key, required this.insightId});
-
-  /// The ID of the insight to display.
   final String insightId;
 
   @override
@@ -53,7 +46,6 @@ class _InsightDetailScreenState extends ConsumerState<InsightDetailScreen> {
   @override
   void initState() {
     super.initState();
-    // Mark as read when opened.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref
           .read(todayRepositoryProvider)
@@ -65,8 +57,6 @@ class _InsightDetailScreenState extends ConsumerState<InsightDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final detailAsync = ref.watch(insightDetailProvider(widget.insightId));
-
-    // Fire viewed event once when detail data is first available.
     detailAsync.whenOrNull(data: (detail) {
       if (!_viewEventFired) {
         _viewEventFired = true;
@@ -80,7 +70,6 @@ class _InsightDetailScreenState extends ConsumerState<InsightDetailScreen> {
               'category': detail.category,
             },
           );
-          // First-use guard.
           SharedPreferences.getInstance().then((prefs) {
             if (prefs.getBool('analytics_first_insight_viewed') != true) {
               prefs.setBool('analytics_first_insight_viewed', true);
@@ -105,19 +94,11 @@ class _InsightDetailScreenState extends ConsumerState<InsightDetailScreen> {
           ),
           onPressed: () => context.pop(),
         ),
-        title: detailAsync.whenOrNull(
-          data: (detail) => Text(
-            _categoryLabel(detail.category),
-            style: AppTextStyles.bodySmall.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
       ),
       body: detailAsync.when(
         data: (detail) => _DetailBody(detail: detail),
         loading: () => const _DetailSkeleton(),
-        error: (e, _) => _DetailError(
+        error: (e, st) => _DetailError(
           onRetry: () =>
               ref.invalidate(insightDetailProvider(widget.insightId)),
         ),
@@ -126,11 +107,10 @@ class _InsightDetailScreenState extends ConsumerState<InsightDetailScreen> {
   }
 }
 
-// ── _DetailBody ───────────────────────────────────────────────────────────────
+// ── _DetailBody ──────────────────────────────────────────────────────────────
 
 class _DetailBody extends ConsumerWidget {
   const _DetailBody({required this.detail});
-
   final InsightDetail detail;
 
   @override
@@ -139,264 +119,40 @@ class _DetailBody extends ConsumerWidget {
     final categoryColor = categoryColorFromString(detail.category);
 
     return CustomScrollView(
-        slivers: [
-        // ── Header: full-bleed category gradient wash + title ─────────────
+      slivers: [
         SliverToBoxAdapter(
-          child: ZFadeSlideIn(
-            delay: Duration.zero,
-            child: Stack(
-              children: [
-                // Edge-to-edge category-color gradient wash (10% opacity).
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            categoryColor.withValues(alpha: 0.10),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppDimens.spaceMd,
-                    AppDimens.spaceSm,
-                    AppDimens.spaceMd,
-                    AppDimens.spaceMd,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          ZIconBadge(
-                            icon: _insightIcon(detail.type),
-                            color: categoryColor,
-                            size: 48,
-                            iconSize: 24,
-                          ),
-                          const SizedBox(width: AppDimens.spaceMd),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        categoryColor.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(
-                                      AppDimens.radiusChip,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    _insightTypeLabel(detail.type),
-                                     style: AppTextStyles.labelSmall.copyWith(
-                                      color: categoryColor,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppDimens.spaceMd),
-                      Text(
-                        detail.title,
-                        style: AppTextStyles.displayLarge.copyWith(
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: AppDimens.spaceSm),
-                      Text(
-                        detail.summary,
-                        style: AppTextStyles.bodyLarge.copyWith(
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+          child: _EditorialHeader(detail: detail, categoryColor: categoryColor),
         ),
-
-        // ── Chart ─────────────────────────────────────────────────────────
-        if (detail.dataPoints.isNotEmpty)
+        const SliverToBoxAdapter(child: SizedBox(height: AppDimens.spaceMd)),
+        ..._categoryBodySlivers(detail, context, ref),
+        if (detail.reasoning.isNotEmpty) ...[
+          const SliverToBoxAdapter(child: SizedBox(height: AppDimens.spaceLg)),
           SliverToBoxAdapter(
-            child: ZFadeSlideIn(
-              delay: const Duration(milliseconds: 80),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceMd,
-                  vertical: AppDimens.spaceSm,
-                ),
-                child: _InsightChart(
-                  detail: detail,
-                  categoryColor: categoryColor,
-                ),
-              ),
-            ),
-          ),
-
-        // ── AI Reasoning ──────────────────────────────────────────────────
-        SliverToBoxAdapter(
-          child: ZFadeSlideIn(
-            delay: const Duration(milliseconds: 130),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppDimens.spaceMd,
-                AppDimens.spaceLg,
-                AppDimens.spaceMd,
-                AppDimens.spaceSm,
-              ),
-              child: Text(
-                'AI Analysis',
-                style: AppTextStyles.titleMedium.copyWith(
-                  color: colors.textPrimary,
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        SliverToBoxAdapter(
-          child: ZFadeSlideIn(
-            delay: const Duration(milliseconds: 160),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDimens.spaceMd,
-              ),
-              // Sage-green left border stripe on reasoning card.
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Container(
-                      width: 3,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(width: AppDimens.spaceSm),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(AppDimens.spaceMd),
-                        decoration: BoxDecoration(
-                          color: colors.cardBackground,
-                          borderRadius: BorderRadius.circular(
-                            AppDimens.radiusCard,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.psychology_outlined,
-                                  size: AppDimens.iconMd,
-                                  color:
-                                      colors.primary.withValues(alpha: 0.8),
-                                ),
-                                const SizedBox(width: AppDimens.spaceSm),
-                                 Text(
-                                   'Reasoning',
-                                   style: AppTextStyles.bodySmall.copyWith(
-                                     color: colors.textSecondary,
-                                     fontWeight: FontWeight.w600,
-                                   ),
-                                 ),
-                               ],
-                             ),
-                             const SizedBox(height: AppDimens.spaceSm),
-                             Text(
-                               detail.reasoning.isNotEmpty
-                                   ? detail.reasoning
-                                   : 'This insight was generated from your recent health data.',
-                               style: AppTextStyles.bodyLarge.copyWith(
-                                 color: colors.textPrimary,
-                                 height: 1.55,
-                               ),
-                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        // ── Data Sources ──────────────────────────────────────────────────
-        if (detail.sources.isNotEmpty) ...[
-          SliverToBoxAdapter(
-            child: ZFadeSlideIn(
-              delay: const Duration(milliseconds: 200),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceLg,
-                  AppDimens.spaceMd,
-                  AppDimens.spaceSm,
-                ),
-                child: Text(
-                  'Data Sources',
-                  style: AppTextStyles.titleMedium.copyWith(
-                    color: colors.textPrimary,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: ZFadeSlideIn(
-              delay: const Duration(milliseconds: 220),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceMd,
-                ),
-                child: Wrap(
-                  spacing: AppDimens.spaceSm,
-                  runSpacing: AppDimens.spaceSm,
-                  children: [
-                    for (final src in detail.sources) _SourceChip(source: src),
-                  ],
-                ),
-              ),
+            child: _AIReasoningBlock(
+              reasoning: detail.reasoning,
+              primary: colors.primary,
             ),
           ),
         ],
-
-        // ── Discuss with Coach CTA ─────────────────────────────────────
+        if (detail.sources.isNotEmpty) ...[
+          const SliverToBoxAdapter(child: SizedBox(height: AppDimens.spaceLg)),
+          SliverToBoxAdapter(
+            child: _SourcesBlock(sources: detail.sources),
+          ),
+        ],
         SliverToBoxAdapter(
-          child: ZFadeSlideIn(
-            delay: const Duration(milliseconds: 260),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppDimens.spaceMd,
-                AppDimens.spaceLg,
-                AppDimens.spaceMd,
-                AppDimens.spaceXxl,
-              ),
-              child: ZButton(
-                label: 'Discuss with Coach',
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppDimens.spaceMd,
+              AppDimens.spaceLg,
+              AppDimens.spaceMd,
+              AppDimens.spaceXxl,
+            ),
+            child: ZFadeSlideIn(
+              delay: const Duration(milliseconds: 260),
+              child: ZPatternPillButton(
                 icon: Icons.chat_bubble_outline_rounded,
+                label: 'Discuss with Coach',
                 onPressed: () {
                   ref.read(hapticServiceProvider).medium();
                   ref.read(analyticsServiceProvider).capture(
@@ -406,9 +162,9 @@ class _DetailBody extends ConsumerWidget {
                       'insight_type': detail.type.name,
                     },
                   );
-                  final prefill = 'I\'d like to discuss this insight: ${detail.title}'.length > 500
-                      ? 'I\'d like to discuss this insight: ${detail.title}'.substring(0, 500)
-                      : 'I\'d like to discuss this insight: ${detail.title}';
+                  final raw = "I'd like to discuss this insight: "
+                      "${detail.title}";
+                  final prefill = raw.length > 500 ? raw.substring(0, 500) : raw;
                   ref.read(coachPrefillProvider.notifier).state = prefill;
                   context.go(RouteNames.coachPath);
                 },
@@ -416,208 +172,302 @@ class _DetailBody extends ConsumerWidget {
             ),
           ),
         ),
-        ],
-      );
-  }
-}
-
-// ── _PressScaleButton ─────────────────────────────────────────────────────────
-
-/// Wraps any widget with a spring press-scale effect.
-class _PressScaleButton extends StatelessWidget {
-  const _PressScaleButton({required this.child, required this.onPressed});
-
-  final Widget child;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return ZuralogSpringButton(
-      onTap: onPressed,
-      child: child,
+      ],
     );
   }
+
+  List<Widget> _categoryBodySlivers(
+    InsightDetail detail,
+    BuildContext context,
+    WidgetRef ref,
+  ) {
+    switch (detail.category) {
+      case 'sleep':
+        return sleepInsightSlivers(context, ref);
+      case 'heart':
+        return heartInsightSlivers(context, ref);
+      case 'nutrition':
+        return nutritionInsightSlivers(context, ref);
+      case 'activity':
+        return activityInsightSlivers(context, ref, detail);
+      case 'streak':
+        return streakInsightSlivers(context, ref);
+      default:
+        return genericInsightSlivers(context, ref, detail);
+    }
+  }
 }
 
-// ── _InsightChart ─────────────────────────────────────────────────────────────
+// ── Editorial header ─────────────────────────────────────────────────────────
 
-/// Bar chart rendered from [InsightDetail.dataPoints].
-class _InsightChart extends StatelessWidget {
-  const _InsightChart({
-    required this.detail,
-    required this.categoryColor,
-  });
-
+class _EditorialHeader extends StatelessWidget {
+  const _EditorialHeader({required this.detail, required this.categoryColor});
   final InsightDetail detail;
   final Color categoryColor;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final points = detail.dataPoints;
-    final maxY = points.map((p) => p.value).reduce(math.max) * 1.2;
-
-    return Container(
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return ZFadeSlideIn(
+      child: Stack(
         children: [
-          if (detail.chartTitle != null) ...[
-            Text(
-              detail.chartTitle!,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: colors.textSecondary,
+          Positioned.fill(
+            child: IgnorePointer(
+              child: ZPatternOverlay(
+                variant: _patternVariantForCategory(detail.category),
+                opacity: 0.06,
+                animate: true,
               ),
-            ),
-            const SizedBox(height: AppDimens.spaceMd),
-          ],
-          SizedBox(
-            height: 160,
-            child: BarChart(
-              BarChartData(
-                maxY: maxY,
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: maxY / 4,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: colors.border.withValues(alpha: 0.3),
-                    strokeWidth: 1,
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                titlesData: FlTitlesData(
-                  leftTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 24,
-                      getTitlesWidget: (value, meta) {
-                        final idx = value.toInt();
-                        if (idx < 0 || idx >= points.length) {
-                          return const SizedBox.shrink();
-                        }
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            points[idx].label,
-                            style: AppTextStyles.labelSmall.copyWith(
-                              color: AppColors.textTertiary,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                barGroups: [
-                  for (var i = 0; i < points.length; i++)
-                    BarChartGroupData(
-                      x: i,
-                      barRods: [
-                        BarChartRodData(
-                          toY: points[i].value,
-                          color: categoryColor,
-                          width: 16,
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(4),
-                          ),
-                          backDrawRodData: BackgroundBarChartRodData(
-                            show: true,
-                            toY: maxY,
-                            color: categoryColor.withValues(alpha: 0.08),
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-                barTouchData: BarTouchData(
-                  touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (_) => colors.surface,
-                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                      final unit = detail.chartUnit ?? '';
-                      return BarTooltipItem(
-                        '${rod.toY.toStringAsFixed(1)} $unit',
-                        AppTextStyles.bodySmall.copyWith(
-                          color: colors.textPrimary,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-              duration: const Duration(milliseconds: 400),
             ),
           ),
-          if (detail.chartUnit != null) ...[
-            const SizedBox(height: AppDimens.spaceXs),
-            Text(
-              detail.chartUnit!,
-              style: AppTextStyles.labelSmall.copyWith(
-                color: AppColors.textTertiary,
-              ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppDimens.spaceMd,
+              AppDimens.spaceSm,
+              AppDimens.spaceMd,
+              AppDimens.spaceMd,
             ),
-          ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: categoryColor.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    _chipLabel(detail).toUpperCase(),
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: categoryColor,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppDimens.spaceMd),
+                Text(
+                  detail.title,
+                  style: GoogleFonts.lora(
+                    textStyle: AppTextStyles.displayLarge.copyWith(
+                      color: colors.textPrimary,
+                      height: 1.2,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppDimens.spaceSm),
+                Text(
+                  detail.summary,
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    color: colors.textPrimary,
+                    height: 1.55,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
+
+  String _chipLabel(InsightDetail detail) {
+    final cat = detail.category.isEmpty ? 'health' : detail.category;
+    final type = _insightTypeLabel(detail.type);
+    return '$cat · $type';
+  }
 }
 
-// ── _SourceChip ───────────────────────────────────────────────────────────────
+ZPatternVariant _patternVariantForCategory(String category) {
+  switch (category) {
+    case 'sleep':
+      return ZPatternVariant.periwinkle;
+    case 'activity':
+      return ZPatternVariant.green;
+    case 'heart':
+      return ZPatternVariant.rose;
+    case 'nutrition':
+      return ZPatternVariant.amber;
+    default:
+      return ZPatternVariant.sage;
+  }
+}
 
-class _SourceChip extends StatelessWidget {
-  const _SourceChip({required this.source});
+String _insightTypeLabel(InsightType type) {
+  switch (type) {
+    case InsightType.anomaly:
+      return 'Anomaly';
+    case InsightType.correlation:
+      return 'Correlation';
+    case InsightType.trend:
+      return 'Trend';
+    case InsightType.recommendation:
+      return 'Recommendation';
+    case InsightType.achievement:
+      return 'Achievement';
+    case InsightType.unknown:
+      return 'Insight';
+  }
+}
 
-  final InsightSource source;
+// ── AI reasoning block ───────────────────────────────────────────────────────
+
+class _AIReasoningBlock extends StatelessWidget {
+  const _AIReasoningBlock({required this.reasoning, required this.primary});
+  final String reasoning;
+  final Color primary;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppDimens.radiusChip),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            _sourceIcon(source.iconName),
-            size: 14,
-            color: colors.textSecondary,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            source.name,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: colors.textSecondary,
+    return ZFadeSlideIn(
+      delay: const Duration(milliseconds: 160),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
+              child: Text(
+                'AI Analysis',
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: colors.textPrimary,
+                ),
+              ),
             ),
-          ),
-        ],
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    width: 3,
+                    decoration: BoxDecoration(
+                      color: primary,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: AppDimens.spaceSm),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(AppDimens.spaceMd),
+                      decoration: BoxDecoration(
+                        color: colors.cardBackground,
+                        borderRadius: BorderRadius.circular(
+                          AppDimens.radiusCard,
+                        ),
+                      ),
+                      child: Text(
+                        reasoning,
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          color: colors.textPrimary,
+                          height: 1.55,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-// ── _DetailSkeleton ───────────────────────────────────────────────────────────
+// ── Sources block ────────────────────────────────────────────────────────────
+
+class _SourcesBlock extends StatelessWidget {
+  const _SourcesBlock({required this.sources});
+  final List<InsightSource> sources;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return ZFadeSlideIn(
+      delay: const Duration(milliseconds: 220),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
+              child: Text(
+                'Data sources',
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: colors.textPrimary,
+                ),
+              ),
+            ),
+            Wrap(
+              spacing: AppDimens.spaceSm,
+              runSpacing: AppDimens.spaceSm,
+              children: [
+                for (final src in sources)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colors.surface,
+                      borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _sourceIcon(src.iconName),
+                          size: 14,
+                          color: colors.textSecondary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          src.name,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _sourceIcon(String iconName) {
+    switch (iconName.toLowerCase()) {
+      case 'apple_health':
+        return Icons.favorite_rounded;
+      case 'strava':
+        return Icons.directions_run_rounded;
+      case 'fitbit':
+        return Icons.watch_rounded;
+      case 'garmin':
+        return Icons.gps_fixed_rounded;
+      case 'whoop':
+        return Icons.monitor_heart_rounded;
+      case 'oura':
+        return Icons.ring_volume_rounded;
+      default:
+        return Icons.device_hub_rounded;
+    }
+  }
+}
+
+// ── Skeleton & error states ──────────────────────────────────────────────────
 
 class _DetailSkeleton extends StatelessWidget {
   const _DetailSkeleton();
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -625,28 +475,25 @@ class _DetailSkeleton extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const ZLoadingSkeleton(width: 200, height: 34),
-          const SizedBox(height: AppDimens.spaceMd),
-          const ZLoadingSkeleton(width: double.infinity, height: 16),
-          const SizedBox(height: 8),
-          const ZLoadingSkeleton(width: 280, height: 16),
-          const SizedBox(height: AppDimens.spaceLg),
-          const ZLoadingSkeleton(width: double.infinity, height: 180),
-          const SizedBox(height: AppDimens.spaceLg),
-          const ZLoadingSkeleton(width: 120, height: 18),
-          const SizedBox(height: AppDimens.spaceSm),
-          const ZLoadingSkeleton(width: double.infinity, height: 100),
+          ZLoadingSkeleton(width: 200, height: 34),
+          SizedBox(height: AppDimens.spaceMd),
+          ZLoadingSkeleton(width: double.infinity, height: 16),
+          SizedBox(height: 8),
+          ZLoadingSkeleton(width: 280, height: 16),
+          SizedBox(height: AppDimens.spaceLg),
+          ZLoadingSkeleton(width: double.infinity, height: 180),
+          SizedBox(height: AppDimens.spaceLg),
+          ZLoadingSkeleton(width: 120, height: 18),
+          SizedBox(height: AppDimens.spaceSm),
+          ZLoadingSkeleton(width: double.infinity, height: 100),
         ],
       ),
     );
   }
 }
 
-// ── _DetailError ──────────────────────────────────────────────────────────────
-
 class _DetailError extends StatelessWidget {
   const _DetailError({required this.onRetry});
-
   final VoidCallback onRetry;
 
   @override
@@ -679,69 +526,5 @@ class _DetailError extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-/// Returns a display label for an [InsightType].
-String _insightTypeLabel(InsightType type) {
-  switch (type) {
-    case InsightType.anomaly:
-      return 'Anomaly';
-    case InsightType.correlation:
-      return 'Correlation';
-    case InsightType.trend:
-      return 'Trend';
-    case InsightType.recommendation:
-      return 'Recommendation';
-    case InsightType.achievement:
-      return 'Achievement';
-    case InsightType.unknown:
-      return 'Insight';
-  }
-}
-
-/// Returns the title-cased category label.
-String _categoryLabel(String category) =>
-    category.isEmpty
-        ? 'Health'
-        : category[0].toUpperCase() + category.substring(1);
-
-/// Returns an icon for the given [InsightType].
-IconData _insightIcon(InsightType type) {
-  switch (type) {
-    case InsightType.anomaly:
-      return Icons.warning_amber_rounded;
-    case InsightType.correlation:
-      return Icons.compare_arrows_rounded;
-    case InsightType.trend:
-      return Icons.trending_up_rounded;
-    case InsightType.recommendation:
-      return Icons.tips_and_updates_rounded;
-    case InsightType.achievement:
-      return Icons.emoji_events_rounded;
-    case InsightType.unknown:
-      return Icons.lightbulb_outline_rounded;
-  }
-}
-
-/// Returns a material icon for an integration source icon name.
-IconData _sourceIcon(String iconName) {
-  switch (iconName.toLowerCase()) {
-    case 'apple_health':
-      return Icons.favorite_rounded;
-    case 'strava':
-      return Icons.directions_run_rounded;
-    case 'fitbit':
-      return Icons.watch_rounded;
-    case 'garmin':
-      return Icons.gps_fixed_rounded;
-    case 'whoop':
-      return Icons.monitor_heart_rounded;
-    case 'oura':
-      return Icons.ring_volume_rounded;
-    default:
-      return Icons.device_hub_rounded;
   }
 }
