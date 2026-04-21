@@ -89,7 +89,7 @@ final exerciseBookmarksProvider = StateNotifierProvider<
 /// This is a convenience provider for widgets that need to check the bookmark
 /// status of a single exercise. It watches [exerciseBookmarksProvider] and
 /// returns `true` if the exercise ID is in the set of bookmarks.
-final isBookmarkedProvider = Provider.family.autoDispose<bool, String>(
+final isBookmarkedProvider = Provider.family<bool, String>(
   (ref, exerciseId) {
     return ref.watch(exerciseBookmarksProvider).contains(exerciseId);
   },

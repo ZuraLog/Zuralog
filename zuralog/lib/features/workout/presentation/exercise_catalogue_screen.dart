@@ -203,7 +203,7 @@ class _ExerciseCatalogueScreenState
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Divider(height: 1),
+                const ZDivider(),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppDimens.spaceMd,

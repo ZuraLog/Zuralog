@@ -102,6 +102,7 @@ class ExerciseGridTile extends ConsumerWidget {
                       top: AppDimens.spaceSm,
                       left: AppDimens.spaceSm,
                       child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
                         onTap: () {
                           HapticFeedback.selectionClick();
                           ref
