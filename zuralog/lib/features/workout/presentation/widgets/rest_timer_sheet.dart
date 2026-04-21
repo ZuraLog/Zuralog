@@ -70,7 +70,7 @@ class _FullSheetBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
 
-    final remaining = timer.remainingSeconds ?? 0;
+    final remaining = timer.remainingSecondsInt;
     final minutes = remaining ~/ 60;
     final seconds = remaining % 60;
     final timeStr =
@@ -238,7 +238,7 @@ class _MiniBannerBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
-    final remaining = timer.remainingSeconds ?? 0;
+    final remaining = timer.remainingSecondsInt;
     final minutes = remaining ~/ 60;
     final seconds = remaining % 60;
     final timeStr =
