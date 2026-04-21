@@ -282,6 +282,113 @@ void main() {
       notifier.updateSet('bench_press', 99, weightValue: 100, reps: 5);
       expect(container.read(workoutSessionProvider), equals(before));
     });
+
+    test('removeSet refuses to remove last set', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final container = _containerWith(prefs);
+      addTearDown(container.dispose);
+      final notifier = container.read(workoutSessionProvider.notifier);
+      notifier.startSession();
+      notifier.addExercises([_bench]);
+      notifier.removeExercise('squat');
+      // Bench has default 2 sets; remove both
+      notifier.removeSet('bench_press', 1);
+      expect(
+        container.read(workoutSessionProvider)!.exercises.single.sets,
+        hasLength(1),
+      );
+      // Try to remove the last set — should be refused
+      final before = container.read(workoutSessionProvider)!;
+      notifier.removeSet('bench_press', 0);
+      expect(container.read(workoutSessionProvider), equals(before));
+    });
+
+    test('removeSet removes at index and renumbers working sets', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final container = _containerWith(prefs);
+      addTearDown(container.dispose);
+      final notifier = container.read(workoutSessionProvider.notifier);
+      notifier.startSession();
+      notifier.addExercises([_bench]);
+      // Default: [warmUp(setNumber:1), working(setNumber:2)]
+      // addSet appends working(setNumber:3)
+      // addSet appends working(setNumber:4)
+      notifier.addSet('bench_press');
+      notifier.addSet('bench_press');
+      // Now: [W(1), W(2), W(3), W(4)]
+      var sets =
+          container.read(workoutSessionProvider)!.exercises.single.sets;
+      expect(sets, hasLength(4));
+      expect(sets[0].type, SetType.warmUp);
+      expect(sets[0].setNumber, 1);
+      expect(sets[1].type, SetType.working);
+      expect(sets[1].setNumber, 2);
+      expect(sets[2].type, SetType.working);
+      expect(sets[2].setNumber, 3);
+      expect(sets[3].type, SetType.working);
+      expect(sets[3].setNumber, 4);
+
+      // Remove set at index 2 (working set with setNumber 3)
+      notifier.removeSet('bench_press', 2);
+      sets = container.read(workoutSessionProvider)!.exercises.single.sets;
+      expect(sets, hasLength(3));
+      // After removal, working sets should be renumbered: [W(1), W(1), W(2)]
+      // (the warmUp stays unchanged, working sets get renumbered)
+      expect(sets[0].type, SetType.warmUp);
+      expect(sets[0].setNumber, 1); // unchanged
+      expect(sets[1].type, SetType.working);
+      expect(sets[1].setNumber, 1); // renumbered from 2
+      expect(sets[2].type, SetType.working);
+      expect(sets[2].setNumber, 2); // renumbered from 4
+    });
+
+    test(
+        'removeSet with out-of-bounds index leaves state unchanged', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final container = _containerWith(prefs);
+      addTearDown(container.dispose);
+      final notifier = container.read(workoutSessionProvider.notifier);
+      notifier.startSession();
+      notifier.addExercises([_bench]);
+      final before = container.read(workoutSessionProvider)!;
+      notifier.removeSet('bench_press', 99);
+      expect(container.read(workoutSessionProvider), equals(before));
+    });
+
+    test(
+        'removeSet preserves non-working set types and does not renumber them',
+        () async {
+      final prefs = await SharedPreferences.getInstance();
+      final container = _containerWith(prefs);
+      addTearDown(container.dispose);
+      final notifier = container.read(workoutSessionProvider.notifier);
+      notifier.startSession();
+      notifier.addExercises([_bench]);
+      // Default: [warmUp(1), working(2)]
+      // Add and modify: [warmUp(1), working(2), dropSet(3)]
+      notifier.addSet('bench_press'); // Add third set as working(3)
+      notifier.updateSet('bench_press', 2, type: SetType.dropSet);
+
+      var sets =
+          container.read(workoutSessionProvider)!.exercises.single.sets;
+      expect(sets, hasLength(3));
+      expect(sets[0].type, SetType.warmUp);
+      expect(sets[0].setNumber, 1);
+      expect(sets[1].type, SetType.working);
+      expect(sets[1].setNumber, 2);
+      expect(sets[2].type, SetType.dropSet);
+      expect(sets[2].setNumber, 3);
+
+      // Remove set at index 1 (working set with setNumber 2)
+      notifier.removeSet('bench_press', 1);
+      sets = container.read(workoutSessionProvider)!.exercises.single.sets;
+      expect(sets, hasLength(2));
+      // Should be: [warmUp(1), dropSet(3)]
+      expect(sets[0].type, SetType.warmUp);
+      expect(sets[0].setNumber, 1); // unchanged
+      expect(sets[1].type, SetType.dropSet);
+      expect(sets[1].setNumber, 3); // unchanged - non-working sets don't get renumbered
+    });
   });
 
   group('finishSession', () {

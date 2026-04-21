@@ -212,6 +212,23 @@ class WorkoutSessionNotifier extends StateNotifier<WorkoutSession?> {
     });
   }
 
+  void removeSet(String exerciseId, int setIndex) {
+    _mutateExercise(exerciseId, (ex) {
+      if (ex.sets.length <= 1) return ex;
+      if (setIndex < 0 || setIndex >= ex.sets.length) return ex;
+      final remaining = [...ex.sets]..removeAt(setIndex);
+      var workingCounter = 0;
+      final renumbered = remaining.map((s) {
+        if (s.type == SetType.working) {
+          workingCounter++;
+          return s.copyWith(setNumber: workingCounter);
+        }
+        return s;
+      }).toList(growable: false);
+      return ex.copyWith(sets: renumbered);
+    });
+  }
+
   void updateSet(
     String exerciseId,
     int setIndex, {
