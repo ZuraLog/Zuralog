@@ -647,14 +647,21 @@ class _BottomNavCluster extends StatelessWidget {
           final expandedWidth =
               (constraints.maxWidth - _logPillWidth - AppDimens.spaceSm)
                   .clamp(_collapsedWidth, double.infinity);
+          // Nav + gap + log pill always sums to the same total so the
+          // Row never overflows during the animation: when nav shrinks,
+          // the gap grows by the exact same amount. Both sides animate
+          // on identical duration + curve so they stay in sync.
           final navWidth =
               isCollapsed ? _collapsedWidth : expandedWidth;
+          final gapWidth = expandedWidth + AppDimens.spaceSm - navWidth;
+          const animDuration = Duration(milliseconds: 280);
+          const animCurve = Curves.easeOutCubic;
           return Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               AnimatedContainer(
-                duration: const Duration(milliseconds: 280),
-                curve: Curves.easeOutCubic,
+                duration: animDuration,
+                curve: animCurve,
                 width: navWidth,
                 child: _FrostedNavigationBar(
                   currentIndex: currentIndex,
@@ -664,15 +671,11 @@ class _BottomNavCluster extends StatelessWidget {
                   expandedWidth: expandedWidth,
                 ),
               ),
-              if (!isCollapsed) const SizedBox(width: AppDimens.spaceSm),
-              // Reserve the full gap when collapsed so the log pill stays in
-              // the same horizontal spot and the nav visually "shrinks into"
-              // the left side.
-              if (isCollapsed)
-                SizedBox(
-                  width: (expandedWidth - _collapsedWidth + AppDimens.spaceSm)
-                      .clamp(AppDimens.spaceSm, double.infinity),
-                ),
+              AnimatedContainer(
+                duration: animDuration,
+                curve: animCurve,
+                width: gapWidth,
+              ),
               _LogPillButton(
                 key: const Key('bottom-nav-log-pill'),
                 isOpen: isLogSheetOpen,
