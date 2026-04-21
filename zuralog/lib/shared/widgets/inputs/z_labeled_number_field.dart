@@ -77,10 +77,7 @@ class ZLabeledNumberField extends StatelessWidget {
     );
     final focusedBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(AppDimens.shapeSm),
-      borderSide: const BorderSide(
-        color: AppColors.categoryNutrition,
-        width: 1.5,
-      ),
+      borderSide: BorderSide(color: colors.primary, width: 1.5),
     );
 
     return Semantics(
