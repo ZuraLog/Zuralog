@@ -308,32 +308,62 @@ class InsightDetail {
   final DateTime? createdAt;
 
   /// Deserializes from a JSON map.
+  ///
+  /// The backend response packs rich fields (`data_points`, `sources`,
+  /// `chart_title`, `chart_unit`) inside a nested `data` map and does not
+  /// return a top-level `category`. We flatten the nested map here and
+  /// derive the category from the insight `type` when missing.
   factory InsightDetail.fromJson(Map<String, dynamic> json) {
-    // TODO: The backend GET /api/v1/insights/{id} does not yet return data_points,
-    // sources, chart_title, or chart_unit. These fields default to empty/null until
-    // the backend InsightResponse schema is extended.
-    final rawPoints = json['data_points'] as List<dynamic>? ?? [];
-    final rawSources = json['sources'] as List<dynamic>? ?? [];
+    final nested = (json['data'] as Map<String, dynamic>?) ?? const {};
+    final rawPoints =
+        (json['data_points'] ?? nested['data_points']) as List<dynamic>? ?? [];
+    final rawSources =
+        (json['sources'] ?? nested['sources']) as List<dynamic>? ?? [];
+    final typeStr = json['type'] as String?;
+    final rawCategory =
+        (json['category'] ?? nested['category']) as String?;
     return InsightDetail(
       id: json['id'] as String,
       title: json['title'] as String,
       summary: json['body'] as String? ?? '',
       reasoning: json['reasoning'] as String? ?? '',
-      type: _insightTypeFromString(json['type'] as String?),
-      category: json['category'] as String? ?? 'general',
+      type: _insightTypeFromString(typeStr),
+      category: rawCategory ?? _categoryFromType(typeStr),
       dataPoints: rawPoints
           .map((e) => InsightDataPoint.fromJson(e as Map<String, dynamic>))
           .toList(),
       sources: rawSources
           .map((e) => InsightSource.fromJson(e as Map<String, dynamic>))
           .toList(),
-      chartTitle: json['chart_title'] as String?,
-      chartUnit: json['chart_unit'] as String?,
+      chartTitle: (json['chart_title'] ?? nested['chart_title']) as String?,
+      chartUnit: (json['chart_unit'] ?? nested['chart_unit']) as String?,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
           : null,
     );
   }
+}
+
+/// Infers a high-level category from the backend `type` string when the
+/// response omits an explicit category.
+String _categoryFromType(String? type) {
+  if (type == null) return 'general';
+  final t = type.toLowerCase();
+  if (t.contains('sleep')) return 'sleep';
+  if (t.contains('step') || t.contains('activity') || t.contains('workout')) {
+    return 'activity';
+  }
+  if (t.contains('nutrition') || t.contains('meal') || t.contains('protein')) {
+    return 'nutrition';
+  }
+  if (t.contains('heart') ||
+      t.contains('hrv') ||
+      t.contains('rhr') ||
+      t.contains('correlation')) {
+    return 'heart';
+  }
+  if (t.contains('streak') || t.contains('engagement')) return 'streak';
+  return 'general';
 }
 
 // ── StreakData ────────────────────────────────────────────────────────────────
