@@ -68,7 +68,9 @@ class ZDailyGoalsCard extends StatelessWidget {
 
 // ── Category inference ──────────────────────────────────────────────────────
 
-/// Visual identity derived from a goal's unit string.
+/// Visual identity derived from a goal's unit string (primary) or its
+/// target value magnitude (secondary fallback when the unit is missing
+/// or generic).
 class _GoalCategory {
   const _GoalCategory({
     required this.icon,
@@ -82,57 +84,96 @@ class _GoalCategory {
   final String fallbackLabel;
   final bool roundInteger;
 
-  static _GoalCategory fromUnit(String unit) {
+  static const _steps = _GoalCategory(
+    icon: Icons.directions_walk_rounded,
+    color: AppColors.categoryActivity,
+    fallbackLabel: 'Steps',
+    roundInteger: true,
+  );
+  static const _water = _GoalCategory(
+    icon: Icons.water_drop_rounded,
+    color: AppColors.categoryBody,
+    fallbackLabel: 'Water',
+    roundInteger: false,
+  );
+  static const _sleep = _GoalCategory(
+    icon: Icons.bedtime_rounded,
+    color: AppColors.categorySleep,
+    fallbackLabel: 'Sleep',
+    roundInteger: true,
+  );
+  static const _calories = _GoalCategory(
+    icon: Icons.local_fire_department_rounded,
+    color: AppColors.categoryNutrition,
+    fallbackLabel: 'Calories',
+    roundInteger: true,
+  );
+  static const _protein = _GoalCategory(
+    icon: Icons.set_meal_rounded,
+    color: AppColors.categoryNutrition,
+    fallbackLabel: 'Protein',
+    roundInteger: true,
+  );
+  static const _mindfulness = _GoalCategory(
+    icon: Icons.self_improvement_rounded,
+    color: AppColors.categorySleep,
+    fallbackLabel: 'Mindfulness',
+    roundInteger: true,
+  );
+  static const _flag = _GoalCategory(
+    icon: Icons.flag_rounded,
+    color: AppColors.primary,
+    fallbackLabel: 'Goal',
+    roundInteger: false,
+  );
+
+  /// Primary inference — from the unit string when the backend provides one.
+  static _GoalCategory? fromUnit(String unit) {
     final u = unit.toLowerCase().trim();
-    if (u == 'steps' || u == 'step') {
-      return const _GoalCategory(
-        icon: Icons.directions_walk_rounded,
-        color: AppColors.categoryActivity,
-        fallbackLabel: 'Steps',
-        roundInteger: true,
-      );
-    }
+    if (u == 'steps' || u == 'step') return _steps;
     if (u == 'glasses' || u == 'glass' || u == 'ml' || u == 'l' || u == 'oz' ||
         u == 'cups' || u == 'cup') {
-      return const _GoalCategory(
-        icon: Icons.water_drop_rounded,
-        color: AppColors.categoryBody,
-        fallbackLabel: 'Water',
-        roundInteger: false,
-      );
+      return _water;
     }
     if (u == 'min' || u == 'mins' || u == 'minutes' || u == 'hrs' ||
         u == 'hours' || u == 'h') {
-      return const _GoalCategory(
-        icon: Icons.bedtime_rounded,
-        color: AppColors.categorySleep,
-        fallbackLabel: 'Sleep',
-        roundInteger: true,
-      );
+      return _sleep;
     }
-    if (u == 'kcal' || u == 'cal' || u == 'calories') {
-      return const _GoalCategory(
-        icon: Icons.local_fire_department_rounded,
-        color: AppColors.categoryNutrition,
-        fallbackLabel: 'Calories',
-        roundInteger: true,
-      );
+    if (u == 'kcal' || u == 'cal' || u == 'calories') return _calories;
+    if (u == 'g' || u == 'grams' || u == 'gram') return _protein;
+    return null;
+  }
+
+  /// Secondary inference — from the target value's magnitude when the unit
+  /// string is absent, generic, or unrecognised. Uses realistic target
+  /// ranges for each category so the card still reads correctly when the
+  /// backend returns `unit: ""` or `unit: "count"`.
+  static _GoalCategory fromTargetValue(double target, int positionHint) {
+    if (target >= 5000) return _steps; // 5,000+ → step count
+    if (target <= 12) return _water; // 1–12 → glasses of water
+    if (target >= 300 && target <= 800) return _sleep; // 300–800 → sleep minutes
+    if (target >= 1200 && target <= 4000) return _calories; // 1200–4000 → kcal
+    if (target >= 50 && target <= 300) return _protein; // 50–300 g
+    // Last-ditch fallback — cycle through mindfulness / flag so we never show
+    // four identical flag icons in a row.
+    return positionHint.isEven ? _mindfulness : _flag;
+  }
+
+  /// Resolve a category from the available goal data. Tries unit first,
+  /// then target-value magnitude, then a position-based variety fallback.
+  static _GoalCategory resolve({
+    required String unit,
+    required String targetRaw,
+    required int position,
+  }) {
+    final fromUnitMatch = fromUnit(unit);
+    if (fromUnitMatch != null) return fromUnitMatch;
+    final parsedTarget =
+        double.tryParse(targetRaw.replaceAll(',', ''));
+    if (parsedTarget != null) {
+      return fromTargetValue(parsedTarget, position);
     }
-    if (u == 'g' || u == 'grams' || u == 'gram') {
-      return const _GoalCategory(
-        icon: Icons.set_meal_rounded,
-        color: AppColors.categoryNutrition,
-        fallbackLabel: 'Protein',
-        roundInteger: true,
-      );
-    }
-    // Fallback: generic flag in primary sage.
-    return const _GoalCategory(
-      icon: Icons.flag_rounded,
-      color: AppColors.primary,
-      fallbackLabel: 'Goal',
-      roundInteger: false,
-    );
+    return _flag;
   }
 }
 
@@ -261,7 +302,7 @@ class _GoalList extends StatelessWidget {
         const SizedBox(height: AppDimens.spaceMd),
         // ── Goal rows ───────────────────────────────────────────────────────
         for (int i = 0; i < visible.length; i++) ...[
-          _GoalRow(goal: visible[i]),
+          _GoalRow(goal: visible[i], position: i),
           if (i < visible.length - 1)
             const SizedBox(height: AppDimens.spaceMd),
         ],
@@ -271,14 +312,19 @@ class _GoalList extends StatelessWidget {
 }
 
 class _GoalRow extends StatelessWidget {
-  const _GoalRow({required this.goal});
+  const _GoalRow({required this.goal, required this.position});
 
   final DailyGoalDisplay goal;
+  final int position;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final category = _GoalCategory.fromUnit(goal.unit);
+    final category = _GoalCategory.resolve(
+      unit: goal.unit,
+      targetRaw: goal.target,
+      position: position,
+    );
     final clamped = goal.fraction.clamp(0.0, 1.0);
     final pct = (clamped * 100).round();
     final isComplete = goal.fraction >= 1.0;
@@ -441,7 +487,8 @@ class _StatusPill extends StatelessWidget {
         ),
       );
     }
-    // Almost-there nudge (95–99%): switch to warning amber to signal momentum.
+    // Almost-there nudge (95–99%): switch to warning amber with a tiny
+    // flame icon to signal momentum.
     final almostThere = percentage >= 95 && !isComplete;
     final pillColor =
         almostThere ? AppColors.warning : colors.border;
@@ -456,12 +503,25 @@ class _StatusPill extends StatelessWidget {
         color: almostThere ? pillColor.withValues(alpha: 0.18) : pillColor,
         borderRadius: BorderRadius.circular(AppDimens.radiusChip),
       ),
-      child: Text(
-        '$percentage%',
-        style: AppTextStyles.labelSmall.copyWith(
-          color: textColor,
-          fontWeight: FontWeight.w700,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (almostThere) ...[
+            Icon(
+              Icons.local_fire_department_rounded,
+              size: 12,
+              color: textColor,
+            ),
+            const SizedBox(width: 3),
+          ],
+          Text(
+            '$percentage%',
+            style: AppTextStyles.labelSmall.copyWith(
+              color: textColor,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
