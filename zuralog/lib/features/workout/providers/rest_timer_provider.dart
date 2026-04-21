@@ -17,8 +17,12 @@ import 'dart:async';
 import 'package:clock/clock.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/haptics/haptic_providers.dart';
+import 'package:zuralog/core/haptics/haptic_service.dart';
 import 'package:zuralog/core/storage/prefs_service.dart';
+import 'package:zuralog/features/workout/audio/rest_sound_service.dart';
 import 'package:zuralog/features/workout/data/rest_timer_storage.dart';
+import 'package:zuralog/features/workout/preferences/workout_preferences.dart';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -100,13 +104,37 @@ class RestTimerState {
 // ── Notifier ──────────────────────────────────────────────────────────────────
 
 class RestTimerNotifier extends StateNotifier<RestTimerState> {
-  RestTimerNotifier(this._storage) : super(const RestTimerState()) {
+  /// Creates a [RestTimerNotifier].
+  ///
+  /// [haptics] — semantic haptic service; no-ops when haptics are off.
+  /// [sound] — plays the soft chime at T-0. Defaults to [NoopRestSoundService]
+  /// so tests (and environments without audio assets) are safe.
+  /// [isRestSoundEnabled] — read each tick to respect the user's toggle. If
+  /// omitted, defaults to always-enabled (the sound service itself may still
+  /// no-op).
+  RestTimerNotifier(
+    this._storage, {
+    HapticService? haptics,
+    RestSoundService? sound,
+    bool Function()? isRestSoundEnabled,
+  })  : _haptics = haptics,
+        _sound = sound ?? const NoopRestSoundService(),
+        _isRestSoundEnabled = isRestSoundEnabled ?? (() => true),
+        super(const RestTimerState()) {
     _restoreFromStorage();
   }
 
   final RestTimerStorage _storage;
+  final HapticService? _haptics;
+  final RestSoundService _sound;
+  final bool Function() _isRestSoundEnabled;
   Timer? _ticker;
   Timer? _autoDismiss;
+
+  /// Last integer remaining-seconds value observed by the ticker. Used to
+  /// edge-trigger haptic/audio feedback exactly once per whole second.
+  /// -1 sentinel means "no tick observed yet".
+  int _lastRemainingSeconds = -1;
 
   /// On startup, rehydrate any persisted timer state. If the rest completed
   /// more than 5 seconds ago, discard it (stale) — otherwise restore minimized
@@ -128,6 +156,7 @@ class RestTimerNotifier extends StateNotifier<RestTimerState> {
   /// Starts a new countdown from [seconds]. Cancels any existing timer first.
   void start(int seconds) {
     _cancelAll();
+    _lastRemainingSeconds = -1;
     state = RestTimerState(
       restStartedAt: clock.now(),
       plannedDurationSeconds: seconds,
@@ -163,6 +192,9 @@ class RestTimerNotifier extends StateNotifier<RestTimerState> {
     if (state.restStartedAt == null) return;
     _autoDismiss?.cancel();
     _autoDismiss = null;
+    // Reset the edge-trigger sentinel so countdown feedback fires again for
+    // the new T-3/T-2/T-1 window if the user extended rest past zero.
+    _lastRemainingSeconds = -1;
     state = state.copyWith(addedSeconds: state.addedSeconds + seconds);
     _storage.save(state);
     if (_ticker == null || !_ticker!.isActive) _startTicker();
@@ -173,6 +205,25 @@ class RestTimerNotifier extends StateNotifier<RestTimerState> {
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       state = state.copyWith(tick: state.tick + 1);
+
+      // ── Lyfta-style countdown feedback ────────────────────────────────────
+      // Selection tick at T-3, T-2, T-1, then a heavy success pulse at T-0.
+      // Edge-triggered on whole-second changes so we never double-fire
+      // within a single second (or across extra ticks when fakeAsync drains).
+      final remainingInt = state.remainingSigned.inSeconds;
+      if (remainingInt != _lastRemainingSeconds) {
+        if (remainingInt == 3 || remainingInt == 2 || remainingInt == 1) {
+          _haptics?.selectionTick();
+        } else if (_lastRemainingSeconds > 0 && remainingInt <= 0) {
+          _haptics?.success();
+          if (_isRestSoundEnabled()) {
+            // Fire-and-forget — the service is a no-op by default.
+            _sound.playRestComplete();
+          }
+        }
+        _lastRemainingSeconds = remainingInt;
+      }
+
       if (state.hasExpired && _autoDismiss == null) {
         _ticker?.cancel();
         _ticker = null;
@@ -210,7 +261,19 @@ final restTimerStorageProvider = Provider<RestTimerStorage>((ref) {
 });
 
 /// Global rest timer state. NOT autoDispose — must outlive navigation.
+///
+/// Wires in:
+/// - [hapticServiceProvider] — respects the device haptic toggle.
+/// - [restSoundServiceProvider] — plays the T-0 chime (no-op stub by default).
+/// - [workoutPreferencesProvider] — read lazily so each tick re-checks the
+///   rest-sound preference; toggling in Settings takes effect immediately.
 final restTimerProvider =
     StateNotifierProvider<RestTimerNotifier, RestTimerState>(
-  (ref) => RestTimerNotifier(ref.watch(restTimerStorageProvider)),
+  (ref) => RestTimerNotifier(
+    ref.watch(restTimerStorageProvider),
+    haptics: ref.watch(hapticServiceProvider),
+    sound: ref.watch(restSoundServiceProvider),
+    isRestSoundEnabled: () =>
+        ref.read(workoutPreferencesProvider).restSoundEnabled,
+  ),
 );
