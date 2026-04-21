@@ -64,6 +64,7 @@ class _HeartTrendChart extends ConsumerWidget {
           ),
       ],
       formatTooltip: (v) => '${v.toStringAsFixed(0)} bpm',
+      formatYAxis: (v) => '${v.round()}',
     );
   }
 

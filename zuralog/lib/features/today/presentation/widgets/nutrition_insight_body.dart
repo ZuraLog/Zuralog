@@ -61,6 +61,9 @@ class _NutritionTrendChart extends ConsumerWidget {
           ),
       ],
       formatTooltip: (v) => '${v.round()} kcal',
+      formatYAxis: (v) => v >= 1000
+          ? '${(v / 1000).toStringAsFixed(1)}k'
+          : v.round().toString(),
     );
   }
 

@@ -91,6 +91,7 @@ class _SleepTrendChart extends ConsumerWidget {
       goalValue: 450, // 7h 30m
       goalLabel: 'Goal 7h 30m',
       formatTooltip: (v) => _formatDuration(v.round()),
+      formatYAxis: (v) => '${(v / 60).round()}h',
     );
   }
 
