@@ -40,15 +40,16 @@ class _AppShellState extends ConsumerState<AppShell> {
   bool _handleScrollNotification(UserScrollNotification n) {
     // Only react to direct vertical scrolls on the primary body axis.
     if (n.metrics.axis != Axis.vertical) return false;
-    // Ignore micro-scrolls near the top to avoid flicker at rest.
-    if (n.metrics.pixels <= 8) {
+    // Expand ONLY when the user scrolls all the way back to the top.
+    // Partial upward scrolls in the middle of the list leave the nav
+    // collapsed — tapping the compact pill is the other way to expand.
+    if (n.metrics.pixels <= 4) {
       _setNavCollapsed(false);
       return false;
     }
+    // Collapse on any downward scroll past the top threshold.
     if (n.direction == ScrollDirection.reverse) {
       _setNavCollapsed(true);
-    } else if (n.direction == ScrollDirection.forward) {
-      _setNavCollapsed(false);
     }
     return false;
   }
