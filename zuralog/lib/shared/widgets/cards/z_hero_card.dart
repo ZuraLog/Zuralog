@@ -16,11 +16,18 @@ class ZHeroCard extends StatelessWidget {
   const ZHeroCard({
     super.key,
     required this.child,
+    this.variant = ZPatternVariant.original,
     this.padding = const EdgeInsets.all(AppDimens.spaceMdPlus),
     this.borderRadius = AppDimens.shapeLg,
   });
 
   final Widget child;
+
+  /// Pattern variant. Defaults to [ZPatternVariant.original]. Pass a
+  /// category variant (e.g. [ZPatternVariant.skyBlue]) when the hero
+  /// should wear a category color (e.g. the Goal Detail hero).
+  final ZPatternVariant variant;
+
   final EdgeInsetsGeometry padding;
   final double borderRadius;
 
@@ -40,9 +47,9 @@ class ZHeroCard extends StatelessWidget {
               ),
             ),
           ),
-          const Positioned.fill(
+          Positioned.fill(
             child: ZPatternOverlay(
-              variant: ZPatternVariant.original,
+              variant: variant,
               opacity: 0.10,
               animate: true,
             ),

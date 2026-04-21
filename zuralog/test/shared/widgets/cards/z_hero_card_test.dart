@@ -49,6 +49,17 @@ void main() {
       expect(overlay.animate, true);
     });
 
+    testWidgets('passes the supplied variant to the overlay', (tester) async {
+      await tester.pumpWidget(
+        _wrap(const ZHeroCard(
+          variant: ZPatternVariant.skyBlue,
+          child: SizedBox(width: 100, height: 50),
+        )),
+      );
+      final overlay = tester.widget<ZPatternOverlay>(find.byType(ZPatternOverlay));
+      expect(overlay.variant, ZPatternVariant.skyBlue);
+    });
+
     testWidgets('uses light-mode surface color when theme is light',
         (tester) async {
       await tester.pumpWidget(
