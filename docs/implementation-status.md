@@ -1,3 +1,45 @@
+## 2026-04-21 — Workout Plan 3: Summary + History
+
+**Branch:** `feat/workout-plan-1-foundation`
+
+Completed the workout loop — finished sessions persist to local history, a real summary screen shows results, and a history screen lets users revisit past workouts.
+
+**What was built:**
+
+- **`CompletedWorkout` + `CompletedExercise`** (`zuralog/lib/features/workout/domain/completed_workout.dart`): Immutable value objects with full JSON round-trip and structural equality via `listEquals`. `CompletedWorkout.fromSession` normalizes mixed-unit session weights into kilograms using each exercise's `unitOverride` (falling back to the global units setting).
+
+- **`WorkoutHistoryRepository`** (`zuralog/lib/features/workout/data/workout_history_repository.dart`): Offline-first persistence under SharedPreferences key `workout_history`. `loadAll` returns most-recent-first; `saveWorkout` appends and caps at 100 entries. Tolerates corrupt JSON and malformed entries by returning an empty list / filtering.
+
+- **`finishSession` on `WorkoutSessionNotifier`** (`zuralog/lib/features/workout/providers/workout_session_providers.dart`): Awaits `saveWorkout`, then calls the existing `discardSession()` to clear the draft. Also exposes new `workoutHistoryRepositoryProvider` (Provider) and `workoutHistoryProvider` (FutureProvider.autoDispose).
+
+- **`WorkoutSummaryScreen`** (`zuralog/lib/features/workout/presentation/workout_summary_screen.dart`): Replaced Plan 1 stub. Accepts a `CompletedWorkout?` from GoRouter extra — renders a friendly error state when null. Shows header (Activity-accent check icon + "Workout Complete" + localized date), totals row (Duration in Activity accent, Volume, Sets), per-exercise `ZuralogCard` blocks with muscle-group-tinted icon bubble and a read-only set table. Done button pops back to the log grid sheet.
+
+- **`WorkoutHistoryScreen`** (`zuralog/lib/features/workout/presentation/workout_history_screen.dart`): Scrollable list of past workouts with tap-through to the summary screen. Empty state when no history. Error state with retry when load fails.
+
+- **Routing**: `/log/workout/history` added. Summary route now reads `state.extra` as `CompletedWorkout?`. Session screen's app bar gets a history icon. `pushReplacement` used for finish flow so the session screen is gone from the stack when the summary appears.
+
+**Tests:** 17 new tests (4 domain + 5 repository + 4 provider + 2 summary widget + 2 history widget); 78 workout tests total, all green; zero new analyzer issues in workout feature.
+
+**Files created:**
+- `zuralog/lib/features/workout/domain/completed_workout.dart`
+- `zuralog/lib/features/workout/data/workout_history_repository.dart`
+- `zuralog/lib/features/workout/presentation/workout_history_screen.dart`
+- `zuralog/test/features/workout/domain/completed_workout_test.dart`
+- `zuralog/test/features/workout/data/workout_history_repository_test.dart`
+- `zuralog/test/features/workout/providers/workout_history_provider_test.dart`
+- `zuralog/test/features/workout/presentation/workout_summary_screen_test.dart`
+- `zuralog/test/features/workout/presentation/workout_history_screen_test.dart`
+
+**Files modified:**
+- `zuralog/lib/features/workout/providers/workout_session_providers.dart`
+- `zuralog/lib/features/workout/presentation/workout_session_screen.dart`
+- `zuralog/lib/features/workout/presentation/workout_summary_screen.dart` (stub replaced)
+- `zuralog/lib/core/router/route_names.dart`
+- `zuralog/lib/core/router/app_router.dart`
+- `zuralog/test/features/workout/providers/workout_session_providers_test.dart`
+
+---
+
 ## 2026-04-21 — Workout Plan 2: Active Session Tracking
 
 **Branch:** `feat/workout-plan-1-foundation`
