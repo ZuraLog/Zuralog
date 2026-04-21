@@ -15,6 +15,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/features/workout/domain/completed_workout.dart';
 import 'package:zuralog/features/workout/domain/exercise.dart';
 import 'package:zuralog/features/workout/presentation/widgets/workout_exercise_card.dart';
 import 'package:zuralog/features/workout/presentation/widgets/workout_stats_row.dart';
@@ -80,7 +81,19 @@ class _WorkoutSessionScreenState
       if (confirmed != true) return;
     }
     if (!mounted) return;
-    context.push(RouteNames.workoutSummaryPath);
+
+    final history = ref.read(workoutHistoryRepositoryProvider);
+    final CompletedWorkout? completed =
+        await ref.read(workoutSessionProvider.notifier).finishSession(history);
+
+    // Invalidate so the history screen shows this workout on next visit.
+    ref.invalidate(workoutHistoryProvider);
+
+    if (!mounted || completed == null) return;
+    context.pushReplacement(
+      RouteNames.workoutSummaryPath,
+      extra: completed,
+    );
   }
 
   Future<void> _showMoreMenu() async {

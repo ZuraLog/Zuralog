@@ -28,6 +28,8 @@ import 'package:uuid/uuid.dart';
 import 'package:zuralog/core/storage/prefs_service.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/features/workout/data/workout_history_repository.dart';
+import 'package:zuralog/features/workout/domain/completed_workout.dart';
 import 'package:zuralog/features/workout/domain/exercise.dart';
 import 'package:zuralog/features/workout/domain/workout_session.dart';
 
@@ -179,6 +181,30 @@ class WorkoutSessionNotifier extends StateNotifier<WorkoutSession?> {
     _globalUnitDefault = newDefault;
   }
 
+  /// Converts the current session to a [CompletedWorkout], appends it to
+  /// history, and clears the in-memory + draft session. Returns the
+  /// persisted record so the caller can navigate to the summary screen.
+  /// Returns `null` if there is no active session.
+  Future<CompletedWorkout?> finishSession(
+    WorkoutHistoryRepository history,
+  ) async {
+    final session = state;
+    if (session == null) return null;
+    final completed = CompletedWorkout.fromSession(
+      session,
+      completedAt: DateTime.now(),
+      globalUnitSystem: _globalUnitDefault,
+    );
+    try {
+      await history.saveWorkout(completed);
+    } catch (e, st) {
+      debugPrint(
+          '[WorkoutSessionNotifier] finishSession save failed: $e\n$st');
+    }
+    discardSession();
+    return completed;
+  }
+
   void removeExercise(String exerciseId) {
     final session = state;
     if (session == null) return;
@@ -280,6 +306,20 @@ final workoutVolumeProvider = Provider<double>((ref) {
     }
   }
   return total;
+});
+
+final workoutHistoryRepositoryProvider =
+    Provider<WorkoutHistoryRepository>((ref) {
+  final prefs = ref.read(prefsProvider);
+  return WorkoutHistoryRepository(prefs);
+});
+
+/// One-shot read of the user's workout history, most-recent-first.
+/// Invalidated by the finish flow so the history screen refreshes.
+final workoutHistoryProvider =
+    FutureProvider.autoDispose<List<CompletedWorkout>>((ref) async {
+  final repo = ref.watch(workoutHistoryRepositoryProvider);
+  return repo.loadAll();
 });
 
 final workoutSetsCompletedProvider = Provider<int>((ref) {

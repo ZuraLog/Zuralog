@@ -10,6 +10,7 @@ import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/workout/domain/exercise.dart';
 import 'package:zuralog/features/workout/domain/workout_session.dart';
+import 'package:zuralog/features/workout/data/workout_history_repository.dart';
 import 'package:zuralog/features/workout/providers/workout_session_providers.dart';
 
 ProviderContainer _containerWith(
@@ -275,6 +276,67 @@ void main() {
       final before = container.read(workoutSessionProvider)!;
       notifier.updateSet('bench_press', 99, weightValue: 100, reps: 5);
       expect(container.read(workoutSessionProvider), equals(before));
+    });
+  });
+
+  group('finishSession', () {
+    test('persists workout, clears draft, returns record', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final history = WorkoutHistoryRepository(prefs);
+
+      final container = ProviderContainer(
+        overrides: [
+          prefsProvider.overrideWithValue(prefs),
+          unitsSystemProvider.overrideWithValue(UnitsSystem.metric),
+          workoutHistoryRepositoryProvider.overrideWithValue(history),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(workoutSessionProvider.notifier);
+      notifier.startSession();
+      notifier.addExercises([
+        const Exercise(
+          id: 'bench-press',
+          name: 'Bench Press',
+          muscleGroup: MuscleGroup.chest,
+          equipment: Equipment.barbell,
+          instructions: '',
+        ),
+      ]);
+      notifier.updateSet('bench-press', 0,
+          weightValue: 60, reps: 10, isCompleted: true);
+
+      final result = await notifier.finishSession(history);
+
+      expect(result, isNotNull);
+      expect(result!.totalSetsCompleted, 1);
+      expect(result.totalVolumeKg, 600.0);
+      expect(container.read(workoutSessionProvider), isNull);
+      expect(prefs.getString(kWorkoutActiveDraftKey), isNull);
+
+      final saved = await history.loadAll();
+      expect(saved, [result]);
+    });
+
+    test('returns null when no session', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final history = WorkoutHistoryRepository(prefs);
+
+      final container = ProviderContainer(
+        overrides: [
+          prefsProvider.overrideWithValue(prefs),
+          unitsSystemProvider.overrideWithValue(UnitsSystem.metric),
+          workoutHistoryRepositoryProvider.overrideWithValue(history),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(workoutSessionProvider.notifier);
+      final result = await notifier.finishSession(history);
+      expect(result, isNull);
     });
   });
 
