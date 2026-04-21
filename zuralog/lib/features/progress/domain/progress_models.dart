@@ -25,6 +25,10 @@
 library;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show Color;
+
+import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 
 // ── GoalType ──────────────────────────────────────────────────────────────────
 
@@ -1035,4 +1039,37 @@ class JournalPage {
         'entries': entries.map((e) => e.toJson()).toList(),
         'has_more': hasMore,
       };
+}
+
+// ── GoalTypeCategory ──────────────────────────────────────────────────────────
+
+/// Maps a [GoalType] to its health category color and matching brand
+/// pattern variant. Single source of truth — feature widgets consume
+/// these getters instead of duplicating the lookup.
+extension GoalTypeCategory on GoalType {
+  /// The category color used for the icon tile, badge tint, and
+  /// percent-pill text on this goal's card.
+  Color get categoryColor {
+    switch (this) {
+      case GoalType.stepCount:
+      case GoalType.weeklyRunCount:
+        return AppColors.categoryActivity;
+      case GoalType.weightTarget:
+        return AppColors.categoryBody;
+      case GoalType.dailyCalorieLimit:
+        return AppColors.categoryNutrition;
+      case GoalType.sleepDuration:
+        return AppColors.categorySleep;
+      case GoalType.waterIntake:
+        return AppColors.categoryVitals;
+      case GoalType.custom:
+        return AppColors.primary;
+    }
+  }
+
+  /// The brand pattern variant overlaid on this goal's feature card.
+  /// Mirrors [categoryColor] via [patternForCategory].
+  ZPatternVariant get patternVariant {
+    return patternForCategory(categoryColor);
+  }
 }
