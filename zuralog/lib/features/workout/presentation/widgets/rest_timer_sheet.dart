@@ -18,17 +18,46 @@ import 'package:zuralog/features/workout/providers/rest_timer_provider.dart';
 
 /// Bottom sheet shown while the rest timer is running and expanded.
 ///
-/// Renders nothing when the timer is hidden or minimized — that keeps the
-/// layout simple and avoids layout-timing bugs from manual slide animations.
+/// Always mounted so the full sheet can fade + scale in/out in sync with
+/// the inline mini pill's `AnimatedSize` collapse/expand. An [IgnorePointer]
+/// prevents the invisible overlay from eating taps when hidden.
 class RestTimerOverlay extends ConsumerWidget {
   const RestTimerOverlay({super.key});
+
+  /// Matches the inline morph duration so the pill and sheet feel like a
+  /// single morphing element.
+  static const Duration _duration = Duration(milliseconds: 320);
+
+  /// Material 3 "emphasized decelerate" — a more expressive ease-out than
+  /// the stock [Curves.easeOutCubic], used here to match the inline pill.
+  static const Curve _curve = Cubic(0.05, 0.7, 0.1, 1.0);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final timer = ref.watch(restTimerProvider);
     final show = timer.isVisible && !timer.isMinimized;
-    if (!show) return const SizedBox.shrink();
-    return _FullSheetBody(timer: timer);
+    return IgnorePointer(
+      ignoring: !show,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0, end: show ? 1 : 0),
+        duration: _duration,
+        curve: _curve,
+        builder: (context, t, child) {
+          // Fade from 0 → 1 and scale from 0.98 → 1.0 on enter; reverse on exit.
+          final scale = 0.98 + (0.02 * t);
+          return Opacity(
+            opacity: t,
+            child: Transform.scale(
+              scale: scale,
+              alignment: Alignment.bottomCenter,
+              child: child,
+            ),
+          );
+        },
+        // Keep the body built so its internal state survives minimize/expand.
+        child: _FullSheetBody(timer: timer),
+      ),
+    );
   }
 }
 
@@ -230,14 +259,14 @@ class _MiniBannerBody extends ConsumerWidget {
     final textColor = expired ? colors.primary : colors.textPrimary;
     final iconColor = expired ? colors.primary : colors.textSecondary;
 
-    return SafeArea(
-      top: false,
-      child: Padding(
+    return Padding(
+      // Zero bottom margin so the pill hugs the bottom action bar directly.
+      // The sibling `_BottomActions` widget handles safe-area bottom padding.
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceMd,
         AppDimens.spaceXs,
         AppDimens.spaceMd,
-        AppDimens.spaceSm,
+        0,
       ),
       child: Material(
         color: bgColor,
@@ -252,9 +281,10 @@ class _MiniBannerBody extends ConsumerWidget {
             ref.read(restTimerProvider.notifier).expand();
           },
           child: Padding(
+            // Compact vertical padding — keeps the pill around 40–44 pt tall.
             padding: const EdgeInsets.symmetric(
               horizontal: AppDimens.spaceMd,
-              vertical: AppDimens.spaceSm,
+              vertical: AppDimens.spaceXs,
             ),
             child: Row(
               children: [
@@ -284,7 +314,6 @@ class _MiniBannerBody extends ConsumerWidget {
             ),
           ),
         ),
-      ),
       ),
     );
   }
