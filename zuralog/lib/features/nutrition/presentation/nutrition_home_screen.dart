@@ -595,30 +595,39 @@ class _SlidableMealCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    return Slidable(
-      key: ValueKey(meal.id),
-      endActionPane: ActionPane(
-        motion: const BehindMotion(),
-        extentRatio: 0.5,
-        dismissible: DismissiblePane(onDismissed: onDelete),
-        children: [
-          SlidableAction(
-            onPressed: (_) => onEdit(),
-            backgroundColor: colors.surfaceRaised,
-            foregroundColor: colors.textPrimary,
-            icon: Icons.edit_rounded,
-            label: 'Edit',
-          ),
-          SlidableAction(
-            onPressed: (_) => onDelete(),
-            backgroundColor: AppColors.error,
-            foregroundColor: Colors.white,
-            icon: Icons.delete_outline_rounded,
-            label: 'Delete',
-          ),
-        ],
+    // Simple, reliable: default SlidableAction rectangles filling the
+    // full row height, with an outer ClipRRect that rounds Delete's
+    // right edge to match the meal card radius. Edit stays flush
+    // between the card and Delete — the sandwich position means it
+    // can't carry its own rounding without drifting into floating
+    // capsules, which we tried and rejected.
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+      child: Slidable(
+        key: ValueKey(meal.id),
+        endActionPane: ActionPane(
+          motion: const BehindMotion(),
+          extentRatio: 0.5,
+          dismissible: DismissiblePane(onDismissed: onDelete),
+          children: [
+            SlidableAction(
+              onPressed: (_) => onEdit(),
+              backgroundColor: colors.surfaceRaised,
+              foregroundColor: colors.textPrimary,
+              icon: Icons.edit_rounded,
+              label: 'Edit',
+            ),
+            SlidableAction(
+              onPressed: (_) => onDelete(),
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              icon: Icons.delete_outline_rounded,
+              label: 'Delete',
+            ),
+          ],
+        ),
+        child: _MealCard(meal: meal),
       ),
-      child: _MealCard(meal: meal),
     );
   }
 }

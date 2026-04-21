@@ -29,6 +29,38 @@ class AppShell extends ConsumerStatefulWidget {
 class _AppShellState extends ConsumerState<AppShell> {
   DateTime? _lastSheetTap;
   bool _isLogSheetOpen = false;
+  bool _navCollapsed = false;
+
+  void _setNavCollapsed(bool collapsed) {
+    if (_navCollapsed == collapsed) return;
+    setState(() => _navCollapsed = collapsed);
+  }
+
+  // Position-based collapse with hysteresis:
+  //  • pixels ≤ [_kExpandAt]  → expand (at or near top)
+  //  • pixels ≥ [_kCollapseAt] → collapse (clearly scrolled down)
+  //  • in the dead band in between → no change (prevents jitter)
+  //
+  // We listen to the base [ScrollNotification] (not just [UserScrollNotification])
+  // so momentum-flick scrolls past the top also expand the nav, which fixes
+  // the "scrolled all the way up but it didn't expand" bug.
+  static const double _kExpandAt = 8;
+  static const double _kCollapseAt = 48;
+
+  bool _handleScrollNotification(ScrollNotification n) {
+    // Only react to the primary vertical scrollable (ignore nested horizontal
+    // carousels, inner bottom-sheet scrollables, etc.).
+    if (n.depth != 0) return false;
+    if (n.metrics.axis != Axis.vertical) return false;
+
+    final pixels = n.metrics.pixels - n.metrics.minScrollExtent;
+    if (pixels <= _kExpandAt) {
+      _setNavCollapsed(false);
+    } else if (pixels >= _kCollapseAt) {
+      _setNavCollapsed(true);
+    }
+    return false;
+  }
 
   @override
   void initState() {
@@ -73,6 +105,9 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   void _onDestinationSelected(int index) {
+    // Any tab switch immediately expands the nav so users never get stuck in
+    // the compact state.
+    _setNavCollapsed(false);
     ref.read(hapticServiceProvider).selectionTick();
     widget.navigationShell.goBranch(
       index,
@@ -84,12 +119,17 @@ class _AppShellState extends ConsumerState<AppShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      body: widget.navigationShell,
+      body: NotificationListener<ScrollNotification>(
+        onNotification: _handleScrollNotification,
+        child: widget.navigationShell,
+      ),
       bottomNavigationBar: _BottomNavCluster(
         currentIndex: widget.navigationShell.currentIndex,
         onDestinationSelected: _onDestinationSelected,
         isLogSheetOpen: _isLogSheetOpen,
         onLogPressed: _openLogSheet,
+        isCollapsed: _navCollapsed,
+        onExpandRequest: () => _setNavCollapsed(false),
       ),
     );
   }
@@ -124,10 +164,22 @@ class _FrostedNavigationBar extends StatefulWidget {
   const _FrostedNavigationBar({
     required this.currentIndex,
     required this.onDestinationSelected,
+    required this.expandedWidth,
+    this.isCollapsed = false,
+    this.onExpandRequest,
   });
 
   final int currentIndex;
   final ValueChanged<int> onDestinationSelected;
+  final bool isCollapsed;
+  final VoidCallback? onExpandRequest;
+
+  /// Natural full width of the expanded nav. The expanded content is
+  /// always laid out at this width regardless of the current animated
+  /// container width — the outer ClipRRect clips visually while the
+  /// width animation runs, preventing Flutter's overflow indicator
+  /// from painting during the collapse/expand transition.
+  final double expandedWidth;
 
   static const List<_NavTab> _tabs = [
     _NavTab(
@@ -208,13 +260,111 @@ class _FrostedNavigationBarState extends State<_FrostedNavigationBar>
             ),
             borderRadius: BorderRadius.circular(AppDimens.shapePill),
           ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final tabCount = _FrostedNavigationBar._tabs.length;
-              final tabWidth = constraints.maxWidth / tabCount;
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: child,
+            ),
+            child: widget.isCollapsed
+                ? _buildCompact(colors, activePillBg, activeItemColor)
+                : _buildExpanded(colors, activePillBg, activeItemColor),
+          ),
+        ),
+      ),
+    );
+  }
 
-              return Stack(
+  /// Single-tab pill — shows the active tab's icon + label only. Tapping
+  /// anywhere on the pill calls [onExpandRequest] so the user can switch
+  /// tabs again without having to scroll the page.
+  Widget _buildCompact(
+    dynamic colors,
+    Color activePillBg,
+    Color activeItemColor,
+  ) {
+    final tab = _FrostedNavigationBar._tabs[widget.currentIndex];
+    return Semantics(
+      key: const ValueKey('nav-compact'),
+      button: true,
+      label: 'Expand navigation. Current: ${tab.label}',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onExpandRequest,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppDimens.shapePill),
+            child: ColoredBox(
+              color: activePillBg,
+              child: Stack(
+                fit: StackFit.expand,
                 children: [
+                  const IgnorePointer(
+                    child: ZPatternOverlay(
+                      variant: ZPatternVariant.sage,
+                      opacity: 0.35,
+                      animate: true,
+                    ),
+                  ),
+                  Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          tab.activeIcon,
+                          size: 20,
+                          color: activeItemColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          tab.label,
+                          style: AppTextStyles.labelMedium.copyWith(
+                            color: activeItemColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Original three-tab navigation with sliding sage pill. Always
+  /// renders at [widget.expandedWidth] regardless of the animated
+  /// parent container width — the outer ClipRRect clips to the
+  /// current pill width during the collapse transition, which avoids
+  /// the overflow markers that appear when the inner Row is asked to
+  /// render in an intermediate narrow space.
+  Widget _buildExpanded(
+    dynamic colors,
+    Color activePillBg,
+    Color activeItemColor,
+  ) {
+    return OverflowBox(
+      key: const ValueKey('nav-expanded'),
+      alignment: Alignment.centerLeft,
+      minWidth: 0,
+      maxWidth: double.infinity,
+      child: SizedBox(
+        width: widget.expandedWidth,
+        height: 64,
+        child: LayoutBuilder(
+      builder: (context, constraints) {
+        final tabCount = _FrostedNavigationBar._tabs.length;
+        final tabWidth = constraints.maxWidth / tabCount;
+
+        return Stack(
+          children: [
                   // Sliding pill — driven by spring physics.
                   AnimatedBuilder(
                     animation: _pillController,
@@ -320,8 +470,7 @@ class _FrostedNavigationBarState extends State<_FrostedNavigationBar>
             },
           ),
         ),
-      ),
-    );
+      );
   }
 }
 
@@ -455,22 +604,55 @@ class LogPillButtonForTest extends StatelessWidget {
 /// Groups the frosted nav pill and the log pill into a single centered row
 /// at the bottom safe-area offset. Owns the bottom-margin padding so the
 /// nav bar widget no longer has to.
+///
+/// Supports a scroll-aware collapse: when [isCollapsed] is true the nav
+/// pill shrinks to a single-tab width showing only the current tab, and
+/// tapping it calls [onExpandRequest] to restore the full nav. The log
+/// pill always stays the same — it's the primary action, always tappable.
 class _BottomNavCluster extends StatelessWidget {
   const _BottomNavCluster({
     required this.currentIndex,
     required this.onDestinationSelected,
     required this.isLogSheetOpen,
     required this.onLogPressed,
+    this.isCollapsed = false,
+    this.onExpandRequest,
   });
 
   final int currentIndex;
   final ValueChanged<int> onDestinationSelected;
   final bool isLogSheetOpen;
   final VoidCallback onLogPressed;
+  final bool isCollapsed;
+  final VoidCallback? onExpandRequest;
+
+  /// Width of the nav pill when collapsed to a single tab.
+  static const double _collapsedWidth = 112;
+
+  /// Width of the log pill itself (see [_LogPillButton]).
+  static const double _logPillWidth = 56;
 
   @override
   Widget build(BuildContext context) {
-    final bottomSafeArea = MediaQuery.of(context).padding.bottom;
+    final mq = MediaQuery.of(context);
+    final bottomSafeArea = mq.padding.bottom;
+    // Compute the expanded nav width directly from the screen width so the
+    // bottom-nav slot can report a correct intrinsic height. LayoutBuilder
+    // was defeating the Scaffold's intrinsic-sizing pass and floating the
+    // nav into the middle of the screen.
+    final screenWidth = mq.size.width;
+    const horizontalInsets = AppDimens.spaceMdPlus * 2;
+    final expandedWidth =
+        (screenWidth - horizontalInsets - _logPillWidth - AppDimens.spaceSm)
+            .clamp(_collapsedWidth, double.infinity);
+    // Nav + gap + log pill always sums to the same total so the Row never
+    // overflows during the animation: when nav shrinks, the gap grows by
+    // the exact same amount. Both sides animate on identical duration +
+    // curve so they stay in sync.
+    final navWidth = isCollapsed ? _collapsedWidth : expandedWidth;
+    final gapWidth = expandedWidth + AppDimens.spaceSm - navWidth;
+    const animDuration = Duration(milliseconds: 280);
+    const animCurve = Curves.easeOutCubic;
     return Padding(
       padding: EdgeInsets.fromLTRB(
         AppDimens.spaceMdPlus,
@@ -478,22 +660,35 @@ class _BottomNavCluster extends StatelessWidget {
         AppDimens.spaceMdPlus,
         bottomSafeArea + 18,
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Flexible(
-            child: _FrostedNavigationBar(
-              currentIndex: currentIndex,
-              onDestinationSelected: onDestinationSelected,
+      child: SizedBox(
+        height: _logPillWidth,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: animDuration,
+              curve: animCurve,
+              width: navWidth,
+              child: _FrostedNavigationBar(
+                currentIndex: currentIndex,
+                onDestinationSelected: onDestinationSelected,
+                isCollapsed: isCollapsed,
+                onExpandRequest: onExpandRequest,
+                expandedWidth: expandedWidth,
+              ),
             ),
-          ),
-          const SizedBox(width: AppDimens.spaceSm),
-          _LogPillButton(
-            key: const Key('bottom-nav-log-pill'),
-            isOpen: isLogSheetOpen,
-            onTap: onLogPressed,
-          ),
-        ],
+            AnimatedContainer(
+              duration: animDuration,
+              curve: animCurve,
+              width: gapWidth,
+            ),
+            _LogPillButton(
+              key: const Key('bottom-nav-log-pill'),
+              isOpen: isLogSheetOpen,
+              onTap: onLogPressed,
+            ),
+          ],
+        ),
       ),
     );
   }
