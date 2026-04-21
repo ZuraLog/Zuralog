@@ -602,23 +602,79 @@ class _SlidableMealCard extends StatelessWidget {
         extentRatio: 0.5,
         dismissible: DismissiblePane(onDismissed: onDelete),
         children: [
-          SlidableAction(
-            onPressed: (_) => onEdit(),
-            backgroundColor: colors.surfaceRaised,
-            foregroundColor: colors.textPrimary,
+          _RoundedSwipeAction(
+            onPressed: onEdit,
             icon: Icons.edit_rounded,
             label: 'Edit',
+            backgroundColor: colors.surfaceRaised,
+            foregroundColor: colors.textPrimary,
           ),
-          SlidableAction(
-            onPressed: (_) => onDelete(),
-            backgroundColor: AppColors.error,
-            foregroundColor: Colors.white,
+          _RoundedSwipeAction(
+            onPressed: onDelete,
             icon: Icons.delete_outline_rounded,
             label: 'Delete',
+            backgroundColor: AppColors.error,
+            foregroundColor: Colors.white,
           ),
         ],
       ),
       child: _MealCard(meal: meal),
+    );
+  }
+}
+
+/// Swipe-pane action rendered as a rounded pill that matches the meal card
+/// radius, with a small margin on each side so the chips float instead of
+/// butting up flush against the card edge.
+class _RoundedSwipeAction extends StatelessWidget {
+  const _RoundedSwipeAction({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+    required this.backgroundColor,
+    required this.foregroundColor,
+  });
+
+  final VoidCallback onPressed;
+  final IconData icon;
+  final String label;
+  final Color backgroundColor;
+  final Color foregroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomSlidableAction(
+      onPressed: (_) => onPressed(),
+      backgroundColor: Colors.transparent,
+      padding: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 4,
+          vertical: AppDimens.spaceXs,
+        ),
+        child: Material(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onPressed,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: foregroundColor, size: 22),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: foregroundColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
