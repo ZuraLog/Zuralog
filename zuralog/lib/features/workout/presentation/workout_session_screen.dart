@@ -188,16 +188,22 @@ class _WorkoutSessionScreenState
                         ),
                       ),
               ),
-              const RestTimerMiniBanner(),
               _BottomActions(
                 onAdd: _openCatalogue,
                 onMore: _showMoreMenu,
               ),
             ],
           ),
-          // Floating rest timer overlay — anchored to the bottom of the Stack.
-          // Positioned(left:0, right:0, bottom:0) without a top/height constraint
-          // sizes the child to its intrinsic height, which is what we want.
+          // Transparent barrier — captures taps outside the sheet to minimize.
+          const _RestTimerBarrier(),
+          // Floating pill shown while the timer is minimized.
+          const Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: RestTimerMiniBanner(),
+          ),
+          // Full-height rest timer sheet — renders on top of everything.
           const Positioned(
             left: 0,
             right: 0,
@@ -240,6 +246,25 @@ class _EmptyState extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _RestTimerBarrier extends ConsumerWidget {
+  const _RestTimerBarrier();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final timer = ref.watch(restTimerProvider);
+    if (!timer.isVisible || timer.isMinimized) return const SizedBox.shrink();
+    return Positioned.fill(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          ref.read(restTimerProvider.notifier).minimize();
+        },
       ),
     );
   }
