@@ -69,8 +69,8 @@ class Exercise {
   final String instructions;
 
   factory Exercise.fromJson(Map<String, dynamic> json) => Exercise(
-        id: json['id'] as String,
-        name: json['name'] as String,
+        id: json['id'] as String? ?? '',
+        name: json['name'] as String? ?? '',
         muscleGroup: MuscleGroup.fromString(json['muscleGroup'] as String? ?? ''),
         equipment: Equipment.fromString(json['equipment'] as String? ?? ''),
         instructions: json['instructions'] as String? ?? '',

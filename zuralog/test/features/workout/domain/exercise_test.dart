@@ -1,3 +1,5 @@
+library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zuralog/features/workout/domain/exercise.dart';
 
