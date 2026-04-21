@@ -23,6 +23,8 @@ import 'package:zuralog/features/data/domain/category_color.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
+import 'package:zuralog/features/heart/domain/heart_models.dart';
+import 'package:zuralog/features/heart/providers/heart_providers.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart'
     show UnitsSystem;
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
@@ -122,6 +124,11 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
                   unitsSystem: unitsSystem,
                 ),
               HealthCategory.activity => _ActivityDetailBody(
+                  color: color,
+                  detailAsync: detailAsync,
+                  unitsSystem: unitsSystem,
+                ),
+              HealthCategory.heart => _HeartDetailBody(
                   color: color,
                   detailAsync: detailAsync,
                   unitsSystem: unitsSystem,
@@ -1000,6 +1007,554 @@ class _ActivityMetricCard extends StatelessWidget {
                 child: _StatChip(
                   label: 'Max',
                   value: _formatActivityMetricValue(
+                    max,
+                    metricId: series.metricId,
+                    unit: displayUnit,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── _HeartDetailBody ─────────────────────────────────────────────────────────
+
+/// Magazine-layout body for the Heart category detail screen.
+///
+/// Sections, top to bottom:
+///  1. Hero card (today's resting HR + delta vs 7-day resting HR average).
+///  2. 7-day resting-HR line chart (no goal line).
+///  3. Heart zones stacked bar (empty-state placeholder — no zone data yet).
+///  4. 2×2 stats grid — RHR / HRV / Avg HR / Recovery.
+///  5. One card per sub-metric (line for continuous HR metrics, bars for
+///     countable metrics like workouts).
+///  6. AI analysis card when a summary is available.
+///
+/// Notes on adaptations vs the original brief:
+///  - The dashboard/today backend does not expose a maximum heart rate
+///    field, so the third stats tile substitutes `avgHr` (Avg HR).
+///  - There is no recovery score field yet — the Recovery tile renders
+///    a dash until the backend adds one.
+///  - [HeartDaySummary] has no per-zone minute breakdown, so the zones
+///    card always uses [ZHeartZonesBar]'s empty-state placeholder.
+class _HeartDetailBody extends ConsumerWidget {
+  const _HeartDetailBody({
+    required this.color,
+    required this.detailAsync,
+    required this.unitsSystem,
+  });
+
+  final Color color;
+  final AsyncValue<CategoryDetailData> detailAsync;
+  final UnitsSystem unitsSystem;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final summaryAsync = ref.watch(heartDaySummaryProvider);
+    final trendAsync = ref.watch(heartTrendProvider('7d'));
+
+    final summary = summaryAsync.valueOrNull ?? HeartDaySummary.empty;
+    final trendDays = trendAsync.valueOrNull ?? const <HeartTrendDay>[];
+    final metrics = detailAsync.valueOrNull?.metrics ?? const <MetricSeries>[];
+    final isLoading = summaryAsync.isLoading && !summaryAsync.hasValue ||
+        detailAsync.isLoading && !detailAsync.hasValue;
+
+    // At least two resting-HR points are required for a meaningful line.
+    final hasTrend = trendDays
+            .where((d) => d.restingHr != null && d.restingHr!.isFinite)
+            .length >=
+        2;
+
+    return ListView(
+      padding: EdgeInsets.fromLTRB(
+        0,
+        AppDimens.spaceXs,
+        0,
+        AppDimens.bottomNavHeight + AppDimens.spaceMd,
+      ),
+      children: [
+        // 1. Hero card
+        _HeartHero(summary: summary, color: color),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 2. 7-day resting HR line chart
+        if (hasTrend)
+          _HeartPrimaryChart(days: trendDays, color: color)
+        else if (isLoading)
+          const _ChartSkeleton()
+        else
+          const SizedBox.shrink(),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 3. Heart zones bar (empty state — no zone field yet)
+        _HeartZonesCard(
+          color: color,
+          // No per-zone minute data on HeartDaySummary today — pass empty
+          // so the bar renders its placeholder and the legend shows 0 min.
+          minutes: const <ZHeartZone, int>{},
+        ),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 4. Stats grid
+        _HeartStatsGrid(summary: summary, color: color),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 5. Per-metric cards
+        if (metrics.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimens.spaceMd,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 12),
+                  child: Text(
+                    'Heart metrics',
+                    style: AppTextStyles.titleMedium.copyWith(
+                      color: AppColorsOf(context).textPrimary,
+                    ),
+                  ),
+                ),
+                for (var i = 0; i < metrics.length; i++) ...[
+                  _HeartMetricCard(
+                    series: metrics[i],
+                    color: color,
+                    displayUnit: displayUnit(metrics[i].unit, unitsSystem),
+                  ),
+                  if (i != metrics.length - 1)
+                    const SizedBox(height: AppDimens.spaceMd),
+                ],
+              ],
+            ),
+          )
+        else if (isLoading) ...[
+          const SizedBox(height: AppDimens.spaceSm),
+          const _MetricListSkeleton(),
+        ],
+
+        // 6. AI analysis
+        if ((summary.aiSummary ?? '').trim().isNotEmpty) ...[
+          const SizedBox(height: AppDimens.spaceMd),
+          _AiAnalysisCard(text: summary.aiSummary!, color: color),
+        ],
+      ],
+    );
+  }
+}
+
+// ── _HeartHero ───────────────────────────────────────────────────────────────
+
+class _HeartHero extends StatelessWidget {
+  const _HeartHero({required this.summary, required this.color});
+
+  final HeartDaySummary summary;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final rhr = summary.restingHr;
+    final delta = summary.restingHrVs7Day;
+
+    // Lower resting HR is better. A positive delta (RHR rose) is bad, and
+    // a negative delta (RHR dropped) is good. Invert the sign for the
+    // hero's "is positive?" flag so the pill tints correctly.
+    final deltaIsPositive = delta == null
+        ? null
+        : (delta <= 0); // RHR dropped or flat → treated as good
+
+    return InsightHeroCard(
+      eyebrow: 'Today',
+      categoryIcon: Icons.favorite_rounded,
+      categoryColor: color,
+      value: (rhr != null && rhr.isFinite) ? '${rhr.round()} bpm' : '—',
+      deltaLabel:
+          delta != null ? _formatHeartRateDeltaVsWeek(delta.round()) : null,
+      deltaIsPositive: deltaIsPositive,
+    );
+  }
+}
+
+// ── _HeartPrimaryChart ───────────────────────────────────────────────────────
+
+/// Feature-variant card wrapping a 200pt resting-HR line chart. Styled to
+/// match [InsightPrimaryChart]'s card chrome (surface fill, border, title
+/// row, radiusCard, spaceLg padding) so the Heart body feels cohesive with
+/// the other categories' primary charts.
+class _HeartPrimaryChart extends StatelessWidget {
+  const _HeartPrimaryChart({required this.days, required this.color});
+
+  final List<HeartTrendDay> days;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
+    // Build the 7 raw values, aligned oldest → newest, with NaN for gaps.
+    final points = <double>[
+      for (final d in days)
+        (d.restingHr != null && d.restingHr!.isFinite)
+            ? d.restingHr!
+            : double.nan,
+    ];
+    // Pad the head with NaN if there are fewer than 7 days of history.
+    final tail = points.length >= 7
+        ? points.sublist(points.length - 7)
+        : [
+            for (var i = 0; i < 7 - points.length; i++) double.nan,
+            ...points,
+          ];
+
+    // Today is the last day in the series if it's marked, else the last
+    // index when data exists.
+    var todayIndex = -1;
+    for (var i = days.length - 1; i >= 0; i--) {
+      if (days[i].isToday) {
+        todayIndex = i + (7 - days.length);
+        break;
+      }
+    }
+    if (todayIndex < 0 && tail.any((v) => v.isFinite)) {
+      todayIndex = 6;
+    }
+
+    // Day labels: derive from trend dates when possible, else fall back to
+    // the shared week-label helper.
+    final fallbackLabels = _generateWeekLabels();
+    final labels = <String>[
+      for (var i = 0; i < tail.length; i++)
+        if (i >= 7 - days.length)
+          _weekdayLetter(days[i - (7 - days.length)].date)
+        else
+          i < fallbackLabels.length ? fallbackLabels[i] : '',
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+      child: ZFadeSlideIn(
+        delay: const Duration(milliseconds: 180),
+        child: Container(
+          decoration: BoxDecoration(
+            color: colors.cardBackground,
+            border: Border.all(
+              color: colors.border.withValues(alpha: 0.4),
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceLg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '7-day resting HR',
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: colors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: AppDimens.spaceMd),
+              SizedBox(
+                height: 200,
+                child: ZCategoryChart(
+                  kind: ZCategoryChartKind.line,
+                  points: tail,
+                  color: color,
+                  dayLabels: labels,
+                  todayIndex: todayIndex,
+                  formatY: (v) => '${v.round()}',
+                  height: 200,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── _HeartZonesCard ──────────────────────────────────────────────────────────
+
+/// Feature card hosting [ZHeartZonesBar] — today's effort split across
+/// Resting / Fat burn / Cardio / Peak zones. When no zone data is
+/// available the bar draws a dim placeholder.
+class _HeartZonesCard extends StatelessWidget {
+  const _HeartZonesCard({
+    required this.color,
+    required this.minutes,
+  });
+
+  final Color color;
+  final Map<ZHeartZone, int> minutes;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+      child: ZFadeSlideIn(
+        delay: const Duration(milliseconds: 210),
+        child: ZuralogCard(
+          variant: ZCardVariant.feature,
+          category: color,
+          padding: const EdgeInsets.all(AppDimens.spaceLg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Today's heart zones",
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppDimens.spaceMd),
+              ZHeartZonesBar(
+                minutes: minutes,
+                categoryColor: color,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── _HeartStatsGrid ──────────────────────────────────────────────────────────
+
+class _HeartStatsGrid extends StatelessWidget {
+  const _HeartStatsGrid({required this.summary, required this.color});
+
+  final HeartDaySummary summary;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    String formatBpm(double? v) =>
+        (v != null && v.isFinite) ? '${v.round()} bpm' : '—';
+    String formatMs(double? v) =>
+        (v != null && v.isFinite) ? '${v.round()} ms' : '—';
+
+    final tiles = <InsightStatTile>[
+      InsightStatTile(
+        icon: Icons.favorite_rounded,
+        label: 'Resting HR',
+        value: formatBpm(summary.restingHr),
+      ),
+      InsightStatTile(
+        icon: Icons.monitor_heart_rounded,
+        label: 'HRV',
+        value: formatMs(summary.hrvMs),
+      ),
+      // No max HR field on HeartDaySummary yet — substitute Avg HR so the
+      // tile shows real data instead of a placeholder.
+      InsightStatTile(
+        icon: Icons.trending_up_rounded,
+        label: 'Avg HR',
+        value: formatBpm(summary.avgHr),
+      ),
+      // No recovery score field on HeartDaySummary yet — renders a dash.
+      const InsightStatTile(
+        icon: Icons.self_improvement_rounded,
+        label: 'Recovery',
+        value: '—',
+      ),
+    ];
+
+    return InsightStatsGrid(
+      title: 'The details',
+      categoryColor: color,
+      tiles: tiles,
+    );
+  }
+}
+
+// ── _HeartMetricCard ─────────────────────────────────────────────────────────
+
+/// Per-metric card for Heart. Continuous rate-like metrics (resting HR,
+/// HRV, max HR, walking HR) render as a line; countable metrics like
+/// workouts-per-day render as bars; everything else defaults to a line.
+class _HeartMetricCard extends StatelessWidget {
+  const _HeartMetricCard({
+    required this.series,
+    required this.color,
+    required this.displayUnit,
+  });
+
+  final MetricSeries series;
+  final Color color;
+  final String displayUnit;
+
+  /// Metric ids that read best as a line (continuous rate-like).
+  static const _continuousMetricIds = <String>{
+    'resting_heart_rate',
+    'hrv',
+    'max_heart_rate',
+    'walking_heart_rate',
+    'heart_rate',
+    'respiratory_rate',
+    'vo2_max',
+    'spo2',
+  };
+
+  /// Metric ids that read best as bars (countable-per-day).
+  static const _countableMetricIds = <String>{
+    'workouts',
+    'workouts_count',
+  };
+
+  bool get _isContinuous {
+    final id = series.metricId.toLowerCase();
+    return _continuousMetricIds.contains(id);
+  }
+
+  bool get _isCountable {
+    final id = series.metricId.toLowerCase();
+    return _countableMetricIds.contains(id);
+  }
+
+  ZCategoryChartKind get _chartKind {
+    if (_isCountable) return ZCategoryChartKind.bars;
+    if (_isContinuous) return ZCategoryChartKind.line;
+    // Unknown — line is the safer default for Heart metrics, which are
+    // overwhelmingly rate-like.
+    return ZCategoryChartKind.line;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final points = <double>[
+      for (final p in series.dataPoints) p.value,
+    ];
+    final tail = points.length >= 7
+        ? points.sublist(points.length - 7)
+        : [
+            for (var i = 0; i < 7 - points.length; i++) double.nan,
+            ...points,
+          ];
+    final todayIndex = points.isNotEmpty ? 6 : -1;
+    final dayLabels = _generateWeekLabels();
+
+    final values = series.dataPoints.map((p) => p.value).toList();
+    final avg = values.isEmpty
+        ? null
+        : values.reduce((a, b) => a + b) / values.length;
+    final min = values.isEmpty ? null : values.reduce((a, b) => a < b ? a : b);
+    final max = values.isEmpty ? null : values.reduce((a, b) => a > b ? a : b);
+
+    return ZuralogCard(
+      variant: ZCardVariant.feature,
+      category: color,
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row: name + delta pill
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  series.displayName,
+                  style: AppTextStyles.titleMedium.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              if (series.deltaPercent != null)
+                _MetricCardDeltaPill(deltaPercent: series.deltaPercent!),
+            ],
+          ),
+          const SizedBox(height: 4),
+          // Hero value
+          if (series.currentValue != null)
+            RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: series.currentValue!,
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 22,
+                      height: 1.15,
+                    ),
+                  ),
+                  if (displayUnit.isNotEmpty)
+                    TextSpan(
+                      text: ' $displayUnit',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: colors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          const SizedBox(height: AppDimens.spaceSm),
+          // Chart slot
+          if (series.dataPoints.length >= 2)
+            SizedBox(
+              height: 110,
+              child: ZCategoryChart(
+                kind: _chartKind,
+                points: tail,
+                color: color,
+                dayLabels: dayLabels,
+                todayIndex: todayIndex,
+                height: 110,
+              ),
+            )
+          else
+            SizedBox(
+              height: 42,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Not enough data yet',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: colors.textTertiary,
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(height: AppDimens.spaceMd),
+          // Avg / Min / Max strip
+          Row(
+            children: [
+              Expanded(
+                child: _StatChip(
+                  label: 'Avg',
+                  value: _formatMetricValue(
+                    avg,
+                    metricId: series.metricId,
+                    unit: displayUnit,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _StatChip(
+                  label: 'Min',
+                  value: _formatMetricValue(
+                    min,
+                    metricId: series.metricId,
+                    unit: displayUnit,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _StatChip(
+                  label: 'Max',
+                  value: _formatMetricValue(
                     max,
                     metricId: series.metricId,
                     unit: displayUnit,
@@ -1916,6 +2471,14 @@ String _formatSteps(double steps) {
 String _formatStepsDeltaVsWeek(int delta) {
   final sign = delta >= 0 ? '+' : '-';
   return '$sign${_formatSteps(delta.abs().toDouble())} vs last week';
+}
+
+/// Formats a heart-rate delta (in bpm) as `+4 bpm vs last week` or
+/// `-4 bpm vs last week`. Zero renders without a sign.
+String _formatHeartRateDeltaVsWeek(int delta) {
+  if (delta == 0) return '0 bpm vs last week';
+  final sign = delta > 0 ? '+' : '-';
+  return '$sign${delta.abs()} bpm vs last week';
 }
 
 /// Formats a raw Activity metric value for the Avg/Min/Max strip.
