@@ -37,6 +37,7 @@ const String kWorkoutActiveDraftKey = 'workout_active_draft';
 const String kWorkoutExerciseUnitKeyPrefix = 'workout_exercise_unit_';
 const Object _kNotSet = Object();
 const _uuid = Uuid();
+const bool _useMock = bool.fromEnvironment('USE_MOCK_DATA', defaultValue: false);
 
 class WorkoutSessionNotifier extends StateNotifier<WorkoutSession?> {
   WorkoutSessionNotifier(this._prefs, this._globalUnitDefault) : super(null);
@@ -349,4 +350,57 @@ final workoutSetsCompletedProvider = Provider<int>((ref) {
     }
   }
   return count;
+});
+
+class WorkoutWeeklySummary {
+  const WorkoutWeeklySummary({
+    required this.workoutsThisWeek,
+    required this.totalSets,
+    required this.totalVolumeKg,
+    required this.totalDurationSeconds,
+  });
+
+  static const empty = WorkoutWeeklySummary(
+    workoutsThisWeek: 0,
+    totalSets: 0,
+    totalVolumeKg: 0.0,
+    totalDurationSeconds: 0,
+  );
+
+  final int workoutsThisWeek;
+  final int totalSets;
+  final double totalVolumeKg;
+  final int totalDurationSeconds;
+}
+
+/// Weekly workout totals for the Today feed card.
+/// Returns mock values when USE_MOCK_DATA=true (make run-mock only).
+/// All other targets compute from local SharedPreferences workout history.
+final workoutWeeklySummaryProvider = Provider<WorkoutWeeklySummary>((ref) {
+  if (_useMock) {
+    return const WorkoutWeeklySummary(
+      workoutsThisWeek: 4,
+      totalSets: 52,
+      totalVolumeKg: 3840.0,
+      totalDurationSeconds: 5280,
+    );
+  }
+  final history = ref.watch(workoutHistoryProvider);
+  return history.maybeWhen(
+    data: (workouts) {
+      final now = DateTime.now();
+      final weekStart = DateTime(now.year, now.month, now.day)
+          .subtract(Duration(days: now.weekday - 1));
+      final thisWeek =
+          workouts.where((w) => !w.completedAt.toLocal().isBefore(weekStart));
+      return WorkoutWeeklySummary(
+        workoutsThisWeek: thisWeek.length,
+        totalSets: thisWeek.fold(0, (s, w) => s + w.totalSetsCompleted),
+        totalVolumeKg: thisWeek.fold(0.0, (s, w) => s + w.totalVolumeKg),
+        totalDurationSeconds:
+            thisWeek.fold(0, (s, w) => s + w.durationSeconds),
+      );
+    },
+    orElse: () => WorkoutWeeklySummary.empty,
+  );
 });

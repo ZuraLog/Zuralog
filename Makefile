@@ -15,18 +15,18 @@
 # ---------------------------------------------------------------------------
 # | Target            | Flutter mode | Backend              | Mock data?  |
 # |-------------------|--------------|----------------------|-------------|
-# | run               | --debug      | local (10.0.2.2)     | YES (auto)  |
+# | run               | --debug      | local (10.0.2.2)     | NO          |
 # | run-mock          | --debug      | none required        | YES (forced)|
 # | run-prod          | --release    | api.zuralog.com      | NO          |
-# | run-ios           | --debug      | local (localhost)    | YES (auto)  |
+# | run-ios           | --debug      | local (localhost)    | NO          |
 # | run-ios-prod      | --release    | api.zuralog.com      | NO          |
-# | run-device        | --debug      | local (DEVICE_IP)    | YES (auto)  |
+# | run-device        | --debug      | local (DEVICE_IP)    | NO          |
 # | run-device-prod   | --release    | api.zuralog.com      | NO          |
-# | reinstall         | --debug      | local (10.0.2.2)     | YES (auto)  |
+# | reinstall         | --debug      | local (10.0.2.2)     | NO          |
 # | reinstall-prod    | --release    | api.zuralog.com      | NO          |
 #
-# Mock data: --debug builds use kDebugMode=true, which activates MockRepository
-# in each feature provider. Release builds always use the real API.
+# Mock data: only active when USE_MOCK_DATA=true (run-mock target).
+# All other targets — debug or release — use real repositories.
 #
 # reinstall / reinstall-prod: uninstall the existing APK, run flutter clean,
 # then build and install fresh. Use these whenever make run / make run-prod
