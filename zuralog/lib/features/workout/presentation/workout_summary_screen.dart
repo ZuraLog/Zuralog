@@ -282,7 +282,7 @@ class _ExerciseBlock extends StatelessWidget {
                   children: [
                     Text(
                       exercise.exerciseName,
-                      style: AppTextStyles.titleSmall.copyWith(
+                      style: AppTextStyles.titleMedium.copyWith(
                         color: colors.textPrimary,
                         fontWeight: FontWeight.w600,
                       ),
