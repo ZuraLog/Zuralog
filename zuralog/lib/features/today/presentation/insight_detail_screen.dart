@@ -158,6 +158,8 @@ class _DetailBody extends ConsumerWidget {
               child: ZPatternPillButton(
                 icon: Icons.chat_bubble_outline_rounded,
                 label: 'Discuss with Coach',
+                accent: categoryColor,
+                patternVariant: _patternVariantForCategory(detail.category),
                 onPressed: () {
                   ref.read(hapticServiceProvider).medium();
                   ref.read(analyticsServiceProvider).capture(
