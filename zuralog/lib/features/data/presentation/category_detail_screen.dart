@@ -25,6 +25,8 @@ import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/heart/domain/heart_models.dart';
 import 'package:zuralog/features/heart/providers/heart_providers.dart';
+import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
+import 'package:zuralog/features/nutrition/providers/nutrition_providers.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart'
     show UnitsSystem;
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
@@ -129,6 +131,11 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
                   unitsSystem: unitsSystem,
                 ),
               HealthCategory.heart => _HeartDetailBody(
+                  color: color,
+                  detailAsync: detailAsync,
+                  unitsSystem: unitsSystem,
+                ),
+              HealthCategory.nutrition => _NutritionDetailBody(
                   color: color,
                   detailAsync: detailAsync,
                   unitsSystem: unitsSystem,
@@ -1569,6 +1576,615 @@ class _HeartMetricCard extends StatelessWidget {
   }
 }
 
+// ── _NutritionDetailBody ─────────────────────────────────────────────────────
+
+/// Magazine-layout body for the Nutrition category detail screen.
+///
+/// Sections, top to bottom:
+///  1. Hero card (today's calories + delta vs last-week average).
+///  2. 7-day calorie bar chart with 2,000 kcal goal line.
+///  3. Macro donut — today's carbs / protein / fat split, with legend.
+///  4. 2×2 stats grid — calories / protein / carbs / fat.
+///  5. One card per sub-metric (bars for countable totals, line for continuous).
+///  6. AI analysis card when a summary is available.
+///
+/// Notes on adaptations vs the original brief:
+///  - [NutritionDaySummary] has no calorie goal field today, so the
+///    primary chart defaults to 2,000 kcal and labels it "2,000 goal".
+///  - Calorie trend can be higher or lower — neither direction is
+///    "better" — so the hero uses [deltaIsPositive] = `null` and the
+///    pill renders in a neutral tint.
+class _NutritionDetailBody extends ConsumerWidget {
+  const _NutritionDetailBody({
+    required this.color,
+    required this.detailAsync,
+    required this.unitsSystem,
+  });
+
+  final Color color;
+  final AsyncValue<CategoryDetailData> detailAsync;
+  // ignore: unused_element_parameter
+  final UnitsSystem unitsSystem;
+
+  /// Daily calorie target used for the primary chart's goal line. Kept
+  /// local because [NutritionDaySummary] doesn't carry a goal field yet
+  /// — tracked to move to user preferences in a follow-up.
+  static const double _calorieGoal = 2000;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final summaryAsync = ref.watch(nutritionDaySummaryProvider);
+    final trendAsync = ref.watch(nutritionTrendProvider('7d'));
+
+    final summary = summaryAsync.valueOrNull ?? NutritionDaySummary.empty;
+    final trendDays =
+        trendAsync.valueOrNull ?? const <NutritionTrendDay>[];
+    final metrics = detailAsync.valueOrNull?.metrics ?? const <MetricSeries>[];
+    final isLoading = summaryAsync.isLoading && !summaryAsync.hasValue ||
+        detailAsync.isLoading && !detailAsync.hasValue;
+
+    // Delta vs last-week average calories. Skips today when computing
+    // the average so the hero pill compares "today vs the days before".
+    final historical = trendDays
+        .where((d) => !d.isToday && d.calories != null && d.calories!.isFinite)
+        .map((d) => d.calories!)
+        .toList();
+    final avgLastWeek = historical.isEmpty
+        ? null
+        : historical.reduce((a, b) => a + b) / historical.length;
+    final todayKcal = summary.totalCalories.toDouble();
+    final kcalDelta = (avgLastWeek != null && todayKcal > 0)
+        ? (todayKcal - avgLastWeek).round()
+        : null;
+
+    final hasCalorieTrend = trendDays
+            .where((d) => d.calories != null && d.calories!.isFinite)
+            .length >=
+        2;
+
+    return ListView(
+      padding: EdgeInsets.fromLTRB(
+        0,
+        AppDimens.spaceXs,
+        0,
+        AppDimens.bottomNavHeight + AppDimens.spaceMd,
+      ),
+      children: [
+        // 1. Hero card
+        _NutritionHero(
+          color: color,
+          totalKcal: summary.totalCalories,
+          kcalDelta: kcalDelta,
+        ),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 2. 7-day calorie bar chart
+        if (hasCalorieTrend)
+          _NutritionPrimaryChart(
+            days: trendDays,
+            color: color,
+            goalValue: _calorieGoal,
+          )
+        else if (isLoading)
+          const _ChartSkeleton()
+        else
+          const SizedBox.shrink(),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 3. Macro donut (signature visual)
+        _NutritionMacroDonutCard(summary: summary, color: color),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 4. Stats grid
+        _NutritionStatsGrid(summary: summary, color: color),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 5. Per-metric cards
+        if (metrics.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimens.spaceMd,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 12),
+                  child: Text(
+                    'Nutrition metrics',
+                    style: AppTextStyles.titleMedium.copyWith(
+                      color: AppColorsOf(context).textPrimary,
+                    ),
+                  ),
+                ),
+                for (var i = 0; i < metrics.length; i++) ...[
+                  _NutritionMetricCard(
+                    series: metrics[i],
+                    color: color,
+                    displayUnit: displayUnit(metrics[i].unit, unitsSystem),
+                    calorieGoal: _calorieGoal,
+                  ),
+                  if (i != metrics.length - 1)
+                    const SizedBox(height: AppDimens.spaceMd),
+                ],
+              ],
+            ),
+          )
+        else if (isLoading) ...[
+          const SizedBox(height: AppDimens.spaceSm),
+          const _MetricListSkeleton(),
+        ],
+
+        // 6. AI analysis
+        if ((summary.aiSummary ?? '').trim().isNotEmpty) ...[
+          const SizedBox(height: AppDimens.spaceMd),
+          _AiAnalysisCard(text: summary.aiSummary!, color: color),
+        ],
+      ],
+    );
+  }
+}
+
+// ── _NutritionHero ───────────────────────────────────────────────────────────
+
+class _NutritionHero extends StatelessWidget {
+  const _NutritionHero({
+    required this.color,
+    required this.totalKcal,
+    required this.kcalDelta,
+  });
+
+  final Color color;
+  final int totalKcal;
+  final int? kcalDelta;
+
+  @override
+  Widget build(BuildContext context) {
+    return InsightHeroCard(
+      eyebrow: 'Today',
+      categoryIcon: Icons.local_fire_department_rounded,
+      categoryColor: color,
+      value: totalKcal > 0 ? '${_formatSteps(totalKcal.toDouble())} kcal' : '—',
+      deltaLabel:
+          kcalDelta != null ? _formatCalorieDeltaVsWeek(kcalDelta!) : null,
+      // Calorie delta is direction-agnostic — neither "up" nor "down" is
+      // objectively better. `null` keeps the pill in the neutral tint.
+      deltaIsPositive: null,
+    );
+  }
+}
+
+// ── _NutritionPrimaryChart ──────────────────────────────────────────────────
+
+class _NutritionPrimaryChart extends StatelessWidget {
+  const _NutritionPrimaryChart({
+    required this.days,
+    required this.color,
+    required this.goalValue,
+  });
+
+  final List<NutritionTrendDay> days;
+  final Color color;
+  final double goalValue;
+
+  @override
+  Widget build(BuildContext context) {
+    return InsightPrimaryChart(
+      title: '7-day calories',
+      categoryColor: color,
+      points: [
+        for (final d in days)
+          InsightPrimaryChartPoint(
+            label: _weekdayLetter(d.date),
+            value: (d.calories ?? 0).toDouble(),
+            isToday: d.isToday,
+          ),
+      ],
+      goalValue: goalValue,
+      goalLabel: '${_formatSteps(goalValue)} goal',
+      formatTooltip: (v) => '${v.toInt()} kcal',
+      formatYAxis: (v) => v >= 1000
+          ? '${(v / 1000).toStringAsFixed(v % 1000 == 0 ? 0 : 1)}k'
+          : v.round().toString(),
+    );
+  }
+}
+
+// ── _NutritionMacroDonutCard ────────────────────────────────────────────────
+
+/// Feature card hosting [ZMacroDonut] — today's carbs / protein / fat
+/// split, with a legend row per macro underneath. Renders a friendly
+/// empty-state caption when no macros have been logged yet today.
+class _NutritionMacroDonutCard extends StatelessWidget {
+  const _NutritionMacroDonutCard({
+    required this.summary,
+    required this.color,
+  });
+
+  final NutritionDaySummary summary;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final carbs = summary.totalCarbsG;
+    final protein = summary.totalProteinG;
+    final fat = summary.totalFatG;
+    final totalMacros = carbs + protein + fat;
+    final hasData = totalMacros > 0;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+      child: ZFadeSlideIn(
+        delay: const Duration(milliseconds: 210),
+        child: ZuralogCard(
+          variant: ZCardVariant.feature,
+          category: color,
+          padding: const EdgeInsets.all(AppDimens.spaceLg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Today's macros",
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppDimens.spaceMd),
+              if (hasData) ...[
+                Center(
+                  child: ZMacroDonut(
+                    proteinGrams: protein,
+                    carbsGrams: carbs,
+                    fatGrams: fat,
+                    categoryColor: color,
+                    centerValue:
+                        _formatSteps(summary.totalCalories.toDouble()),
+                    centerLabel: 'kcal today',
+                  ),
+                ),
+                const SizedBox(height: AppDimens.spaceLg),
+                _MacroLegendRow(
+                  dotColor: kMacroCarbsColor,
+                  label: 'Carbs',
+                  value: '${carbs.round()} g',
+                ),
+                const SizedBox(height: AppDimens.spaceXs),
+                _MacroLegendRow(
+                  dotColor: kMacroProteinColor,
+                  label: 'Protein',
+                  value: '${protein.round()} g',
+                ),
+                const SizedBox(height: AppDimens.spaceXs),
+                _MacroLegendRow(
+                  dotColor: kMacroFatColor,
+                  label: 'Fat',
+                  value: '${fat.round()} g',
+                ),
+              ] else
+                Text(
+                  'No meals logged yet today.',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: colors.textTertiary,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MacroLegendRow extends StatelessWidget {
+  const _MacroLegendRow({
+    required this.dotColor,
+    required this.label,
+    required this.value,
+  });
+
+  final Color dotColor;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: dotColor,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: AppDimens.spaceSm),
+        Text(
+          label,
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: colors.textSecondary,
+          ),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── _NutritionStatsGrid ─────────────────────────────────────────────────────
+
+class _NutritionStatsGrid extends StatelessWidget {
+  const _NutritionStatsGrid({required this.summary, required this.color});
+
+  final NutritionDaySummary summary;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final tiles = <InsightStatTile>[
+      InsightStatTile(
+        icon: Icons.local_fire_department_rounded,
+        label: 'Calories',
+        value: summary.totalCalories > 0
+            ? '${_formatSteps(summary.totalCalories.toDouble())} kcal'
+            : '—',
+      ),
+      InsightStatTile(
+        icon: Icons.fitness_center_rounded,
+        label: 'Protein',
+        value:
+            summary.totalProteinG > 0 ? '${summary.totalProteinG.round()}g' : '—',
+      ),
+      InsightStatTile(
+        icon: Icons.grain_rounded,
+        label: 'Carbs',
+        value:
+            summary.totalCarbsG > 0 ? '${summary.totalCarbsG.round()}g' : '—',
+      ),
+      InsightStatTile(
+        icon: Icons.opacity_rounded,
+        label: 'Fat',
+        value: summary.totalFatG > 0 ? '${summary.totalFatG.round()}g' : '—',
+      ),
+    ];
+
+    return InsightStatsGrid(
+      title: 'The details',
+      categoryColor: color,
+      tiles: tiles,
+    );
+  }
+}
+
+// ── _NutritionMetricCard ────────────────────────────────────────────────────
+
+/// Per-metric card for Nutrition. Countable daily totals (calories,
+/// macros, water) render as bars; any continuous/ratio metric renders
+/// as a line; unknowns default to bars.
+class _NutritionMetricCard extends StatelessWidget {
+  const _NutritionMetricCard({
+    required this.series,
+    required this.color,
+    required this.displayUnit,
+    required this.calorieGoal,
+  });
+
+  final MetricSeries series;
+  final Color color;
+  final String displayUnit;
+  final double calorieGoal;
+
+  /// Metric ids that are countable-per-day (bars).
+  static const _countableMetricIds = <String>{
+    'calories',
+    'calories_consumed',
+    'total_calories',
+    'protein',
+    'protein_g',
+    'carbs',
+    'carbs_g',
+    'fat',
+    'fat_g',
+    'water',
+    'water_ml',
+    'fiber',
+    'fiber_g',
+    'sugar',
+    'sugar_g',
+    'sodium',
+    'sodium_mg',
+  };
+
+  /// Metric ids that read best as a line (continuous ratios or scores).
+  static const _continuousMetricIds = <String>{
+    'protein_ratio',
+    'carbs_ratio',
+    'fat_ratio',
+    'macro_ratio',
+    'nutrition_score',
+  };
+
+  bool get _isCountable {
+    final id = series.metricId.toLowerCase();
+    return _countableMetricIds.contains(id);
+  }
+
+  bool get _isContinuous {
+    final id = series.metricId.toLowerCase();
+    return _continuousMetricIds.contains(id);
+  }
+
+  ZCategoryChartKind get _chartKind {
+    if (_isContinuous) return ZCategoryChartKind.line;
+    if (_isCountable) return ZCategoryChartKind.bars;
+    // Unknown metric → bars (safer default for daily totals, which
+    // dominate the Nutrition category).
+    return ZCategoryChartKind.bars;
+  }
+
+  double? get _goalValue {
+    final id = series.metricId.toLowerCase();
+    if (id == 'calories' ||
+        id == 'calories_consumed' ||
+        id == 'total_calories') {
+      return calorieGoal;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final points = <double>[
+      for (final p in series.dataPoints) p.value,
+    ];
+    // Pad/crop to 7 for the slim chart primitive, which expects 7 labels.
+    final tail = points.length >= 7
+        ? points.sublist(points.length - 7)
+        : [
+            for (var i = 0; i < 7 - points.length; i++) double.nan,
+            ...points,
+          ];
+    final todayIndex = points.isNotEmpty ? 6 : -1;
+    final dayLabels = _generateWeekLabels();
+
+    final values = series.dataPoints.map((p) => p.value).toList();
+    final avg = values.isEmpty
+        ? null
+        : values.reduce((a, b) => a + b) / values.length;
+    final min = values.isEmpty ? null : values.reduce((a, b) => a < b ? a : b);
+    final max = values.isEmpty ? null : values.reduce((a, b) => a > b ? a : b);
+
+    return ZuralogCard(
+      variant: ZCardVariant.feature,
+      category: color,
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row: name + delta pill
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  series.displayName,
+                  style: AppTextStyles.titleMedium.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              if (series.deltaPercent != null)
+                _MetricCardDeltaPill(deltaPercent: series.deltaPercent!),
+            ],
+          ),
+          const SizedBox(height: 4),
+          // Hero value
+          if (series.currentValue != null)
+            RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: series.currentValue!,
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 22,
+                      height: 1.15,
+                    ),
+                  ),
+                  if (displayUnit.isNotEmpty)
+                    TextSpan(
+                      text: ' $displayUnit',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: colors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          const SizedBox(height: AppDimens.spaceSm),
+          // Chart slot
+          if (series.dataPoints.length >= 2)
+            SizedBox(
+              height: 110,
+              child: ZCategoryChart(
+                kind: _chartKind,
+                points: tail,
+                color: color,
+                dayLabels: dayLabels,
+                todayIndex: todayIndex,
+                goalValue: _goalValue,
+                height: 110,
+              ),
+            )
+          else
+            SizedBox(
+              height: 42,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Not enough data yet',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: colors.textTertiary,
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(height: AppDimens.spaceMd),
+          // Avg / Min / Max strip
+          Row(
+            children: [
+              Expanded(
+                child: _StatChip(
+                  label: 'Avg',
+                  value: _formatMetricValue(
+                    avg,
+                    metricId: series.metricId,
+                    unit: displayUnit,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _StatChip(
+                  label: 'Min',
+                  value: _formatMetricValue(
+                    min,
+                    metricId: series.metricId,
+                    unit: displayUnit,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _StatChip(
+                  label: 'Max',
+                  value: _formatMetricValue(
+                    max,
+                    metricId: series.metricId,
+                    unit: displayUnit,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── _SleepHero ────────────────────────────────────────────────────────────────
 
 class _SleepHero extends StatelessWidget {
@@ -2479,6 +3095,14 @@ String _formatHeartRateDeltaVsWeek(int delta) {
   if (delta == 0) return '0 bpm vs last week';
   final sign = delta > 0 ? '+' : '-';
   return '$sign${delta.abs()} bpm vs last week';
+}
+
+/// Formats a calorie delta (kcal) as `+120 kcal vs last week` or
+/// `-80 kcal vs last week`. Zero renders without a sign.
+String _formatCalorieDeltaVsWeek(int delta) {
+  if (delta == 0) return '0 kcal vs last week';
+  final sign = delta > 0 ? '+' : '-';
+  return '$sign${_formatSteps(delta.abs().toDouble())} kcal vs last week';
 }
 
 /// Formats a raw Activity metric value for the Avg/Min/Max strip.
