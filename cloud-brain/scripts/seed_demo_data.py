@@ -44,12 +44,13 @@ Demo account credentials
     FULL_USER_ID  = a0000000-0000-0000-0000-000000000001
     EMPTY_USER_ID = a0000000-0000-0000-0000-000000000002
 
-Table coverage (23/23)
------------------------
-  users, user_preferences, integrations, user_goals, daily_health_metrics,
-  sleep_records, weight_measurements, nutrition_entries, unified_activities,
-  blood_pressure_records, user_streaks, achievements, insights, journal_entries,
-  quick_logs, notification_logs, emergency_health_cards, conversations, messages,
+Table coverage
+--------------
+  users, user_preferences, integrations, user_goals,
+  health_events, daily_summaries, activity_sessions,
+  meals, meal_foods, nutrition_daily_summaries,
+  user_streaks, achievements, insights, journal_entries,
+  notification_logs, emergency_health_cards, conversations, messages,
   reports, health_scores, user_devices, usage_logs
 """
 
@@ -57,7 +58,9 @@ import argparse
 import json
 import math
 import os
+import random
 import sys
+import uuid
 from datetime import date, datetime, timedelta, timezone
 
 import psycopg2
@@ -112,11 +115,20 @@ def get_connection() -> psycopg2.extensions.connection:
 def reset_demo_data(cur):
     """Wipe all rows belonging to both demo accounts."""
     print("  Resetting demo data...")
+
+    # meal_foods references meals, so delete child rows first
+    cur.execute(
+        "DELETE FROM meal_foods WHERE meal_id IN (SELECT id FROM meals WHERE user_id IN (%s, %s))",
+        (FULL_ID, EMPTY_ID),
+    )
+
+    # health_events may reference activity_sessions via session_id
+    cur.execute("DELETE FROM health_events WHERE user_id IN (%s, %s)", (FULL_ID, EMPTY_ID))
+
     tables_with_user_id = [
         "usage_logs",
         "user_devices",
         "health_scores",
-        "quick_logs",
         "journal_entries",
         "achievements",
         "user_streaks",
@@ -127,12 +139,10 @@ def reset_demo_data(cur):
         "reports",
         "user_goals",
         "integrations",
-        "nutrition_entries",
-        "sleep_records",
-        "weight_measurements",
-        "blood_pressure_records",
-        "daily_health_metrics",
-        "unified_activities",
+        "daily_summaries",
+        "activity_sessions",
+        "meals",
+        "nutrition_daily_summaries",
     ]
     for tbl in tables_with_user_id:
         cur.execute(f"DELETE FROM {tbl} WHERE user_id IN (%s, %s)", (FULL_ID, EMPTY_ID))
@@ -312,18 +322,22 @@ def seed_integrations(cur):
 
 
 def seed_goals(cur):
+    # start_date is NOT NULL in the current schema (migration b3c4d5e6f7a9
+    # converted the column from String to Date and enforced the constraint).
+    # Seed every goal with today as the start date.
+    today = date.today()
     rows = [
-        ("goal-demo-steps", FULL_ID, "steps", 10000.0, "DAILY", True),
-        ("goal-demo-sleep", FULL_ID, "sleep_hours", 8.0, "DAILY", True),
-        ("goal-demo-workouts", FULL_ID, "workouts", 3.0, "WEEKLY", True),
-        ("goal-demo-weight", FULL_ID, "weight_kg", 76.0, "LONG_TERM", True),
-        ("goal-demo-calories", FULL_ID, "active_calories", 500.0, "DAILY", True),
-        ("goal-demo-water", FULL_ID, "water_ml", 2000.0, "DAILY", True),
+        ("goal-demo-steps", FULL_ID, "steps", 10000.0, "DAILY", True, today),
+        ("goal-demo-sleep", FULL_ID, "sleep_hours", 8.0, "DAILY", True, today),
+        ("goal-demo-workouts", FULL_ID, "workouts", 3.0, "WEEKLY", True, today),
+        ("goal-demo-weight", FULL_ID, "weight_kg", 76.0, "LONG_TERM", True, today),
+        ("goal-demo-calories", FULL_ID, "active_calories", 500.0, "DAILY", True, today),
+        ("goal-demo-water", FULL_ID, "water_ml", 2000.0, "DAILY", True, today),
     ]
     execute_values(
         cur,
         """
-        INSERT INTO user_goals (id, user_id, metric, target_value, period, is_active)
+        INSERT INTO user_goals (id, user_id, metric, target_value, period, is_active, start_date)
         VALUES %s
         ON CONFLICT (id) DO UPDATE SET target_value = EXCLUDED.target_value
     """,
@@ -332,187 +346,671 @@ def seed_goals(cur):
     print(f"  user_goals: {len(rows)} rows")
 
 
-def seed_daily_health_metrics(cur):
-    rows = []
+def _det_uuid(key: str) -> str:
+    """Generate a deterministic UUID from a string key using uuid5."""
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, key))
+
+
+def seed_unified_health_metrics(cur):
+    """30 days of daily_aggregate health_events + daily_summaries for 9 metrics."""
+    # Metric definitions: (metric_type, unit, base, amplitude, trend_per_day)
+    metric_specs = [
+        ("steps", "steps", 8500, 2500, 0),
+        ("active_calories", "kcal", 475, 175, 0),
+        ("distance", "m", 6000, 3000, 0),
+        ("exercise_minutes", "min", 37, 22, 0),
+        ("floors_climbed", "floors", 15, 10, 0),
+        ("resting_heart_rate", "bpm", 65, 6, -0.07),   # trends down slightly
+        ("hrv_ms", "ms", 57, 17, 0.1),                 # trends up slightly
+        ("heart_rate_avg", "bpm", 75, 7, 0),
+        ("vo2_max", "mL/kg/min", 45, 3, 0.02),
+    ]
+
+    he_rows = []
+    ds_rows = []
+
     for i in range(30):
         d = days_ago(29 - i)
-        dow = d.weekday()
-        day = d.day
-        age = i  # 0 = oldest, 29 = today
+        ts = datetime(d.year, d.month, d.day, 8, 0, 0, tzinfo=timezone.utc)
 
-        rows.append(
-            (
-                f"dhm-demo-{d.strftime('%Y%m%d')}",
+        for metric_type, unit, base, amplitude, trend in metric_specs:
+            val = base + trend * i + random.uniform(-amplitude / 2, amplitude / 2)
+            # Keep vo2_max stable-ish
+            if metric_type == "vo2_max":
+                val = round(val, 1)
+            else:
+                val = max(1, round(val, 1))
+
+            row_id = _det_uuid(f"{FULL_ID}:{metric_type}:{d.isoformat()}:daily_aggregate")
+
+            he_rows.append((
+                row_id,
                 FULL_ID,
-                "apple_health",
-                d.strftime("%Y-%m-%d"),
-                7000 + (dow * 400 + (day * 157) % 5000),  # steps
-                350 + (day * 83 + dow * 29) % 200,  # active_calories
-                round(68.0 - age * 0.2 + math.sin(day) * 1.5, 1),  # resting_heart_rate
-                round(44.0 + age * 0.5 + math.cos(day) * 3.0, 1),  # hrv_ms
-                round(39.5 + math.sin(day / 3) * 1.5, 1),  # vo2_max
-                round(5000 + (dow * 500 + (day * 211) % 4000), 0),  # distance_meters
-                5 + (day * 3) % 10,  # flights_climbed
-                round(20.0 - age * 0.05, 1),  # body_fat_percentage
-                round(14.0 + math.sin(day / 2) * 1.5, 1),  # respiratory_rate
-                round(98.0 + math.sin(day) * 0.8, 1),  # oxygen_saturation
-                round(72.0 + math.sin(day / 2) * 4.0, 1),  # heart_rate_avg
-            )
-        )
+                metric_type,
+                val,
+                unit,
+                "manual",
+                ts,
+                d,
+                "daily_aggregate",
+                None,   # session_id
+                None,   # idempotency_key
+                None,   # metadata
+            ))
+
+            ds_rows.append((
+                _det_uuid(f"ds:{FULL_ID}:{metric_type}:{d.isoformat()}"),
+                FULL_ID,
+                d,
+                metric_type,
+                val,
+                unit,
+                1,
+            ))
 
     execute_values(
         cur,
         """
-        INSERT INTO daily_health_metrics
-          (id, user_id, source, date, steps, active_calories, resting_heart_rate,
-           hrv_ms, vo2_max, distance_meters, flights_climbed, body_fat_percentage,
-           respiratory_rate, oxygen_saturation, heart_rate_avg)
+        INSERT INTO health_events
+          (id, user_id, metric_type, value, unit, source, recorded_at, local_date,
+           granularity, session_id, idempotency_key, metadata)
+        VALUES %s
+        ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+        """,
+        he_rows,
+    )
+    execute_values(
+        cur,
+        """
+        INSERT INTO daily_summaries
+          (id, user_id, date, metric_type, value, unit, event_count)
+        VALUES %s
+        ON CONFLICT (user_id, date, metric_type) DO UPDATE SET value = EXCLUDED.value
+        """,
+        ds_rows,
+    )
+    print(f"  health_events (daily metrics): {len(he_rows)} rows")
+    print(f"  daily_summaries (daily metrics): {len(ds_rows)} rows")
+
+
+def seed_sleep_v2(cur):
+    """30 days of sleep metrics in health_events + daily_summaries."""
+    sleep_metrics = [
+        ("sleep_duration", "min", 450, 75),       # 6–8.5 hrs in minutes
+        ("sleep_efficiency", "%", 88, 13),
+        ("deep_sleep_minutes", "min", 85, 70),
+        ("rem_sleep_minutes", "min", 100, 60),
+        ("sleep_quality", "score", 80, 20),
+    ]
+
+    he_rows = []
+    ds_rows = []
+
+    for i in range(30):
+        d = days_ago(29 - i)
+        # Wake-up time: 8am local
+        ts = datetime(d.year, d.month, d.day, 8, 0, 0, tzinfo=timezone.utc)
+        dow = d.weekday()
+        weekend_bonus = 20 if dow >= 5 else 0  # sleep longer on weekends
+
+        for metric_type, unit, base, amplitude in sleep_metrics:
+            bonus = weekend_bonus if metric_type == "sleep_duration" else 0
+            val = base + bonus + random.uniform(-amplitude / 2, amplitude / 2)
+            val = max(1, round(val, 1))
+
+            row_id = _det_uuid(f"{FULL_ID}:{metric_type}:{d.isoformat()}:daily_aggregate")
+
+            he_rows.append((
+                row_id, FULL_ID, metric_type, val, unit,
+                "manual", ts, d, "daily_aggregate",
+                None, None, None,
+            ))
+            ds_rows.append((
+                _det_uuid(f"ds:{FULL_ID}:{metric_type}:{d.isoformat()}"),
+                FULL_ID, d, metric_type, val, unit, 1,
+            ))
+
+    execute_values(
+        cur,
+        """
+        INSERT INTO health_events
+          (id, user_id, metric_type, value, unit, source, recorded_at, local_date,
+           granularity, session_id, idempotency_key, metadata)
+        VALUES %s
+        ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+        """,
+        he_rows,
+    )
+    execute_values(
+        cur,
+        """
+        INSERT INTO daily_summaries
+          (id, user_id, date, metric_type, value, unit, event_count)
+        VALUES %s
+        ON CONFLICT (user_id, date, metric_type) DO UPDATE SET value = EXCLUDED.value
+        """,
+        ds_rows,
+    )
+    print(f"  health_events (sleep): {len(he_rows)} rows")
+    print(f"  daily_summaries (sleep): {len(ds_rows)} rows")
+
+
+def seed_weight_v2(cur):
+    """~10 point-in-time weight_kg readings + ~5 body_fat readings across 30 days."""
+    # Spread weight readings across the 30 days (roughly every 3 days)
+    weight_days = [29, 26, 23, 20, 17, 14, 11, 8, 5, 2]
+    weight_base = 76.0
+    weight_end = 75.2
+
+    he_rows = []
+    ds_rows = []
+
+    for idx, d_offset in enumerate(weight_days):
+        d = days_ago(d_offset)
+        ts = datetime(d.year, d.month, d.day, 7, 30, 0, tzinfo=timezone.utc)
+        # Linear drift from 76.0 → 75.2 with small noise
+        progress = idx / (len(weight_days) - 1)
+        val = round(weight_base + (weight_end - weight_base) * progress + random.uniform(-0.3, 0.3), 1)
+
+        row_id = _det_uuid(f"{FULL_ID}:weight_kg:{d.isoformat()}:point_in_time")
+        he_rows.append((
+            row_id, FULL_ID, "weight_kg", val, "kg",
+            "manual", ts, d, "point_in_time",
+            None, None, None,
+        ))
+        ds_rows.append((
+            _det_uuid(f"ds:{FULL_ID}:weight_kg:{d.isoformat()}"),
+            FULL_ID, d, "weight_kg", val, "kg", 1,
+        ))
+
+    # Body fat: ~5 readings
+    bf_days = [28, 21, 14, 7, 0]
+    bf_values = [20.5, 20.1, 19.8, 19.5, 19.2]
+    for idx, d_offset in enumerate(bf_days):
+        d = days_ago(d_offset)
+        ts = datetime(d.year, d.month, d.day, 7, 30, 0, tzinfo=timezone.utc)
+        val = round(bf_values[idx] + random.uniform(-0.4, 0.4), 1)
+
+        row_id = _det_uuid(f"{FULL_ID}:body_fat_percentage:{d.isoformat()}:point_in_time")
+        he_rows.append((
+            row_id, FULL_ID, "body_fat_percentage", val, "%",
+            "manual", ts, d, "point_in_time",
+            None, None, None,
+        ))
+        ds_rows.append((
+            _det_uuid(f"ds:{FULL_ID}:body_fat_percentage:{d.isoformat()}"),
+            FULL_ID, d, "body_fat_percentage", val, "%", 1,
+        ))
+
+    execute_values(
+        cur,
+        """
+        INSERT INTO health_events
+          (id, user_id, metric_type, value, unit, source, recorded_at, local_date,
+           granularity, session_id, idempotency_key, metadata)
+        VALUES %s
+        ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+        """,
+        he_rows,
+    )
+    execute_values(
+        cur,
+        """
+        INSERT INTO daily_summaries
+          (id, user_id, date, metric_type, value, unit, event_count)
+        VALUES %s
+        ON CONFLICT (user_id, date, metric_type) DO UPDATE SET value = EXCLUDED.value
+        """,
+        ds_rows,
+    )
+    print(f"  health_events (weight/body_fat): {len(he_rows)} rows")
+    print(f"  daily_summaries (weight/body_fat): {len(ds_rows)} rows")
+
+
+# ---------------------------------------------------------------------------
+# Meal food data pools
+# ---------------------------------------------------------------------------
+_MEAL_TEMPLATES = {
+    "breakfast": [
+        {
+            "name": "Eggs & Toast",
+            "foods": [
+                {"food_name": "Scrambled Eggs (2)", "portion_amount": 2, "portion_unit": "eggs",
+                 "calories": 180, "protein_g": 14, "carbs_g": 2, "fat_g": 13},
+                {"food_name": "Whole Wheat Toast", "portion_amount": 1, "portion_unit": "slice",
+                 "calories": 80, "protein_g": 3, "carbs_g": 15, "fat_g": 1},
+            ],
+        },
+        {
+            "name": "Oatmeal & Berries",
+            "foods": [
+                {"food_name": "Rolled Oats", "portion_amount": 80, "portion_unit": "g",
+                 "calories": 300, "protein_g": 10, "carbs_g": 54, "fat_g": 5},
+                {"food_name": "Mixed Berries", "portion_amount": 100, "portion_unit": "g",
+                 "calories": 57, "protein_g": 1, "carbs_g": 14, "fat_g": 0},
+            ],
+        },
+        {
+            "name": "Greek Yogurt & Honey",
+            "foods": [
+                {"food_name": "Greek Yogurt", "portion_amount": 200, "portion_unit": "g",
+                 "calories": 150, "protein_g": 20, "carbs_g": 9, "fat_g": 4},
+                {"food_name": "Honey", "portion_amount": 1, "portion_unit": "tbsp",
+                 "calories": 64, "protein_g": 0, "carbs_g": 17, "fat_g": 0},
+            ],
+        },
+        {
+            "name": "Avocado Toast",
+            "foods": [
+                {"food_name": "Sourdough Bread", "portion_amount": 2, "portion_unit": "slices",
+                 "calories": 180, "protein_g": 6, "carbs_g": 34, "fat_g": 2},
+                {"food_name": "Avocado", "portion_amount": 0.5, "portion_unit": "avocado",
+                 "calories": 120, "protein_g": 2, "carbs_g": 7, "fat_g": 11},
+            ],
+        },
+    ],
+    "lunch": [
+        {
+            "name": "Chicken Salad",
+            "foods": [
+                {"food_name": "Grilled Chicken Breast", "portion_amount": 150, "portion_unit": "g",
+                 "calories": 248, "protein_g": 47, "carbs_g": 0, "fat_g": 5},
+                {"food_name": "Mixed Greens", "portion_amount": 100, "portion_unit": "g",
+                 "calories": 25, "protein_g": 2, "carbs_g": 4, "fat_g": 0},
+                {"food_name": "Olive Oil Dressing", "portion_amount": 1, "portion_unit": "tbsp",
+                 "calories": 120, "protein_g": 0, "carbs_g": 0, "fat_g": 14},
+            ],
+        },
+        {
+            "name": "Burrito Bowl",
+            "foods": [
+                {"food_name": "Brown Rice", "portion_amount": 150, "portion_unit": "g",
+                 "calories": 195, "protein_g": 4, "carbs_g": 40, "fat_g": 2},
+                {"food_name": "Black Beans", "portion_amount": 100, "portion_unit": "g",
+                 "calories": 132, "protein_g": 9, "carbs_g": 24, "fat_g": 0},
+                {"food_name": "Shredded Chicken", "portion_amount": 100, "portion_unit": "g",
+                 "calories": 165, "protein_g": 31, "carbs_g": 0, "fat_g": 4},
+            ],
+        },
+        {
+            "name": "Turkey Sandwich",
+            "foods": [
+                {"food_name": "Turkey Breast", "portion_amount": 90, "portion_unit": "g",
+                 "calories": 108, "protein_g": 24, "carbs_g": 0, "fat_g": 1},
+                {"food_name": "Whole Grain Bread", "portion_amount": 2, "portion_unit": "slices",
+                 "calories": 160, "protein_g": 6, "carbs_g": 30, "fat_g": 2},
+                {"food_name": "Swiss Cheese", "portion_amount": 1, "portion_unit": "slice",
+                 "calories": 106, "protein_g": 8, "carbs_g": 0, "fat_g": 8},
+            ],
+        },
+        {
+            "name": "Sushi Roll",
+            "foods": [
+                {"food_name": "Salmon Roll (8 pcs)", "portion_amount": 8, "portion_unit": "pieces",
+                 "calories": 344, "protein_g": 22, "carbs_g": 42, "fat_g": 9},
+                {"food_name": "Miso Soup", "portion_amount": 1, "portion_unit": "bowl",
+                 "calories": 40, "protein_g": 3, "carbs_g": 5, "fat_g": 1},
+            ],
+        },
+    ],
+    "dinner": [
+        {
+            "name": "Grilled Salmon & Rice",
+            "foods": [
+                {"food_name": "Grilled Salmon", "portion_amount": 180, "portion_unit": "g",
+                 "calories": 357, "protein_g": 40, "carbs_g": 0, "fat_g": 22},
+                {"food_name": "White Rice", "portion_amount": 150, "portion_unit": "g",
+                 "calories": 195, "protein_g": 4, "carbs_g": 43, "fat_g": 0},
+                {"food_name": "Steamed Broccoli", "portion_amount": 100, "portion_unit": "g",
+                 "calories": 35, "protein_g": 3, "carbs_g": 7, "fat_g": 0},
+            ],
+        },
+        {
+            "name": "Pasta Primavera",
+            "foods": [
+                {"food_name": "Pasta", "portion_amount": 200, "portion_unit": "g",
+                 "calories": 310, "protein_g": 11, "carbs_g": 62, "fat_g": 2},
+                {"food_name": "Mixed Vegetables", "portion_amount": 150, "portion_unit": "g",
+                 "calories": 60, "protein_g": 3, "carbs_g": 12, "fat_g": 0},
+                {"food_name": "Parmesan Cheese", "portion_amount": 20, "portion_unit": "g",
+                 "calories": 83, "protein_g": 7, "carbs_g": 0, "fat_g": 5},
+            ],
+        },
+        {
+            "name": "Steak & Sweet Potato",
+            "foods": [
+                {"food_name": "Sirloin Steak", "portion_amount": 200, "portion_unit": "g",
+                 "calories": 450, "protein_g": 52, "carbs_g": 0, "fat_g": 26},
+                {"food_name": "Sweet Potato", "portion_amount": 150, "portion_unit": "g",
+                 "calories": 135, "protein_g": 2, "carbs_g": 31, "fat_g": 0},
+            ],
+        },
+        {
+            "name": "Veggie Stir Fry",
+            "foods": [
+                {"food_name": "Tofu", "portion_amount": 150, "portion_unit": "g",
+                 "calories": 120, "protein_g": 13, "carbs_g": 3, "fat_g": 7},
+                {"food_name": "Stir Fry Vegetables", "portion_amount": 200, "portion_unit": "g",
+                 "calories": 80, "protein_g": 5, "carbs_g": 16, "fat_g": 1},
+                {"food_name": "Brown Rice", "portion_amount": 150, "portion_unit": "g",
+                 "calories": 195, "protein_g": 4, "carbs_g": 40, "fat_g": 2},
+                {"food_name": "Soy Sauce", "portion_amount": 2, "portion_unit": "tbsp",
+                 "calories": 18, "protein_g": 2, "carbs_g": 2, "fat_g": 0},
+            ],
+        },
+    ],
+}
+
+
+def seed_nutrition_v2(cur):
+    """30 days × 3 meals (breakfast, lunch, dinner) → meals + meal_foods + nutrition_daily_summaries."""
+    meal_rows = []
+    food_rows = []
+    summary_rows = []
+
+    meal_types = ["breakfast", "lunch", "dinner"]
+    meal_hours = {"breakfast": 8, "lunch": 12, "dinner": 19}
+
+    for i in range(30):
+        d = days_ago(29 - i)
+        daily_cal = 0.0
+        daily_protein = 0.0
+        daily_carbs = 0.0
+        daily_fat = 0.0
+
+        for meal_type in meal_types:
+            templates = _MEAL_TEMPLATES[meal_type]
+            template = templates[i % len(templates)]
+            meal_id = _det_uuid(f"{FULL_ID}:{d.isoformat()}:{meal_type}:meal")
+            logged_at = datetime(
+                d.year, d.month, d.day, meal_hours[meal_type], 0, 0, tzinfo=timezone.utc
+            )
+            meal_rows.append((meal_id, FULL_ID, meal_type, template["name"], logged_at))
+
+            for food_idx, food in enumerate(template["foods"]):
+                # Vary portions slightly day-to-day
+                variance = 1.0 + random.uniform(-0.1, 0.1)
+                food_id = _det_uuid(f"{meal_id}:{food_idx}")
+                cal = round(food["calories"] * variance, 2)
+                protein = round(food["protein_g"] * variance, 2)
+                carbs = round(food["carbs_g"] * variance, 2)
+                fat = round(food["fat_g"] * variance, 2)
+                food_rows.append((
+                    food_id, meal_id,
+                    food["food_name"],
+                    food["portion_amount"],
+                    food["portion_unit"],
+                    cal, protein, carbs, fat,
+                ))
+                daily_cal += cal
+                daily_protein += protein
+                daily_carbs += carbs
+                daily_fat += fat
+
+        summary_rows.append((
+            _det_uuid(f"{FULL_ID}:{d.isoformat()}:nutrition_summary"),
+            FULL_ID, d,
+            round(daily_cal, 2),
+            round(daily_protein, 2),
+            round(daily_carbs, 2),
+            round(daily_fat, 2),
+            3,  # meal_count
+        ))
+
+    execute_values(
+        cur,
+        """
+        INSERT INTO meals (id, user_id, meal_type, name, logged_at)
+        VALUES %s
+        ON CONFLICT (id) DO UPDATE SET logged_at = EXCLUDED.logged_at
+        """,
+        meal_rows,
+    )
+    execute_values(
+        cur,
+        """
+        INSERT INTO meal_foods
+          (id, meal_id, food_name, portion_amount, portion_unit,
+           calories, protein_g, carbs_g, fat_g)
         VALUES %s
         ON CONFLICT (id) DO NOTHING
-    """,
-        rows,
+        """,
+        food_rows,
     )
-    print(f"  daily_health_metrics: {len(rows)} rows")
-
-
-def seed_sleep(cur):
-    rows = []
-    for i in range(30):
-        d = days_ago(29 - i)
-        dow = d.weekday()
-        day = d.day
-        weekend_bonus = 0.4 if dow >= 5 else 0.0
-        hours = round(7.4 + math.sin(day / 2) * 0.9 + weekend_bonus, 1)
-        quality = 68 + (day * 7 + dow * 3) % 17
-        rows.append(
-            (f"slp-demo-{d.strftime('%Y%m%d')}", FULL_ID, "apple_health", d.strftime("%Y-%m-%d"), hours, quality)
-        )
-
     execute_values(
         cur,
         """
-        INSERT INTO sleep_records (id, user_id, source, date, hours, quality_score)
-        VALUES %s ON CONFLICT (id) DO NOTHING
-    """,
-        rows,
-    )
-    print(f"  sleep_records: {len(rows)} rows")
-
-
-def seed_weight(cur):
-    rows = [
-        ("wgt-demo-w1", FULL_ID, "apple_health", days_ago(28).strftime("%Y-%m-%d"), 78.8),
-        ("wgt-demo-w2", FULL_ID, "apple_health", days_ago(21).strftime("%Y-%m-%d"), 78.6),
-        ("wgt-demo-w3", FULL_ID, "apple_health", days_ago(14).strftime("%Y-%m-%d"), 78.3),
-        ("wgt-demo-w4", FULL_ID, "apple_health", days_ago(7).strftime("%Y-%m-%d"), 78.1),
-        ("wgt-demo-w5", FULL_ID, "apple_health", TODAY.strftime("%Y-%m-%d"), 77.9),
-    ]
-    execute_values(
-        cur,
-        """
-        INSERT INTO weight_measurements (id, user_id, source, date, weight_kg)
-        VALUES %s ON CONFLICT (id) DO NOTHING
-    """,
-        rows,
-    )
-    print(f"  weight_measurements: {len(rows)} rows")
-
-
-def seed_nutrition(cur):
-    rows = []
-    for i in range(30):
-        d = days_ago(29 - i)
-        dow = d.weekday()
-        day = d.day
-        rows.append(
-            (
-                f"nut-demo-{d.strftime('%Y%m%d')}",
-                FULL_ID,
-                "apple_health",
-                d.strftime("%Y-%m-%d"),
-                1750 + (day * 47 + dow * 61) % 350,
-                round(130.0 + math.sin(day) * 15, 1),
-                round(200.0 + math.cos(day) * 25, 1),
-                round(62.0 + math.sin(day / 2) * 10, 1),
-            )
-        )
-    execute_values(
-        cur,
-        """
-        INSERT INTO nutrition_entries (id, user_id, source, date, calories, protein_grams, carbs_grams, fat_grams)
-        VALUES %s ON CONFLICT (id) DO NOTHING
-    """,
-        rows,
-    )
-    print(f"  nutrition_entries: {len(rows)} rows")
-
-
-def seed_activities(cur):
-    """Seed 26 workouts: RUN, STRENGTH, WALK, CYCLE, SWIM."""
-    rows = [
-        # Runs (10)
-        ("act-demo-run-01", FULL_ID, "strava", "strava-1001", "RUN", 2700, 6200.0, 480, ts_ago(days=28, hours=-7)),
-        ("act-demo-run-02", FULL_ID, "strava", "strava-1004", "RUN", 3000, 7100.0, 530, ts_ago(days=25, hours=-7)),
-        ("act-demo-run-03", FULL_ID, "strava", "strava-1006", "RUN", 2400, 5400.0, 420, ts_ago(days=23, hours=-6)),
-        ("act-demo-run-04", FULL_ID, "strava", "strava-1009", "RUN", 3300, 8200.0, 610, ts_ago(days=20, hours=-7)),
-        ("act-demo-run-05", FULL_ID, "strava", "strava-1011", "RUN", 2700, 6500.0, 490, ts_ago(days=18, hours=-6)),
-        ("act-demo-run-06", FULL_ID, "strava", "strava-1014", "RUN", 3600, 9100.0, 670, ts_ago(days=14, hours=-7)),
-        ("act-demo-run-07", FULL_ID, "strava", "strava-1016", "RUN", 2100, 4800.0, 370, ts_ago(days=11, hours=-6)),
-        ("act-demo-run-08", FULL_ID, "strava", "strava-1019", "RUN", 3000, 7400.0, 550, ts_ago(days=7, hours=-7)),
-        ("act-demo-run-09", FULL_ID, "strava", "strava-1021", "RUN", 2400, 5600.0, 440, ts_ago(days=4, hours=-6)),
-        ("act-demo-run-10", FULL_ID, "strava", "strava-1023", "RUN", 3300, 8000.0, 600, ts_ago(days=1, hours=-7)),
-        # Strength (9)
-        ("act-demo-str-01", FULL_ID, "strava", "strava-1002", "STRENGTH", 3600, None, 380, ts_ago(days=27, hours=-18)),
-        ("act-demo-str-02", FULL_ID, "strava", "strava-1005", "STRENGTH", 2700, None, 310, ts_ago(days=24, hours=-18)),
-        ("act-demo-str-03", FULL_ID, "strava", "strava-1007", "STRENGTH", 4500, None, 440, ts_ago(days=22, hours=-17)),
-        ("act-demo-str-04", FULL_ID, "strava", "strava-1010", "STRENGTH", 3000, None, 350, ts_ago(days=19, hours=-18)),
-        ("act-demo-str-05", FULL_ID, "strava", "strava-1012", "STRENGTH", 3600, None, 400, ts_ago(days=17, hours=-17)),
-        ("act-demo-str-06", FULL_ID, "strava", "strava-1015", "STRENGTH", 4500, None, 450, ts_ago(days=13, hours=-18)),
-        ("act-demo-str-07", FULL_ID, "strava", "strava-1017", "STRENGTH", 3300, None, 380, ts_ago(days=10, hours=-17)),
-        ("act-demo-str-08", FULL_ID, "strava", "strava-1020", "STRENGTH", 3600, None, 420, ts_ago(days=6, hours=-18)),
-        ("act-demo-str-09", FULL_ID, "strava", "strava-1022", "STRENGTH", 3000, None, 360, ts_ago(days=3, hours=-17)),
-        # Walks (4)
-        ("act-demo-wlk-01", FULL_ID, "strava", "strava-1003", "WALK", 1800, 2800.0, 170, ts_ago(days=26, hours=-12)),
-        ("act-demo-wlk-02", FULL_ID, "strava", "strava-1008", "WALK", 2100, 3200.0, 200, ts_ago(days=21, hours=-11)),
-        ("act-demo-wlk-03", FULL_ID, "strava", "strava-1013", "WALK", 1500, 2200.0, 140, ts_ago(days=16, hours=-12)),
-        ("act-demo-wlk-04", FULL_ID, "strava", "strava-1018", "WALK", 2400, 3600.0, 220, ts_ago(days=9, hours=-11)),
-        # Cycling (2)
-        ("act-demo-cyc-01", FULL_ID, "strava", "strava-2001", "CYCLE", 4200, 32500.0, 650, ts_ago(days=15, hours=-9)),
-        ("act-demo-cyc-02", FULL_ID, "strava", "strava-2002", "CYCLE", 5400, 48000.0, 820, ts_ago(days=5, hours=-9)),
-        # Swimming (1)
-        ("act-demo-swm-01", FULL_ID, "fitbit", "fitbit-3001", "SWIM", 2700, 2000.0, 390, ts_ago(days=12, hours=-8)),
-    ]
-    execute_values(
-        cur,
-        """
-        INSERT INTO unified_activities
-          (id, user_id, source, original_id, activity_type, duration_seconds,
-           distance_meters, calories, start_time)
+        INSERT INTO nutrition_daily_summaries
+          (id, user_id, date, total_calories, total_protein_g, total_carbs_g,
+           total_fat_g, meal_count)
         VALUES %s
-        ON CONFLICT (user_id, source, original_id) DO NOTHING
-    """,
-        rows,
+        ON CONFLICT (user_id, date) DO UPDATE SET
+          total_calories = EXCLUDED.total_calories,
+          total_protein_g = EXCLUDED.total_protein_g,
+          total_carbs_g = EXCLUDED.total_carbs_g,
+          total_fat_g = EXCLUDED.total_fat_g,
+          meal_count = EXCLUDED.meal_count
+        """,
+        summary_rows,
     )
-    print(f"  unified_activities: {len(rows)} rows (RUN, STRENGTH, WALK, CYCLE, SWIM)")
+    print(f"  meals: {len(meal_rows)} rows (30 days × 3 meals)")
+    print(f"  meal_foods: {len(food_rows)} rows")
+    print(f"  nutrition_daily_summaries: {len(summary_rows)} rows")
 
 
-def seed_blood_pressure(cur):
-    rows = [
-        ("bp-demo-001", FULL_ID, "withings", days_ago(21).strftime("%Y-%m-%d"), ts_ago(days=21), 122.0, 80.0, 67.0),
-        ("bp-demo-002", FULL_ID, "withings", days_ago(14).strftime("%Y-%m-%d"), ts_ago(days=14), 119.0, 78.0, 65.0),
-        ("bp-demo-003", FULL_ID, "withings", days_ago(7).strftime("%Y-%m-%d"), ts_ago(days=7), 120.0, 79.0, 64.0),
-        ("bp-demo-004", FULL_ID, "withings", TODAY.strftime("%Y-%m-%d"), ts_ago(hours=1), 118.0, 77.0, 63.0),
+def seed_activities_v2(cur):
+    """~12 activity_sessions across 30 days with linked health_events."""
+    # (activity_type, days_ago, hour, duration_min, calories, distance_m or None)
+    session_specs = [
+        ("run",      28, 7,  35, 480,   6200.0),
+        ("strength", 26, 18, 55, 380,   None),
+        ("walk",     24, 12, 30, 170,   2800.0),
+        ("run",      21, 7,  40, 530,   7100.0),
+        ("cycle",    18, 9,  70, 650,   32500.0),
+        ("strength", 16, 18, 50, 400,   None),
+        ("run",      14, 7,  45, 610,   8200.0),
+        ("swim",     12, 8,  45, 390,   2000.0),
+        ("yoga",     10, 7,  50, 200,   None),
+        ("strength", 8,  18, 60, 420,   None),
+        ("run",      5,  7,  38, 550,   7400.0),
+        ("cycle",    3,  9,  90, 820,   48000.0),
     ]
+
+    session_rows = []
+    he_rows = []
+    ds_rows = []  # daily_summaries for exercise_minutes on session days
+
+    for spec in session_specs:
+        activity_type, d_offset, hour, duration_min, calories, distance_m = spec
+        started_at = ts_ago(days=d_offset, hours=-hour)
+        ended_at = started_at + timedelta(minutes=duration_min)
+        local_date = days_ago(d_offset)
+        session_id = _det_uuid(f"{FULL_ID}:{activity_type}:{d_offset}:session")
+
+        session_rows.append((
+            session_id, FULL_ID, activity_type, "manual", started_at, ended_at, None, None
+        ))
+
+        # exercise_minutes event
+        he_rows.append((
+            _det_uuid(f"{FULL_ID}:exercise_minutes:{d_offset}:{activity_type}:pit"),
+            FULL_ID, "exercise_minutes", float(duration_min), "min",
+            "manual", started_at, local_date, "point_in_time",
+            session_id, None, None,
+        ))
+        # active_calories event
+        he_rows.append((
+            _det_uuid(f"{FULL_ID}:active_calories:{d_offset}:{activity_type}:pit"),
+            FULL_ID, "active_calories", float(calories), "kcal",
+            "manual", started_at, local_date, "point_in_time",
+            session_id, None, None,
+        ))
+        # distance event (cardio only)
+        if distance_m is not None:
+            he_rows.append((
+                _det_uuid(f"{FULL_ID}:distance:{d_offset}:{activity_type}:pit"),
+                FULL_ID, "distance", float(distance_m), "m",
+                "manual", started_at, local_date, "point_in_time",
+                session_id, None, None,
+            ))
+
     execute_values(
         cur,
         """
-        INSERT INTO blood_pressure_records
-          (id, user_id, source, date, measured_at, systolic_mmhg, diastolic_mmhg, heart_rate_bpm)
-        VALUES %s ON CONFLICT (id) DO NOTHING
-    """,
-        rows,
+        INSERT INTO activity_sessions
+          (id, user_id, activity_type, source, started_at, ended_at, notes, metadata)
+        VALUES %s
+        ON CONFLICT (id) DO NOTHING
+        """,
+        session_rows,
     )
-    print(f"  blood_pressure_records: {len(rows)} rows")
+    execute_values(
+        cur,
+        """
+        INSERT INTO health_events
+          (id, user_id, metric_type, value, unit, source, recorded_at, local_date,
+           granularity, session_id, idempotency_key, metadata)
+        VALUES %s
+        ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+        """,
+        he_rows,
+    )
+    print(f"  activity_sessions: {len(session_rows)} rows")
+    print(f"  health_events (activity sessions): {len(he_rows)} rows")
+
+
+def seed_vitals(cur):
+    """~5 blood pressure readings + ~15 SpO2 readings as point_in_time health_events."""
+    # Blood pressure: 5 paired readings
+    bp_days = [21, 17, 14, 7, 1]
+    bp_systolic = [122.0, 120.0, 119.0, 118.0, 117.0]
+    bp_diastolic = [80.0, 79.0, 78.0, 77.0, 76.0]
+
+    he_rows = []
+    ds_rows = []
+
+    for idx, d_offset in enumerate(bp_days):
+        d = days_ago(d_offset)
+        ts = datetime(d.year, d.month, d.day, 9, 0, 0, tzinfo=timezone.utc)
+
+        sys_val = round(bp_systolic[idx] + random.uniform(-3, 3), 1)
+        dia_val = round(bp_diastolic[idx] + random.uniform(-2, 2), 1)
+
+        for metric_type, val, unit in [
+            ("blood_pressure_systolic", sys_val, "mmHg"),
+            ("blood_pressure_diastolic", dia_val, "mmHg"),
+        ]:
+            row_id = _det_uuid(f"{FULL_ID}:{metric_type}:{d.isoformat()}:pit")
+            he_rows.append((
+                row_id, FULL_ID, metric_type, val, unit,
+                "manual", ts, d, "point_in_time",
+                None, None, None,
+            ))
+            ds_rows.append((
+                _det_uuid(f"ds:{FULL_ID}:{metric_type}:{d.isoformat()}"),
+                FULL_ID, d, metric_type, val, unit, 1,
+            ))
+
+    # SpO2: ~15 readings spread across 30 days
+    spo2_offsets = [29, 27, 25, 23, 21, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1]
+    for d_offset in spo2_offsets:
+        d = days_ago(d_offset)
+        ts = datetime(d.year, d.month, d.day, 8, 30, 0, tzinfo=timezone.utc)
+        val = round(random.uniform(96, 99), 1)
+
+        row_id = _det_uuid(f"{FULL_ID}:spo2:{d.isoformat()}:pit")
+        he_rows.append((
+            row_id, FULL_ID, "spo2", val, "%",
+            "manual", ts, d, "point_in_time",
+            None, None, None,
+        ))
+        ds_rows.append((
+            _det_uuid(f"ds:{FULL_ID}:spo2:{d.isoformat()}"),
+            FULL_ID, d, "spo2", val, "%", 1,
+        ))
+
+    execute_values(
+        cur,
+        """
+        INSERT INTO health_events
+          (id, user_id, metric_type, value, unit, source, recorded_at, local_date,
+           granularity, session_id, idempotency_key, metadata)
+        VALUES %s
+        ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+        """,
+        he_rows,
+    )
+    execute_values(
+        cur,
+        """
+        INSERT INTO daily_summaries
+          (id, user_id, date, metric_type, value, unit, event_count)
+        VALUES %s
+        ON CONFLICT (user_id, date, metric_type) DO UPDATE SET value = EXCLUDED.value
+        """,
+        ds_rows,
+    )
+    print(f"  health_events (vitals/spo2): {len(he_rows)} rows")
+    print(f"  daily_summaries (vitals/spo2): {len(ds_rows)} rows")
+
+
+def seed_wellness(cur):
+    """30 days of mood, energy, stress daily_aggregate events + daily_summaries."""
+    wellness_metrics = [
+        ("mood",   "score", 6.5, 2.5),   # 4–9
+        ("energy", "score", 6.5, 2.5),   # 4–9
+        ("stress", "score", 45,  50),    # 20–70
+    ]
+
+    he_rows = []
+    ds_rows = []
+
+    for i in range(30):
+        d = days_ago(29 - i)
+        ts = datetime(d.year, d.month, d.day, 20, 0, 0, tzinfo=timezone.utc)  # evening check-in
+
+        for metric_type, unit, base, amplitude in wellness_metrics:
+            val = base + random.uniform(-amplitude / 2, amplitude / 2)
+            # clamp to valid ranges
+            if metric_type in ("mood", "energy"):
+                val = max(0.0, min(10.0, round(val, 1)))
+            else:
+                val = max(0.0, min(100.0, round(val, 1)))
+
+            row_id = _det_uuid(f"{FULL_ID}:{metric_type}:{d.isoformat()}:daily_aggregate")
+            he_rows.append((
+                row_id, FULL_ID, metric_type, val, unit,
+                "manual", ts, d, "daily_aggregate",
+                None, None, None,
+            ))
+            ds_rows.append((
+                _det_uuid(f"ds:{FULL_ID}:{metric_type}:{d.isoformat()}"),
+                FULL_ID, d, metric_type, val, unit, 1,
+            ))
+
+    execute_values(
+        cur,
+        """
+        INSERT INTO health_events
+          (id, user_id, metric_type, value, unit, source, recorded_at, local_date,
+           granularity, session_id, idempotency_key, metadata)
+        VALUES %s
+        ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+        """,
+        he_rows,
+    )
+    execute_values(
+        cur,
+        """
+        INSERT INTO daily_summaries
+          (id, user_id, date, metric_type, value, unit, event_count)
+        VALUES %s
+        ON CONFLICT (user_id, date, metric_type) DO UPDATE SET value = EXCLUDED.value
+        """,
+        ds_rows,
+    )
+    print(f"  health_events (wellness): {len(he_rows)} rows")
+    print(f"  daily_summaries (wellness): {len(ds_rows)} rows")
 
 
 def seed_streaks(cur):
@@ -858,53 +1356,6 @@ def seed_journals(cur):
     )
     print(f"  journal_entries: {len(rows)} rows (30 days)")
 
-
-def seed_quick_logs(cur):
-    """Seed ~4 quick logs per day across 7 days (water, mood, energy, stress)."""
-    rows = []
-    for day_offset in range(7):
-        base = ts_ago(days=day_offset)
-        d = days_ago(day_offset)
-        day = d.day
-        # Water: 3× per day
-        rows.append((f"qlog-water-{d.strftime('%Y%m%d')}-a", FULL_ID, "water", 250.0, base - timedelta(hours=1)))
-        rows.append((f"qlog-water-{d.strftime('%Y%m%d')}-b", FULL_ID, "water", 250.0, base - timedelta(hours=4)))
-        rows.append((f"qlog-water-{d.strftime('%Y%m%d')}-c", FULL_ID, "water", 500.0, base - timedelta(hours=8)))
-        # Mood: 1× per day
-        rows.append(
-            (f"qlog-mood-{d.strftime('%Y%m%d')}", FULL_ID, "mood", float(5 + (day * 3) % 5), base - timedelta(hours=6))
-        )
-        # Energy: 1× per day
-        rows.append(
-            (
-                f"qlog-energy-{d.strftime('%Y%m%d')}",
-                FULL_ID,
-                "energy",
-                float(5 + (day * 7) % 5),
-                base - timedelta(hours=5),
-            )
-        )
-        # Stress: every other day
-        if day_offset % 2 == 0:
-            rows.append(
-                (
-                    f"qlog-stress-{d.strftime('%Y%m%d')}",
-                    FULL_ID,
-                    "stress",
-                    float(1 + (day * 5) % 5),
-                    base - timedelta(hours=3),
-                )
-            )
-
-    execute_values(
-        cur,
-        """
-        INSERT INTO quick_logs (id, user_id, metric_type, value, logged_at)
-        VALUES %s ON CONFLICT (id) DO NOTHING
-    """,
-        rows,
-    )
-    print(f"  quick_logs: {len(rows)} rows (7 days, water/mood/energy/stress)")
 
 
 def seed_notifications(cur):
@@ -1375,6 +1826,9 @@ def main():
     parser.add_argument("--reset", action="store_true", help="Wipe all demo data before re-seeding")
     args = parser.parse_args()
 
+    # Deterministic randomness — same data every run
+    random.seed(42)
+
     print("\nZuralog demo data seeder")
     print("========================")
     print(f"  demo-full  -> {FULL_ID}  ({FULL_EMAIL})")
@@ -1394,17 +1848,18 @@ def main():
         seed_preferences(cur)
         seed_integrations(cur)
         seed_goals(cur)
-        seed_daily_health_metrics(cur)
-        seed_sleep(cur)
-        seed_weight(cur)
-        seed_nutrition(cur)
-        seed_activities(cur)
-        seed_blood_pressure(cur)
+        # activity_sessions must be inserted before health_events that reference them
+        seed_activities_v2(cur)
+        seed_unified_health_metrics(cur)
+        seed_sleep_v2(cur)
+        seed_weight_v2(cur)
+        seed_nutrition_v2(cur)
+        seed_vitals(cur)
+        seed_wellness(cur)
         seed_streaks(cur)
         seed_achievements(cur)
         seed_insights(cur)
         seed_journals(cur)
-        seed_quick_logs(cur)
         seed_notifications(cur)
         seed_emergency_card(cur)
         seed_conversations(cur)
@@ -1420,12 +1875,12 @@ def main():
         print(f"  Full account:  {FULL_EMAIL}")
         print(f"  Empty account: {EMPTY_EMAIL}")
         print()
-        print("  Tables seeded (23/23):")
+        print("  Tables seeded:")
         print("    users, user_preferences, integrations, user_goals,")
-        print("    daily_health_metrics, sleep_records, weight_measurements,")
-        print("    nutrition_entries, unified_activities, blood_pressure_records,")
+        print("    activity_sessions, health_events, daily_summaries,")
+        print("    meals, meal_foods, nutrition_daily_summaries,")
         print("    user_streaks, achievements, insights, journal_entries,")
-        print("    quick_logs, notification_logs, emergency_health_cards,")
+        print("    notification_logs, emergency_health_cards,")
         print("    conversations, messages, reports, health_scores,")
         print("    user_devices, usage_logs")
 

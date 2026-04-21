@@ -43,6 +43,7 @@ import 'package:zuralog/shared/widgets/nutrition/z_answer_origin_badge.dart';
 import 'package:zuralog/shared/widgets/nutrition/z_meal_type_picker.dart';
 import 'package:zuralog/shared/widgets/nutrition/z_suggested_rule_banner.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
+import 'package:zuralog/features/nutrition/presentation/widgets/food_icon.dart';
 
 // ── Input types ─────────────────────────────────────────────────────────────
 
@@ -912,15 +913,6 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
         index < _parsedItems.length ? _parsedItems[index] : null;
     final showRefinement = isGuided && parsedItem != null;
 
-    // Confidence dot color.
-    final confidenceColor = parsedItem != null
-        ? (parsedItem.confidence >= 0.8
-            ? AppColors.success
-            : parsedItem.confidence >= 0.5
-                ? AppColors.warning
-                : AppColors.error)
-        : AppColors.success;
-
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceSm + 4),
       decoration: BoxDecoration(
@@ -931,19 +923,14 @@ class _MealReviewScreenState extends ConsumerState<MealReviewScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Name row with confidence dot, edit icon, and delete.
+          // Name row with food icon (coloured by parse confidence), edit, delete.
           Row(
             children: [
-              // Confidence dot.
-              Container(
-                width: 8,
-                height: 8,
-                margin: const EdgeInsets.only(right: AppDimens.spaceSm),
-                decoration: BoxDecoration(
-                  color: confidenceColor,
-                  shape: BoxShape.circle,
-                ),
+              FoodIcon(
+                foodName: food.name,
+                confidence: parsedItem?.confidence,
               ),
+              const SizedBox(width: AppDimens.spaceSm),
               Expanded(
                 child: Text(
                   food.name,
