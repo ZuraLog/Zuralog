@@ -332,7 +332,7 @@ void main() {
       notifier.removeSet('bench_press', 2);
       sets = container.read(workoutSessionProvider)!.exercises.single.sets;
       expect(sets, hasLength(3));
-      // After removal, working sets should be renumbered: [W(1), W(1), W(2)]
+      // After removal: [warmUp(setNumber:1), working(setNumber:1), working(setNumber:2)]
       // (the warmUp stays unchanged, working sets get renumbered)
       expect(sets[0].type, SetType.warmUp);
       expect(sets[0].setNumber, 1); // unchanged
