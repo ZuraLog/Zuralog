@@ -117,6 +117,11 @@ class _DetailBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
     final categoryColor = categoryColorFromString(detail.category);
+    // The Discuss-with-Coach pill sits above the floating bottom nav cluster
+    // (pill ~56pt + 18pt bottom gap + device safe area). Pad the last sliver
+    // by that cluster height so the pill never tucks under the nav.
+    final bottomClusterHeight =
+        MediaQuery.paddingOf(context).bottom + 56 + 18 + AppDimens.spaceMd;
 
     return CustomScrollView(
       slivers: [
@@ -142,11 +147,11 @@ class _DetailBody extends ConsumerWidget {
         ],
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(
+            padding: EdgeInsets.fromLTRB(
               AppDimens.spaceMd,
               AppDimens.spaceLg,
               AppDimens.spaceMd,
-              AppDimens.spaceXxl,
+              bottomClusterHeight,
             ),
             child: ZFadeSlideIn(
               delay: const Duration(milliseconds: 260),
