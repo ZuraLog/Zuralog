@@ -158,6 +158,30 @@ abstract final class RouteNames {
   /// Path for the Symptom Log screen.
   static const String symptomLogPath = '/today/log/symptom';
 
+  /// Name for the Workout Session full-screen form.
+  static const String workoutLog = 'workout-log';
+
+  /// Path for the Workout Session screen.
+  static const String workoutLogPath = '/log/workout';
+
+  /// Name for the Exercise Catalogue screen.
+  static const String workoutExercises = 'workout-exercises';
+
+  /// Path for the Exercise Catalogue screen.
+  static const String workoutExercisesPath = '/log/workout/exercises';
+
+  /// Name for the Workout Summary screen.
+  static const String workoutSummary = 'workout-summary';
+
+  /// Path for the Workout Summary screen.
+  static const String workoutSummaryPath = '/log/workout/summary';
+
+  /// Name for the Workout History screen.
+  static const String workoutHistory = 'workout-history';
+
+  /// Path for the Workout History screen.
+  static const String workoutHistoryPath = '/log/workout/history';
+
   /// Name for the Metric Picker full-screen sheet (add metrics to Today grid).
   static const String metricPicker = 'metricPicker';
 

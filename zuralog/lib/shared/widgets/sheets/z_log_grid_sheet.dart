@@ -60,7 +60,7 @@ const List<_TileDef> _tiles = [
   _TileDef(key: 'meal',       icon: Icons.restaurant_rounded,       label: 'Meal',         behaviour: _TileBehaviour.fullScreen),
   _TileDef(key: 'supplement', icon: Icons.medication_rounded,       label: 'Supplements',  behaviour: _TileBehaviour.fullScreen),
   _TileDef(key: 'symptom',    icon: Icons.healing_rounded,          label: 'Symptom',      behaviour: _TileBehaviour.fullScreen),
-  _TileDef(key: 'workout',    icon: Icons.fitness_center_rounded,   label: 'Workout',      behaviour: _TileBehaviour.comingSoon),
+  _TileDef(key: 'workout',    icon: Icons.fitness_center_rounded,   label: 'Workout',      behaviour: _TileBehaviour.fullScreen),
 ];
 
 /// Maps each tile key to the canonical backend metric-type slug reported
@@ -176,7 +176,7 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
       case _TileBehaviour.comingSoon:
         (widget.parentMessenger ?? ScaffoldMessenger.of(context)).showSnackBar(
           SnackBar(
-            content: const Text('Workout tracking is coming soon — stay tuned!'),
+            content: const Text('This feature is coming soon — stay tuned!'),
             backgroundColor: AppColorsOf(context).primary,
             duration: const Duration(seconds: 3),
           ),
@@ -191,6 +191,7 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
       'meal'       => RouteNames.mealLog,
       'supplement' => RouteNames.supplementsLog,
       'symptom'    => RouteNames.symptomLog,
+      'workout'    => RouteNames.workoutLog,
       _            => throw AssertionError('No route mapped for full-screen tile key: $key'),
     };
   }

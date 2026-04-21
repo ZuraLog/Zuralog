@@ -24,6 +24,9 @@
 /// /trends                           → TrendsHomeScreen (pushed over shell)
 /// /nutrition                        → NutritionHomeScreen (pushed over shell)
 ///   /nutrition/meal/:id             → MealDetailScreen
+/// /log/workout                      → WorkoutSessionScreen (pushed over shell)
+///   /log/workout/exercises          → ExerciseCatalogueScreen
+///   /log/workout/summary            → WorkoutSummaryScreen
 /// /sleep                            → SleepDetailScreen (pushed over shell)
 ///   /sleep/all-data                 → SleepAllDataScreen
 /// /heart                            → HeartDetailScreen (pushed over shell)
@@ -73,6 +76,13 @@ import 'package:zuralog/features/today/presentation/log_screens/meal_log_screen.
 import 'package:zuralog/features/today/presentation/log_screens/supplements_log_screen.dart';
 import 'package:zuralog/features/today/presentation/log_screens/symptom_log_screen.dart';
 import 'package:zuralog/features/today/presentation/log_screens/metric_picker_screen.dart';
+
+// ── Workout (pushed over shell) ───────────────────────────────────────────────
+import 'package:zuralog/features/workout/presentation/workout_session_screen.dart';
+import 'package:zuralog/features/workout/presentation/exercise_catalogue_screen.dart';
+import 'package:zuralog/features/workout/domain/completed_workout.dart';
+import 'package:zuralog/features/workout/presentation/workout_history_screen.dart';
+import 'package:zuralog/features/workout/presentation/workout_summary_screen.dart';
 
 // ── Sleep Detail (pushed over shell) ─────────────────────────────────────────
 import 'package:zuralog/features/sleep/presentation/sleep_detail_screen.dart';
@@ -366,6 +376,51 @@ List<RouteBase> _buildRoutes() {
       name: RouteNames.symptomLog,
       pageBuilder: (context, state) => const MaterialPage(
         child: SentryErrorBoundary(module: 'today.symptom_log', child: SymptomLogScreen()),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.workoutLogPath,
+      name: RouteNames.workoutLog,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: SentryErrorBoundary(
+          module: 'workout.session',
+          child: WorkoutSessionScreen(),
+        ),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.workoutExercisesPath,
+      name: RouteNames.workoutExercises,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: SentryErrorBoundary(
+          module: 'workout.exercises',
+          child: ExerciseCatalogueScreen(),
+        ),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.workoutSummaryPath,
+      name: RouteNames.workoutSummary,
+      pageBuilder: (context, state) {
+        final workout = state.extra is CompletedWorkout
+            ? state.extra as CompletedWorkout
+            : null;
+        return MaterialPage(
+          child: SentryErrorBoundary(
+            module: 'workout.summary',
+            child: WorkoutSummaryScreen(workout: workout),
+          ),
+        );
+      },
+    ),
+    GoRoute(
+      path: RouteNames.workoutHistoryPath,
+      name: RouteNames.workoutHistory,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: SentryErrorBoundary(
+          module: 'workout.history',
+          child: WorkoutHistoryScreen(),
+        ),
       ),
     ),
     GoRoute(

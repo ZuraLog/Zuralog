@@ -79,8 +79,10 @@ void main() {
       expect(find.text('What do you want to log?'), findsOneWidget);
     });
 
-    testWidgets('Workout tile shows snackbar on tap', (tester) async {
+    testWidgets('Workout tile fires onFullScreenRoute with workout route',
+        (tester) async {
       final container = _container();
+      String? capturedRoute;
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -93,6 +95,7 @@ void main() {
                     isScrollControlled: true,
                     builder: (_) => ZLogGridSheet(
                       parentMessenger: ScaffoldMessenger.of(ctx),
+                      onFullScreenRoute: (route) => capturedRoute = route,
                     ),
                   ),
                   child: const Text('Open'),
@@ -105,11 +108,9 @@ void main() {
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Workout'));
-      await tester.pumpAndSettle();
-      expect(
-        find.text('Workout tracking is coming soon — stay tuned!'),
-        findsOneWidget,
-      );
+      await tester.pump();
+      expect(capturedRoute, isNotNull);
+      expect(capturedRoute, contains('workout'));
     });
 
     testWidgets('tapping an inline tile shows panel view and back button',

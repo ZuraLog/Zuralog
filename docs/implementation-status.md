@@ -1,3 +1,129 @@
+## 2026-04-21 — Workout Plan 3: Summary + History
+
+**Branch:** `feat/workout-plan-1-foundation`
+
+Completed the workout loop — finished sessions persist to local history, a real summary screen shows results, and a history screen lets users revisit past workouts.
+
+**What was built:**
+
+- **`CompletedWorkout` + `CompletedExercise`** (`zuralog/lib/features/workout/domain/completed_workout.dart`): Immutable value objects with full JSON round-trip and structural equality via `listEquals`. `CompletedWorkout.fromSession` normalizes mixed-unit session weights into kilograms using each exercise's `unitOverride` (falling back to the global units setting).
+
+- **`WorkoutHistoryRepository`** (`zuralog/lib/features/workout/data/workout_history_repository.dart`): Offline-first persistence under SharedPreferences key `workout_history`. `loadAll` returns most-recent-first; `saveWorkout` appends and caps at 100 entries. Tolerates corrupt JSON and malformed entries by returning an empty list / filtering.
+
+- **`finishSession` on `WorkoutSessionNotifier`** (`zuralog/lib/features/workout/providers/workout_session_providers.dart`): Awaits `saveWorkout`, then calls the existing `discardSession()` to clear the draft. Also exposes new `workoutHistoryRepositoryProvider` (Provider) and `workoutHistoryProvider` (FutureProvider.autoDispose).
+
+- **`WorkoutSummaryScreen`** (`zuralog/lib/features/workout/presentation/workout_summary_screen.dart`): Replaced Plan 1 stub. Accepts a `CompletedWorkout?` from GoRouter extra — renders a friendly error state when null. Shows header (Activity-accent check icon + "Workout Complete" + localized date), totals row (Duration in Activity accent, Volume, Sets), per-exercise `ZuralogCard` blocks with muscle-group-tinted icon bubble and a read-only set table. Done button pops back to the log grid sheet.
+
+- **`WorkoutHistoryScreen`** (`zuralog/lib/features/workout/presentation/workout_history_screen.dart`): Scrollable list of past workouts with tap-through to the summary screen. Empty state when no history. Error state with retry when load fails.
+
+- **Routing**: `/log/workout/history` added. Summary route now reads `state.extra` as `CompletedWorkout?`. Session screen's app bar gets a history icon. `pushReplacement` used for finish flow so the session screen is gone from the stack when the summary appears.
+
+**Tests:** 17 new tests (4 domain + 5 repository + 4 provider + 2 summary widget + 2 history widget); 78 workout tests total, all green; zero new analyzer issues in workout feature.
+
+**Files created:**
+- `zuralog/lib/features/workout/domain/completed_workout.dart`
+- `zuralog/lib/features/workout/data/workout_history_repository.dart`
+- `zuralog/lib/features/workout/presentation/workout_history_screen.dart`
+- `zuralog/test/features/workout/domain/completed_workout_test.dart`
+- `zuralog/test/features/workout/data/workout_history_repository_test.dart`
+- `zuralog/test/features/workout/providers/workout_history_provider_test.dart`
+- `zuralog/test/features/workout/presentation/workout_summary_screen_test.dart`
+- `zuralog/test/features/workout/presentation/workout_history_screen_test.dart`
+
+**Files modified:**
+- `zuralog/lib/features/workout/providers/workout_session_providers.dart`
+- `zuralog/lib/features/workout/presentation/workout_session_screen.dart`
+- `zuralog/lib/features/workout/presentation/workout_summary_screen.dart` (stub replaced)
+- `zuralog/lib/core/router/route_names.dart`
+- `zuralog/lib/core/router/app_router.dart`
+- `zuralog/test/features/workout/providers/workout_session_providers_test.dart`
+
+---
+
+## 2026-04-21 — Workout Plan 2: Active Session Tracking
+
+**Branch:** `feat/workout-plan-1-foundation`
+
+Full live workout session — offline-first, crash-safe, unit-aware.
+
+**What was built:**
+
+- **Domain models** (`zuralog/lib/features/workout/domain/workout_session.dart`): `SetType` enum (Warm-Up, Working, Drop Set, Failure, AMRAP), `WorkoutSet`, `WorkoutExercise`, `WorkoutSession`. Immutable value objects with `copyWith` (`_kUnset` sentinel pattern for nullable fields), full JSON round-trip, structural equality via `listEquals`. Top-level helpers: `effectiveUnitSystem`, `unitLabel`, `kgToLbs`, `lbsToKg`.
+
+- **`WorkoutSessionNotifier`** (`zuralog/lib/features/workout/providers/workout_session_providers.dart`): `StateNotifier<WorkoutSession?>`, non-autoDispose (survives catalogue push). Auto-saves draft to SharedPreferences under `workout_active_draft` after every mutation. `startSession()` restores an existing draft or creates a new one. `toggleUnit()` converts all set weights and persists per-exercise unit override under `workout_exercise_unit_{exerciseId}`. `discardSession()` clears both the draft and all per-exercise unit keys. `ref.listen` on `unitsSystemProvider` keeps the global unit default current. Three derived providers: `workoutDurationProvider` (1 Hz `StreamProvider<Duration>`), `workoutVolumeProvider` (`Provider<double>`, completed sets only), `workoutSetsCompletedProvider` (`Provider<int>`).
+
+- **`WorkoutStatsRow`** (`zuralog/lib/features/workout/presentation/widgets/workout_stats_row.dart`): Three-column live strip — Duration (h:mm:ss, Activity accent), Volume, Sets. Watches its own providers so the parent screen doesn't rebuild on every tick.
+
+- **`WorkoutExerciseCard`** (`zuralog/lib/features/workout/presentation/widgets/workout_exercise_card.dart`): Per-exercise card with muscle-group color-coded icon bubble, inline notes `TextField` (auto-saved on change), rest timer row with `ZToggle`, set table (`_SetTableHeader` with tappable unit header + `_SetRow` per set), and "Add Set" `TextButton`. Set type picker and exercise action menu via `ZBottomSheet`. All mutations delegate to `workoutSessionProvider.notifier`.
+
+- **`WorkoutSessionScreen`** (`zuralog/lib/features/workout/presentation/workout_session_screen.dart`): Replaced Plan 1 stub. `startSession()` called via `addPostFrameCallback`. AppBar: down-arrow (discard), timer icon centered, "Finish" TextButton. Body: `WorkoutStatsRow` → divider → exercise list or `_EmptyState` → `_BottomActions`. Finish guard: zero-sets confirmation dialog. Discard: `ZAlertDialog` with `isDestructive: true`, then `discardSession()` + `context.pop()`.
+
+**Tests:** 35 new tests — 14 domain (workout_session_test.dart), 17 provider (workout_session_providers_test.dart), 4 widget (workout_session_screen_test.dart). 61 workout tests total, all green. Zero new analyzer issues.
+
+**Files created:**
+- `zuralog/lib/features/workout/domain/workout_session.dart`
+- `zuralog/lib/features/workout/providers/workout_session_providers.dart`
+- `zuralog/lib/features/workout/presentation/widgets/workout_stats_row.dart`
+- `zuralog/lib/features/workout/presentation/widgets/workout_exercise_card.dart`
+- `zuralog/test/features/workout/domain/workout_session_test.dart`
+- `zuralog/test/features/workout/providers/workout_session_providers_test.dart`
+- `zuralog/test/features/workout/presentation/workout_session_screen_test.dart`
+
+**Files modified:**
+- `zuralog/lib/features/workout/presentation/workout_session_screen.dart` (stub replaced)
+
+---
+
+## 2026-04-21 — Workout Plan 1: Foundation + Exercise Catalogue
+
+**Branch:** `feat/workout-plan-1-foundation`
+
+Laid the full foundation for the Workout feature. No backend dependency — everything runs offline from a bundled asset.
+
+**What was built:**
+
+- **`exercises.json`** (`assets/data/exercises.json`): 50 bundled exercises across all major muscle groups and equipment types. Loaded at runtime — no API call required.
+
+- **Domain models** (`zuralog/lib/features/workout/domain/exercise.dart`): `Exercise`, `MuscleGroup` (11 groups including cardio and full_body), and `Equipment` (6 types). Pure value objects with `fromJson` factory.
+
+- **`ExerciseRepository`** (`zuralog/lib/features/workout/data/exercise_repository.dart`): Loads from `rootBundle`, caches the parsed list in memory on first call, and exposes a `filter(muscleGroup, query)` method for combined search.
+
+- **Riverpod providers** (`zuralog/lib/features/workout/providers/exercise_providers.dart`): `exerciseListProvider` (async, autoDispose), `exerciseSearchQueryProvider` (state), `exerciseMuscleGroupFilterProvider` (state), `exerciseSearchProvider` (derived, async). All propagate errors correctly.
+
+- **`ExerciseCatalogueScreen`** (`zuralog/lib/features/workout/presentation/exercise_catalogue_screen.dart`): Search bar, horizontal muscle-group chip filter (plus "All"), multi-select exercise grid. Selection count badge on the sticky footer CTA. Empty state for no results.
+
+- **`ExerciseGridTile`** (`zuralog/lib/features/workout/presentation/widgets/exercise_grid_tile.dart`): Shared widget with muscle-group color coding via `MuscleGroup.color` extension, selection overlay with checkmark, and press-scale animation.
+
+- **Stub screens**: `WorkoutSessionScreen` and `WorkoutSummaryScreen` — placeholder routes for Plan 2.
+
+- **Routes** (`route_names.dart`, `app_router.dart`): `/log/workout`, `/log/workout/exercises`, `/log/workout/summary`.
+
+- **`ZLogGridSheet` wired**: Workout tile changed from `comingSoon` to `fullScreen` behaviour, navigating to `/log/workout` instead of showing a snackbar.
+
+**Tests:** 26 new tests across domain, repository, and providers. Zero new analyzer issues vs main. The outdated "coming soon" snackbar test updated to verify the navigation callback.
+
+**Files created:**
+- `assets/data/exercises.json`
+- `zuralog/lib/features/workout/domain/exercise.dart`
+- `zuralog/lib/features/workout/data/exercise_repository.dart`
+- `zuralog/lib/features/workout/providers/exercise_providers.dart`
+- `zuralog/lib/features/workout/presentation/exercise_catalogue_screen.dart`
+- `zuralog/lib/features/workout/presentation/workout_session_screen.dart`
+- `zuralog/lib/features/workout/presentation/workout_summary_screen.dart`
+- `zuralog/lib/features/workout/presentation/widgets/exercise_grid_tile.dart`
+- `test/features/workout/domain/exercise_test.dart`
+- `test/features/workout/data/exercise_repository_test.dart`
+- `test/features/workout/providers/exercise_providers_test.dart`
+
+**Files modified:**
+- `zuralog/lib/core/router/route_names.dart`
+- `zuralog/lib/core/router/app_router.dart`
+- `zuralog/lib/shared/widgets/sheets/z_log_grid_sheet.dart`
+- `pubspec.yaml`
+- `test/shared/widgets/sheets/z_log_grid_sheet_test.dart`
+
+---
+
 ## 2026-04-21 — Heart Section: Flutter Frontend
 
 **Branch:** `feat/heart-flutter` (off `feat/heart-backend`)
