@@ -112,7 +112,7 @@ void main() {
       expect(session.exercises, hasLength(2));
       expect(session.exercises[0].exerciseId, 'bench_press');
       expect(session.exercises[0].sets, hasLength(2));
-      expect(session.exercises[0].sets[0].type, SetType.warmUp);
+      expect(session.exercises[0].sets[0].type, SetType.working);
       expect(session.exercises[0].sets[1].type, SetType.working);
       expect(session.exercises[0].muscleGroup, 'chest');
     });
@@ -145,9 +145,9 @@ void main() {
       notifier.addSet('bench_press');
       final sets =
           container.read(workoutSessionProvider)!.exercises.single.sets;
-      // Default is 2 sets (warmUp + working); addSet appends a third.
+      // Default is 2 sets (working + working); addSet appends a third.
       expect(sets, hasLength(3));
-      expect(sets[0].type, SetType.warmUp);
+      expect(sets[0].type, SetType.working);
       expect(sets[1].type, SetType.working);
       expect(sets[2].type, SetType.working);
       expect(sets[2].setNumber, 3);
@@ -310,7 +310,7 @@ void main() {
       final notifier = container.read(workoutSessionProvider.notifier);
       notifier.startSession();
       notifier.addExercises([_bench]);
-      // Default: [warmUp(setNumber:1), working(setNumber:2)]
+      // Default: [working(setNumber:1), working(setNumber:2)]
       // addSet appends working(setNumber:3)
       // addSet appends working(setNumber:4)
       notifier.addSet('bench_press');
@@ -319,7 +319,7 @@ void main() {
       var sets =
           container.read(workoutSessionProvider)!.exercises.single.sets;
       expect(sets, hasLength(4));
-      expect(sets[0].type, SetType.warmUp);
+      expect(sets[0].type, SetType.working);
       expect(sets[0].setNumber, 1);
       expect(sets[1].type, SetType.working);
       expect(sets[1].setNumber, 2);
@@ -332,14 +332,14 @@ void main() {
       notifier.removeSet('bench_press', 2);
       sets = container.read(workoutSessionProvider)!.exercises.single.sets;
       expect(sets, hasLength(3));
-      // After removal: [warmUp(setNumber:1), working(setNumber:1), working(setNumber:2)]
-      // (the warmUp stays unchanged, working sets get renumbered)
-      expect(sets[0].type, SetType.warmUp);
-      expect(sets[0].setNumber, 1); // unchanged
+      // After removal: [working(setNumber:1), working(setNumber:2), working(setNumber:3)]
+      // All sets are working, get renumbered 1-3
+      expect(sets[0].type, SetType.working);
+      expect(sets[0].setNumber, 1); // renumbered
       expect(sets[1].type, SetType.working);
-      expect(sets[1].setNumber, 1); // renumbered from 2
+      expect(sets[1].setNumber, 2); // renumbered
       expect(sets[2].type, SetType.working);
-      expect(sets[2].setNumber, 2); // renumbered from 4
+      expect(sets[2].setNumber, 3); // renumbered from 4
     });
 
     test(
@@ -364,15 +364,15 @@ void main() {
       final notifier = container.read(workoutSessionProvider.notifier);
       notifier.startSession();
       notifier.addExercises([_bench]);
-      // Default: [warmUp(1), working(2)]
-      // Add and modify: [warmUp(1), working(2), dropSet(3)]
+      // Default: [working(1), working(2)]
+      // Add and modify: [working(1), working(2), dropSet(3)]
       notifier.addSet('bench_press'); // Add third set as working(3)
       notifier.updateSet('bench_press', 2, type: SetType.dropSet);
 
       var sets =
           container.read(workoutSessionProvider)!.exercises.single.sets;
       expect(sets, hasLength(3));
-      expect(sets[0].type, SetType.warmUp);
+      expect(sets[0].type, SetType.working);
       expect(sets[0].setNumber, 1);
       expect(sets[1].type, SetType.working);
       expect(sets[1].setNumber, 2);
@@ -383,9 +383,9 @@ void main() {
       notifier.removeSet('bench_press', 1);
       sets = container.read(workoutSessionProvider)!.exercises.single.sets;
       expect(sets, hasLength(2));
-      // Should be: [warmUp(1), dropSet(3)]
-      expect(sets[0].type, SetType.warmUp);
-      expect(sets[0].setNumber, 1); // unchanged
+      // Should be: [working(1), dropSet(3)]
+      expect(sets[0].type, SetType.working);
+      expect(sets[0].setNumber, 1); // renumbered
       expect(sets[1].type, SetType.dropSet);
       expect(sets[1].setNumber, 3); // unchanged - non-working sets don't get renumbered
     });

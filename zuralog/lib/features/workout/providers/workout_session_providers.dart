@@ -103,7 +103,7 @@ class WorkoutSessionNotifier extends StateNotifier<WorkoutSession?> {
     ];
     if (result.isEmpty) {
       return const [
-        WorkoutSet(setNumber: 1, type: SetType.warmUp),
+        WorkoutSet(setNumber: 1, type: SetType.working),
         WorkoutSet(setNumber: 2, type: SetType.working),
       ];
     }
@@ -182,7 +182,7 @@ class WorkoutSessionNotifier extends StateNotifier<WorkoutSession?> {
       final sets = prev != null
           ? _setsFromHistory(prev, unitSystem)
           : const [
-              WorkoutSet(setNumber: 1, type: SetType.warmUp),
+              WorkoutSet(setNumber: 1, type: SetType.working),
               WorkoutSet(setNumber: 2, type: SetType.working),
             ];
       return WorkoutExercise(
@@ -202,7 +202,7 @@ class WorkoutSessionNotifier extends StateNotifier<WorkoutSession?> {
   void addSet(String exerciseId) {
     _mutateExercise(exerciseId, (ex) {
       final nextNumber = ex.sets.length + 1;
-      final nextType = ex.sets.isEmpty ? SetType.warmUp : SetType.working;
+      final nextType = SetType.working;
       return ex.copyWith(
         sets: [
           ...ex.sets,

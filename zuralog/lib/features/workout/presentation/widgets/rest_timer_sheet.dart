@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:zuralog/core/theme/theme.dart';
 
-/// A modal bottom sheet that counts down from a given number of seconds.
+/// A persistent (non-blocking) bottom sheet that counts down from a given
+/// number of seconds.
 ///
 /// Shows a large mm:ss countdown, a "+30s" button to add time, and a "Skip"
 /// button to dismiss early. Vibrates and auto-dismisses when the countdown
@@ -12,22 +13,27 @@ import 'package:zuralog/core/theme/theme.dart';
 ///
 /// Usage:
 /// ```dart
-/// await RestTimerSheet.show(context, seconds: 90);
+/// RestTimerSheet.show(context, seconds: 90);
 /// ```
 class RestTimerSheet extends StatefulWidget {
-  const RestTimerSheet({super.key, required this.initialSeconds});
+  const RestTimerSheet({
+    super.key,
+    required this.initialSeconds,
+    required this.onDismiss,
+  });
 
   final int initialSeconds;
+  final VoidCallback onDismiss;
 
-  static Future<void> show(BuildContext context, {required int seconds}) {
-    return showModalBottomSheet<void>(
-      context: context,
+  static void show(BuildContext context, {required int seconds}) {
+    late PersistentBottomSheetController controller;
+    controller = Scaffold.of(context).showBottomSheet(
+      (_) => RestTimerSheet(
+        initialSeconds: seconds,
+        onDismiss: () => controller.close(),
+      ),
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.40),
-      isScrollControlled: true,
-      useSafeArea: true,
-      isDismissible: true,
-      builder: (_) => RestTimerSheet(initialSeconds: seconds),
+      elevation: 0,
     );
   }
 
@@ -55,7 +61,7 @@ class _RestTimerSheetState extends State<RestTimerSheet> {
       if (_remaining <= 0) {
         _timer?.cancel();
         HapticFeedback.heavyImpact();
-        if (mounted) Navigator.of(context).pop();
+        if (mounted) widget.onDismiss();
       }
     });
   }
@@ -136,7 +142,7 @@ class _RestTimerSheetState extends State<RestTimerSheet> {
               FilledButton(
                 onPressed: () {
                   HapticFeedback.selectionClick();
-                  Navigator.of(context).pop();
+                  widget.onDismiss();
                 },
                 style: FilledButton.styleFrom(
                   backgroundColor: colors.primary,
