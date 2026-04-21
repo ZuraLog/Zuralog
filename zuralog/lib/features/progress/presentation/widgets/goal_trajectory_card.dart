@@ -1,12 +1,16 @@
 library;
 
 import 'package:flutter/material.dart';
+
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
-import 'package:zuralog/features/progress/presentation/widgets/pattern_progress_bar.dart';
+import 'package:zuralog/features/progress/presentation/widgets/goal_visuals.dart';
 import 'package:zuralog/features/progress/presentation/widgets/pressable_card.dart';
+import 'package:zuralog/shared/widgets/cards/z_feature_card.dart';
+import 'package:zuralog/shared/widgets/feedback/z_progress_bar.dart';
+import 'package:zuralog/shared/widgets/indicators/z_category_icon_tile.dart';
 
 class GoalTrajectoryCard extends StatelessWidget {
   const GoalTrajectoryCard({
@@ -18,78 +22,61 @@ class GoalTrajectoryCard extends StatelessWidget {
   final Goal goal;
   final VoidCallback onTap;
 
-  static const Map<GoalType, (IconData, Color)> _typeInfo = {
-    GoalType.weightTarget: (Icons.gps_fixed_rounded, Color(0xFF64D2FF)),
-    GoalType.weeklyRunCount: (Icons.directions_run_rounded, Color(0xFF30D158)),
-    GoalType.dailyCalorieLimit: (Icons.restaurant_rounded, Color(0xFFFF9F0A)),
-    GoalType.sleepDuration: (Icons.bedtime_rounded, Color(0xFF5E5CE6)),
-    GoalType.stepCount: (Icons.directions_walk_rounded, Color(0xFF30D158)),
-    GoalType.waterIntake: (Icons.water_drop_rounded, Color(0xFF64D2FF)),
-  };
-
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final typeData = _typeInfo[goal.type];
-    final iconData = typeData?.$1 ?? Icons.auto_awesome_rounded;
-    final color = typeData?.$2 ?? colors.progressSage;
+    final visuals = goalVisuals(goal);
     final pct = goal.progressFraction;
     final pctInt = (pct * 100).round();
 
-    final badgeColor = (goal.trendDirection == 'completed' ||
-            goal.trendDirection == 'on_track')
-        ? AppColors.statusConnected
-        : colors.progressStreakWarm;
-    final pctColor = badgeColor;
-
     return PressableCard(
       onTap: onTap,
-      borderRadius: AppDimens.radiusCard,
-      child: Container(
-        padding: const EdgeInsets.all(AppDimens.spaceMd),
-        decoration: BoxDecoration(
-          color: colors.progressSurface,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-          border: Border.all(color: colors.progressBorderDefault),
-        ),
+      borderRadius: AppDimens.shapeLg,
+      child: ZFeatureCard(
+        variant: visuals.variant,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Container(
-                  width: AppDimens.iconContainerSm,
-                  height: AppDimens.iconContainerSm,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                  ),
-                  child: Center(
-                    child: Icon(iconData, size: 16, color: color),
-                  ),
+                ZCategoryIconTile(
+                  color: visuals.color,
+                  icon: visuals.icon,
                 ),
-                const SizedBox(width: AppDimens.spaceSm),
+                const SizedBox(width: AppDimens.spaceMd),
                 Expanded(
-                  child: Text(
-                    goal.title,
-                    style: AppTextStyles.titleMedium.copyWith(
-                      color: colors.progressTextPrimary,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        goal.title,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: colors.progressTextPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        '${_fmt(goal.currentValue)} / ${_fmt(goal.targetValue)} ${goal.unit}',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: colors.progressTextMuted,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimens.spaceSm,
-                    vertical: 3,
+                    horizontal: 11,
+                    vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: pctColor.withValues(alpha: 0.12),
+                    color: AppColors.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(AppDimens.radiusButton),
                   ),
                   child: Text(
                     '$pctInt%',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: pctColor,
+                    style: AppTextStyles.labelMedium.copyWith(
+                      color: AppColors.primary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -97,18 +84,11 @@ class GoalTrajectoryCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppDimens.spaceSm),
-            PatternProgressBar(fraction: pct),
-            const SizedBox(height: AppDimens.spaceXs),
+            ZProgressBar(value: pct.clamp(0.0, 1.0)),
+            const SizedBox(height: AppDimens.spaceSm),
             Row(
               children: [
-                Expanded(
-                  child: Text(
-                    '${_fmt(goal.currentValue)} / ${_fmt(goal.targetValue)} ${goal.unit}',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: colors.progressTextMuted,
-                    ),
-                  ),
-                ),
+                const Spacer(),
                 _TrendBadge(direction: goal.trendDirection),
               ],
             ),
@@ -130,38 +110,24 @@ class _TrendBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     if (direction == 'completed') {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(
-          color: AppColors.statusConnected.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(AppDimens.radiusButton),
-        ),
-        child: Text(
-          '✓ Done',
-          style: AppTextStyles.labelSmall.copyWith(
-            color: AppColors.statusConnected,
-            fontWeight: FontWeight.w600,
-          ),
+      return Text(
+        '✓ Done',
+        style: AppTextStyles.labelSmall.copyWith(
+          color: AppColors.success,
+          fontWeight: FontWeight.w600,
         ),
       );
     }
-    final colors = AppColorsOf(context);
     final isOnTrack = direction == 'on_track';
-    final color = isOnTrack ? AppColors.statusConnected : colors.progressStreakWarm;
+    final color = isOnTrack ? AppColors.success : colors.progressStreakWarm;
     final label = isOnTrack ? '▲ On track' : '⚠ Behind';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(AppDimens.radiusButton),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.labelSmall.copyWith(
-          color: color,
-          fontWeight: FontWeight.w600,
-        ),
+    return Text(
+      label,
+      style: AppTextStyles.labelSmall.copyWith(
+        color: color,
+        fontWeight: FontWeight.w600,
       ),
     );
   }

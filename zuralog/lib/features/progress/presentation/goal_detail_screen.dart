@@ -1,24 +1,27 @@
 /// Goal Detail Screen — deep-dive view for a single goal.
 ///
-/// Shows an animated progress ring, sparkline history chart, goal metadata,
-/// AI commentary, and edit/delete actions.
+/// Composes the eight section widgets that make up the redesigned Goal
+/// Detail page: hero, coach take, stats grid, trend chart, activity
+/// heatmap, milestones track, related journal, and share action.
 library;
 
-import 'dart:math' as math;
-
-import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
-import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/presentation/goal_create_edit_sheet.dart';
+import 'package:zuralog/features/progress/presentation/widgets/goal_activity_heatmap.dart';
+import 'package:zuralog/features/progress/presentation/widgets/goal_coach_take_card.dart';
+import 'package:zuralog/features/progress/presentation/widgets/goal_detail_hero.dart';
+import 'package:zuralog/features/progress/presentation/widgets/goal_milestones_track.dart';
+import 'package:zuralog/features/progress/presentation/widgets/goal_related_journal.dart';
+import 'package:zuralog/features/progress/presentation/widgets/goal_share_action.dart';
+import 'package:zuralog/features/progress/presentation/widgets/goal_stats_grid.dart';
+import 'package:zuralog/features/progress/presentation/widgets/goal_trend_chart_card.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
-import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
-import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -36,31 +39,7 @@ class GoalDetailScreen extends ConsumerStatefulWidget {
   ConsumerState<GoalDetailScreen> createState() => _GoalDetailScreenState();
 }
 
-class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ringController;
-  late Animation<double> _ringAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _ringController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    );
-    _ringAnimation = CurvedAnimation(
-      parent: _ringController,
-      curve: Curves.easeOutCubic,
-    );
-    _ringController.forward();
-  }
-
-  @override
-  void dispose() {
-    _ringController.dispose();
-    super.dispose();
-  }
-
+class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
   // ── Actions ─────────────────────────────────────────────────────────────────
 
   void _openEdit(BuildContext context, Goal goal) {
@@ -134,8 +113,6 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final goalsAsync = ref.watch(goalsProvider);
-    final unitsSystem = ref.watch(unitsSystemProvider);
-    final isPremium = ref.watch(isPremiumProvider);
 
     return goalsAsync.when(
       loading: () => ZuralogScaffold(
@@ -197,9 +174,6 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
 
         return _GoalDetailView(
           goal: goal,
-          ringAnimation: _ringAnimation,
-          unitsSystem: unitsSystem,
-          isPremium: isPremium,
           onEdit: () => _openEdit(context, goal!),
           onDelete: () => _confirmDelete(context, goal!),
         );
@@ -210,72 +184,21 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
 
 // ── _GoalDetailView ───────────────────────────────────────────────────────────
 
-class _GoalDetailView extends StatelessWidget {
+class _GoalDetailView extends ConsumerWidget {
   const _GoalDetailView({
     required this.goal,
-    required this.ringAnimation,
-    required this.unitsSystem,
-    required this.isPremium,
     required this.onEdit,
     required this.onDelete,
   });
 
   final Goal goal;
-  final Animation<double> ringAnimation;
-  final UnitsSystem unitsSystem;
-  final bool isPremium;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
-  String _formatDate(String? iso) {
-    if (iso == null || iso.isEmpty) return '—';
-    final dt = DateTime.tryParse(iso);
-    if (dt == null) return iso;
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-    return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
-  }
-
-  /// Returns a human-readable projected completion date based on recent
-  /// progress history, or null when a projection cannot be made.
-  String? _projectCompletionDate(Goal goal) {
-    final history = goal.progressHistory;
-    if (history.length < 2) return null;
-
-    // Use the last min(14, history.length) entries
-    final n = history.length < 14 ? history.length : 14;
-    final window = history.sublist(history.length - n);
-
-    // Average daily gain over the window
-    final avgGain = (window.last - window.first) / (n - 1);
-    if (avgGain <= 0) return null;
-
-    final remaining = goal.targetValue - goal.currentValue;
-    if (remaining <= 0) return 'Already achieved!';
-
-    final daysNeeded = (remaining / avgGain).ceil();
-    final projectedDate = DateTime.now().add(Duration(days: daysNeeded));
-
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-    return '${months[projectedDate.month - 1]} ${projectedDate.day}, ${projectedDate.year}';
-  }
-
-  String _fmtValue(double v) {
-    if (v == v.truncateToDouble()) return v.toInt().toString();
-    return v.toStringAsFixed(1);
-  }
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
-    final projected = _projectCompletionDate(goal);
-    final hasAiCommentary = goal.aiCommentary != null;
-    final showAiCard = hasAiCommentary || projected != null;
+    final isPremium = ref.watch(isPremiumProvider);
 
     return ZuralogScaffold(
       appBar: ZuralogAppBar(
@@ -295,390 +218,67 @@ class _GoalDetailView extends StatelessWidget {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: AppDimens.spaceMd,
+        padding: const EdgeInsets.fromLTRB(
+          AppDimens.spaceMd,
+          AppDimens.spaceSm,
+          AppDimens.spaceMd,
+          AppDimens.spaceXl,
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeroSection(colors),
+            GoalDetailHero(goal: goal),
+            if (goal.aiCommentary != null && goal.aiCommentary!.trim().isNotEmpty) ...[
+              const SizedBox(height: AppDimens.spaceMd),
+              const _SectionLabel('COACH TAKE'),
+              const SizedBox(height: AppDimens.spaceSm),
+              GoalCoachTakeCard(commentary: goal.aiCommentary, isPremium: isPremium),
+            ],
             const SizedBox(height: AppDimens.spaceMd),
-            if (goal.progressHistory.isNotEmpty) ...[
-              _buildSparklineCard(colors),
-              const SizedBox(height: AppDimens.spaceMd),
-            ],
-            _buildDetailsCard(colors, projected: projected),
-            if (showAiCard) ...[
-              const SizedBox(height: AppDimens.spaceMd),
-              if (!isPremium && hasAiCommentary)
-                ZLockedOverlay(
-                  headline: 'Get AI insights on your goals',
-                  body:
-                      'Upgrade to Pro for personalized AI commentary that tells you exactly how your goals are tracking.',
-                  icon: Icons.auto_awesome_rounded,
-                  child: _buildAiCommentaryCard(colors, projected: projected),
-                )
-              else
-                _buildAiCommentaryCard(colors, projected: projected),
-            ],
-            const SizedBox(height: AppDimens.spaceXl),
+            const _SectionLabel('AT A GLANCE'),
+            const SizedBox(height: AppDimens.spaceSm),
+            GoalStatsGrid(goal: goal),
+            const SizedBox(height: AppDimens.spaceMd),
+            const _SectionLabel('TREND'),
+            const SizedBox(height: AppDimens.spaceSm),
+            GoalTrendChartCard(goal: goal),
+            const SizedBox(height: AppDimens.spaceMd),
+            const _SectionLabel('30-DAY ACTIVITY'),
+            const SizedBox(height: AppDimens.spaceSm),
+            GoalActivityHeatmap(goal: goal),
+            const SizedBox(height: AppDimens.spaceMd),
+            const _SectionLabel('MILESTONES'),
+            const SizedBox(height: AppDimens.spaceSm),
+            GoalMilestonesTrack(goal: goal),
+            GoalRelatedJournal(goal: goal),
+            const SizedBox(height: AppDimens.spaceMd),
+            const GoalShareAction(),
           ],
         ),
-      ),
-    );
-  }
-
-  // ── Hero Section ─────────────────────────────────────────────────────────────
-
-  Widget _buildHeroSection(AppColorsOf colors) {
-    return Container(
-      padding: const EdgeInsets.all(AppDimens.spaceLg),
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-      ),
-      child: Column(
-        children: [
-          // Animated progress ring
-          AnimatedBuilder(
-            animation: ringAnimation,
-            builder: (context, child) {
-              final progress = goal.progressFraction * ringAnimation.value;
-              return SizedBox(
-                width: 120,
-                height: 120,
-                child: CustomPaint(
-                  painter: _RingPainter(
-                    progress: progress,
-                    strokeWidth: 10,
-                    trackColor: colors.border,
-                    progressColor: AppColors.primary,
-                  ),
-                  child: Center(
-                      child: Text(
-                        '${(goal.progressFraction * 100).round()}%',
-                        style: AppTextStyles.displaySmall.copyWith(
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: AppDimens.spaceMd),
-          // Current value
-          Text(
-            _fmtValue(goal.currentValue),
-            style: AppTextStyles.displayLarge.copyWith(
-              color: colors.textPrimary,
-              fontSize: 40,
-            ),
-          ),
-          const SizedBox(height: AppDimens.spaceXs),
-          // Target unit subtitle
-          Text(
-            '/ ${_fmtValue(goal.targetValue)} ${displayUnit(goal.unit, unitsSystem)}',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
-          if (goal.isCompleted) ...[
-            const SizedBox(height: AppDimens.spaceMd),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDimens.spaceMd,
-                vertical: AppDimens.spaceXs,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(AppDimens.radiusChip),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.check_circle_rounded,
-                    size: 14,
-                    color: AppColors.primary,
-                  ),
-                  const SizedBox(width: AppDimens.spaceXs),
-                  Text(
-                    'Completed',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  // ── Sparkline Card ────────────────────────────────────────────────────────────
-
-  Widget _buildSparklineCard(AppColorsOf colors) {
-    final history = goal.progressHistory;
-    final recent = history.length > 14
-        ? history.sublist(history.length - 14)
-        : history;
-
-    return Container(
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Progress History',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: colors.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: AppDimens.spaceMd),
-          SizedBox(
-            height: 80,
-            child: CustomPaint(
-              size: const Size(double.infinity, 80),
-              painter: _SparklinePainter(
-                values: recent,
-                color: AppColors.primary,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Details Card ─────────────────────────────────────────────────────────────
-
-  Widget _buildDetailsCard(AppColorsOf colors, {String? projected}) {
-    return Container(
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Details',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: colors.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: AppDimens.spaceMd),
-          _DetailRow(label: 'Type', value: goal.type.displayName),
-          _DetailRow(label: 'Period', value: goal.period.displayName),
-          _DetailRow(label: 'Started', value: _formatDate(goal.startDate)),
-          if (goal.deadline != null)
-            _DetailRow(label: 'Deadline', value: _formatDate(goal.deadline)),
-          if (projected != null)
-            _DetailRow(label: 'Projected', value: projected),
-        ],
-      ),
-    );
-  }
-
-  // ── AI Commentary Card ────────────────────────────────────────────────────────
-
-  Widget _buildAiCommentaryCard(AppColorsOf colors, {String? projected}) {
-    // Build the display text: append projection sentence when available.
-    final String displayText;
-    if (goal.aiCommentary != null) {
-      if (projected != null && projected != 'Already achieved!') {
-        displayText =
-            '${goal.aiCommentary!} At your current pace, you\'ll hit your target by $projected.';
-      } else {
-        displayText = goal.aiCommentary!;
-      }
-    } else {
-      // No aiCommentary but there IS a projection — show only the projection.
-      displayText =
-          'At your current pace, you\'ll hit your target by $projected.';
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            Icons.auto_awesome_rounded,
-            size: AppDimens.iconSm + 4,
-            color: AppColors.primary,
-          ),
-          const SizedBox(width: AppDimens.spaceSm),
-          Expanded(
-            child: Text(
-              displayText,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: colors.textSecondary,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
 }
 
-// ── _DetailRow ────────────────────────────────────────────────────────────────
+// ── _SectionLabel ─────────────────────────────────────────────────────────────
 
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.label, required this.value});
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
 
-  final String label;
-  final String value;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppDimens.spaceSm),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
-          Text(
-            value,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: colors.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text(
+        text,
+        style: AppTextStyles.labelSmall.copyWith(
+          color: AppColors.textSecondary,
+          letterSpacing: 0.6,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
-}
-
-// ── _RingPainter ──────────────────────────────────────────────────────────────
-
-class _RingPainter extends CustomPainter {
-  const _RingPainter({
-    required this.progress,
-    required this.strokeWidth,
-    required this.trackColor,
-    required this.progressColor,
-  });
-
-  final double progress;
-  final double strokeWidth;
-  final Color trackColor;
-  final Color progressColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (math.min(size.width, size.height) - strokeWidth) / 2;
-    final rect = Rect.fromCircle(center: center, radius: radius);
-
-    final trackPaint = Paint()
-      ..color = trackColor
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawArc(rect, -math.pi / 2, 2 * math.pi, false, trackPaint);
-
-    if (progress > 0) {
-      final progressPaint = Paint()
-        ..color = progressColor
-        ..strokeWidth = strokeWidth
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round;
-
-      canvas.drawArc(
-        rect,
-        -math.pi / 2,
-        2 * math.pi * progress,
-        false,
-        progressPaint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_RingPainter old) =>
-      old.progress != progress ||
-      old.progressColor != progressColor ||
-      old.trackColor != trackColor;
-}
-
-// ── _SparklinePainter ─────────────────────────────────────────────────────────
-
-class _SparklinePainter extends CustomPainter {
-  const _SparklinePainter({required this.values, required this.color});
-
-  final List<double> values;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (values.length < 2) return;
-
-    final minVal = values.reduce(math.min);
-    final maxVal = values.reduce(math.max);
-    final range = (maxVal - minVal).abs();
-    final effectiveRange = range < 1e-10 ? 1.0 : range;
-
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    final path = Path();
-    for (var i = 0; i < values.length; i++) {
-      final x = size.width * i / (values.length - 1);
-      final normalized = (values[i] - minVal) / effectiveRange;
-      // Invert Y: high value = top of canvas
-      final y = size.height * (1.0 - normalized * 0.8 - 0.1);
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-
-    canvas.drawPath(path, paint);
-
-    // Draw last-point dot — inset by radius to stay within canvas bounds
-    final lastX = size.width - 4.0;
-    final lastNorm = (values.last - minVal) / effectiveRange;
-    final lastY = size.height * (1.0 - lastNorm * 0.8 - 0.1);
-    canvas.drawCircle(
-      Offset(lastX, lastY),
-      4,
-      Paint()..color = color,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_SparklinePainter old) =>
-      !listEquals(old.values, values) || old.color != color;
 }

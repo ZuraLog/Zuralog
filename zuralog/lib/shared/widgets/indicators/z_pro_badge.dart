@@ -62,7 +62,7 @@ class ZProBadge extends StatelessWidget {
                     'PRO',
                     style: AppTextStyles.labelSmall.copyWith(
                       color: colors.primary,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],

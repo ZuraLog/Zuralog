@@ -5,9 +5,11 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
-import 'package:zuralog/features/progress/presentation/widgets/pattern_fill.dart';
-import 'package:zuralog/features/progress/presentation/widgets/pattern_progress_bar.dart';
+import 'package:zuralog/features/progress/presentation/widgets/achievement_category.dart';
 import 'package:zuralog/features/progress/presentation/widgets/pressable_card.dart';
+import 'package:zuralog/shared/widgets/cards/z_feature_card.dart';
+import 'package:zuralog/shared/widgets/feedback/z_progress_bar.dart';
+import 'package:zuralog/shared/widgets/indicators/z_category_icon_tile.dart';
 
 class NextAchievementCard extends StatelessWidget {
   const NextAchievementCard({
@@ -37,95 +39,64 @@ class NextAchievementCard extends StatelessWidget {
     final current = achievement.progressCurrent ?? 0;
     final total = achievement.progressTotal ?? 1;
     final fraction = (total > 0) ? (current / total).clamp(0.0, 1.0) : 0.0;
+    final category = achievementCategoryFor(achievement.iconName);
+    final iconData =
+        _iconMap[achievement.iconName] ?? Icons.emoji_events_rounded;
 
     return PressableCard(
       onTap: onTap,
       borderRadius: AppDimens.radiusCard,
-      child: Stack(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(AppDimens.spaceMd),
-            decoration: BoxDecoration(
-              color: colors.progressSurface,
-              borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-              border: Border.all(color: colors.progressBorderDefault),
+      child: ZFeatureCard(
+        variant: category.variant,
+        borderRadius: AppDimens.radiusCard,
+        child: Row(
+          children: [
+            ZCategoryIconTile(
+              color: category.color,
+              icon: iconData,
+              size: AppDimens.iconContainerMd,
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: AppDimens.iconContainerMd,
-                  height: AppDimens.iconContainerMd,
-                  decoration: BoxDecoration(
-                    color: colors.progressSurfaceRaised,
-                    borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      _iconMap[achievement.iconName] ?? Icons.emoji_events_rounded,
-                      size: 22,
-                      color: colors.progressTextSecondary,
+            const SizedBox(width: AppDimens.spaceMd),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    achievement.title,
+                    style: AppTextStyles.titleMedium.copyWith(
+                      color: colors.progressTextPrimary,
                     ),
                   ),
-                ),
-                const SizedBox(width: AppDimens.spaceMd),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 2),
+                  Text(
+                    achievement.description,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: colors.progressTextMuted,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: AppDimens.spaceSm),
+                  Row(
                     children: [
-                      Text(
-                        achievement.title,
-                        style: AppTextStyles.titleMedium.copyWith(
-                          color: colors.progressTextPrimary,
-                        ),
+                      Expanded(
+                        child: ZProgressBar(value: fraction.toDouble()),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(width: AppDimens.spaceSm),
                       Text(
-                        achievement.description,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: colors.progressTextMuted,
+                        achievement.progressLabel ?? '$current/$total',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: colors.progressTextSecondary,
+                          fontWeight: FontWeight.w600,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: AppDimens.spaceSm),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: PatternProgressBar(fraction: fraction),
-                          ),
-                          const SizedBox(width: AppDimens.spaceSm),
-                          Text(
-                            achievement.progressLabel ?? '$current/$total',
-                            style: AppTextStyles.labelSmall.copyWith(
-                              color: colors.progressTextSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-          ),
-          // Top 3px pattern-fill accent bar
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 3,
-            child: ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(AppDimens.radiusCard),
-                topRight: Radius.circular(AppDimens.radiusCard),
-              ),
-              child: PatternFill(
-                child: Container(color: Colors.white),
+                ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

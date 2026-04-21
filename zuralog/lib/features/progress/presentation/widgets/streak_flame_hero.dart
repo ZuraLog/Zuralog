@@ -6,6 +6,8 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/presentation/widgets/streak_week_calendar_row.dart';
 import 'package:zuralog/features/progress/presentation/widgets/pattern_fill.dart';
+import 'package:zuralog/shared/widgets/cards/z_hero_card.dart';
+import 'package:zuralog/shared/widgets/indicators/z_category_icon_tile.dart';
 
 class StreakFlameHero extends StatelessWidget {
   const StreakFlameHero({
@@ -38,36 +40,24 @@ class StreakFlameHero extends StatelessWidget {
     final clampedTodayIndex = todayIndex.clamp(0, 6);
     final todayDone = clampedTodayIndex < weekHits.length && weekHits[clampedTodayIndex];
 
-    return Container(
+    return ZHeroCard(
       padding: const EdgeInsets.all(AppDimens.spaceLg),
-      decoration: BoxDecoration(
-        color: AppColors.progressSurface,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        border: Border.all(color: AppColors.progressBorderDefault),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: AppDimens.iconContainerLg,
-                height: AppDimens.iconContainerLg,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.progressStreakWarm.withValues(alpha: 0.15),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-                child: Center(
-                  child: isFrozen
-                      ? const Icon(Icons.ac_unit_rounded, size: 40, color: Color(0xFF64D2FF))
-                      : const Icon(Icons.local_fire_department_rounded, size: 40, color: Color(0xFFFF9500)),
-                ),
+              ZCategoryIconTile(
+                color: isFrozen
+                    ? AppColors.categoryBody
+                    : AppColors.streakWarm,
+                icon: isFrozen
+                    ? Icons.ac_unit_rounded
+                    : Icons.local_fire_department_rounded,
+                size: AppDimens.iconContainerLg, // 72
+                iconSize: 36,
+                borderRadius: AppDimens.iconContainerLg / 2, // perfect circle
               ),
               const SizedBox(width: AppDimens.spaceMd),
               Expanded(

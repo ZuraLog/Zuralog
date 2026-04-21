@@ -10,7 +10,10 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
+import 'package:zuralog/features/progress/presentation/widgets/achievement_category.dart';
 import 'package:zuralog/features/progress/presentation/widgets/next_achievement_card.dart';
+import 'package:zuralog/shared/widgets/cards/z_feature_card.dart';
+import 'package:zuralog/shared/widgets/indicators/z_category_icon_tile.dart';
 
 class AchievementsSectionCard extends StatelessWidget {
   const AchievementsSectionCard({
@@ -112,21 +115,16 @@ class _RecentBadgesRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    return Container(
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: colors.progressSurface,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        border: Border.all(color: colors.progressBorderDefault),
-      ),
+    return ZFeatureCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Recently Unlocked',
+            'RECENTLY UNLOCKED',
             style: AppTextStyles.labelSmall.copyWith(
               color: colors.progressTextMuted,
-              letterSpacing: 0.3,
+              letterSpacing: 0.4,
+              fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: AppDimens.spaceSm),
@@ -147,30 +145,21 @@ class _BadgeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
+    final cat = achievementCategoryFor(achievement.iconName);
     return Expanded(
       child: Column(
         children: [
-          Container(
-            width: AppDimens.iconContainerMd,
-            height: AppDimens.iconContainerMd,
-            decoration: BoxDecoration(
-              color: colors.progressSurfaceRaised,
-              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-              border: Border.all(color: colors.progressBorderStrong),
-            ),
-            child: Center(
-              child: Icon(
-                iconMap[achievement.iconName] ?? Icons.emoji_events_rounded,
-                size: 20,
-                color: colors.progressSage,
-              ),
-            ),
+          ZCategoryIconTile(
+            color: cat.color,
+            icon: iconMap[achievement.iconName] ?? Icons.emoji_events_rounded,
+            size: AppDimens.iconContainerMd,
+            iconSize: 22,
           ),
           const SizedBox(height: AppDimens.spaceXs),
           Text(
             achievement.title,
             style: AppTextStyles.labelSmall.copyWith(
-              color: colors.progressTextSecondary,
+              color: colors.progressTextMuted,
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
