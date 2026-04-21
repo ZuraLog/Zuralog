@@ -1250,11 +1250,20 @@ def seed_insights(cur):
             None,
         ),
     ]
-    # Sleep / body / heart detail screens query insights by `generation_date`
-    # matching the user's local date — so every insight needs it set to today
-    # for the widgets to render. Stamp all rows with TODAY.
+    # The GET /insights/{id} route requires a UUID-formatted ID (FastAPI
+    # Path regex ^[0-9a-fA-F-]{36}$). The literal "ins-demo-NNN" slugs in
+    # the tuples above are fine for INSERT but fail the API validator when
+    # the Flutter detail screen tries to fetch them. Stable v5 UUIDs keyed
+    # on the slug give us deterministic IDs that pass validation.
+    # Also stamp `generation_date` = TODAY so the sleep/body/heart detail
+    # screens find these insights when they query for today's card.
     rows = [
-        (*r, TODAY) for r in rows
+        (
+            str(uuid.uuid5(uuid.NAMESPACE_DNS, f"zuralog-demo-insight-{r[0]}")),
+            *r[1:],
+            TODAY,
+        )
+        for r in rows
     ]
     execute_values(
         cur,
