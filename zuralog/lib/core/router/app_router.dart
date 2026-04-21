@@ -82,6 +82,7 @@ import 'package:zuralog/features/workout/presentation/workout_session_screen.dar
 import 'package:zuralog/features/workout/presentation/exercise_catalogue_screen.dart';
 import 'package:zuralog/features/workout/domain/completed_workout.dart';
 import 'package:zuralog/features/workout/presentation/workout_history_screen.dart';
+import 'package:zuralog/features/workout/presentation/workout_overview_screen.dart';
 import 'package:zuralog/features/workout/presentation/workout_summary_screen.dart';
 
 // ── Sleep Detail (pushed over shell) ─────────────────────────────────────────
@@ -381,6 +382,16 @@ List<RouteBase> _buildRoutes() {
     GoRoute(
       path: RouteNames.workoutLogPath,
       name: RouteNames.workoutLog,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: SentryErrorBoundary(
+          module: 'workout.overview',
+          child: WorkoutOverviewScreen(),
+        ),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.workoutSessionPath,
+      name: RouteNames.workoutSession,
       pageBuilder: (context, state) => const MaterialPage(
         child: SentryErrorBoundary(
           module: 'workout.session',

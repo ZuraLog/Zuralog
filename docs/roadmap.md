@@ -44,3 +44,18 @@ What shipped:
 - History icon added to `WorkoutSessionScreen` app bar
 - GoRouter wired to accept `CompletedWorkout` as extra on the summary route
 - 17 new tests (4 domain + 5 repository + 4 provider + 2 summary widget + 2 history widget); 78 workout tests total, all green; zero new analyzer issues
+
+### Plan 4: Workout Overview Screen — complete (2026-04-21)
+
+Branch: `feat/workout-overview-screen`
+
+What shipped:
+- `WorkoutOverviewScreen` — landing page when the workout tile is tapped (replaces direct jump into the session screen)
+- Hero card showing the last completed workout (duration, volume, sets) with skeleton loading state and empty state
+- "Start Workout" button pushing `/log/workout/session`
+- AI Summary placeholder card with `ZProBadge(showLock: true)` — coming soon
+- Weekly snapshot (last 7 days) showing workout count and total volume
+- "View All History" link to the history screen
+- Route change: `/log/workout` now shows the overview; new `/log/workout/session` is the live session screen
+- Input focus color fix: all outlined input fields across the app now use `colors.primary` (theme-aware) instead of hardcoded `AppColors.categoryNutrition` (orange) or dark-mode-only `AppColors.primary`
+- 3 new widget tests for the overview screen; 82 workout tests total, all green; zero new analyzer issues

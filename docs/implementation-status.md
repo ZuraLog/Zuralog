@@ -1,3 +1,33 @@
+## 2026-04-21 — Workout Plan 4: Overview Screen + Input Focus Fix
+
+**Branch:** `feat/workout-overview-screen`
+
+Workout tile now lands on a proper overview screen instead of jumping straight into a session. Also fixed a visual bug where input fields flashed orange on focus in light mode.
+
+**What was built:**
+
+- **`WorkoutOverviewScreen`** (`zuralog/lib/features/workout/presentation/workout_overview_screen.dart`): ConsumerWidget following the same Sleep/Heart pattern. `CustomScrollView` + pinned `SliverAppBar` + `ZStaggeredList`. Sections: hero card (last workout with duration/volume/sets, skeleton while loading, empty state), Start Workout button, AI Summary placeholder with `ZProBadge`, weekly snapshot (last 7 days), View All History link.
+
+- **Route restructure**: `/log/workout` (`workoutLogPath`) now resolves to `WorkoutOverviewScreen`. New `/log/workout/session` (`workoutSessionPath`) resolves to `WorkoutSessionScreen`. All existing navigation updated.
+
+- **Input focus color fix**: `ZLabeledTextField`, `ZLabeledNumberField`, `goal_create_edit_sheet.dart`, and `emergency_card_edit_screen.dart` were using static `AppColors.categoryNutrition` (orange) or `AppColors.primary` (dark-mode-only Sage) for focused border and cursor colors. All replaced with `colors.primary` (theme-aware instance from `AppColorsOf(context)`).
+
+**Tests:** 3 new widget tests for `WorkoutOverviewScreen`; 82 workout tests total, all green; zero new analyzer issues.
+
+**Files created:**
+- `zuralog/lib/features/workout/presentation/workout_overview_screen.dart`
+- `zuralog/test/features/workout/presentation/workout_overview_screen_test.dart`
+
+**Files modified:**
+- `zuralog/lib/core/router/route_names.dart`
+- `zuralog/lib/core/router/app_router.dart`
+- `zuralog/lib/shared/widgets/inputs/z_labeled_text_field.dart`
+- `zuralog/lib/shared/widgets/inputs/z_labeled_number_field.dart`
+- `zuralog/lib/features/progress/presentation/goal_create_edit_sheet.dart`
+- `zuralog/lib/features/profile/presentation/emergency_card_edit_screen.dart`
+
+---
+
 ## 2026-04-21 — Workout Plan 3: Summary + History
 
 **Branch:** `feat/workout-plan-1-foundation`

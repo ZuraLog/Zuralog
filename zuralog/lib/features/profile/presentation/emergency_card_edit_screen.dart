@@ -350,7 +350,7 @@ class _TagEditor extends StatelessWidget {
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: colors.textPrimary,
                   ),
-                  cursorColor: AppColors.primary,
+                  cursorColor: colors.primary,
                   decoration: InputDecoration(
                     hintText: placeholder,
                     hintStyle: AppTextStyles.bodyMedium.copyWith(
@@ -610,10 +610,7 @@ class _ContactField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusInput),
-          borderSide: const BorderSide(
-            color: AppColors.primary,
-            width: 1.5,
-          ),
+          borderSide: BorderSide(color: colors.primary, width: 1.5),
         ),
       ),
     );
