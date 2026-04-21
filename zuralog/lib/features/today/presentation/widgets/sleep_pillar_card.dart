@@ -24,7 +24,7 @@ class SleepPillarCard extends ConsumerWidget {
         icon: Icons.bedtime_rounded,
         categoryColor: AppColors.categorySleep,
         label: 'Sleep',
-        headline: 'Log sleep',
+        headline: 'No sleep yet',
         contextStat: 'No data yet',
         onTap: onTap,
       );
