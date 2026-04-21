@@ -1,3 +1,37 @@
+## 2026-04-21 — Workout Plan 2: Active Session Tracking
+
+**Branch:** `feat/workout-plan-1-foundation`
+
+Full live workout session — offline-first, crash-safe, unit-aware.
+
+**What was built:**
+
+- **Domain models** (`zuralog/lib/features/workout/domain/workout_session.dart`): `SetType` enum (Warm-Up, Working, Drop Set, Failure, AMRAP), `WorkoutSet`, `WorkoutExercise`, `WorkoutSession`. Immutable value objects with `copyWith` (`_kUnset` sentinel pattern for nullable fields), full JSON round-trip, structural equality via `listEquals`. Top-level helpers: `effectiveUnitSystem`, `unitLabel`, `kgToLbs`, `lbsToKg`.
+
+- **`WorkoutSessionNotifier`** (`zuralog/lib/features/workout/providers/workout_session_providers.dart`): `StateNotifier<WorkoutSession?>`, non-autoDispose (survives catalogue push). Auto-saves draft to SharedPreferences under `workout_active_draft` after every mutation. `startSession()` restores an existing draft or creates a new one. `toggleUnit()` converts all set weights and persists per-exercise unit override under `workout_exercise_unit_{exerciseId}`. `discardSession()` clears both the draft and all per-exercise unit keys. `ref.listen` on `unitsSystemProvider` keeps the global unit default current. Three derived providers: `workoutDurationProvider` (1 Hz `StreamProvider<Duration>`), `workoutVolumeProvider` (`Provider<double>`, completed sets only), `workoutSetsCompletedProvider` (`Provider<int>`).
+
+- **`WorkoutStatsRow`** (`zuralog/lib/features/workout/presentation/widgets/workout_stats_row.dart`): Three-column live strip — Duration (h:mm:ss, Activity accent), Volume, Sets. Watches its own providers so the parent screen doesn't rebuild on every tick.
+
+- **`WorkoutExerciseCard`** (`zuralog/lib/features/workout/presentation/widgets/workout_exercise_card.dart`): Per-exercise card with muscle-group color-coded icon bubble, inline notes `TextField` (auto-saved on change), rest timer row with `ZToggle`, set table (`_SetTableHeader` with tappable unit header + `_SetRow` per set), and "Add Set" `TextButton`. Set type picker and exercise action menu via `ZBottomSheet`. All mutations delegate to `workoutSessionProvider.notifier`.
+
+- **`WorkoutSessionScreen`** (`zuralog/lib/features/workout/presentation/workout_session_screen.dart`): Replaced Plan 1 stub. `startSession()` called via `addPostFrameCallback`. AppBar: down-arrow (discard), timer icon centered, "Finish" TextButton. Body: `WorkoutStatsRow` → divider → exercise list or `_EmptyState` → `_BottomActions`. Finish guard: zero-sets confirmation dialog. Discard: `ZAlertDialog` with `isDestructive: true`, then `discardSession()` + `context.pop()`.
+
+**Tests:** 35 new tests — 14 domain (workout_session_test.dart), 17 provider (workout_session_providers_test.dart), 4 widget (workout_session_screen_test.dart). 61 workout tests total, all green. Zero new analyzer issues.
+
+**Files created:**
+- `zuralog/lib/features/workout/domain/workout_session.dart`
+- `zuralog/lib/features/workout/providers/workout_session_providers.dart`
+- `zuralog/lib/features/workout/presentation/widgets/workout_stats_row.dart`
+- `zuralog/lib/features/workout/presentation/widgets/workout_exercise_card.dart`
+- `zuralog/test/features/workout/domain/workout_session_test.dart`
+- `zuralog/test/features/workout/providers/workout_session_providers_test.dart`
+- `zuralog/test/features/workout/presentation/workout_session_screen_test.dart`
+
+**Files modified:**
+- `zuralog/lib/features/workout/presentation/workout_session_screen.dart` (stub replaced)
+
+---
+
 ## 2026-04-21 — Workout Plan 1: Foundation + Exercise Catalogue
 
 **Branch:** `feat/workout-plan-1-foundation`
