@@ -94,9 +94,10 @@ class _WorkoutSessionScreenState
           ListTile(
             leading: const Icon(Icons.delete_outline_rounded),
             title: const Text('Discard Workout'),
-            onTap: () {
+            onTap: () async {
               Navigator.of(context).pop();
-              _confirmDiscard();
+              await Future<void>.delayed(Duration.zero);
+              if (mounted) await _confirmDiscard();
             },
           ),
           ListTile(
@@ -155,9 +156,7 @@ class _WorkoutSessionScreenState
                     padding: const EdgeInsets.only(bottom: AppDimens.spaceLg),
                     itemCount: exercises.length,
                     itemBuilder: (_, i) => WorkoutExerciseCard(
-                      key: ValueKey(
-                        'exercise-${exercises[i].exerciseId}',
-                      ),
+                      key: ValueKey('exercise-$i'),
                       exercise: exercises[i],
                     ),
                   ),
