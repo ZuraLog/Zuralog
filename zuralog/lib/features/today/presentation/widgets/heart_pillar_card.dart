@@ -24,6 +24,17 @@ class HeartPillarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!summary.hasData) {
+      return ZPillarCard(
+        icon: Icons.favorite_rounded,
+        categoryColor: AppColors.categoryHeart,
+        label: 'Heart',
+        headline: 'No heart data yet',
+        contextStat: 'No data yet',
+        onTap: onTap,
+      );
+    }
+
     return ZPillarCard(
       icon: Icons.favorite_rounded,
       categoryColor: AppColors.categoryHeart,
