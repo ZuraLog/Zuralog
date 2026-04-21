@@ -1,6 +1,5 @@
 library;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/features/workout/data/exercise_repository.dart';
@@ -12,23 +11,20 @@ final exerciseRepositoryProvider = Provider<ExerciseRepository>((ref) {
 
 final exerciseListProvider = FutureProvider<List<Exercise>>((ref) async {
   final repo = ref.read(exerciseRepositoryProvider);
-  try {
-    return await repo.loadAll();
-  } catch (e, st) {
-    debugPrint('exerciseListProvider failed: $e\n$st');
-    return const <Exercise>[];
-  }
+  return repo.loadAll();
 });
 
-final exerciseSearchQueryProvider = StateProvider<String>((ref) => '');
+final exerciseSearchQueryProvider =
+    StateProvider.autoDispose<String>((ref) => '');
 
 final exerciseMuscleGroupFilterProvider =
-    StateProvider<MuscleGroup?>((ref) => null);
+    StateProvider.autoDispose<MuscleGroup?>((ref) => null);
 
 final exerciseSearchProvider = FutureProvider<List<Exercise>>((ref) async {
-  final all = await ref.watch(exerciseListProvider.future);
+  // Watch state providers before the async gap so autoDispose keeps them alive.
   final query = ref.watch(exerciseSearchQueryProvider);
   final group = ref.watch(exerciseMuscleGroupFilterProvider);
+  final all = await ref.watch(exerciseListProvider.future);
 
   final trimmed = query.trim().toLowerCase();
 

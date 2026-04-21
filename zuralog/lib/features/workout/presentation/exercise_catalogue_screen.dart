@@ -125,11 +125,21 @@ class _ExerciseCatalogueScreenState
             child: resultsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, st) => Center(
-                child: Text(
-                  'Could not load exercises.',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: colors.textSecondary,
-                  ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Could not load exercises.',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppDimens.spaceMd),
+                    ZButton(
+                      label: 'Retry',
+                      onPressed: () => ref.refresh(exerciseListProvider),
+                    ),
+                  ],
                 ),
               ),
               data: (results) {
