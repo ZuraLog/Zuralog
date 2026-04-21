@@ -5,34 +5,11 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
+import 'package:zuralog/features/progress/presentation/widgets/achievement_category.dart';
 import 'package:zuralog/features/progress/presentation/widgets/pressable_card.dart';
 import 'package:zuralog/shared/widgets/cards/z_feature_card.dart';
 import 'package:zuralog/shared/widgets/feedback/z_progress_bar.dart';
 import 'package:zuralog/shared/widgets/indicators/z_category_icon_tile.dart';
-import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
-
-/// Resolves the category color + pattern variant pair for a given
-/// achievement icon key. Task 12 will lift this into a shared helper.
-({Color color, ZPatternVariant variant}) _categoryFor(String iconKey) {
-  switch (iconKey) {
-    case 'flame':
-      return (color: AppColors.streakWarm, variant: ZPatternVariant.amber);
-    case 'zap':
-    case 'gem':
-    case 'crown':
-    case 'trophy':
-    case 'star':
-      return (color: AppColors.categoryNutrition, variant: ZPatternVariant.amber);
-    case 'bar_chart':
-      return (color: AppColors.categoryBody, variant: ZPatternVariant.skyBlue);
-    case 'flag':
-      return (color: AppColors.categoryActivity, variant: ZPatternVariant.green);
-    case 'link':
-      return (color: AppColors.categoryWellness, variant: ZPatternVariant.purple);
-    default:
-      return (color: AppColors.primary, variant: ZPatternVariant.sage);
-  }
-}
 
 class NextAchievementCard extends StatelessWidget {
   const NextAchievementCard({
@@ -62,7 +39,7 @@ class NextAchievementCard extends StatelessWidget {
     final current = achievement.progressCurrent ?? 0;
     final total = achievement.progressTotal ?? 1;
     final fraction = (total > 0) ? (current / total).clamp(0.0, 1.0) : 0.0;
-    final category = _categoryFor(achievement.iconName);
+    final category = achievementCategoryFor(achievement.iconName);
     final iconData =
         _iconMap[achievement.iconName] ?? Icons.emoji_events_rounded;
 
