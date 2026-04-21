@@ -14,6 +14,7 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/data/domain/all_data_summary.dart';
 import 'package:zuralog/features/data/domain/category_color.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/mandala_data.dart';
@@ -81,6 +82,7 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen>
             const SliverToBoxAdapter(child: SizedBox(height: AppDimens.spaceSm)),
             SliverToBoxAdapter(child: _MandalaSection(range: _range)),
             const SliverToBoxAdapter(child: _Legend()),
+            SliverToBoxAdapter(child: _AiSummarySection(range: _range)),
             SliverToBoxAdapter(
               child: SizedBox(
                 height: AppDimens.bottomClearance(context) + AppDimens.spaceXl,
@@ -102,6 +104,48 @@ class _AllDataScreenState extends ConsumerState<AllDataScreen>
       )));
     }
   }
+}
+
+/// Reads live category-detail providers for the given range and assembles the
+/// [MandalaData] consumed by both the wheel and the AI summary generator.
+MandalaData _readMandalaData(WidgetRef ref, _AllDataRange r) {
+  final wedges = <MandalaWedge>[];
+  for (final cat in kMandalaCategoryOrder) {
+    final detail = ref.watch(categoryDetailProvider(CategoryDetailParams(
+      categoryId: cat.name,
+      timeRange: r.providerRange,
+    )));
+    final spokes = detail.maybeWhen(
+      data: (d) => _spokesFromMetrics(d.metrics),
+      orElse: () => const <MandalaSpoke>[],
+    );
+    wedges.add(MandalaWedge(category: cat, spokes: spokes));
+  }
+  return MandalaData(wedges: wedges);
+}
+
+/// Maps a list of [MetricSeries] into a spoke list. Caps density at 8 spokes
+/// per wedge. Requires at least 3 finite data points to compute a baseline.
+List<MandalaSpoke> _spokesFromMetrics(List<MetricSeries> metrics) {
+  final spokes = <MandalaSpoke>[];
+  for (final m in metrics) {
+    if (spokes.length >= 8) break;
+    final values = m.dataPoints
+        .map((p) => p.value)
+        .where((v) => v.isFinite)
+        .toList();
+    if (values.length < 3) continue;
+    final today = values.last;
+    final baseline = values.reduce((a, b) => a + b) / values.length;
+    spokes.add(MandalaSpoke(
+      metricId: m.metricId,
+      displayName: m.displayName,
+      todayValue: today,
+      baseline30d: baseline,
+      inverted: kInvertedMetricIds.contains(m.metricId),
+    ));
+  }
+  return spokes;
 }
 
 /// "YOUR BODY" eyebrow, above the title.
@@ -221,46 +265,6 @@ class _MandalaSection extends ConsumerWidget {
       ),
     );
   }
-
-  MandalaData _readMandalaData(WidgetRef ref, _AllDataRange r) {
-    final wedges = <MandalaWedge>[];
-    for (final cat in kMandalaCategoryOrder) {
-      final detail = ref.watch(categoryDetailProvider(CategoryDetailParams(
-        categoryId: cat.name,
-        timeRange: r.providerRange,
-      )));
-      final spokes = detail.maybeWhen(
-        data: (d) => _spokesFromMetrics(d.metrics),
-        orElse: () => const <MandalaSpoke>[],
-      );
-      wedges.add(MandalaWedge(category: cat, spokes: spokes));
-    }
-    return MandalaData(wedges: wedges);
-  }
-
-  /// Maps a list of [MetricSeries] into a spoke list. Caps density at 8 spokes
-  /// per wedge. Requires at least 3 finite data points to compute a baseline.
-  List<MandalaSpoke> _spokesFromMetrics(List<MetricSeries> metrics) {
-    final spokes = <MandalaSpoke>[];
-    for (final m in metrics) {
-      if (spokes.length >= 8) break;
-      final values = m.dataPoints
-          .map((p) => p.value)
-          .where((v) => v.isFinite)
-          .toList();
-      if (values.length < 3) continue;
-      final today = values.last;
-      final baseline = values.reduce((a, b) => a + b) / values.length;
-      spokes.add(MandalaSpoke(
-        metricId: m.metricId,
-        displayName: m.displayName,
-        todayValue: today,
-        baseline30d: baseline,
-        inverted: kInvertedMetricIds.contains(m.metricId),
-      ));
-    }
-    return spokes;
-  }
 }
 
 /// Compact legend that wraps under the mandala.
@@ -312,4 +316,69 @@ class _Legend extends StatelessWidget {
       ),
     );
   }
+}
+
+/// AI summary card with inline expandable breakdown.
+///
+/// Sits below the legend and summarises the same mandala data the wheel
+/// renders. Tapping the card toggles an animated reveal of the full
+/// [ZAiBreakdownCard] directly below it — same sliver, same scroll.
+class _AiSummarySection extends ConsumerStatefulWidget {
+  const _AiSummarySection({required this.range});
+  final _AllDataRange range;
+  @override
+  ConsumerState<_AiSummarySection> createState() => _AiSummarySectionState();
+}
+
+class _AiSummarySectionState extends ConsumerState<_AiSummarySection> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final mandala = _readMandalaData(ref, widget.range);
+    final summary = AllDataSummaryGenerator.generate(mandala);
+    final now = TimeOfDay.now();
+    final timeLabel = _formatAiTime(now);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppDimens.spaceMd, AppDimens.spaceMd, AppDimens.spaceMd, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ZAiSummaryCard(
+            summary: summary,
+            generatedAtLabel: timeLabel,
+            onExpand: () => setState(() => _expanded = !_expanded),
+            onMetricTap: (id) {
+              // Microscope wiring lands in a follow-up task.
+            },
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutCubic,
+            child: _expanded
+                ? Padding(
+                    padding: const EdgeInsets.only(top: AppDimens.spaceSm),
+                    child: ZAiBreakdownCard(
+                      summary: summary,
+                      onSectionTap: (_) {
+                        // Microscope wiring lands in a follow-up task.
+                      },
+                      onClose: () => setState(() => _expanded = false),
+                    ),
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatAiTime(TimeOfDay t) {
+  final hour12 = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
+  final minute = t.minute.toString().padLeft(2, '0');
+  final amPm = t.period == DayPeriod.am ? 'AM' : 'PM';
+  return 'AI · ${hour12.toString().padLeft(2, '0')}:$minute $amPm';
 }
