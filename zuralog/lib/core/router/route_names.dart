@@ -214,6 +214,12 @@ abstract final class RouteNames {
   /// Path for the Score Breakdown screen.
   static const String dataScoreBreakdownPath = '/data/score-breakdown';
 
+  /// Name for the All Data long-form report screen.
+  static const String dataAll = 'dataAll';
+
+  /// Path for the All Data screen.
+  static const String dataAllPath = '/data/all';
+
   // ── Tab 2: Coach ──────────────────────────────────────────────────────────
 
   /// Name for the Coach (New Chat) tab root.

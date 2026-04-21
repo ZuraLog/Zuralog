@@ -245,6 +245,8 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                 const SizedBox(height: AppDimens.spaceSm + 4),
             ],
             const SizedBox(height: AppDimens.spaceMd),
+            const _ViewAllDataPill(),
+            const SizedBox(height: AppDimens.spaceMd),
             const _ConnectACTAIfNeeded(),
             SizedBox(
               height: AppDimens.bottomClearance(context) + AppDimens.spaceMd,
@@ -252,6 +254,24 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── _ViewAllDataPill ──────────────────────────────────────────────────────────
+
+/// Pattern pill that pushes the All Data long-form report. Sits between
+/// the six category cards and the Connect CTA so the user can step from
+/// the at-a-glance view into the full breakdown.
+class _ViewAllDataPill extends StatelessWidget {
+  const _ViewAllDataPill();
+
+  @override
+  Widget build(BuildContext context) {
+    return ZPatternPillButton(
+      icon: Icons.arrow_forward_rounded,
+      label: 'View all your data',
+      onPressed: () => context.push(RouteNames.dataAllPath),
     );
   }
 }

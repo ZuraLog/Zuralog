@@ -87,6 +87,7 @@ import 'package:zuralog/features/data/presentation/health_dashboard_screen.dart'
 import 'package:zuralog/features/data/presentation/category_detail_screen.dart' as data_screens;
 import 'package:zuralog/features/data/presentation/metric_detail_screen.dart' as data_metric;
 import 'package:zuralog/features/data/presentation/score_breakdown_screen.dart' as data_score;
+import 'package:zuralog/features/data/presentation/all_data_screen.dart' as data_all;
 
 // ── Tab 2: Coach ──────────────────────────────────────────────────────────────
 import 'package:zuralog/features/coach/presentation/coach_screen.dart';
@@ -499,6 +500,14 @@ List<RouteBase> _buildRoutes() {
                   builder: (context, state) => const SentryErrorBoundary(
                     module: 'data.score_breakdown',
                     child: data_score.ScoreBreakdownScreen(),
+                  ),
+                ),
+                GoRoute(
+                  path: 'all',
+                  name: RouteNames.dataAll,
+                  builder: (context, state) => const SentryErrorBoundary(
+                    module: 'data.all',
+                    child: data_all.AllDataScreen(),
                   ),
                 ),
               ],
