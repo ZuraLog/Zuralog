@@ -2,10 +2,12 @@
 ///
 /// Drill-down into a specific health category (Activity, Sleep, Heart, etc.).
 ///
-/// Sleep and Activity use a richer "magazine" body: hero value, 7-day
-/// primary chart, a category signature visual (sleep stage donut /
-/// activity goal ring), a 2×2 stats grid, and per-metric cards with
-/// chart types matched to each sub-metric.
+/// Sleep, Activity, Heart, Nutrition, Body, and Wellness all use a
+/// richer "magazine" body: hero value, a 7-day primary chart, a
+/// category signature visual (sleep stage donut / activity goal ring /
+/// heart zones bar / macro donut / BMI gauge / mood-energy-stress
+/// grid), a 2×2 stats grid, and per-metric cards with chart types
+/// matched to each sub-metric.
 ///
 /// Every other category still renders the original flat line-chart list
 /// until their own redesign pass lands.
@@ -148,6 +150,11 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
                   detailAsync: detailAsync,
                   unitsSystem: unitsSystem,
                   selectedRange: _selectedRange,
+                ),
+              HealthCategory.wellness => _WellnessDetailBody(
+                  color: color,
+                  detailAsync: detailAsync,
+                  unitsSystem: unitsSystem,
                 ),
               _ => _buildLegacyBody(
                   context, colors, cat, color, unitsSystem, detailAsync),
@@ -2906,6 +2913,793 @@ class _BodyMetricCard extends StatelessWidget {
   }
 }
 
+// ── _WellnessDetailBody ──────────────────────────────────────────────────────
+
+/// Magazine-layout body for the Wellness category detail screen.
+///
+/// Sections, top to bottom:
+///  1. Hero card (today's mood score + delta vs 7-day mood average).
+///  2. 7-day mood dots — primary chart inside a feature card.
+///  3. Signature visual — three stacked dot rows (Mood / Energy / Stress)
+///     so the reader can scan a week of wellness at a glance. Stress is
+///     inverse (higher = worse), so its row label is suffixed to make
+///     that reading direction obvious.
+///  4. 2×2 stats grid — Mood / Energy / Stress / Mindful minutes.
+///  5. One card per sub-metric — dots for 1–5 scale metrics, bars for
+///     mindful minutes (a daily total), bars for anything unknown.
+///
+/// Notes on adaptations vs the brief:
+///  - There is no `wellnessDaySummaryProvider` or `WellnessDaySummary`
+///    in the codebase today. Wellness data comes from
+///    [categoryDetailProvider]'s metric series, with
+///    [dashboardProvider]'s [CategorySummary] as the hero-value
+///    fallback so the number matches the category card verbatim.
+///  - The backend scale for mood/energy is `/10` (per
+///    [mock_data_repository] unit strings), not the `/5` in the brief.
+///    We format hero/stats/strips in decimals without pinning to any
+///    specific scale so the numbers stay truthful whatever the
+///    underlying data uses.
+///  - Mood delta direction is neither "up good" nor "down good" in a
+///    universal sense — the hero pill stays neutral
+///    (`deltaIsPositive: null`).
+///  - No wellness model exposes an AI summary today, so the analysis
+///    card is skipped.
+class _WellnessDetailBody extends ConsumerWidget {
+  const _WellnessDetailBody({
+    required this.color,
+    required this.detailAsync,
+    required this.unitsSystem,
+  });
+
+  final Color color;
+  final AsyncValue<CategoryDetailData> detailAsync;
+  final UnitsSystem unitsSystem;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dashboardAsync = ref.watch(dashboardProvider);
+
+    // Locate the wellness summary inside the dashboard, if present.
+    CategorySummary? wellnessSummary;
+    final dash = dashboardAsync.valueOrNull;
+    if (dash != null) {
+      for (final c in dash.categories) {
+        if (c.category == HealthCategory.wellness) {
+          wellnessSummary = c;
+          break;
+        }
+      }
+    }
+
+    final metrics = detailAsync.valueOrNull?.metrics ?? const <MetricSeries>[];
+    final isLoading = dashboardAsync.isLoading && !dashboardAsync.hasValue ||
+        detailAsync.isLoading && !detailAsync.hasValue;
+
+    // Grab the individual series we need for the primary chart + grid.
+    final moodSeries = _findSeries(metrics, const ['mood']);
+    final energySeries = _findSeries(metrics, const ['energy']);
+    final stressSeries = _findSeries(metrics, const ['stress']);
+    final mindfulSeries = _findSeries(
+      metrics,
+      const ['mindful_minutes', 'mindfulness', 'meditation_minutes'],
+    );
+
+    // Delta vs 7-day mood average. Compares today's mood to the average
+    // of the preceding days in the series so the hero pill reads
+    // "+0.4 vs last week".
+    final moodDelta = _deltaVsWeek(moodSeries);
+
+    // Hero primary value. Prefer a formatted `latest / 5` when a mood
+    // series is present; fall back to the dashboard primary value
+    // verbatim (which keeps the hero number in sync with the category
+    // card on the dashboard).
+    final latestMood = _latestValue(moodSeries);
+    final moodUnit = moodSeries?.unit ?? '';
+    final String heroValue;
+    if (latestMood != null && latestMood.isFinite) {
+      // `.unit` often encodes the scale (e.g. "/10", "/5"). If it does,
+      // pair "<latest> <unit>" so the hero reads "7 /10" or "4 /5".
+      // Otherwise fall back to a plain number.
+      final scaleLooksLikeRatio =
+          moodUnit.startsWith('/') || moodUnit.contains('/');
+      final formattedLatest = _formatOneDecimal(latestMood);
+      heroValue = scaleLooksLikeRatio
+          ? '$formattedLatest $moodUnit'
+          : formattedLatest;
+    } else if ((wellnessSummary?.primaryValue ?? '').trim().isNotEmpty) {
+      final pv = wellnessSummary!.primaryValue;
+      final unit = (wellnessSummary.unit ?? '').trim();
+      // Dashboard primary for wellness is a bare number like "7" with
+      // unit "mood". Don't append the unit in that case — "7 mood"
+      // reads wrong. Only append when the unit looks like a scale
+      // (e.g. "/5").
+      heroValue = unit.startsWith('/') ? '$pv $unit' : pv;
+    } else {
+      heroValue = '—';
+    }
+
+    // Today index for the dot rows — last index whenever we have data.
+    final todayIndex = 6;
+    final dayLabels = _generateWeekLabels();
+
+    // Pre-compute the per-dimension 7-day points for the signature grid
+    // so the widget stays dumb (it just paints what it's given).
+    final moodPoints = _lastSeven(moodSeries);
+    final energyPoints = _lastSeven(energySeries);
+    final stressPoints = _lastSeven(stressSeries);
+
+    final hasMoodTrend = moodPoints.where((v) => v.isFinite).length >= 2;
+
+    return ListView(
+      padding: EdgeInsets.fromLTRB(
+        0,
+        AppDimens.spaceXs,
+        0,
+        AppDimens.bottomNavHeight + AppDimens.spaceMd,
+      ),
+      children: [
+        // 1. Hero card
+        _WellnessHero(
+          color: color,
+          value: heroValue,
+          moodDelta: moodDelta,
+        ),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 2. Primary chart — 7-day mood dots inside a feature card.
+        if (hasMoodTrend)
+          _WellnessPrimaryChart(
+            color: color,
+            points: moodPoints,
+            dayLabels: dayLabels,
+            todayIndex: todayIndex,
+          )
+        else if (isLoading)
+          const _ChartSkeleton()
+        else
+          const SizedBox.shrink(),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 3. Signature visual — Mood / Energy / Stress grid.
+        _WellnessWeeklyGridCard(
+          color: color,
+          moodPoints: moodPoints,
+          energyPoints: energyPoints,
+          stressPoints: stressPoints,
+          dayLabels: dayLabels,
+          todayIndex: todayIndex,
+        ),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 4. Stats grid
+        _WellnessStatsGrid(
+          color: color,
+          moodSeries: moodSeries,
+          energySeries: energySeries,
+          stressSeries: stressSeries,
+          mindfulSeries: mindfulSeries,
+        ),
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // 5. Per-metric cards
+        if (metrics.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimens.spaceMd,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 12),
+                  child: Text(
+                    'Wellness metrics',
+                    style: AppTextStyles.titleMedium.copyWith(
+                      color: AppColorsOf(context).textPrimary,
+                    ),
+                  ),
+                ),
+                for (var i = 0; i < metrics.length; i++) ...[
+                  _WellnessMetricCard(
+                    series: metrics[i],
+                    color: color,
+                    displayUnit: displayUnit(metrics[i].unit, unitsSystem),
+                  ),
+                  if (i != metrics.length - 1)
+                    const SizedBox(height: AppDimens.spaceMd),
+                ],
+              ],
+            ),
+          )
+        else if (isLoading) ...[
+          const SizedBox(height: AppDimens.spaceSm),
+          const _MetricListSkeleton(),
+        ],
+      ],
+    );
+  }
+
+  /// Finds the first metric series whose id matches any of [candidateIds].
+  static MetricSeries? _findSeries(
+    List<MetricSeries> metrics,
+    List<String> candidateIds,
+  ) {
+    for (final id in candidateIds) {
+      for (final s in metrics) {
+        if (s.metricId.toLowerCase() == id) return s;
+      }
+    }
+    return null;
+  }
+
+  /// Returns the latest finite value from a series, or `null`.
+  static double? _latestValue(MetricSeries? s) {
+    if (s == null) return null;
+    for (var i = s.dataPoints.length - 1; i >= 0; i--) {
+      final v = s.dataPoints[i].value;
+      if (v.isFinite) return v;
+    }
+    return null;
+  }
+
+  /// Computes "today's value minus the average of the prior days" for
+  /// the given series. Returns `null` when the series has fewer than
+  /// two finite points.
+  static double? _deltaVsWeek(MetricSeries? s) {
+    if (s == null) return null;
+    final finite = s.dataPoints
+        .map((p) => p.value)
+        .where((v) => v.isFinite)
+        .toList();
+    if (finite.length < 2) return null;
+    final today = finite.last;
+    final prior = finite.sublist(0, finite.length - 1);
+    final avg = prior.reduce((a, b) => a + b) / prior.length;
+    return today - avg;
+  }
+
+  /// Returns the last 7 finite-or-NaN values from a series, padded at
+  /// the head with NaN when the series is shorter than 7. Missing
+  /// series yields all NaN.
+  static List<double> _lastSeven(MetricSeries? s) {
+    if (s == null) return List<double>.filled(7, double.nan);
+    final values = s.dataPoints.map((p) => p.value).toList();
+    if (values.length >= 7) {
+      return values.sublist(values.length - 7);
+    }
+    return [
+      for (var i = 0; i < 7 - values.length; i++) double.nan,
+      ...values,
+    ];
+  }
+}
+
+// ── _WellnessHero ────────────────────────────────────────────────────────────
+
+class _WellnessHero extends StatelessWidget {
+  const _WellnessHero({
+    required this.color,
+    required this.value,
+    required this.moodDelta,
+  });
+
+  final Color color;
+  final String value;
+  final double? moodDelta;
+
+  @override
+  Widget build(BuildContext context) {
+    final deltaLabel = (moodDelta != null && moodDelta!.isFinite)
+        ? _formatMoodDeltaVsWeek(moodDelta!)
+        : null;
+
+    return InsightHeroCard(
+      eyebrow: 'Today',
+      categoryIcon: Icons.self_improvement_rounded,
+      categoryColor: color,
+      value: value,
+      deltaLabel: deltaLabel,
+      // Mood delta direction is not universally "better" in either
+      // direction — keep the pill neutral.
+      deltaIsPositive: null,
+    );
+  }
+}
+
+// ── _WellnessPrimaryChart ───────────────────────────────────────────────────
+
+/// Feature-variant card wrapping the 7-day mood dots. Matches the card
+/// chrome used by Heart / Body primary charts so the Wellness body
+/// feels cohesive with the rest of the redesigned categories.
+class _WellnessPrimaryChart extends StatelessWidget {
+  const _WellnessPrimaryChart({
+    required this.color,
+    required this.points,
+    required this.dayLabels,
+    required this.todayIndex,
+  });
+
+  final Color color;
+  final List<double> points;
+  final List<String> dayLabels;
+  final int todayIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+      child: ZFadeSlideIn(
+        delay: const Duration(milliseconds: 180),
+        child: Container(
+          decoration: BoxDecoration(
+            color: colors.cardBackground,
+            border: Border.all(
+              color: colors.border.withValues(alpha: 0.4),
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceLg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "This week's mood",
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: colors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: AppDimens.spaceMd),
+              SizedBox(
+                height: 120,
+                child: ZCategoryChart(
+                  kind: ZCategoryChartKind.dots,
+                  points: points,
+                  color: color,
+                  dayLabels: dayLabels,
+                  todayIndex: todayIndex,
+                  height: 120,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── _WellnessWeeklyGridCard ─────────────────────────────────────────────────
+
+/// Feature card hosting three stacked dot rows — Mood, Energy, and
+/// Stress — so the user can read a week of wellness at a glance. Each
+/// row has a small left-aligned label; rows with no data render a
+/// dim "No data yet" placeholder.
+///
+/// Note: the Stress row's label is suffixed with "(lower is better)"
+/// because the scale is inverse — a darker dot means more stress,
+/// which the reader would otherwise mistake for a "good" day.
+class _WellnessWeeklyGridCard extends StatelessWidget {
+  const _WellnessWeeklyGridCard({
+    required this.color,
+    required this.moodPoints,
+    required this.energyPoints,
+    required this.stressPoints,
+    required this.dayLabels,
+    required this.todayIndex,
+  });
+
+  final Color color;
+  final List<double> moodPoints;
+  final List<double> energyPoints;
+  final List<double> stressPoints;
+  final List<String> dayLabels;
+  final int todayIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+      child: ZFadeSlideIn(
+        delay: const Duration(milliseconds: 210),
+        child: ZuralogCard(
+          variant: ZCardVariant.feature,
+          category: color,
+          padding: const EdgeInsets.all(AppDimens.spaceLg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'This week at a glance',
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppDimens.spaceMd),
+              _WellnessGridRow(
+                label: 'Mood',
+                points: moodPoints,
+                color: color,
+                dayLabels: dayLabels,
+                todayIndex: todayIndex,
+              ),
+              const SizedBox(height: AppDimens.spaceMd),
+              _WellnessGridRow(
+                label: 'Energy',
+                points: energyPoints,
+                color: color,
+                dayLabels: dayLabels,
+                todayIndex: todayIndex,
+              ),
+              const SizedBox(height: AppDimens.spaceMd),
+              _WellnessGridRow(
+                label: 'Stress (lower is better)',
+                points: stressPoints,
+                color: color,
+                dayLabels: dayLabels,
+                todayIndex: todayIndex,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Single row in the Mood/Energy/Stress grid. Renders the dot strip
+/// via [ZCategoryChart] when the series has at least one finite
+/// value; otherwise draws a dim "No data yet" placeholder so the
+/// layout height stays steady across rows.
+class _WellnessGridRow extends StatelessWidget {
+  const _WellnessGridRow({
+    required this.label,
+    required this.points,
+    required this.color,
+    required this.dayLabels,
+    required this.todayIndex,
+  });
+
+  final String label;
+  final List<double> points;
+  final Color color;
+  final List<String> dayLabels;
+  final int todayIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final hasData = points.any((v) => v.isFinite);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 2),
+          child: Text(
+            label,
+            style: AppTextStyles.labelMedium.copyWith(
+              color: colors.textSecondary,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        if (hasData)
+          SizedBox(
+            height: 100,
+            child: ZCategoryChart(
+              kind: ZCategoryChartKind.dots,
+              points: points,
+              color: color,
+              dayLabels: dayLabels,
+              todayIndex: todayIndex,
+              height: 100,
+            ),
+          )
+        else
+          SizedBox(
+            height: 100,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'No data yet',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: colors.textTertiary,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ── _WellnessStatsGrid ──────────────────────────────────────────────────────
+
+class _WellnessStatsGrid extends StatelessWidget {
+  const _WellnessStatsGrid({
+    required this.color,
+    required this.moodSeries,
+    required this.energySeries,
+    required this.stressSeries,
+    required this.mindfulSeries,
+  });
+
+  final Color color;
+  final MetricSeries? moodSeries;
+  final MetricSeries? energySeries;
+  final MetricSeries? stressSeries;
+  final MetricSeries? mindfulSeries;
+
+  @override
+  Widget build(BuildContext context) {
+    // Average-over-range for 1–5 / 1–10 scale metrics. The unit
+    // suffix (e.g. "/5", "/10") comes straight from the series when
+    // present so the tile reads honestly at whatever scale the
+    // backend uses.
+    String formatScaleAvg(MetricSeries? s) {
+      if (s == null) return '—';
+      final values = s.dataPoints
+          .map((p) => p.value)
+          .where((v) => v.isFinite)
+          .toList();
+      if (values.isEmpty) return '—';
+      final avg = values.reduce((a, b) => a + b) / values.length;
+      final unit = s.unit.trim();
+      final formatted = _formatOneDecimal(avg);
+      if (unit.isEmpty) return formatted;
+      return unit.startsWith('/') ? '$formatted $unit' : '$formatted $unit';
+    }
+
+    // Total (sum) over the range for mindful minutes — a daily
+    // countable metric.
+    String formatMindfulTotal(MetricSeries? s) {
+      if (s == null) return '—';
+      final values = s.dataPoints
+          .map((p) => p.value)
+          .where((v) => v.isFinite)
+          .toList();
+      if (values.isEmpty) return '—';
+      final total = values.reduce((a, b) => a + b);
+      return '${total.round()} min';
+    }
+
+    final tiles = <InsightStatTile>[
+      InsightStatTile(
+        icon: Icons.sentiment_very_satisfied_rounded,
+        label: 'Mood',
+        value: formatScaleAvg(moodSeries),
+      ),
+      InsightStatTile(
+        icon: Icons.bolt_rounded,
+        label: 'Energy',
+        value: formatScaleAvg(energySeries),
+      ),
+      InsightStatTile(
+        icon: Icons.spa_rounded,
+        label: 'Stress',
+        value: formatScaleAvg(stressSeries),
+      ),
+      InsightStatTile(
+        icon: Icons.self_improvement_rounded,
+        label: 'Mindful minutes',
+        value: formatMindfulTotal(mindfulSeries),
+      ),
+    ];
+
+    return InsightStatsGrid(
+      title: 'The details',
+      categoryColor: color,
+      tiles: tiles,
+    );
+  }
+}
+
+// ── _WellnessMetricCard ─────────────────────────────────────────────────────
+
+/// Per-metric card for Wellness. Mood / energy / stress are 1–5
+/// (or 1–10) ratings and render as dots; mindful minutes are a
+/// daily countable total and render as bars; any unknown metric
+/// defaults to bars (safer default for a category dominated by
+/// countable scores).
+class _WellnessMetricCard extends StatelessWidget {
+  const _WellnessMetricCard({
+    required this.series,
+    required this.color,
+    required this.displayUnit,
+  });
+
+  final MetricSeries series;
+  final Color color;
+  final String displayUnit;
+
+  /// Metric ids that read as a 1–5/1–10 rating (dot strip).
+  static const _ratingMetricIds = <String>{
+    'mood',
+    'energy',
+    'stress',
+    'focus',
+    'calm',
+  };
+
+  /// Metric ids that are countable-per-day (bars).
+  static const _countableMetricIds = <String>{
+    'mindful_minutes',
+    'mindfulness',
+    'meditation_minutes',
+  };
+
+  bool get _isRating =>
+      _ratingMetricIds.contains(series.metricId.toLowerCase());
+
+  bool get _isCountable =>
+      _countableMetricIds.contains(series.metricId.toLowerCase());
+
+  ZCategoryChartKind get _chartKind {
+    if (_isRating) return ZCategoryChartKind.dots;
+    if (_isCountable) return ZCategoryChartKind.bars;
+    // Unknown → bars. Safer default for wellness, which is dominated
+    // by countable daily totals outside the three core rating scores.
+    return ZCategoryChartKind.bars;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final points = <double>[
+      for (final p in series.dataPoints) p.value,
+    ];
+    final tail = points.length >= 7
+        ? points.sublist(points.length - 7)
+        : [
+            for (var i = 0; i < 7 - points.length; i++) double.nan,
+            ...points,
+          ];
+    final todayIndex = points.isNotEmpty ? 6 : -1;
+    final dayLabels = _generateWeekLabels();
+
+    final values = series.dataPoints
+        .map((p) => p.value)
+        .where((v) => v.isFinite)
+        .toList();
+    final avg = values.isEmpty
+        ? null
+        : values.reduce((a, b) => a + b) / values.length;
+    final min = values.isEmpty ? null : values.reduce((a, b) => a < b ? a : b);
+    final max = values.isEmpty ? null : values.reduce((a, b) => a > b ? a : b);
+
+    return ZuralogCard(
+      variant: ZCardVariant.feature,
+      category: color,
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row: name + delta pill
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  series.displayName,
+                  style: AppTextStyles.titleMedium.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              if (series.deltaPercent != null)
+                _MetricCardDeltaPill(deltaPercent: series.deltaPercent!),
+            ],
+          ),
+          const SizedBox(height: 4),
+          // Hero value
+          if (series.currentValue != null)
+            RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: series.currentValue!,
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 22,
+                      height: 1.15,
+                    ),
+                  ),
+                  if (displayUnit.isNotEmpty)
+                    TextSpan(
+                      text: ' $displayUnit',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: colors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          const SizedBox(height: AppDimens.spaceSm),
+          // Chart slot
+          if (series.dataPoints.length >= 2)
+            SizedBox(
+              height: _chartKind == ZCategoryChartKind.dots ? 100 : 110,
+              child: ZCategoryChart(
+                kind: _chartKind,
+                points: tail,
+                color: color,
+                dayLabels: dayLabels,
+                todayIndex: todayIndex,
+                height: _chartKind == ZCategoryChartKind.dots ? 100 : 110,
+              ),
+            )
+          else
+            SizedBox(
+              height: 42,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Not enough data yet',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: colors.textTertiary,
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(height: AppDimens.spaceMd),
+          // Avg / Min / Max strip. Rating metrics (dots) render
+          // decimals so the numbers read naturally at the 1–5/1–10
+          // scale; countable metrics fall back to the shared
+          // integer/unit formatter.
+          Row(
+            children: [
+              Expanded(
+                child: _StatChip(
+                  label: 'Avg',
+                  value: _isRating
+                      ? _formatOneDecimal(avg)
+                      : _formatMetricValue(
+                          avg,
+                          metricId: series.metricId,
+                          unit: displayUnit,
+                        ),
+                ),
+              ),
+              Expanded(
+                child: _StatChip(
+                  label: 'Min',
+                  value: _isRating
+                      ? _formatIntOrDash(min)
+                      : _formatMetricValue(
+                          min,
+                          metricId: series.metricId,
+                          unit: displayUnit,
+                        ),
+                ),
+              ),
+              Expanded(
+                child: _StatChip(
+                  label: 'Max',
+                  value: _isRating
+                      ? _formatIntOrDash(max)
+                      : _formatMetricValue(
+                          max,
+                          metricId: series.metricId,
+                          unit: displayUnit,
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── _SleepHero ────────────────────────────────────────────────────────────────
 
 class _SleepHero extends StatelessWidget {
@@ -3895,6 +4689,33 @@ String _formatTemperature(double celsius, UnitsSystem system) {
     return '${f.toStringAsFixed(1)}°F';
   }
   return '${celsius.toStringAsFixed(1)}°C';
+}
+
+/// Formats a value as a single decimal (e.g. `3.6`). Returns `—` when
+/// the value is non-finite. Used by the Wellness hero and rating
+/// stat-strip tiles where the scale lives in the unit string.
+String _formatOneDecimal(double? value) {
+  if (value == null || !value.isFinite) return '—';
+  return value.toStringAsFixed(1);
+}
+
+/// Formats a value as an integer (e.g. `4`) when it rounds cleanly, or
+/// a single decimal when it doesn't. Returns `—` when non-finite.
+String _formatIntOrDash(double? value) {
+  if (value == null || !value.isFinite) return '—';
+  if (value == value.roundToDouble()) return value.toInt().toString();
+  return value.toStringAsFixed(1);
+}
+
+/// Formats a mood-delta vs the 7-day average for the hero pill. Mood
+/// scales range from 1–5 or 1–10 depending on backend config; a
+/// single decimal reads well at either scale. Example outputs:
+/// `+0.4 vs last week`, `-0.8 vs last week`.
+String _formatMoodDeltaVsWeek(double delta) {
+  if (!delta.isFinite) return '';
+  final abs = delta.abs();
+  final sign = delta > 0 ? '+' : (delta < 0 ? '-' : '');
+  return '$sign${abs.toStringAsFixed(1)} vs last week';
 }
 
 /// Formats a raw numeric metric value for the Avg/Min/Max strip.
