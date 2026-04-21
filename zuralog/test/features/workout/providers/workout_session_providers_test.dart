@@ -99,8 +99,9 @@ void main() {
       expect(session.exercises, hasLength(1));
     });
 
-    test('addExercises appends WorkoutExercise entries with one warm-up set',
-        () async {
+    test(
+        'addExercises appends WorkoutExercise entries with default 2 sets '
+        'when no history is cached', () async {
       final prefs = await SharedPreferences.getInstance();
       final container = _containerWith(prefs);
       addTearDown(container.dispose);
@@ -110,8 +111,9 @@ void main() {
       final session = container.read(workoutSessionProvider)!;
       expect(session.exercises, hasLength(2));
       expect(session.exercises[0].exerciseId, 'bench_press');
-      expect(session.exercises[0].sets, hasLength(1));
-      expect(session.exercises[0].sets.single.type, SetType.warmUp);
+      expect(session.exercises[0].sets, hasLength(2));
+      expect(session.exercises[0].sets[0].type, SetType.warmUp);
+      expect(session.exercises[0].sets[1].type, SetType.working);
       expect(session.exercises[0].muscleGroup, 'chest');
     });
 
@@ -143,10 +145,12 @@ void main() {
       notifier.addSet('bench_press');
       final sets =
           container.read(workoutSessionProvider)!.exercises.single.sets;
-      expect(sets, hasLength(2));
+      // Default is 2 sets (warmUp + working); addSet appends a third.
+      expect(sets, hasLength(3));
       expect(sets[0].type, SetType.warmUp);
       expect(sets[1].type, SetType.working);
-      expect(sets[1].setNumber, 2);
+      expect(sets[2].type, SetType.working);
+      expect(sets[2].setNumber, 3);
     });
 
     test('updateSet applies partial edits immutably', () async {
@@ -216,13 +220,14 @@ void main() {
       notifier.toggleUnit('bench_press');
       final ex = container.read(workoutSessionProvider)!.exercises.single;
       expect(ex.unitOverride, 'imperial');
-      expect(ex.sets.single.weightValue, closeTo(110.23, 0.1));
+      // Default is 2 sets; set[0] had a weight, set[1] did not.
+      expect(ex.sets[0].weightValue, closeTo(110.23, 0.1));
       expect(prefs.getString('workout_exercise_unit_bench_press'), 'imperial');
 
       notifier.toggleUnit('bench_press');
       final ex2 = container.read(workoutSessionProvider)!.exercises.single;
       expect(ex2.unitOverride, 'metric');
-      expect(ex2.sets.single.weightValue, closeTo(50, 0.01));
+      expect(ex2.sets[0].weightValue, closeTo(50, 0.01));
     });
 
     test('removeExercise drops the matching entry', () async {

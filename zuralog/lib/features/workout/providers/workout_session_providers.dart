@@ -45,6 +45,73 @@ class WorkoutSessionNotifier extends StateNotifier<WorkoutSession?> {
   final SharedPreferences _prefs;
   String _globalUnitDefault;
 
+  /// Cached workout history, newest-first. `null` means not yet loaded.
+  List<CompletedWorkout>? _cachedHistory;
+
+  /// Called by the provider factory whenever [workoutHistoryProvider] emits
+  /// a new data value so that [addExercises] can look up history synchronously.
+  void updateCachedHistory(List<CompletedWorkout> history) {
+    _cachedHistory = history;
+  }
+
+  /// Finds the most recent [CompletedExercise] for [exerciseId] in the cached
+  /// history. Returns `null` when history is not yet loaded or there is no
+  /// prior entry for this exercise.
+  CompletedExercise? _findLastCompletedExercise(String exerciseId) {
+    final history = _cachedHistory;
+    if (history == null) return null;
+    for (final workout in history) {
+      for (final ex in workout.exercises) {
+        if (ex.exerciseId == exerciseId) return ex;
+      }
+    }
+    return null;
+  }
+
+  /// Builds a fresh list of [WorkoutSet]s pre-populated with the previous
+  /// session's data as hint values. The sets are empty (ready for new input)
+  /// but carry `previousWeightValue`, `previousReps`, and `previousRecord`.
+  List<WorkoutSet> _setsFromHistory(
+    CompletedExercise prev,
+    String currentUnitSystem,
+  ) {
+    final prevUnit = prev.unitOverride ?? _globalUnitDefault;
+    final needsConversion = prevUnit != currentUnitSystem;
+    return [
+      for (var i = 0; i < prev.sets.length; i++)
+        () {
+          final s = prev.sets[i];
+          double? prevWeight = s.weightValue;
+          if (prevWeight != null && needsConversion) {
+            prevWeight = currentUnitSystem == 'imperial'
+                ? kgToLbs(prevWeight)
+                : lbsToKg(prevWeight);
+            prevWeight = double.parse(prevWeight.toStringAsFixed(2));
+          }
+          final prevReps = s.reps;
+          final unit = currentUnitSystem == 'imperial' ? 'lbs' : 'kg';
+          return WorkoutSet(
+            setNumber: s.setNumber,
+            type: s.type,
+            previousWeightValue: prevWeight,
+            previousReps: prevReps,
+            previousRecord: _formatPrevRecord(prevWeight, prevReps, unit),
+          );
+        }(),
+    ];
+  }
+
+  /// Formats a previous-record string like `"20 kg × 8"` for display.
+  /// Returns `"— × 8"` when weight is null, `""` when both are null.
+  String _formatPrevRecord(double? weight, int? reps, String unit) {
+    if (weight == null && reps == null) return '';
+    final weightStr = weight != null
+        ? '${weight % 1 == 0 ? weight.toInt() : weight} $unit'
+        : '—';
+    final repsStr = reps?.toString() ?? '—';
+    return '$weightStr × $repsStr';
+  }
+
   void startSession() {
     if (state != null) return;
     final raw = _prefs.getString(kWorkoutActiveDraftKey);
@@ -101,11 +168,19 @@ class WorkoutSessionNotifier extends StateNotifier<WorkoutSession?> {
     final additions = exercises.map((e) {
       final override =
           _prefs.getString('$kWorkoutExerciseUnitKeyPrefix${e.id}');
+      final unitSystem = override ?? _globalUnitDefault;
+      final prev = _findLastCompletedExercise(e.id);
+      final sets = prev != null
+          ? _setsFromHistory(prev, unitSystem)
+          : const [
+              WorkoutSet(setNumber: 1, type: SetType.warmUp),
+              WorkoutSet(setNumber: 2, type: SetType.working),
+            ];
       return WorkoutExercise(
         exerciseId: e.id,
         exerciseName: e.name,
         muscleGroup: e.muscleGroup.slug,
-        sets: const [WorkoutSet(setNumber: 1, type: SetType.warmUp)],
+        sets: sets,
         unitOverride: override,
       );
     }).toList(growable: false);
@@ -151,6 +226,8 @@ class WorkoutSessionNotifier extends StateNotifier<WorkoutSession?> {
             : (reps as num?)?.toInt(),
         isCompleted: isCompleted ?? s.isCompleted,
         previousRecord: s.previousRecord,
+        previousWeightValue: s.previousWeightValue,
+        previousReps: s.previousReps,
       );
       return ex.copyWith(sets: sets);
     });
@@ -282,6 +359,14 @@ final workoutSessionProvider =
     notifier.updateGlobalDefault(
       next == UnitsSystem.metric ? 'metric' : 'imperial',
     );
+  });
+  // Pre-populate history cache immediately if already loaded, then keep it
+  // in sync as history updates (e.g. after a workout is finished).
+  final history = ref.read(workoutHistoryProvider);
+  history.whenData(notifier.updateCachedHistory);
+  ref.listen<AsyncValue<List<CompletedWorkout>>>(workoutHistoryProvider,
+      (_, next) {
+    next.whenData(notifier.updateCachedHistory);
   });
   return notifier;
 });

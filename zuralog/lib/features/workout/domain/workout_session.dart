@@ -43,6 +43,8 @@ class WorkoutSet {
     this.reps,
     this.isCompleted = false,
     this.previousRecord,
+    this.previousWeightValue,
+    this.previousReps,
   });
 
   final int setNumber;
@@ -52,6 +54,14 @@ class WorkoutSet {
   final bool isCompleted;
   final String? previousRecord;
 
+  /// Weight from the user's last session for this exercise, in the current
+  /// unit. Displayed as ghost/hint text in the weight input field.
+  final double? previousWeightValue;
+
+  /// Reps from the user's last session for this exercise.
+  /// Displayed as ghost/hint text in the reps input field.
+  final int? previousReps;
+
   WorkoutSet copyWith({
     int? setNumber,
     SetType? type,
@@ -59,9 +69,13 @@ class WorkoutSet {
     Object? reps = _kUnset,
     bool? isCompleted,
     Object? previousRecord = _kUnset,
+    Object? previousWeightValue = _kUnset,
+    Object? previousReps = _kUnset,
     bool clearWeightValue = false,
     bool clearReps = false,
     bool clearPreviousRecord = false,
+    bool clearPreviousWeightValue = false,
+    bool clearPreviousReps = false,
   }) {
     return WorkoutSet(
       setNumber: setNumber ?? this.setNumber,
@@ -80,6 +94,16 @@ class WorkoutSet {
           : (identical(previousRecord, _kUnset)
               ? this.previousRecord
               : previousRecord as String?),
+      previousWeightValue: clearPreviousWeightValue
+          ? null
+          : (identical(previousWeightValue, _kUnset)
+              ? this.previousWeightValue
+              : (previousWeightValue as num?)?.toDouble()),
+      previousReps: clearPreviousReps
+          ? null
+          : (identical(previousReps, _kUnset)
+              ? this.previousReps
+              : (previousReps as num?)?.toInt()),
     );
   }
 
@@ -90,6 +114,8 @@ class WorkoutSet {
         'reps': reps,
         'isCompleted': isCompleted,
         'previousRecord': previousRecord,
+        'previousWeightValue': previousWeightValue,
+        'previousReps': previousReps,
       };
 
   factory WorkoutSet.fromJson(Map<String, dynamic> json) => WorkoutSet(
@@ -99,6 +125,8 @@ class WorkoutSet {
         reps: (json['reps'] as num?)?.toInt(),
         isCompleted: json['isCompleted'] as bool? ?? false,
         previousRecord: json['previousRecord'] as String?,
+        previousWeightValue: (json['previousWeightValue'] as num?)?.toDouble(),
+        previousReps: (json['previousReps'] as num?)?.toInt(),
       );
 
   @override
@@ -110,7 +138,9 @@ class WorkoutSet {
           other.weightValue == weightValue &&
           other.reps == reps &&
           other.isCompleted == isCompleted &&
-          other.previousRecord == previousRecord);
+          other.previousRecord == previousRecord &&
+          other.previousWeightValue == previousWeightValue &&
+          other.previousReps == previousReps);
 
   @override
   int get hashCode => Object.hash(
@@ -120,6 +150,8 @@ class WorkoutSet {
         reps,
         isCompleted,
         previousRecord,
+        previousWeightValue,
+        previousReps,
       );
 }
 
