@@ -38,30 +38,13 @@ enum ZCardVariant {
 ///   child: Text('Card content'),
 /// )
 /// ```
-class ZuralogCard extends StatelessWidget {
-  /// The content widget rendered inside the card.
+class ZuralogCard extends StatefulWidget {
   final Widget child;
-
-  /// Inner padding around [child].
-  ///
-  /// When null, defaults based on variant:
-  /// - data/plain: 16px
-  /// - feature/hero: 20px
   final EdgeInsetsGeometry? padding;
-
-  /// Optional tap callback.
   final VoidCallback? onTap;
-
-  /// Card visual style variant. Defaults to [ZCardVariant.plain].
   final ZCardVariant variant;
-
-  /// Optional health category color for pattern tinting on feature cards.
-  ///
-  /// When provided on a [ZCardVariant.feature] card, the pattern overlay
-  /// uses the matching category color variant via [patternForCategory].
   final Color? category;
 
-  /// Creates a [ZuralogCard].
   const ZuralogCard({
     super.key,
     required this.child,
@@ -71,52 +54,56 @@ class ZuralogCard extends StatelessWidget {
     this.category,
   });
 
+  @override
+  State<ZuralogCard> createState() => _ZuralogCardState();
+}
+
+class _ZuralogCardState extends State<ZuralogCard> {
+  bool _isPressed = false;
+
   double get _radius {
-    switch (variant) {
+    switch (widget.variant) {
       case ZCardVariant.data:
-        return AppDimens.shapeMd; // 16px
+        return AppDimens.shapeMd;
       case ZCardVariant.feature:
       case ZCardVariant.hero:
       case ZCardVariant.plain:
-        return AppDimens.shapeLg; // 20px
+        return AppDimens.shapeLg;
     }
   }
 
   EdgeInsetsGeometry get _defaultPadding {
-    switch (variant) {
+    switch (widget.variant) {
       case ZCardVariant.data:
       case ZCardVariant.plain:
-        return const EdgeInsets.all(AppDimens.spaceMd); // 16px
+        return const EdgeInsets.all(AppDimens.spaceMd);
       case ZCardVariant.feature:
       case ZCardVariant.hero:
-        return const EdgeInsets.all(AppDimens.spaceMdPlus); // 20px
+        return const EdgeInsets.all(AppDimens.spaceMdPlus);
     }
   }
 
   bool get _hasPattern =>
-      variant == ZCardVariant.feature || variant == ZCardVariant.hero;
+      widget.variant == ZCardVariant.feature || widget.variant == ZCardVariant.hero;
 
-  double get _patternOpacity =>
-      variant == ZCardVariant.hero ? 0.10 : 0.07;
+  double get _patternOpacity => widget.variant == ZCardVariant.hero ? 0.10 : 0.07;
 
-  bool get _patternAnimated => variant == ZCardVariant.hero;
+  bool get _patternAnimated => widget.variant == ZCardVariant.hero;
 
   ZPatternVariant get _patternVariant {
-    if (variant == ZCardVariant.feature && category != null) {
-      return patternForCategory(category!);
+    if (widget.variant == ZCardVariant.feature && widget.category != null) {
+      return patternForCategory(widget.category!);
     }
     return ZPatternVariant.original;
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = AppColorsOf(context);
     final borderRadius = BorderRadius.circular(_radius);
-    final effectivePadding = padding ?? _defaultPadding;
+    final effectivePadding = widget.padding ?? _defaultPadding;
 
-    // Build the card body with optional pattern overlay
     Widget body;
     if (_hasPattern) {
       body = ClipRRect(
@@ -128,7 +115,6 @@ class ZuralogCard extends StatelessWidget {
           ),
           child: Stack(
             children: [
-              // Pattern overlay on top of solid surface
               Positioned.fill(
                 child: ZPatternOverlay(
                   variant: _patternVariant,
@@ -136,8 +122,7 @@ class ZuralogCard extends StatelessWidget {
                   animate: _patternAnimated,
                 ),
               ),
-              // Content
-              Padding(padding: effectivePadding, child: child),
+              Padding(padding: effectivePadding, child: widget.child),
             ],
           ),
         ),
@@ -148,23 +133,28 @@ class ZuralogCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: colors.cardBackground,
           borderRadius: borderRadius,
-          // Light mode only: soft shadow
           boxShadow: isDark ? null : AppDimens.cardShadowLight,
         ),
-        child: child,
+        child: widget.child,
       );
     }
 
-    // Wrap in InkWell for tap support
-    if (onTap != null) {
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: borderRadius,
-          child: ClipRRect(
-            borderRadius: borderRadius,
-            child: body,
+    if (widget.onTap != null) {
+      return GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
+        child: AnimatedScale(
+          scale: _isPressed ? 0.97 : 1.0,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeInOut,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: widget.onTap,
+              borderRadius: borderRadius,
+              child: ClipRRect(borderRadius: borderRadius, child: body),
+            ),
           ),
         ),
       );

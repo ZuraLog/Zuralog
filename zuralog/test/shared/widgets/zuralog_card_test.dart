@@ -199,4 +199,64 @@ void main() {
       expect(find.byType(InkWell), findsNothing);
     });
   });
+
+  group('ZuralogCard — press animation', () {
+    testWidgets('tappable card has AnimatedScale in widget tree', (tester) async {
+      final card = ZuralogCard(
+        onTap: () {},
+        child: const Text('Animated'),
+      );
+      await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: card)),
+      );
+      expect(find.byType(AnimatedScale), findsOneWidget);
+    });
+
+    testWidgets('non-tappable card has no AnimatedScale', (tester) async {
+      const card = ZuralogCard(
+        child: Text('Static'),
+      );
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: card)),
+      );
+      expect(find.byType(AnimatedScale), findsNothing);
+    });
+
+    testWidgets('tappable card has GestureDetector in widget tree', (tester) async {
+      final card = ZuralogCard(
+        onTap: () {},
+        child: const Text('Gesture'),
+      );
+      await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: card)),
+      );
+      // Scaffold may also add GestureDetectors; verify the card itself has one
+      // by checking we find the GestureDetector that is an ancestor of the card text.
+      expect(
+        find.ancestor(
+          of: find.text('Gesture'),
+          matching: find.byType(GestureDetector),
+        ),
+        findsAtLeastNWidgets(1),
+      );
+    });
+
+    testWidgets('non-tappable card has no GestureDetector', (tester) async {
+      const card = ZuralogCard(
+        child: Text('No Gesture'),
+      );
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: card)),
+      );
+      // Non-tappable card must not wrap in GestureDetector; only Scaffold's
+      // own GestureDetectors may exist, none of which are ancestors of our text.
+      expect(
+        find.ancestor(
+          of: find.text('No Gesture'),
+          matching: find.byType(GestureDetector),
+        ),
+        findsNothing,
+      );
+    });
+  });
 }
