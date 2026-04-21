@@ -1,10 +1,13 @@
 library;
 
 import 'package:flutter/material.dart';
+
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/presentation/widgets/pressable_card.dart';
+import 'package:zuralog/shared/widgets/cards/z_feature_card.dart';
+import 'package:zuralog/shared/widgets/indicators/z_category_icon_tile.dart';
 
 class JournalPromptCta extends StatelessWidget {
   const JournalPromptCta({
@@ -15,13 +18,7 @@ class JournalPromptCta extends StatelessWidget {
   });
 
   final VoidCallback onTap;
-
-  /// ISO-8601 date string of the most recent journal entry (e.g. "2026-03-24").
-  /// Null when the user has never journalled.
   final String? lastEntryDate;
-
-  /// True when the user has already logged a journal entry today.
-  /// When true this widget renders nothing (returns [SizedBox.shrink]).
   final bool journalledToday;
 
   static const _prompts = [
@@ -52,113 +49,57 @@ class JournalPromptCta extends StatelessWidget {
     if (journalledToday) return const SizedBox.shrink();
 
     final colors = AppColorsOf(context);
-    final prompt = _buildPrompt();
-    final subLabel = _buildSubLabel();
 
     return PressableCard(
       onTap: onTap,
-      borderRadius: AppDimens.radiusCard,
-      child: CustomPaint(
-        painter: _DashedBorderPainter(
-          color: colors.progressBorderStrong,
-          radius: AppDimens.radiusCard.toDouble(),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimens.spaceMd),
-          child: Row(
-            children: [
-              const Icon(Icons.edit_rounded, size: 22, color: Color(0xFF4A7C3F)),
-              const SizedBox(width: AppDimens.spaceSm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '"$prompt"',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: colors.progressTextSecondary,
-                        fontStyle: FontStyle.italic,
-                      ),
+      borderRadius: AppDimens.shapeLg,
+      child: ZFeatureCard(
+        child: Row(
+          children: [
+            const ZCategoryIconTile(
+              color: AppColors.primary, // Sage
+              icon: Icons.edit_rounded,
+              size: AppDimens.avatarMd, // 36
+              iconSize: 18,
+              iconColor: AppColors.textOnSage,
+              borderRadius: 10,
+            ),
+            const SizedBox(width: AppDimens.spaceMd),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '"${_buildPrompt()}"',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: colors.progressTextPrimary,
+                      fontStyle: FontStyle.italic,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subLabel,
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: colors.progressTextMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppDimens.spaceSm),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: colors.progressSurfaceRaised,
-                  borderRadius: BorderRadius.circular(AppDimens.radiusButton),
-                  border: Border.all(color: colors.progressBorderStrong),
-                ),
-                child: Text(
-                  'Write',
-                  style: AppTextStyles.labelMedium.copyWith(
-                    color: colors.progressTextSecondary,
-                    fontWeight: FontWeight.w700,
                   ),
-                ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _buildSubLabel(),
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: colors.progressTextMuted,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: AppDimens.spaceSm),
+            // Tertiary text button per bible — Sage SemiBold, no fill, no border.
+            Text(
+              'Write',
+              style: AppTextStyles.labelMedium.copyWith(
+                color: colors.progressTextSecondary, // Sage in dark mode
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
-}
-
-class _DashedBorderPainter extends CustomPainter {
-  const _DashedBorderPainter({required this.color, required this.radius});
-  final Color color;
-  final double radius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-
-    final rect = RRect.fromRectAndRadius(
-      Offset.zero & size,
-      Radius.circular(radius),
-    );
-    _drawDashedRRect(canvas, rect, paint, dashLength: 6, gapLength: 4);
-  }
-
-  void _drawDashedRRect(
-    Canvas canvas,
-    RRect rrect,
-    Paint paint, {
-    required double dashLength,
-    required double gapLength,
-  }) {
-    final path = Path()..addRRect(rrect);
-    final metrics = path.computeMetrics().first;
-    double distance = 0;
-    bool draw = true;
-    while (distance < metrics.length) {
-      final len = draw ? dashLength : gapLength;
-      if (draw) {
-        canvas.drawPath(
-          metrics.extractPath(distance, distance + len),
-          paint,
-        );
-      }
-      distance += len;
-      draw = !draw;
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedBorderPainter old) => old.color != color;
 }
 
 extension on DateTime {
