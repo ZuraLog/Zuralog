@@ -28,6 +28,10 @@ class MainActivity : FlutterFragmentActivity() {
     companion object {
         /// Channel name shared with `HealthBridge.dart`.
         private const val HEALTH_CHANNEL = "com.zuralog/health"
+        /// Channel name shared with `WorkoutCompanionBridge.dart` (Phase 10).
+        /// Wear OS Data Layer integration is deferred — the handler below
+        /// currently reports "no companion present" on every call.
+        private const val COMPANION_CHANNEL = "com.zuralog/workout_companion"
         private const val TAG = "MainActivity"
     }
 
@@ -678,6 +682,22 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                 }
 
+                else -> result.notImplemented()
+            }
+        }
+
+        // ── Workout companion channel (Phase 10) ────────────────────────────
+        // Stub handler: reports "no companion paired" and accepts broadcast
+        // calls without transmitting anything. When the Wear OS companion app
+        // ships, wire `isPaired` to check the Wearable Node API and `broadcast`
+        // to send payloads via the Data Layer's `DataClient.putDataItem(...)`.
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            COMPANION_CHANNEL
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "isPaired" -> result.success(false)
+                "broadcast" -> result.success(null)
                 else -> result.notImplemented()
             }
         }

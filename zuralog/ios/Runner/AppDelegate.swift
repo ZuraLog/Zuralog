@@ -38,6 +38,18 @@ import UIKit
             }
             self.handleMethodCall(call: call, result: result)
         }
+
+        // Register Live Activity platform channel (Phase 6 of the workout
+        // background plan). Bridge is self-contained — the static `register`
+        // method wires its own FlutterMethodChannel + handler. Holds no
+        // reference to `self`, so re-registration across hot-restart is safe.
+        WorkoutLiveActivityBridge.register(with: engineBridge.applicationRegistrar)
+
+        // Register Watch companion platform channel (Phase 10 of the workout
+        // background plan). Stub today — reports `isPaired` based on real
+        // WCSession state and no-ops on `broadcast` until the watchOS
+        // companion app ships. Safe to register even without a paired watch.
+        WorkoutCompanionBridge.register(with: engineBridge.applicationRegistrar)
     }
 
     // MARK: - Timestamp Helpers

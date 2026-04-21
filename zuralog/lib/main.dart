@@ -5,10 +5,13 @@
 /// Riverpod [ProviderScope] for dependency injection.
 library;
 
+import 'dart:io' show Platform;
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
@@ -19,6 +22,7 @@ import 'package:zuralog/app.dart';
 import 'package:zuralog/core/monitoring/sentry_riverpod_observer.dart';
 import 'package:zuralog/core/network/fcm_service.dart';
 import 'package:zuralog/core/storage/prefs_service.dart';
+import 'package:zuralog/features/workout/background/workout_notifications.dart';
 
 /// RevenueCat public API key (dev key by default).
 ///
@@ -90,6 +94,25 @@ Future<void> _initAndRun() async {
   }
 
   final prefs = await SharedPreferences.getInstance();
+
+  // Phase 4 — workout-background-system: Android-only. Opens the receive
+  // port that the foreground-service isolate uses to push data back to the
+  // UI isolate (notification button taps, tick heartbeats). Safe to call
+  // even when no workout is active; the port just stays quiet.
+  if (!kIsWeb && Platform.isAndroid) {
+    FlutterForegroundTask.initCommunicationPort();
+  }
+
+  // Phase 5 — workout-background-system: cross-platform local notifications.
+  // Runs in the ROOT isolate only. Initializes the plugin, registers the
+  // iOS notification category (Skip / +30s / Finish), primes the timezone
+  // database used for scheduled notifications, and requests permissions.
+  try {
+    await WorkoutNotifications.instance.initialize();
+  } catch (e, stackTrace) {
+    Sentry.captureException(e, stackTrace: stackTrace);
+    debugPrint('Workout notifications init skipped: $e');
+  }
 
   runApp(
     ProviderScope(

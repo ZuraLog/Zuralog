@@ -38,10 +38,23 @@ dependencies:
   # Lightweight key-value storage (sync status timestamps)
   shared_preferences: ^2.5.4
 
+  # Android foreground service for workout background tracking (Phase 4).
+  # iOS-side is a graceful no-op; iOS uses local notifications + Live
+  # Activities (Phases 5 and 6).
+  flutter_foreground_task: ^9.1.0
+
+  # Cross-platform local notifications (Phase 5 — workout-background-system).
+  # Used to schedule the rest-end alert on iOS (where we have no foreground
+  # service) and as a fallback on Android. Includes action buttons (Skip /
+  # +30s / Finish) wired back into Riverpod via the service bridge.
+  flutter_local_notifications: ^19.4.2
+  timezone: ^0.10.1
+
   # UUID generation (idempotency keys for ingest API)
   uuid: ^4.5.1
 
   # Utilities
+  clock: ^1.1.2                  # Injectable clock for testable time (fake_async interop)
   url_launcher: ^6.3.2
   app_links: ^7.0.0  # Deep link / custom URL scheme interception (Phase 1.6)
   cupertino_icons: ^1.0.8

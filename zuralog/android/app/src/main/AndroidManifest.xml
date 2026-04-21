@@ -42,6 +42,17 @@
          are intentionally omitted to avoid a dangerous-permission Play Store review. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
 
+    <!-- ============================================================
+         Workout Foreground Service (Phase 4 — workout-background-system)
+         Keeps the rest timer accurate while the app is backgrounded,
+         the screen is off, or the Dart VM is reclaimed by the OS.
+         `health` service type matches the plan's Android 14+ declaration.
+         ============================================================ -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+
     <application
         android:label="ZuraLog"
         android:name="${applicationName}"
@@ -93,6 +104,17 @@
                 <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
             </intent-filter>
         </activity-alias>
+
+        <!-- Workout Foreground Service (Phase 4 — workout-background-system)
+             The ForegroundService class is provided by flutter_foreground_task;
+             the RebootReceiver / RestartReceiver are merged in from the plugin's
+             own AndroidManifest.xml so we don't declare them here.
+             Warning: do not change the service name — it must match the plugin. -->
+        <service
+            android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
+            android:foregroundServiceType="health"
+            android:stopWithTask="false"
+            android:exported="false" />
 
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

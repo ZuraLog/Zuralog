@@ -31,6 +31,7 @@ import 'package:zuralog/shared/widgets/widgets.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/features/workout/preferences/workout_preferences.dart';
 
 // ── Local provider ─────────────────────────────────────────────────────────────
 
@@ -122,6 +123,16 @@ class _NotificationState {
 
 final _notificationStateProvider =
     StateProvider<_NotificationState>((_) => const _NotificationState());
+
+/// Reactive mirror of [WorkoutPreferences.restSoundEnabled].
+///
+/// SharedPreferences itself isn't a [Listenable], so we mirror the value in a
+/// [StateProvider] to drive the toggle's UI. The setter below updates both
+/// the provider (for instant UI feedback) and the preferences store (for
+/// persistence and the rest-timer's per-tick read).
+final _restSoundEnabledProvider = StateProvider<bool>((ref) {
+  return ref.read(workoutPreferencesProvider).restSoundEnabled;
+});
 
 // ── NotificationSettingsScreen ────────────────────────────────────────────────
 
@@ -499,6 +510,27 @@ class _NotificationSettingsScreenState
                   },
                 ),
               ],
+            ],
+          ),
+
+          // ── Workout ───────────────────────────────────────────────────
+          SettingsSectionLabel('Workout'),
+          _SettingsCard(
+            children: [
+              _ToggleRow(
+                icon: Icons.music_note_rounded,
+                iconColor: AppColors.categoryHeart,
+                title: 'Rest completion sound',
+                subtitle: 'Soft chime when your rest timer hits zero',
+                value: ref.watch(_restSoundEnabledProvider),
+                onChanged: (v) {
+                  ref.read(_restSoundEnabledProvider.notifier).state = v;
+                  ref
+                      .read(workoutPreferencesProvider)
+                      .setRestSoundEnabled(v);
+                  trackToggle('rest_completion_sound', v);
+                },
+              ),
             ],
           ),
 

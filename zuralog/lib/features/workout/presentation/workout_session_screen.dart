@@ -17,6 +17,7 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/workout/domain/completed_workout.dart';
 import 'package:zuralog/features/workout/domain/exercise.dart';
+import 'package:zuralog/features/workout/presentation/widgets/rest_timer_morph.dart';
 import 'package:zuralog/features/workout/presentation/widgets/rest_timer_sheet.dart';
 import 'package:zuralog/features/workout/presentation/widgets/workout_exercise_card.dart';
 import 'package:zuralog/features/workout/presentation/widgets/workout_stats_row.dart';
@@ -188,6 +189,9 @@ class _WorkoutSessionScreenState
                         ),
                       ),
               ),
+              // Inline morph slot — collapses to zero-height when the full
+              // sheet is expanded, expands into the mini pill when minimized.
+              const RestTimerMorph(),
               _BottomActions(
                 onAdd: _openCatalogue,
                 onMore: _showMoreMenu,
@@ -196,13 +200,6 @@ class _WorkoutSessionScreenState
           ),
           // Transparent barrier — captures taps outside the sheet to minimize.
           const _RestTimerBarrier(),
-          // Floating pill shown while the timer is minimized.
-          const Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: RestTimerMiniBanner(),
-          ),
           // Full-height rest timer sheet — renders on top of everything.
           const Positioned(
             left: 0,
