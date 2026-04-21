@@ -25,7 +25,6 @@ import 'package:zuralog/features/auth/domain/auth_state.dart';
 import 'package:zuralog/features/auth/domain/social_auth_credentials.dart';
 import 'package:zuralog/features/auth/domain/user_profile.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
-import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/integrations/domain/integrations_provider.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
@@ -368,9 +367,6 @@ class AuthStateNotifier extends Notifier<AuthState> {
 
     // Data tab.
     ref.invalidate(dashboardProvider);
-    ref.invalidate(dashboardLayoutLoaderProvider);
-    ref.read(dashboardLayoutProvider.notifier).state =
-        DashboardLayout.defaultLayout;
 
     // Coach tab.
     ref.invalidate(coachConversationsProvider);

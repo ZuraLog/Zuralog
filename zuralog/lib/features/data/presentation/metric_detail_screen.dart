@@ -215,13 +215,7 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody> {
   Widget build(BuildContext context) {
     final series = widget.detail.series;
     final cat = widget.detail.category;
-    final overrideInt = ref.watch(
-      dashboardLayoutProvider
-          .select((l) => l.categoryColorOverrides[cat.name]),
-    );
-    final color = (overrideInt != null && overrideInt != 0)
-        ? Color(overrideInt)
-        : categoryColor(cat);
+    final color = categoryColor(cat);
 
     final unitsSystem = ref.watch(unitsSystemProvider);
     final unitLabel = displayUnit(series.unit, unitsSystem);
