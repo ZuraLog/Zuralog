@@ -208,11 +208,17 @@ abstract final class AppColors {
   /// Sleep — Night sky, calm. Apple sleep convention.
   static const Color categorySleep = Color(0xFF5E5CE6);
 
+  /// Lighter Sleep tint for inline use inside body copy (AI summary highlights). The full Sleep color is too dark on small body text.
+  static const Color categorySleepInline = Color(0xFFA5A4F0);
+
   /// Body — Mass, weight, composition. Neutral/clinical blue.
   static const Color categoryBody = Color(0xFF64D2FF);
 
   /// Heart — Cardio health, heart rate.
   static const Color categoryHeart = Color(0xFFFF375F);
+
+  /// Lighter Heart tint for inline use inside body copy (AI summary highlights). The full Heart color is too dark on small body text.
+  static const Color categoryHeartInline = Color(0xFFFF6B82);
 
   /// Vitals — Blood pressure, oxygen, temperature. Medical blue.
   static const Color categoryVitals = Color(0xFF6AC4DC);
@@ -225,6 +231,9 @@ abstract final class AppColors {
 
   /// Wellness — Mood, stress, energy subjective check-in. Purple/mindfulness.
   static const Color categoryWellness = Color(0xFFBF5AF2);
+
+  /// Lighter Wellness tint for inline use inside body copy (AI summary highlights). The full Wellness color is too dark on small body text.
+  static const Color categoryWellnessInline = Color(0xFFD38FF6);
 
   /// Mobility — Flexibility, range of motion, recovery. Bright yellow/active.
   static const Color categoryMobility = Color(0xFFFFD60A);

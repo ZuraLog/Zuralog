@@ -1,8 +1,15 @@
-/// Health Dashboard Screen — Tab 1 (Data) root screen.
+/// Data tab — editorial health briefing.
 ///
-/// Phase 8 rewrite: integrates the full masonry tile grid with all Phase 3-7
-/// widgets — [HealthScoreStrip], [CategoryFilterChips],
-/// [GlobalTimeRangeSelector], [TileGrid], [SearchOverlay], and [TileEditOverlay] — into a single cohesive screen.
+/// One hero Health Score card on top, followed by six
+/// [ZCategorySummaryCard]s in fixed order (Sleep → Activity → Heart →
+/// Nutrition → Body → Wellness). Shows a Connect-a-source CTA only when
+/// fewer than three of the visible categories have data.
+///
+/// Keeps two behaviors from the earlier implementation:
+/// - Pull-to-refresh runs an Apple Health / Health Connect sync and then
+///   invalidates the three providers this screen reads.
+/// - A throttled app-launch auto-sync fires once per screen lifecycle via
+///   [addPostFrameCallback].
 library;
 
 import 'dart:async' show unawaited;
@@ -12,34 +19,88 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:zuralog/core/constants/app_constants.dart';
 import 'package:zuralog/core/di/providers.dart';
-import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/core/widgets/shimmer.dart';
-import 'package:zuralog/features/auth/domain/auth_providers.dart';
-import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/data/domain/category_color.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
-import 'package:zuralog/features/data/domain/tile_models.dart';
-import 'package:zuralog/features/data/domain/time_range.dart';
-import 'package:zuralog/features/data/presentation/widgets/category_filter_chips.dart';
-import 'package:zuralog/features/data/presentation/widgets/global_time_range_selector.dart';
-import 'package:zuralog/features/data/presentation/widgets/health_score_strip.dart';
-import 'package:zuralog/features/data/presentation/widgets/search_overlay.dart';
-import 'package:zuralog/features/data/presentation/widgets/tile_empty_states.dart';
-import 'package:zuralog/features/data/presentation/widgets/tile_grid.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
+import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
-import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
+
+// ── Visible categories ───────────────────────────────────────────────────────
+
+/// Fixed editorial order for the Data tab's six category cards.
+const List<HealthCategory> _kVisibleCategories = [
+  HealthCategory.sleep,
+  HealthCategory.activity,
+  HealthCategory.heart,
+  HealthCategory.nutrition,
+  HealthCategory.body,
+  HealthCategory.wellness,
+];
+
+// ── File-scope lookup helpers ────────────────────────────────────────────────
+//
+// These helpers let both [_CategoryCard] and [_ConnectACTAIfNeeded] share
+// exactly one definition of "find this category's summary" and "does this
+// summary have enough data to show". They also make the Riverpod
+// `.select(...)` closures trivial — each card subscribes only to the
+// primitive value it actually renders, so a single-category update no
+// longer rebuilds every card on the screen.
+
+/// Returns the [CategorySummary] for [category] from [dash], or `null` if
+/// [dash] hasn't loaded yet or the category isn't present.
+CategorySummary? _findSummaryFor(DashboardData? dash, HealthCategory category) {
+  if (dash == null) return null;
+  for (final s in dash.categories) {
+    if (s.category == category) return s;
+  }
+  return null;
+}
+
+/// Returns 7 short weekday labels (`['W','T',...,'T']`) with today's label at
+/// index `count - 1`.
+List<String> _lastSevenDayLabels(int count) {
+  const week = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  final todayWeekday = DateTime.now().weekday; // 1=Mon..7=Sun
+  final labels = <String>[];
+  for (int i = count - 1; i >= 0; i--) {
+    final idx = (todayWeekday - 1 - i) % 7;
+    labels.add(week[(idx + 7) % 7]);
+  }
+  return labels;
+}
+
+/// Is a [CategorySummary] populated enough to show on a category card?
+/// A card only renders real data when it has a trend of at least three points
+/// AND a non-empty, non-placeholder primary value.
+bool _summaryHasData(CategorySummary? s) {
+  if (s == null) return false;
+  final hasTrend = s.trend != null && s.trend!.length >= 3;
+  final hasValue = s.primaryValue.trim().isNotEmpty && s.primaryValue != '—';
+  return hasTrend && hasValue;
+}
+
+/// Counts how many of the six visible categories have data. Runs on a single
+/// `.select` tick so the Connect-a-source CTA only rebuilds when the count
+/// itself actually changes.
+int _countCategoriesWithData(DashboardData? dash) {
+  if (dash == null) return 0;
+  var count = 0;
+  for (final cat in _kVisibleCategories) {
+    if (_summaryHasData(_findSummaryFor(dash, cat))) count++;
+  }
+  return count;
+}
 
 // ── HealthDashboardScreen ─────────────────────────────────────────────────────
 
-/// Health Dashboard — root screen for the Data tab.
+/// Data tab root — editorial category briefing.
 class HealthDashboardScreen extends ConsumerStatefulWidget {
   /// Creates the [HealthDashboardScreen].
   const HealthDashboardScreen({super.key});
@@ -51,152 +112,15 @@ class HealthDashboardScreen extends ConsumerStatefulWidget {
 
 class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     with AutomaticKeepAliveClientMixin {
-  bool _isEditMode = false;
-  bool _showSearch = false;
-  bool _reorderedDuringEdit = false;
-
-  /// Per-category time range override. `null` means "inherit global range".
-  /// Set when a category chip is activated; cleared when filter is cleared.
-  TimeRange? _categoryTimeRange;
-
-  /// Snapshot of the global time range when a category filter is activated.
-  /// Restored when the filter is cleared so the global selector stays consistent.
-  TimeRange? _globalTimeRangeSnapshot;
-
   @override
   bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
-    // Restore persisted layout on cold-start after first frame.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(dashboardLayoutLoaderProvider.future).then((persistedLayout) {
-        if (!mounted) return;
-        if (persistedLayout != null) {
-          ref.read(dashboardLayoutProvider.notifier).state = persistedLayout;
-        } else {
-          final dashData = ref.read(dashboardProvider).valueOrNull;
-          if (dashData != null && dashData.visibleOrder.isNotEmpty) {
-            ref.read(dashboardLayoutProvider.notifier).state = DashboardLayout(
-              orderedCategories: dashData.visibleOrder,
-              hiddenCategories: const {},
-            );
-          }
-        }
-      });
-    });
-    // Schedule auto-sync check after first frame so rendering is not blocked.
+    // Fire the throttled app-launch health sync once, after the first frame,
+    // so rendering is never blocked on a network round-trip.
     WidgetsBinding.instance.addPostFrameCallback((_) => _triggerSyncIfDue());
-  }
-
-  // ── Edit mode ────────────────────────────────────────────────────────────────
-
-  void _enterEditMode() {
-    ref.read(hapticServiceProvider).medium();
-    setState(() {
-      _isEditMode = true;
-      _reorderedDuringEdit = false;
-    });
-  }
-
-  void _exitEditMode() {
-    ref.read(hapticServiceProvider).medium();
-    final didReorder = _reorderedDuringEdit;
-    setState(() {
-      _isEditMode = false;
-      _reorderedDuringEdit = false;
-    });
-    // Only re-apply smart ordering when the tile order actually changed.
-    if (didReorder) ref.invalidate(dashboardTilesProvider);
-  }
-
-  // ── Tile interactions ────────────────────────────────────────────────────────
-
-  void _onTileTap(TileId tileId) {
-    if (_isEditMode) return;
-    context.push('/data/metric/${tileId.metricSlug}');
-  }
-
-  // ── Layout mutations ─────────────────────────────────────────────────────────
-
-  void _onSizeChanged(TileId tileId, TileSize newSize) {
-    final layout = ref.read(dashboardLayoutProvider);
-    final sizes = Map<String, TileSize>.from(layout.tileSizes);
-    sizes[tileId.name] = newSize;
-    final updated = layout.copyWith(tileSizes: sizes);
-    ref.read(dashboardLayoutProvider.notifier).state = updated;
-    _persistLayout(updated);
-  }
-
-  void _onVisibilityToggled(TileId tileId) {
-    ref.read(hapticServiceProvider).selectionTick();
-    final layout = ref.read(dashboardLayoutProvider);
-    final visibility = Map<String, bool>.from(layout.tileVisibility);
-    final current = visibility[tileId.name] ?? true;
-    visibility[tileId.name] = !current;
-    final updated = layout.copyWith(tileVisibility: visibility);
-    ref.read(dashboardLayoutProvider.notifier).state = updated;
-    _persistLayout(updated);
-  }
-
-  void _onColorPick(TileId tileId) {
-    final layout = ref.read(dashboardLayoutProvider);
-    final colorOverride = layout.tileColorOverrides[tileId.name];
-    final currentColor = colorOverride != null
-        ? Color(colorOverride)
-        : null;
-
-    // Reuse the existing _ColorPickerSheet.
-    ref.read(hapticServiceProvider).light();
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => _ColorPickerSheet(
-        categoryName: tileId.displayName,
-        currentColor: currentColor ?? categoryColor(tileId.category),
-        defaultColor: categoryColor(tileId.category),
-        onColorSelected: (picked) {
-          final currentLayout = ref.read(dashboardLayoutProvider);
-          final overrides =
-              Map<String, int>.from(currentLayout.tileColorOverrides);
-          if (picked == null) {
-            overrides.remove(tileId.name);
-          } else {
-            overrides[tileId.name] = picked.toARGB32();
-          }
-          final updated =
-              currentLayout.copyWith(tileColorOverrides: overrides);
-          ref.read(dashboardLayoutProvider.notifier).state = updated;
-          _persistLayout(updated);
-        },
-      ),
-    );
-  }
-
-  void _onReorder(int oldIndex, int newIndex) {
-    _reorderedDuringEdit = true;
-    ref.read(hapticServiceProvider).light();
-    final layout = ref.read(dashboardLayoutProvider);
-    final orderedIds = ref.read(tileOrderingProvider);
-    final names = orderedIds.map((id) => id.name).toList();
-    // DragTarget delivers the exact target index — no off-by-one adjustment.
-    names.insert(newIndex, names.removeAt(oldIndex));
-    final updated = layout.copyWith(tileOrder: names);
-    ref.read(dashboardLayoutProvider.notifier).state = updated;
-    _persistLayout(updated);
-  }
-
-  void _persistLayout(DashboardLayout layout) {
-    unawaited(Future(() async {
-      if (!mounted) return;
-      try {
-        await ref.read(dataRepositoryProvider).saveDashboardLayout(layout);
-      } catch (e) {
-        debugPrint('[Dashboard] saveDashboardLayout error: $e');
-      }
-    }));
   }
 
   // ── Health sync constants ──────────────────────────────────────────────────
@@ -247,11 +171,48 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
       syncService.syncToCloud(days: 7).then((success) {
         debugPrint('[HealthDashboard] Auto-sync ${success ? 'succeeded' : 'failed'}');
         if (success && mounted) {
-          ref.invalidate(dashboardTilesProvider);
           ref.invalidate(dashboardProvider);
+          ref.invalidate(healthScoreProvider);
+          ref.invalidate(todayFeedProvider);
         }
       }),
     );
+  }
+
+  // ── Pull-to-refresh ────────────────────────────────────────────────────────
+
+  Future<void> _onRefresh() async {
+    // Sync latest health data to the server before refreshing screen data.
+    final prefs = await SharedPreferences.getInstance();
+    final appleConnected = prefs.getBool(_kAppleHealthKey) ?? false;
+    final hcConnected = prefs.getBool(_kHealthConnectKey) ?? false;
+
+    if (appleConnected || hcConnected) {
+      final syncService = ref.read(healthSyncServiceProvider);
+      final synced = await syncService.syncToCloud(days: 7);
+      if (synced) {
+        await prefs.setInt(
+            _kLastSyncKey, DateTime.now().millisecondsSinceEpoch);
+      }
+      if (!synced && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sync failed. Pull down to try again.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      // Prime the server cache with fresh data before invalidating providers
+      // so the next read sees post-sync data instead of the stale in-memory
+      // cache on the server.
+      await ref
+          .read(dataRepositoryProvider)
+          .getDashboard(forceRefresh: true);
+    }
+
+    ref.invalidate(dashboardProvider);
+    ref.invalidate(healthScoreProvider);
+    ref.invalidate(todayFeedProvider);
   }
 
   // ── Build ────────────────────────────────────────────────────────────────────
@@ -261,667 +222,35 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     super.build(context); // Required by AutomaticKeepAliveClientMixin.
 
     final colors = AppColorsOf(context);
-    final layout = ref.watch(dashboardLayoutProvider);
-    final tilesAsync = ref.watch(dashboardTilesProvider);
-    final orderedTileIds = ref.watch(tileOrderingProvider);
-    final activeFilter = ref.watch(tileFilterProvider);
-    final scoreAsync = ref.watch(healthScoreProvider);
-    final hasNetworkError = ref.watch(dashboardHasNetworkErrorProvider);
 
-    // Data maturity banner state.
-    final dataDays = scoreAsync.valueOrNull?.dataDays ?? 0;
-    final userProfile = ref.watch(userProfileProvider);
-    final accountAge = userProfile?.createdAt != null
-        ? DateTime.now().difference(userProfile!.createdAt!).inDays
-        : 0;
-    final dataBannerMode = accountAge >= kMinDataDaysForMaturity
-        ? DataMaturityMode.stillBuilding
-        : DataMaturityMode.progress;
-    final showDataBanner =
-        dataDays < kMinDataDaysForMaturity && !layout.bannerDismissed;
-
-    // Build tile map for O(1) lookup.
-    final tileMap = {
-      for (final t in tilesAsync.valueOrNull ?? <TileData>[]) t.tileId: t,
-    };
-
-    // Filter by active category chip.
-    final filteredTileIds = activeFilter == null
-        ? orderedTileIds
-        : orderedTileIds
-            .where((id) => id.category == activeFilter)
-            .toList();
-
-    // Check onboarding state.
-    final allTiles = tilesAsync.valueOrNull ?? [];
-    final allNoSource =
-        allTiles.isNotEmpty &&
-        allTiles.every((t) => t.dataState == TileDataState.noSource);
-
-    return Stack(
-      children: [
-        ZuralogScaffold(
-          // ignore: deprecated_member_use
-          addBottomNavPadding: true,
-          appBar: ZuralogAppBar(
-            title: 'Data',
-            tooltipConfig: const ZuralogAppBarTooltipConfig(
-              screenKey: 'health_dashboard',
-              tooltipKey: 'welcome',
-              message: 'This is your data command center. Tap the search icon '
-                  'to find metrics, or the edit button to customize your grid.',
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.search_rounded),
-                onPressed: () => setState(() => _showSearch = true),
-                tooltip: 'Search metrics',
-              ),
-              if (_isEditMode)
-                TextButton(
-                  onPressed: _exitEditMode,
-                  child: Text(
-                    'Done',
-                    style:
-                        AppTextStyles.bodyLarge.copyWith(color: colors.primary),
-                  ),
-                )
-              else
-                IconButton(
-                  icon: const Icon(Icons.edit_rounded),
-                  onPressed: _enterEditMode,
-                  tooltip: 'Customize',
-                ),
-            ],
+    return ZuralogScaffold(
+      appBar: const ZuralogAppBar(title: 'Data'),
+      body: RefreshIndicator(
+        color: colors.primary,
+        onRefresh: _onRefresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(
+            AppDimens.spaceMd,
+            AppDimens.spaceMd,
+            AppDimens.spaceMd,
+            0,
           ),
-          body: RefreshIndicator(
-            color: colors.primary,
-            onRefresh: () async {
-              if (_isEditMode) return;
-
-              // Sync latest health data to the server before refreshing tiles.
-              final prefs = await SharedPreferences.getInstance();
-              final appleConnected =
-                  prefs.getBool(_kAppleHealthKey) ?? false;
-              final hcConnected =
-                  prefs.getBool(_kHealthConnectKey) ?? false;
-
-              if (appleConnected || hcConnected) {
-                final syncService = ref.read(healthSyncServiceProvider);
-                final synced = await syncService.syncToCloud(days: 7);
-                if (synced) {
-                  await prefs.setInt(
-                      _kLastSyncKey, DateTime.now().millisecondsSinceEpoch);
-                }
-                if (!synced && mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Sync failed. Pull down to try again.'),
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
-                }
-                // Prime the server cache with fresh data before invalidating providers.
-                // Without this, ref.invalidate(dashboardProvider) would trigger a
-                // getDashboard() call that hits the server's stale in-memory cache.
-                await ref
-                    .read(dataRepositoryProvider)
-                    .getDashboard(forceRefresh: true);
-              }
-
-              ref.invalidate(dashboardTilesProvider);
-              ref.invalidate(healthScoreProvider);
-              ref.invalidate(dashboardProvider);
-            },
-            child: CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                // ── Health Score Strip ────────────────────────────────────
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      AppDimens.spaceMd,
-                      AppDimens.spaceMd,
-                      AppDimens.spaceMd,
-                      AppDimens.spaceSm,
-                    ),
-                    child: HealthScoreStrip(),
-                  ),
-                ),
-
-                // ── Data Maturity Banner ──────────────────────────────────
-                if (showDataBanner)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppDimens.spaceMd,
-                        0,
-                        AppDimens.spaceMd,
-                        AppDimens.spaceSm,
-                      ),
-                      child: DataMaturityBanner(
-                        daysWithData: dataDays,
-                        targetDays: kMinDataDaysForMaturity,
-                        mode: dataBannerMode,
-                        onDismiss: () {
-                          final updated = layout.copyWith(bannerDismissed: true);
-                          ref.read(dashboardLayoutProvider.notifier).state =
-                              updated;
-                          _persistLayout(updated);
-                        },
-                        onPermanentDismiss:
-                            dataBannerMode == DataMaturityMode.stillBuilding
-                                ? () {
-                                    final updated =
-                                        layout.copyWith(bannerDismissed: true);
-                                    ref
-                                        .read(dashboardLayoutProvider.notifier)
-                                        .state = updated;
-                                    _persistLayout(updated);
-                                  }
-                                : null,
-                      ),
-                    ),
-                  ),
-
-                // ── Category Filter Chips ─────────────────────────────────
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                      top: AppDimens.spaceSm,
-                      bottom: AppDimens.spaceSm,
-                    ),
-                    child: CategoryFilterChips(
-                      selected: activeFilter,
-                      onSelected: (cat) {
-                        ref.read(tileFilterProvider.notifier).state = cat;
-                        setState(() {
-                          if (cat != null) {
-                            // Snapshot the global range so we can restore it when filter is cleared.
-                            _globalTimeRangeSnapshot = ref.read(dashboardTimeRangeProvider);
-                            _categoryTimeRange = _globalTimeRangeSnapshot;
-                          } else {
-                            // Restore global range when filter is cleared.
-                            if (_globalTimeRangeSnapshot != null) {
-                              ref.read(dashboardTimeRangeProvider.notifier).state =
-                                  _globalTimeRangeSnapshot!;
-                            }
-                            _globalTimeRangeSnapshot = null;
-                            _categoryTimeRange = null;
-                          }
-                        });
-                      },
-                    ),
-                  ),
-                ),
-
-                // ── Global Time Range Selector ────────────────────────────
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.only(bottom: AppDimens.spaceSm),
-                    child: GlobalTimeRangeSelector(),
-                  ),
-                ),
-
-                // ── Per-category Time Range Selector ──────────────────────
-                // Shown only when a category chip is active. Inherits the
-                // global range on activation but can be changed independently.
-                if (activeFilter != null)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                        bottom: AppDimens.spaceSm,
-                      ),
-                      child: _CategoryTimeRangeSelector(
-                        selected: _categoryTimeRange ??
-                            ref.watch(dashboardTimeRangeProvider),
-                        onChanged: (range) {
-                          setState(() => _categoryTimeRange = range);
-                          // Write to dashboardTimeRangeProvider so tiles re-fetch with the new range.
-                          ref.read(dashboardTimeRangeProvider.notifier).state = range;
-                        },
-                      ),
-                    ),
-                  ),
-
-                // ── Network error banner ──────────────────────────────────
-                // Shown when the API call failed AND the user has at least one
-                // connected source (i.e. not all tiles show "noSource").
-                // When ALL tiles are noSource, the full empty-state below
-                // already handles the error message.
-                if (hasNetworkError && !allNoSource)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppDimens.spaceMd,
-                        vertical: AppDimens.spaceXs,
-                      ),
-                      child: Container(
-                        padding: const EdgeInsets.all(AppDimens.spaceSm),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.errorContainer,
-                          borderRadius:
-                              BorderRadius.circular(AppDimens.radiusCard),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.cloud_off_rounded,
-                              size: 18,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onErrorContainer,
-                            ),
-                            const SizedBox(width: AppDimens.spaceSm),
-                            Expanded(
-                              child: Text(
-                                'Could not refresh data. Showing cached results.',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onErrorContainer,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                // ── Onboarding empty state or Tile Grid ───────────────────
-                if (allNoSource && hasNetworkError)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppDimens.spaceMd,
-                        vertical: AppDimens.spaceLg,
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.cloud_off_rounded,
-                            size: 48,
-                            color: AppColors.textTertiary,
-                          ),
-                          const SizedBox(height: AppDimens.spaceMd),
-                          Text(
-                            'Data source unavailable',
-                            style: AppTextStyles.titleMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: AppDimens.spaceXs),
-                          const Text(
-                            'Pull down to retry when your connection is restored.',
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else if (allNoSource)
-                  SliverToBoxAdapter(
-                    child: OnboardingEmptyState(
-                      onConnectDevice: () => context
-                          .push(RouteNames.settingsIntegrationsPath),
-                      onLogManually: () => context.go('/today'),
-                    ),
-                  )
-                else
-                  SliverToBoxAdapter(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      transitionBuilder: (child, animation) => FadeTransition(
-                        opacity: animation,
-                        child: child,
-                      ),
-                      child: tilesAsync.isLoading
-                          ? const _DashboardSkeletonBox(key: ValueKey('loading'))
-                          : _TileGridBox(
-                              key: ValueKey(activeFilter),
-                              orderedTileIds: filteredTileIds,
-                              tiles: tileMap,
-                              layout: layout,
-                              isEditMode: _isEditMode,
-                              onTileTap: _onTileTap,
-                              onSizeChanged: _onSizeChanged,
-                              onVisibilityToggled: _onVisibilityToggled,
-                              onColorPick: _onColorPick,
-                              onReorder: _onReorder,
-                            ),
-                    ),
-                  ),
-
-                // ── "Ask Coach about [Category]" CTA ──────────────────────
-                if (activeFilter != null && !allNoSource)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                          AppDimens.spaceMd, AppDimens.spaceSm, AppDimens.spaceMd, 0),
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.auto_awesome_rounded),
-                        label: Text(
-                          'Ask Coach about ${activeFilter.displayName}',
-                        ),
-                        onPressed: () {
-                          ref.read(coachPrefillProvider.notifier).state =
-                              'Tell me about my ${activeFilter.displayName} data';
-                          context.go('/coach');
-                        },
-                      ),
-                    ),
-                  ),
-
-                // ── Bottom padding ────────────────────────────────────────
-                SliverToBoxAdapter(
-                  child: SizedBox(
-                    height: AppDimens.bottomClearance(context) +
-                        AppDimens.spaceMd,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        // ── Search Overlay ────────────────────────────────────────────────
-        if (_showSearch)
-          SearchOverlay(
-            tiles: tilesAsync.valueOrNull ?? [],
-            onClose: () => setState(() => _showSearch = false),
-            onTileSelected: (tileId) {
-              setState(() => _showSearch = false);
-              context.push('/data/metric/${tileId.metricSlug}');
-            },
-          ),
-      ],
-    );
-  }
-
-}
-
-// ── _CategoryTimeRangeSelector ────────────────────────────────────────────────
-
-/// Per-category time range selector.
-///
-/// Shown below the global [GlobalTimeRangeSelector] when a category filter
-/// chip is active (§3.3, §3.4, §8.2). Inherits the global range when a
-/// category is first selected but can be changed independently for that
-/// session. Does NOT persist — state lives in the screen.
-class _CategoryTimeRangeSelector extends StatelessWidget {
-  const _CategoryTimeRangeSelector({
-    required this.selected,
-    required this.onChanged,
-  });
-
-  final TimeRange selected;
-  final ValueChanged<TimeRange> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(
-            left: AppDimens.spaceMd,
-            bottom: AppDimens.spaceXs,
-          ),
-          child: Text(
-            'Category range',
-            style: AppTextStyles.labelSmall.copyWith(
-              color: colors.textTertiary,
-            ),
-          ),
-        ),
-        SingleChildScrollView(
-          key: const Key('category_time_range_selector'),
-          scrollDirection: Axis.horizontal,
-          padding:
-              const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-          child: Row(
-            children: TimeRange.values.expand((range) {
-              final isActive = selected == range;
-              final bgColor =
-                  isActive ? colors.primary : Colors.transparent;
-              final borderColor =
-                  isActive ? colors.primary : colors.border;
-              final textColor =
-                  isActive ? Colors.white : colors.textSecondary;
-              return [
-                GestureDetector(
-                  onTap: () => onChanged(range),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    height: 28,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10),
-                    decoration: BoxDecoration(
-                      color: bgColor,
-                      borderRadius:
-                          BorderRadius.circular(AppDimens.radiusChip),
-                      border: Border.all(
-                        color: borderColor,
-                        width: 1,
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      range.label,
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: textColor,
-                        fontWeight: isActive
-                            ? FontWeight.w600
-                            : FontWeight.w400,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppDimens.spaceSm),
-              ];
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── _TileGridBox ──────────────────────────────────────────────────────────────
-
-/// Box-widget wrapper around [TileGrid] for use inside [AnimatedSwitcher].
-///
-/// Embeds TileGrid (a sliver widget) in a [CustomScrollView] with
-/// [shrinkWrap] and [NeverScrollableScrollPhysics] so it sizes itself to its
-/// content and the outer [CustomScrollView] in [HealthDashboardScreen]
-/// controls scrolling.
-class _TileGridBox extends StatelessWidget {
-  const _TileGridBox({
-    super.key,
-    required this.orderedTileIds,
-    required this.tiles,
-    required this.layout,
-    required this.isEditMode,
-    required this.onTileTap,
-    required this.onSizeChanged,
-    required this.onVisibilityToggled,
-    required this.onColorPick,
-    required this.onReorder,
-  });
-
-  final List<TileId> orderedTileIds;
-  final Map<TileId, TileData> tiles;
-  final DashboardLayout layout;
-  final bool isEditMode;
-  final void Function(TileId) onTileTap;
-  final void Function(TileId, TileSize) onSizeChanged;
-  final void Function(TileId) onVisibilityToggled;
-  final void Function(TileId) onColorPick;
-  final void Function(int, int) onReorder;
-
-  @override
-  Widget build(BuildContext context) {
-    // shrinkWrap: true is intentional here. AnimatedSwitcher requires a box
-    // widget, so TileGrid (a sliver) must be wrapped in a CustomScrollView.
-    // With only 20 tiles this eagerly-measured scroll view has negligible
-    // performance cost. NeverScrollableScrollPhysics prevents scroll conflicts
-    // with the outer CustomScrollView.
-    return CustomScrollView(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      slivers: [
-        TileGrid(
-          orderedTileIds: orderedTileIds,
-          tiles: tiles,
-          layout: layout,
-          isEditMode: isEditMode,
-          onTileTap: onTileTap,
-          onSizeChanged: onSizeChanged,
-          onVisibilityToggled: onVisibilityToggled,
-          onColorPick: onColorPick,
-          onReorder: onReorder,
-        ),
-      ],
-    );
-  }
-}
-
-// ── _ColorPickerSheet ─────────────────────────────────────────────────────────
-
-/// Bottom sheet for picking a tile accent color override.
-class _ColorPickerSheet extends StatelessWidget {
-  const _ColorPickerSheet({
-    required this.categoryName,
-    required this.currentColor,
-    required this.defaultColor,
-    required this.onColorSelected,
-  });
-
-  final String categoryName;
-  final Color currentColor;
-  final Color defaultColor;
-
-  /// Called with the selected [Color], or `null` to reset to the default.
-  final ValueChanged<Color?> onColorSelected;
-
-  static const List<Color> _palette = [
-    Color(0xFFCFE1B9), // Sage Green (brand)
-    Color(0xFF30D158), // Green
-    Color(0xFF34C759), // Light Green
-    Color(0xFF007AFF), // Blue
-    Color(0xFF0A84FF), // Bright Blue
-    Color(0xFF5AC8FA), // Sky Blue
-    Color(0xFF5E5CE6), // Indigo
-    Color(0xFFBF5AF2), // Purple
-    Color(0xFFFF2D55), // Red
-    Color(0xFFFF6B6B), // Coral
-    Color(0xFFFF9F0A), // Amber
-    Color(0xFFFFD60A), // Yellow
-    Color(0xFFFF6F00), // Orange
-    Color(0xFF636366), // Grey
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return SafeArea(
-      top: false,
-      child: Container(
-        decoration: BoxDecoration(
-          color: colors.elevatedSurface,
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.fromLTRB(
-          AppDimens.spaceMd,
-          AppDimens.spaceSm,
-          AppDimens.spaceMd,
-          AppDimens.spaceMd,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Handle
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.textTertiary.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
+            const _HealthScoreHero(),
+            const SizedBox(height: AppDimens.spaceMd),
+            for (var i = 0; i < _kVisibleCategories.length; i++) ...[
+              _CategoryCard(category: _kVisibleCategories[i]),
+              if (i < _kVisibleCategories.length - 1)
+                const SizedBox(height: AppDimens.spaceSm + 4),
+            ],
+            const SizedBox(height: AppDimens.spaceMd),
+            const _ViewAllDataPill(),
+            const SizedBox(height: AppDimens.spaceMd),
+            const _ConnectACTAIfNeeded(),
+            SizedBox(
+              height: AppDimens.bottomClearance(context) + AppDimens.spaceMd,
             ),
-            const SizedBox(height: AppDimens.spaceMd),
-            Text('Accent Color', style: AppTextStyles.titleMedium),
-            const SizedBox(height: AppDimens.spaceMd),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                // Reset to default chip
-                GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    onColorSelected(null);
-                  },
-                  child: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: defaultColor,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: currentColor == defaultColor
-                            ? Colors.white
-                            : Colors.transparent,
-                        width: 2.5,
-                      ),
-                    ),
-                    child: currentColor == defaultColor
-                        ? const Icon(
-                            Icons.check_rounded,
-                            color: Colors.white,
-                            size: 18,
-                          )
-                        : null,
-                  ),
-                ),
-                ..._palette.map(
-                  (c) => GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      onColorSelected(c);
-                    },
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: c,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: currentColor.toARGB32() == c.toARGB32()
-                              ? Colors.white
-                              : Colors.transparent,
-                          width: 2.5,
-                        ),
-                      ),
-                      child: currentColor.toARGB32() == c.toARGB32()
-                          ? const Icon(
-                              Icons.check_rounded,
-                              color: Colors.white,
-                              size: 18,
-                            )
-                          : null,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppDimens.spaceMd),
           ],
         ),
       ),
@@ -929,78 +258,445 @@ class _ColorPickerSheet extends StatelessWidget {
   }
 }
 
-// ── Skeleton widgets ──────────────────────────────────────────────────────────
+// ── _ViewAllDataPill ──────────────────────────────────────────────────────────
 
-/// Animated layout-aware skeleton for a single metric tile card.
-///
-/// Internal structure mirrors [MetricTile]'s loaded layout:
-/// header row → value → unit → chart area.
-class _CardSkeleton extends StatelessWidget {
-  const _CardSkeleton();
+/// Pattern pill that pushes the All Data long-form report. Sits between
+/// the six category cards and the Connect CTA so the user can step from
+/// the at-a-glance view into the full breakdown.
+class _ViewAllDataPill extends StatelessWidget {
+  const _ViewAllDataPill();
 
   @override
   Widget build(BuildContext context) {
+    return ZPatternPillButton(
+      icon: Icons.arrow_forward_rounded,
+      label: 'View all your data',
+      onPressed: () => context.push(RouteNames.dataAllPath),
+    );
+  }
+}
+
+// ── _HealthScoreHero ──────────────────────────────────────────────────────────
+
+/// Editorial Health Score hero card — the single largest number on the Data tab.
+///
+/// Tapping anywhere opens the score breakdown screen. Shows a shimmer skeleton
+/// while the score is loading; shows the same skeleton on error so the user
+/// can pull-to-refresh without seeing a broken state.
+class _HealthScoreHero extends ConsumerWidget {
+  const _HealthScoreHero();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
-    return Semantics(
-      label: 'Loading dashboard metrics',
-      excludeSemantics: true,
-      child: Container(
-        height: 120,
-        decoration: BoxDecoration(
-          color: colors.cardBackground,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-          boxShadow: colors.isDark ? null : AppDimens.cardShadowLight,
-        ),
-        padding: const EdgeInsets.all(12),
-        child: AppShimmer(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header row: dot + name + spacer + icon slot
-              Row(
-                children: [
-                  ShimmerBox(height: 8, width: 8, isCircle: true),
-                  const SizedBox(width: 6),
-                  ShimmerBox(height: 8, width: 64),
-                  const Spacer(),
-                  ShimmerBox(height: 14, width: 14),
-                ],
-              ),
-              const SizedBox(height: 8),
-              // Primary value
-              ShimmerBox(height: 28, width: 56),
-              const SizedBox(height: 4),
-              // Unit label
-              ShimmerBox(height: 8, width: 36),
-              const SizedBox(height: 8),
-              // Chart area — fills remaining height
-              Expanded(
-                child: ShimmerBox(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ],
-          ),
+    final scoreAsync = ref.watch(healthScoreProvider);
+
+    final Widget content = scoreAsync.when(
+      loading: () => const _HeroSkeleton(),
+      error: (_, _) => const _HeroSkeleton(),
+      data: (data) => _HeroContent(data: data),
+    );
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.push(RouteNames.dataScoreBreakdownPath),
+      child: ZuralogCard(
+        variant: ZCardVariant.hero,
+        padding: const EdgeInsets.all(AppDimens.spaceMd),
+        child: DefaultTextStyle(
+          style: TextStyle(color: colors.textPrimary),
+          child: content,
         ),
       ),
     );
   }
 }
 
-/// Box widget wrapping 6 [_CardSkeleton]s — used in [AnimatedSwitcher].
-class _DashboardSkeletonBox extends StatelessWidget {
-  const _DashboardSkeletonBox({super.key});
+// ── _HeroContent ──────────────────────────────────────────────────────────────
+
+class _HeroContent extends StatelessWidget {
+  const _HeroContent({required this.data});
+
+  final HealthScoreData data;
+
+  bool get _hasScore => !(data.score == 0 && data.dataDays == 0);
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final scoreText = _hasScore ? '${data.score}' : '—';
+
     return Column(
-      children: List.generate(6, (_) => const Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: AppDimens.spaceXs,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Eyebrow
+        Text(
+          'Your health · Today',
+          style: AppTextStyles.labelSmall.copyWith(
+            color: colors.textTertiary,
+            letterSpacing: 1.2,
+          ),
         ),
-        child: _CardSkeleton(),
-      )),
+        const SizedBox(height: AppDimens.spaceSm),
+        // Lora hero number + delta pill
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: Text(
+                scoreText,
+                style: AppTextStyles.displayLarge.copyWith(
+                  fontFamily: 'Lora',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 56,
+                  height: 1.0,
+                  color: colors.textPrimary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (_hasScore && data.weekChange != null) ...[
+              const SizedBox(width: AppDimens.spaceSm),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _HeroDeltaPill(weekChange: data.weekChange!),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: AppDimens.spaceSm),
+        // Caption
+        Text(
+          _hasScore ? 'Health Score' : 'Not enough data yet',
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: colors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: AppDimens.spaceMd),
+        // Full-width sparkline in Sage
+        if (data.trend.length >= 2)
+          ZMiniSparkline(
+            values: data.trend,
+            todayIndex: data.trend.length - 1,
+            color: colors.primary,
+            height: 48,
+          )
+        else
+          const SizedBox(height: 48),
+      ],
+    );
+  }
+}
+
+// ── _HeroDeltaPill ────────────────────────────────────────────────────────────
+
+/// Pill showing this week's score change vs. last week. Same red / green /
+/// neutral rules used on the category cards.
+class _HeroDeltaPill extends StatelessWidget {
+  const _HeroDeltaPill({required this.weekChange});
+
+  final int weekChange;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final Color background;
+    final Color foreground;
+    final String arrow;
+    if (weekChange > 0) {
+      background = colors.success.withValues(alpha: 0.14);
+      foreground = colors.success;
+      arrow = '↑';
+    } else if (weekChange < 0) {
+      background = colors.warning.withValues(alpha: 0.14);
+      foreground = colors.warning;
+      arrow = '↓';
+    } else {
+      background = colors.surfaceRaised;
+      foreground = colors.textSecondary;
+      arrow = '·';
+    }
+    final label = weekChange == 0
+        ? 'Flat vs last week'
+        : '$arrow ${weekChange.abs()} vs last week';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.labelSmall.copyWith(
+          color: foreground,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+// ── _HeroSkeleton ─────────────────────────────────────────────────────────────
+
+/// Shimmer placeholder with the same overall footprint as the loaded hero.
+class _HeroSkeleton extends StatelessWidget {
+  const _HeroSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Loading health score',
+      excludeSemantics: true,
+      child: AppShimmer(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ShimmerBox(height: 10, width: 120),
+            const SizedBox(height: AppDimens.spaceSm),
+            ShimmerBox(height: 56, width: 140),
+            const SizedBox(height: AppDimens.spaceSm),
+            ShimmerBox(height: 12, width: 90),
+            const SizedBox(height: AppDimens.spaceMd),
+            ShimmerBox(height: 48),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── _CategoryCard ─────────────────────────────────────────────────────────────
+
+/// Single category card — wraps [ZCategorySummaryCard] with the right
+/// category-level data pulled from [dashboardProvider].
+///
+/// Uses `.select(...)` so each card only rebuilds when its own
+/// [CategorySummary] actually changes. A mutation to a single category no
+/// longer re-runs build on all six cards.
+class _CategoryCard extends ConsumerWidget {
+  const _CategoryCard({required this.category});
+
+  final HealthCategory category;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final summary = ref.watch(
+      dashboardProvider.select(
+        (async) => _findSummaryFor(async.valueOrNull, category),
+      ),
+    );
+
+    final color = categoryColor(category);
+    final icon = _iconFor(category);
+    final name = category.displayName;
+
+    final hasData = _summaryHasData(summary);
+
+    final deltaDirection =
+        _deltaDirection(summary?.deltaPercent, category);
+    final deltaLabel = _deltaLabel(summary?.deltaPercent);
+
+    final chart = _buildChart(category, summary, color);
+
+    return ZCategorySummaryCard(
+      categoryName: name,
+      icon: icon,
+      color: color,
+      heroValue: hasData ? summary!.primaryValue : '—',
+      chart: chart,
+      deltaLabel: hasData ? deltaLabel : null,
+      deltaDirection: deltaDirection,
+      isNoData: !hasData,
+      onConnectTap: () =>
+          context.push(RouteNames.settingsIntegrationsPath),
+      onTap: () => context.pushNamed(
+        RouteNames.categoryDetail,
+        pathParameters: {'id': category.name},
+      ),
+    );
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  /// Builds the per-category 7-day chart widget shown in the card's chart
+  /// slot. Returns `null` when there isn't enough data to render (fewer
+  /// than 3 points) so the slot falls back to an empty reservation.
+  Widget? _buildChart(
+    HealthCategory category,
+    CategorySummary? summary,
+    Color color,
+  ) {
+    if (summary == null) return null;
+    final trend = summary.trend;
+    if (trend == null || trend.length < 3) return null;
+    final labels = _lastSevenDayLabels(trend.length);
+    final todayIdx = trend.length - 1;
+
+    switch (category) {
+      case HealthCategory.sleep:
+        return ZCategoryChart(
+          kind: ZCategoryChartKind.bars,
+          points: trend,
+          color: color,
+          dayLabels: labels,
+          todayIndex: todayIdx,
+        );
+      case HealthCategory.activity:
+        return ZCategoryChart(
+          kind: ZCategoryChartKind.bars,
+          points: trend,
+          color: color,
+          dayLabels: labels,
+          todayIndex: todayIdx,
+          goalValue: 8000,
+        );
+      case HealthCategory.heart:
+        return ZCategoryChart(
+          kind: ZCategoryChartKind.line,
+          points: trend,
+          color: color,
+          dayLabels: labels,
+          todayIndex: todayIdx,
+        );
+      case HealthCategory.nutrition:
+        return ZCategoryChart(
+          kind: ZCategoryChartKind.bars,
+          points: trend,
+          color: color,
+          dayLabels: labels,
+          todayIndex: todayIdx,
+          goalValue: 2000,
+        );
+      case HealthCategory.body:
+        return ZCategoryChart(
+          kind: ZCategoryChartKind.line,
+          points: trend,
+          color: color,
+          dayLabels: labels,
+          todayIndex: todayIdx,
+        );
+      case HealthCategory.wellness:
+        return ZCategoryChart(
+          kind: ZCategoryChartKind.dots,
+          points: trend,
+          color: color,
+          dayLabels: labels,
+          todayIndex: todayIdx,
+        );
+      default:
+        return null;
+    }
+  }
+
+  /// Resting heart rate is the one category in this six-card set where lower
+  /// is better, so we flip the direction there. Returns [ZCategoryDelta.none]
+  /// if the upstream delta is missing or non-finite (NaN / Infinity) so a bad
+  /// upstream number can never crash the pill.
+  static ZCategoryDelta _deltaDirection(
+      double? deltaPercent, HealthCategory category) {
+    if (deltaPercent == null || !deltaPercent.isFinite) {
+      return ZCategoryDelta.none;
+    }
+    final lowerIsBetter = category == HealthCategory.heart;
+    if (deltaPercent.abs() < 1.0) return ZCategoryDelta.flat;
+    final isUp = deltaPercent > 0;
+    final isBetter = lowerIsBetter ? !isUp : isUp;
+    return isBetter ? ZCategoryDelta.better : ZCategoryDelta.worse;
+  }
+
+  /// Builds the "↑ 4% vs last week" pill label. Returns `null` if the upstream
+  /// delta is missing or non-finite (NaN / Infinity) so a bad upstream number
+  /// can never crash the pill.
+  static String? _deltaLabel(double? deltaPercent) {
+    if (deltaPercent == null || !deltaPercent.isFinite) return null;
+    final arrow = deltaPercent > 0
+        ? '↑'
+        : (deltaPercent < 0 ? '↓' : '·');
+    final pct = deltaPercent.abs().round();
+    if (pct == 0) return 'Flat vs last week';
+    return '$arrow $pct% vs last week';
+  }
+
+  static IconData _iconFor(HealthCategory cat) {
+    switch (cat) {
+      case HealthCategory.sleep:
+        return Icons.bedtime_rounded;
+      case HealthCategory.activity:
+        return Icons.directions_walk_rounded;
+      case HealthCategory.heart:
+        return Icons.favorite_rounded;
+      case HealthCategory.nutrition:
+        return Icons.local_fire_department_rounded;
+      case HealthCategory.body:
+        return Icons.accessibility_new_rounded;
+      case HealthCategory.wellness:
+        return Icons.self_improvement_rounded;
+      // Defensive fallback — the six visible categories never hit these
+      // branches, but the switch must be exhaustive.
+      case HealthCategory.vitals:
+        return Icons.monitor_heart_rounded;
+      case HealthCategory.cycle:
+        return Icons.calendar_today_rounded;
+      case HealthCategory.mobility:
+        return Icons.directions_run_rounded;
+      case HealthCategory.environment:
+        return Icons.wb_sunny_rounded;
+    }
+  }
+}
+
+// ── _ConnectACTAIfNeeded ──────────────────────────────────────────────────────
+
+/// Renders a "Connect a source" feature card only when fewer than three of
+/// the six visible categories have usable data. Hidden once the user has
+/// enough data flowing to fill out the page.
+///
+/// Uses `.select(...)` to watch only the integer count of populated
+/// categories, so the CTA only rebuilds when that count actually changes —
+/// not on every per-category mutation.
+class _ConnectACTAIfNeeded extends ConsumerWidget {
+  const _ConnectACTAIfNeeded();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final withDataCount = ref.watch(
+      dashboardProvider
+          .select((async) => _countCategoriesWithData(async.valueOrNull)),
+    );
+    if (withDataCount >= 3) return const SizedBox.shrink();
+
+    final colors = AppColorsOf(context);
+    return ZuralogCard(
+      variant: ZCardVariant.feature,
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Connect a source',
+            style: AppTextStyles.titleMedium.copyWith(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: AppDimens.spaceXs),
+          Text(
+            'Link Apple Health, Health Connect, or a wearable to see your full picture.',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppDimens.spaceMd),
+          ZPatternPillButton(
+            icon: Icons.add_rounded,
+            label: 'Connect a source',
+            onPressed: () =>
+                context.push(RouteNames.settingsIntegrationsPath),
+          ),
+        ],
+      ),
     );
   }
 }

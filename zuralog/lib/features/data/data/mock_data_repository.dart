@@ -82,20 +82,6 @@ final class MockDataRepository implements DataRepositoryInterface {
     );
   }
 
-  // ── Dashboard Layout ──────────────────────────────────────────────────────
-
-  @override
-  Future<void> saveDashboardLayout(DashboardLayout layout) async {
-    await Future<void>.delayed(const Duration(milliseconds: 100));
-    // No-op in mock — layout changes are reflected immediately via provider.
-  }
-
-  @override
-  Future<DashboardLayout?> getPersistedLayout() async {
-    // No-op in mock — always returns null to use the default layout.
-    return null;
-  }
-
   @override
   void invalidateAll() {
     // No-op: mock has no cache to invalidate.

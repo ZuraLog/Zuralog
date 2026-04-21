@@ -16,7 +16,6 @@ import 'package:zuralog/features/coach/presentation/widgets/coach_blob.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_suggestion_card.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_thinking_layer.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_user_message.dart';
-import 'package:zuralog/features/data/presentation/widgets/tile_visualizations.dart';
 import 'package:zuralog/features/heart/domain/heart_models.dart';
 import 'package:zuralog/features/today/presentation/widgets/heart_pillar_card.dart';
 import 'package:zuralog/features/today/presentation/widgets/nutrition_pillar_card.dart';
@@ -2161,10 +2160,10 @@ class _ChartShowcaseRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(AppDimens.shapeMd),
               ),
               padding: const EdgeInsets.all(AppDimens.spaceSm),
-              child: buildTileVisualization(
+              child: ZChart(
                 config: configs[i].$2,
-                categoryColor: color,
-                size: configs[i].$1,
+                mode: configs[i].$1.toChartMode(),
+                color: color,
               ),
             );
           }(),

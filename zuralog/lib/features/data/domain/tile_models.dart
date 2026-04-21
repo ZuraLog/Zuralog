@@ -132,7 +132,7 @@ class TileData {
   /// Typed visualization config — null unless [dataState] == [TileDataState.loaded].
   final TileVisualizationConfig? vizConfig;
 
-  // ── Stats footer (MetricTile, tall/wide only) ──────────────────────────────
+  // ── Stats footer (legacy tile tall/wide layout) ────────────────────────────
 
   /// Formatted average label (e.g. "Avg 8.2k"). Null if no trend data.
   final String? avgLabel;

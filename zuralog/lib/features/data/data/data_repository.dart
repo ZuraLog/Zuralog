@@ -4,7 +4,6 @@
 ///   - Health dashboard summaries    (`GET /api/v1/analytics/daily-summary`)
 ///   - Category detail with metrics  (`GET /api/v1/analytics/…` by category)
 ///   - Single metric deep-dive       (`GET /api/v1/analytics/…` by metric)
-///   - Dashboard layout persistence  (`PATCH /api/v1/preferences`)
 ///
 /// Provides a 5-minute in-memory TTL cache per (category, timeRange) key to
 /// avoid redundant requests on navigation back.
@@ -35,14 +34,6 @@ abstract interface class DataRepositoryInterface {
     required String metricId,
     required String timeRange,
   });
-
-  /// Persists a new dashboard layout via the user preferences API.
-  Future<void> saveDashboardLayout(DashboardLayout layout);
-
-  /// Retrieves the persisted [DashboardLayout] from user preferences.
-  ///
-  /// Returns `null` when no layout has been saved yet.
-  Future<DashboardLayout?> getPersistedLayout();
 
   /// Invalidates all caches, forcing fresh fetches.
   void invalidateAll();
@@ -191,34 +182,6 @@ class DataRepository implements DataRepositoryInterface {
         ),
         category: HealthCategory.activity,
       );
-    }
-  }
-
-  // ── Dashboard Layout ──────────────────────────────────────────────────────
-
-  /// Persists a new dashboard layout via the user preferences API.
-  @override
-  Future<void> saveDashboardLayout(DashboardLayout layout) async {
-    await _api.patch(
-      '/api/v1/preferences',
-      body: {'dashboard_layout': layout.toJson()},
-    );
-    _dashboardCache = null; // Force re-fetch on next load.
-  }
-
-  /// Retrieves the persisted [DashboardLayout] from the preferences API.
-  ///
-  /// Returns `null` when no layout has been saved yet or if parsing fails.
-  @override
-  Future<DashboardLayout?> getPersistedLayout() async {
-    try {
-      final response = await _api.get('/api/v1/preferences');
-      final json = response.data as Map<String, dynamic>?;
-      final layoutJson = json?['dashboard_layout'] as Map<String, dynamic>?;
-      if (layoutJson == null) return null;
-      return DashboardLayout.fromJson(layoutJson);
-    } on DioException {
-      return null;
     }
   }
 
