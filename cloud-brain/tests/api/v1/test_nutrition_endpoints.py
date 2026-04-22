@@ -302,3 +302,17 @@ class TestMealTemplateModel:
                          foods_json=json.dumps([{"food_name": "Oats"}]))
         assert t.name == "My breakfast"
         assert json.loads(t.foods_json)[0]["food_name"] == "Oats"
+
+
+# ---------------------------------------------------------------------------
+# Class 8: NutritionDailySummary model — new columns for nutrition tracking
+# ---------------------------------------------------------------------------
+
+
+class TestNutritionDailySummaryNewColumns:
+    def test_summary_model_has_new_fields(self):
+        from app.models.nutrition_daily_summary import NutritionDailySummary
+        assert hasattr(NutritionDailySummary, "total_fiber_g")
+        assert hasattr(NutritionDailySummary, "total_sodium_mg")
+        assert hasattr(NutritionDailySummary, "total_sugar_g")
+        assert hasattr(NutritionDailySummary, "exercise_calories_burned")
