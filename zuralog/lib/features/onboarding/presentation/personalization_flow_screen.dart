@@ -189,10 +189,13 @@ class _PersonalizationFlowScreenState
         'goals': _selectedGoals,
         // Proactivity defaults to medium when not explicitly set in the new flow.
         'proactivity_level': 'medium',
+        'morning_briefing_enabled': _morningEnabled,
         // Morning briefing at 07:30 is the default; the user can change it in Settings.
-        'morning_briefing_time': '07:30',
+        if (_morningEnabled) 'morning_briefing_time': '07:30',
         // checkin_reminder_enabled maps to the weekly insights toggle in this flow.
         'checkin_reminder_enabled': _weeklyEnabled,
+        'nudges_enabled': _nudgesEnabled,
+        if (_source != null) 'discovery_source': _source,
       };
 
       // Only send fitness_level when a selection was actually made to avoid
