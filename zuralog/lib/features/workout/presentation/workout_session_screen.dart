@@ -43,6 +43,8 @@ class _WorkoutSessionScreenState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(workoutSessionProvider.notifier).startSession();
+      // ref.listen is placed here alongside startSession() for proximity.
+      // It is safe to call outside the callback too, but kept together for clarity.
       // Auto-expand the last exercise when new ones are added from the catalogue.
       ref.listen(
         workoutSessionProvider.select((s) => s?.exercises.length ?? 0),
@@ -208,9 +210,6 @@ class _WorkoutSessionScreenState
                         padding: const EdgeInsets.only(bottom: AppDimens.spaceLg),
                         itemCount: exercises.length,
                         itemBuilder: (_, i) {
-                          final exercises =
-                              ref.watch(workoutSessionProvider)?.exercises ?? [];
-                          if (exercises.isEmpty) return const SizedBox.shrink();
                           final safeIndex = _activeExerciseIndex.clamp(0, exercises.length - 1);
                           return WorkoutExerciseCard(
                             key: ValueKey(exercises[i].exerciseId),
