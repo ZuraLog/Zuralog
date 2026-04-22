@@ -124,7 +124,7 @@ class ActivePillBody extends ConsumerWidget {
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(0, AppDimens.spaceXs, 0, 0),
+        padding: const EdgeInsets.fromLTRB(0, AppDimens.spaceSm, 0, AppDimens.spaceSm),
         child: Material(
           color: bgColor,
           shape: RoundedRectangleBorder(
