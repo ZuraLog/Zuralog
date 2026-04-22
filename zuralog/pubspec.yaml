@@ -143,6 +143,7 @@ flutter:
     - assets/fonts/
     - assets/icons/
     - assets/images/
+    - assets/images/exercises/
     - assets/brand/pattern/
     - assets/welcome/
     - assets/journal/

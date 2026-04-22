@@ -88,12 +88,18 @@ class ExerciseGridTile extends ConsumerWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Container(color: groupColor.withValues(alpha: 0.18)),
-                    Center(
-                      child: Icon(
-                        muscleGroupIcon(exercise.muscleGroup),
-                        size: AppDimens.emojiMd,
-                        color: groupColor,
+                    Image.asset(
+                      'assets/images/exercises/${exercise.id}.webp',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stack) => Container(
+                        color: groupColor.withValues(alpha: 0.18),
+                        child: Center(
+                          child: Icon(
+                            muscleGroupIcon(exercise.muscleGroup),
+                            size: AppDimens.emojiMd,
+                            color: groupColor,
+                          ),
+                        ),
                       ),
                     ),
                     // Bookmark icon — top-left
