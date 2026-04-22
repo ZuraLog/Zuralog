@@ -749,18 +749,6 @@ class _HeartScreen3State extends State<HeartScreen3>
                       ],
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  RevealAnimation(
-                    delay: const Duration(milliseconds: 850),
-                    child: Text(
-                      'HRV is a preview feature. It gets better the longer you use ZuraLog.',
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.45),
-                      ),
-                    ),
-                  ),
                   const Spacer(),
                   TourPrimaryButton(
                     label: 'Continue',
@@ -915,7 +903,7 @@ class HeartScreen4 extends StatelessWidget {
                   RevealAnimation(
                     delay: const Duration(milliseconds: 100),
                     child: Text(
-                      'MORNING. 7:42',
+                      'THIS MORNING',
                       style: TextStyle(
                         fontFamily: 'PlusJakartaSans',
                         fontSize: 11,
@@ -929,7 +917,7 @@ class HeartScreen4 extends StatelessWidget {
                   RevealAnimation(
                     delay: const Duration(milliseconds: 220),
                     child: const Text(
-                      'High energy today.',
+                      'You recovered well.',
                       style: TextStyle(
                         fontFamily: 'PlusJakartaSans',
                         fontSize: 30,
@@ -942,7 +930,7 @@ class HeartScreen4 extends StatelessWidget {
                   const SizedBox(height: 20),
                   RevealAnimation(
                     delay: const Duration(milliseconds: 380),
-                    child: _EnergyCard(),
+                    child: _RecoveryCard(),
                   ),
                   const SizedBox(height: 14),
                   RevealAnimation(
