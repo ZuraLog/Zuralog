@@ -58,6 +58,8 @@ from app.api.v1.nutrition_schemas import (
 from app.config import settings
 from app.database import get_db
 from app.limiter import limiter
+from app.api.v1.exercise_schemas import ExerciseEntryCreate, ExerciseEntryResponse
+from app.models.exercise_entry import ExerciseEntry
 from app.models.food_cache import FoodCache
 from app.models.meal import Meal
 from app.models.meal_food import MealFood
@@ -1749,3 +1751,114 @@ async def lookup_barcode(
         "fat_per_serving": round(float(fat), 2),
         "source": "openfoodfacts",
     }}
+
+
+# ---------------------------------------------------------------------------
+# Exercise Calorie Endpoints (Task 2.3)
+# ---------------------------------------------------------------------------
+
+
+def _exercise_to_response(entry: ExerciseEntry) -> ExerciseEntryResponse:
+    """Convert an ExerciseEntry ORM row to the API response shape."""
+    return ExerciseEntryResponse(
+        id=str(entry.id),
+        activity=entry.activity_name,
+        # duration_minutes is not stored in the DB — default to 0 for now.
+        duration_minutes=0,
+        calories_burned=entry.calories_burned,
+        # Use created_at as the user-visible timestamp.
+        logged_at=entry.created_at,
+    )
+
+
+@limiter.limit("30/minute")
+@router.post(
+    "/exercise",
+    status_code=status.HTTP_201_CREATED,
+    response_model=ExerciseEntryResponse,
+)
+async def create_exercise_entry(
+    request: Request,
+    body: ExerciseEntryCreate,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> ExerciseEntryResponse:
+    """Log a manual exercise entry and recompute the daily calorie summary.
+
+    Returns the saved entry with status 201.
+    """
+    entry = ExerciseEntry(
+        user_id=user_id,
+        date=date.today(),
+        activity_name=body.activity,
+        calories_burned=body.calories_burned,
+        source="manual",
+    )
+    db.add(entry)
+    await db.commit()
+    await db.refresh(entry)
+
+    # Recompute daily summary so the net-calorie budget stays accurate.
+    try:
+        await recompute_nutrition_summary(db, user_id, date.today())
+    except Exception:
+        logger.exception("Failed to recompute nutrition summary after exercise entry create")
+
+    return _exercise_to_response(entry)
+
+
+@limiter.limit("60/minute")
+@router.get(
+    "/exercise/today",
+    response_model=list[ExerciseEntryResponse],
+)
+async def get_today_exercise_entries(
+    request: Request,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> list[ExerciseEntryResponse]:
+    """Return all exercise entries the user has logged today."""
+    result = await db.execute(
+        select(ExerciseEntry).where(
+            ExerciseEntry.user_id == user_id,
+            ExerciseEntry.date == date.today(),
+        )
+    )
+    entries = result.scalars().all()
+    return [_exercise_to_response(e) for e in entries]
+
+
+@limiter.limit("30/minute")
+@router.delete(
+    "/exercise/{entry_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_exercise_entry(
+    request: Request,
+    entry_id: str,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Delete an exercise entry. Returns 404 if not found or not owned by the caller."""
+    result = await db.execute(
+        select(ExerciseEntry).where(
+            ExerciseEntry.id == entry_id,
+            ExerciseEntry.user_id == user_id,
+        )
+    )
+    entry = result.scalar_one_or_none()
+    if not entry:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Exercise entry not found.",
+        )
+
+    entry_date = entry.date
+    await db.delete(entry)
+    await db.commit()
+
+    # Recompute so the daily budget reflects the removed burn.
+    try:
+        await recompute_nutrition_summary(db, user_id, entry_date)
+    except Exception:
+        logger.exception("Failed to recompute nutrition summary after exercise entry delete")
