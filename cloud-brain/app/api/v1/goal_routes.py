@@ -48,6 +48,12 @@ _TYPE_TO_METRIC: dict[str, str] = {
     "sleep_duration": "sleep_hours",
     "weekly_run_count": "workouts",
     "water_intake": "water_intake",
+    "daily_protein_min": "nutrition.daily_protein_g",
+    "daily_carbs_max": "nutrition.daily_carbs_g",
+    "daily_fat_max": "nutrition.daily_fat_g",
+    "daily_fiber_min": "nutrition.daily_fiber_g",
+    "daily_sodium_max": "nutrition.daily_sodium_mg",
+    "daily_sugar_max": "nutrition.daily_sugar_g",
     "custom": "custom",
 }
 

@@ -287,6 +287,21 @@ class TestMealFoodSchemaFiberSodiumSugar:
 
 
 # ---------------------------------------------------------------------------
+# Class 9: Nutrition goal type slugs
+# ---------------------------------------------------------------------------
+
+
+class TestNutritionGoalTypeSlugs:
+    @pytest.mark.parametrize("slug", [
+        "daily_protein_min", "daily_carbs_max", "daily_fat_max",
+        "daily_fiber_min", "daily_sodium_max", "daily_sugar_max",
+    ])
+    def test_new_nutrition_goal_slugs_are_in_valid_types(self, slug):
+        from app.api.v1.goal_schemas import VALID_TYPES
+        assert slug in VALID_TYPES
+
+
+# ---------------------------------------------------------------------------
 # Class 6: ExerciseEntry model — manual exercise calorie tracking
 # ---------------------------------------------------------------------------
 
