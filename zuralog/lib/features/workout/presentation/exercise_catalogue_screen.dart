@@ -56,6 +56,7 @@ class _ExerciseCatalogueScreenState
     final colors = AppColorsOf(context);
     final resultsAsync = ref.watch(exerciseSearchProvider);
     final currentFilter = ref.watch(exerciseMuscleGroupFilterProvider);
+    final currentEquipmentFilter = ref.watch(exerciseEquipmentFilterProvider);
     final bookmarksOnly = ref.watch(exerciseBookmarksOnlyFilterProvider);
 
     return ZuralogScaffold(
@@ -99,14 +100,11 @@ class _ExerciseCatalogueScreenState
                     icon: Icons.bookmark_rounded,
                     isActive: bookmarksOnly,
                     onTap: () {
-                      ref
-                          .read(exerciseBookmarksOnlyFilterProvider.notifier)
-                          .state = !bookmarksOnly;
+                      ref.read(exerciseBookmarksOnlyFilterProvider.notifier).state =
+                          !bookmarksOnly;
                       if (!bookmarksOnly) {
-                        // Activating bookmarks — clear muscle group filter.
-                        ref
-                            .read(exerciseMuscleGroupFilterProvider.notifier)
-                            .state = null;
+                        ref.read(exerciseMuscleGroupFilterProvider.notifier).state = null;
+                        ref.read(exerciseEquipmentFilterProvider.notifier).state = null;
                       }
                     },
                   ),
@@ -140,6 +138,46 @@ class _ExerciseCatalogueScreenState
                         ref
                             .read(exerciseMuscleGroupFilterProvider.notifier)
                             .state = currentFilter == group ? null : group;
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          // Equipment filter chips
+          SizedBox(
+            height: AppDimens.iconContainerMd,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceMd),
+              children: [
+                Padding(
+                  padding:
+                      const EdgeInsets.only(right: AppDimens.spaceSm),
+                  child: ZChip(
+                    label: 'All',
+                    isActive: currentEquipmentFilter == null,
+                    onTap: () {
+                      ref
+                          .read(exerciseEquipmentFilterProvider.notifier)
+                          .state = null;
+                    },
+                  ),
+                ),
+                for (final eq in Equipment.values
+                    .where((e) => e != Equipment.other))
+                  Padding(
+                    padding:
+                        const EdgeInsets.only(right: AppDimens.spaceSm),
+                    child: ZChip(
+                      label: eq.label,
+                      isActive: currentEquipmentFilter == eq,
+                      onTap: () {
+                        ref
+                            .read(exerciseEquipmentFilterProvider.notifier)
+                            .state =
+                            currentEquipmentFilter == eq ? null : eq;
                       },
                     ),
                   ),
