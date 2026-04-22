@@ -269,3 +269,21 @@ class TestMealFoodNewColumns:
         assert hasattr(food, "fiber_g")
         assert hasattr(food, "sodium_mg")
         assert hasattr(food, "sugar_g")
+
+
+# ---------------------------------------------------------------------------
+# Class 6: ExerciseEntry model — manual exercise calorie tracking
+# ---------------------------------------------------------------------------
+
+
+class TestExerciseEntryModel:
+    def test_exercise_entry_model_fields(self):
+        from app.models.exercise_entry import ExerciseEntry
+        from datetime import date
+        entry = ExerciseEntry(
+            user_id="user-1", date=date.today(),
+            activity_name="Morning run", calories_burned=350, source="manual",
+        )
+        assert entry.activity_name == "Morning run"
+        assert entry.source == "manual"
+        assert entry.session_id is None
