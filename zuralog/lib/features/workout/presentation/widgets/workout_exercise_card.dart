@@ -1,7 +1,13 @@
 /// Zuralog — Workout Exercise Card.
 ///
-/// One card per exercise in the active session. Contains:
-/// - Header: muscle-group icon bubble, exercise name, 3-dot action menu.
+/// One card per exercise in the active session. Renders in two modes:
+///
+/// **Collapsed** (default): shows muscle-group icon bubble, exercise name,
+/// a completion badge (e.g. "2 / 3 sets"), and an expand_more chevron.
+/// Tapping anywhere on the header expands the card.
+///
+/// **Expanded**: shows muscle-group icon bubble, exercise name, and a
+/// 3-dot (more_vert) action menu in the header. Below the header:
 /// - Notes field (auto-saved).
 /// - Rest Timer row (switch + duration summary). The duration label taps
 ///   to a "coming soon" toast — Plan 3 builds the popup.
@@ -173,7 +179,7 @@ class _WorkoutExerciseCardState extends ConsumerState<WorkoutExerciseCard> {
 
     final completedCount = ex.sets.where((s) => s.isCompleted).length;
     final totalCount = ex.sets.length;
-    final allDone = completedCount == totalCount;
+    final allDone = totalCount > 0 && completedCount == totalCount;
 
     final muscleIconBubble = Container(
       width: 36,
