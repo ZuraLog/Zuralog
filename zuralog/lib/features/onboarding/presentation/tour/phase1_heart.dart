@@ -569,7 +569,7 @@ class HeartScreen2 extends StatelessWidget {
                           const SizedBox(width: 14),
                           Expanded(
                             child: Text(
-                              'Sleeping longer this week with consistent training. That is why your heart is resting easier.',
+                              'Your resting HR dropped 6 bpm over 7 days — that\'s a training adaptation signal. It aligns with the increase in your weekly training load.',
                               style: TextStyle(
                                 fontFamily: 'PlusJakartaSans',
                                 fontSize: 14,

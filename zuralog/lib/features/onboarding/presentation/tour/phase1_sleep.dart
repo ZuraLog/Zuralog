@@ -834,7 +834,7 @@ class SleepScreen4 extends StatelessWidget {
                             _SleepHeatmap(color: _sleep),
                             const SizedBox(height: 14),
                             Text(
-                              'On days you trained, you slept 47 minutes longer on average. Your deep sleep nearly doubled.',
+                              'On 4 of your last 5 training days, sleep duration exceeded your 7-day average by 38 minutes. Your body is asking for recovery.',
                               style: TextStyle(
                                 fontFamily: 'PlusJakartaSans',
                                 fontSize: 13,
