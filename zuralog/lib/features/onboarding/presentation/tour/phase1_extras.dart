@@ -164,51 +164,111 @@ class JournalScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  RevealAnimation(
-                    delay: const Duration(milliseconds: 360),
-                    child: TourStatCard(
-                      color: AppColors.primary,
+                  Expanded(
+                    child: SingleChildScrollView(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Feeling steadier today. Slept well, ate well. Took a long walk before lunch and noticed how clear my head felt afterwards.',
-                            style: TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 15,
-                              fontStyle: FontStyle.italic,
-                              height: 1.55,
-                              color: Colors.white.withValues(alpha: 0.75),
+                          RevealAnimation(
+                            delay: const Duration(milliseconds: 360),
+                            child: TourStatCard(
+                              color: AppColors.primary,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Feeling steadier today. Slept well, ate well. Took a long walk before lunch and noticed how clear my head felt afterwards.',
+                                    style: TextStyle(
+                                      fontFamily: 'PlusJakartaSans',
+                                      fontSize: 15,
+                                      fontStyle: FontStyle.italic,
+                                      height: 1.55,
+                                      color: Colors.white.withValues(alpha: 0.75),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      TourChip(label: 'Calm', color: AppColors.primary),
+                                      const SizedBox(width: 8),
+                                      TourChip(label: 'Energized', color: AppColors.categoryActivity),
+                                      const SizedBox(width: 8),
+                                      TourChip(label: 'Rested', color: AppColors.categorySleep),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                           const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              TourChip(label: 'Calm', color: AppColors.primary),
-                              const SizedBox(width: 8),
-                              TourChip(label: 'Energized', color: AppColors.categoryActivity),
-                              const SizedBox(width: 8),
-                              TourChip(label: 'Rested', color: AppColors.categorySleep),
-                            ],
+                          RevealAnimation(
+                            delay: const Duration(milliseconds: 480),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: AppColors.primary.withValues(alpha: 0.22),
+                                  width: 0.5,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.insights_rounded,
+                                        size: 16,
+                                        color: AppColors.primary,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'PATTERN FOUND',
+                                        style: TextStyle(
+                                          fontFamily: 'PlusJakartaSans',
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: 1.5,
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'On days you write about stress, your resting heart rate averages 4 bpm higher the next morning.',
+                                    style: TextStyle(
+                                      fontFamily: 'PlusJakartaSans',
+                                      fontSize: 13,
+                                      height: 1.55,
+                                      color: Colors.white.withValues(alpha: 0.82),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
+                          const SizedBox(height: 20),
+                          RevealAnimation(
+                            delay: const Duration(milliseconds: 550),
+                            child: Text(
+                              'ZuraLog reads your journal over time to find patterns. No human ever sees it.',
+                              style: TextStyle(
+                                fontFamily: 'PlusJakartaSans',
+                                fontSize: 13,
+                                height: 1.5,
+                                color: Colors.white.withValues(alpha: 0.55),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  RevealAnimation(
-                    delay: const Duration(milliseconds: 550),
-                    child: Text(
-                      'ZuraLog reads your journal over time to find patterns. No human ever sees it.',
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 13,
-                        height: 1.5,
-                        color: Colors.white.withValues(alpha: 0.55),
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
                   RevealAnimation(
                     delay: const Duration(milliseconds: 900),
                     child: TourPrimaryButton(
