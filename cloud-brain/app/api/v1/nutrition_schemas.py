@@ -38,6 +38,9 @@ class FoodItemRequest(BaseModel):
         protein_g: Protein in grams (>= 0).
         carbs_g: Carbohydrates in grams (>= 0).
         fat_g: Fat in grams (>= 0).
+        fiber_g: Dietary fiber in grams (>= 0, optional).
+        sodium_mg: Sodium in milligrams (>= 0, optional).
+        sugar_g: Total sugar in grams (>= 0, optional).
         origin: Optional tag ("user" or "from_answer") marking how this
             food landed on the meal. Only set for foods added via the
             guided walkthrough.
@@ -54,6 +57,9 @@ class FoodItemRequest(BaseModel):
     protein_g: float = Field(..., ge=0)
     carbs_g: float = Field(..., ge=0)
     fat_g: float = Field(..., ge=0)
+    fiber_g: float = Field(default=0.0, ge=0)
+    sodium_mg: float = Field(default=0.0, ge=0)
+    sugar_g: float = Field(default=0.0, ge=0)
     origin: Literal["user", "from_answer"] | None = None
     source_question_id: str | None = None
     source_answer_value: str | None = None
@@ -166,6 +172,9 @@ class ParsedFoodItem(BaseModel):
     protein_g: float
     carbs_g: float
     fat_g: float
+    fiber_g: float = Field(default=0.0, ge=0.0)
+    sodium_mg: float = Field(default=0.0, ge=0.0)
+    sugar_g: float = Field(default=0.0, ge=0.0)
     confidence: float = Field(default=0.5, ge=0.0, le=1.0)
     applied_rules: list[str] = Field(default_factory=list)
     origin: Literal["user", "from_answer"] = "user"
@@ -195,6 +204,11 @@ class ParsedFoodItem(BaseModel):
     @field_validator("protein_g", "carbs_g", "fat_g")
     @classmethod
     def clamp_macros(cls, v: float) -> float:
+        return max(0.0, min(999.0, round(v, 1)))
+
+    @field_validator("fiber_g", "sodium_mg", "sugar_g")
+    @classmethod
+    def clamp_micronutrients(cls, v: float) -> float:
         return max(0.0, min(999.0, round(v, 1)))
 
     @field_validator("confidence")
@@ -227,6 +241,9 @@ class OnAnswerFood(BaseModel):
     protein_g: float
     carbs_g: float
     fat_g: float
+    fiber_g: float = Field(default=0.0, ge=0.0)
+    sodium_mg: float = Field(default=0.0, ge=0.0)
+    sugar_g: float = Field(default=0.0, ge=0.0)
 
     @field_validator("food_name")
     @classmethod
@@ -251,6 +268,11 @@ class OnAnswerFood(BaseModel):
     @field_validator("protein_g", "carbs_g", "fat_g")
     @classmethod
     def clamp_macros(cls, v: float) -> float:
+        return max(0.0, min(999.0, round(v, 1)))
+
+    @field_validator("fiber_g", "sodium_mg", "sugar_g")
+    @classmethod
+    def clamp_micronutrients(cls, v: float) -> float:
         return max(0.0, min(999.0, round(v, 1)))
 
 

@@ -93,6 +93,9 @@ Rules:
    - "protein_g": number (estimated protein in grams)
    - "carbs_g": number (estimated carbohydrates in grams)
    - "fat_g": number (estimated fat in grams)
+   - "fiber_g": number (optional, grams of dietary fiber)
+   - "sodium_mg": number (optional, milligrams of sodium)
+   - "sugar_g": number (optional, grams of total sugar)
    - "confidence": number (0.0 to 1.0 — how confident you are in this specific item's nutritional estimate. Use 0.8+ for well-known standard foods, 0.5-0.8 for reasonable guesses, below 0.5 for very uncertain items)
    - "applied_rules": array of strings (which user rules you used while estimating this food — see APPLIED RULES below)
 3. Separate compound items. "Toast with butter" becomes two items: toast and butter.
@@ -196,6 +199,9 @@ Rules:
    - "protein_g": number (estimated protein in grams)
    - "carbs_g": number (estimated carbohydrates in grams)
    - "fat_g": number (estimated fat in grams)
+   - "fiber_g": number (optional, grams of dietary fiber)
+   - "sodium_mg": number (optional, milligrams of sodium)
+   - "sugar_g": number (optional, grams of total sugar)
    - "confidence": number (0.0 to 1.0)
    - "applied_rules": array of strings (which user rules you used while estimating this food — see APPLIED RULES below)
 3. For nutrition labels: read exact values. Set confidence to 0.95.
@@ -689,6 +695,9 @@ async def create_meal(
             protein_g=food_req.protein_g,
             carbs_g=food_req.carbs_g,
             fat_g=food_req.fat_g,
+            fiber_g=food_req.fiber_g,
+            sodium_mg=food_req.sodium_mg,
+            sugar_g=food_req.sugar_g,
             origin=food_req.origin,
             source_question_id=food_req.source_question_id,
             source_answer_value=food_req.source_answer_value,
@@ -799,6 +808,9 @@ async def update_meal(
             protein_g=food_req.protein_g,
             carbs_g=food_req.carbs_g,
             fat_g=food_req.fat_g,
+            fiber_g=food_req.fiber_g,
+            sodium_mg=food_req.sodium_mg,
+            sugar_g=food_req.sugar_g,
             origin=food_req.origin,
             source_question_id=food_req.source_question_id,
             source_answer_value=food_req.source_answer_value,

@@ -271,6 +271,21 @@ class TestMealFoodNewColumns:
         assert hasattr(food, "sugar_g")
 
 
+class TestMealFoodSchemaFiberSodiumSugar:
+    def test_food_item_request_has_fiber_sodium_sugar_defaults(self):
+        from app.api.v1.nutrition_schemas import FoodItemRequest
+        item = FoodItemRequest(
+            food_name="oatmeal", portion_amount=1, portion_unit="cup",
+            calories=300, protein_g=10, carbs_g=54, fat_g=5,
+        )
+        assert hasattr(item, "fiber_g")
+        assert hasattr(item, "sodium_mg")
+        assert hasattr(item, "sugar_g")
+        assert item.fiber_g == 0.0
+        assert item.sodium_mg == 0.0
+        assert item.sugar_g == 0.0
+
+
 # ---------------------------------------------------------------------------
 # Class 6: ExerciseEntry model — manual exercise calorie tracking
 # ---------------------------------------------------------------------------
