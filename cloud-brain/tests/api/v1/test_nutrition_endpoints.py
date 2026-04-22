@@ -250,3 +250,22 @@ class TestNutritionTodayAiSummary:
 
         assert resp.status_code == 200
         assert resp.json()["summary"] is None
+
+
+# ---------------------------------------------------------------------------
+# Class 5: MealFood model — new columns for nutrition tracking
+# ---------------------------------------------------------------------------
+
+
+class TestMealFoodNewColumns:
+    def test_meal_food_model_has_fiber_sodium_sugar(self):
+        from app.models.meal_food import MealFood
+        import uuid
+        food = MealFood(
+            meal_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+            food_name="Apple", portion_amount=150.0, portion_unit="g",
+            calories=78.0, protein_g=0.4, carbs_g=21.0, fat_g=0.2,
+        )
+        assert hasattr(food, "fiber_g")
+        assert hasattr(food, "sodium_mg")
+        assert hasattr(food, "sugar_g")
