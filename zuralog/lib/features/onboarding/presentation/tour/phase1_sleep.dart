@@ -560,7 +560,7 @@ class SleepScreen2 extends StatelessWidget {
                     RevealAnimation(
                       delay: const Duration(milliseconds: 80),
                       child: Text(
-                        'SLEEP SCORE',
+                        'LAST NIGHT',
                         style: TextStyle(
                           fontFamily: 'PlusJakartaSans',
                           fontSize: 11,
@@ -573,30 +573,15 @@ class SleepScreen2 extends StatelessWidget {
                     const SizedBox(height: 8),
                     RevealAnimation(
                       delay: const Duration(milliseconds: 160),
-                      child: RichText(
-                        text: TextSpan(
-                          children: [
-                            const TextSpan(
-                              text: '88',
-                              style: TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 28,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.8,
-                                color: Colors.white,
-                              ),
-                            ),
-                            TextSpan(
-                              text: ' / 100',
-                              style: TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 28,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.8,
-                                color: Colors.white.withValues(alpha: 0.4),
-                              ),
-                            ),
-                          ],
+                      child: const Text(
+                        'Last night, by the numbers.',
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.8,
+                          color: Colors.white,
+                          height: 1.2,
                         ),
                       ),
                     ),
@@ -640,7 +625,7 @@ class SleepScreen2 extends StatelessWidget {
                       child: _InsightBox(
                         color: _sleep,
                         text:
-                            'Tonight: head to bed by 10:48pm to hit 88+ again.',
+                            'Tonight: head to bed by 10:48pm for another solid night like this.',
                       ),
                     ),
                     const SizedBox(height: 24),
