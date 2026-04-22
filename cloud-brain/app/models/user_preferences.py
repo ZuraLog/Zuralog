@@ -283,6 +283,22 @@ class UserPreferences(Base):
         comment="beginner | active | athletic — set during onboarding",
     )
 
+    # Real-time nudges (notification-adjacent)
+    nudges_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default="false",
+        nullable=False,
+        comment="Whether real-time nudges are enabled",
+    )
+
+    # Onboarding attribution (set once)
+    discovery_source: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+        comment="How the user discovered ZuraLog (set once during onboarding)",
+    )
+
     # Timezone for scheduling fan-out (e.g. 6 AM local)
     timezone: Mapped[str] = mapped_column(
         String(50),

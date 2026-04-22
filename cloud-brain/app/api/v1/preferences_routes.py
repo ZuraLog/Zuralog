@@ -78,6 +78,8 @@ class PreferencesResponse(BaseModel):
     data_maturity_banner_dismissed: bool = False
     analytics_opt_out: bool = False
     memory_enabled: bool = True
+    nudges_enabled: bool = False
+    discovery_source: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -125,6 +127,8 @@ class PreferencesUpdate(BaseModel):
     data_maturity_banner_dismissed: bool | None = None
     analytics_opt_out: bool | None = None
     memory_enabled: bool | None = None
+    nudges_enabled: bool | None = None
+    discovery_source: str | None = None
 
 
 class PreferencesCreate(BaseModel):
@@ -155,6 +159,8 @@ class PreferencesCreate(BaseModel):
     data_maturity_banner_dismissed: bool | None = None
     analytics_opt_out: bool | None = None
     memory_enabled: bool | None = None
+    nudges_enabled: bool | None = None
+    discovery_source: str | None = None
 
 
 # ---------------------------------------------------------------------------
