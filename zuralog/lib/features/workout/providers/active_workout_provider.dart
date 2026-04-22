@@ -149,6 +149,9 @@ final activeWorkoutSnapshotProvider = Provider<ActiveWorkoutSnapshot>((ref) {
 final workoutServiceBridgeProvider = Provider<void>((ref) {
   final controller = ref.watch(workoutServiceControllerProvider);
   final notifications = ref.watch(workoutNotificationsProvider);
+  // Initialize local-notification plumbing so rest-end alerts can fire.
+  // initialize() is idempotent — safe across hot-restarts.
+  unawaited(notifications.initialize());
   final liveActivity = ref.watch(liveActivityBridgeProvider);
   // Phase 10: scaffold for future Apple Watch / Wear OS companion apps.
   // The native sides are stubs today — `broadcast` is a no-op until those
