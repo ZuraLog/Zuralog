@@ -272,21 +272,36 @@ class WorkoutSession {
     required this.id,
     required this.startedAt,
     required this.exercises,
+    this.pausedAt,
+    this.totalPausedDuration = Duration.zero,
   });
 
   final String id;
   final DateTime startedAt;
   final List<WorkoutExercise> exercises;
 
+  /// Non-null while the workout clock is paused.
+  final DateTime? pausedAt;
+
+  /// Cumulative time the user has spent paused across all pause/resume cycles.
+  final Duration totalPausedDuration;
+
+  bool get isPaused => pausedAt != null;
+
   WorkoutSession copyWith({
     String? id,
     DateTime? startedAt,
     List<WorkoutExercise>? exercises,
+    DateTime? pausedAt,
+    Duration? totalPausedDuration,
+    bool clearPausedAt = false,
   }) {
     return WorkoutSession(
       id: id ?? this.id,
       startedAt: startedAt ?? this.startedAt,
       exercises: exercises ?? this.exercises,
+      pausedAt: clearPausedAt ? null : (pausedAt ?? this.pausedAt),
+      totalPausedDuration: totalPausedDuration ?? this.totalPausedDuration,
     );
   }
 
@@ -295,6 +310,8 @@ class WorkoutSession {
         'startedAt': startedAt.toUtc().toIso8601String(),
         'exercises':
             exercises.map((e) => e.toJson()).toList(growable: false),
+        'pausedAt': pausedAt?.toUtc().toIso8601String(),
+        'totalPausedDurationMs': totalPausedDuration.inMilliseconds,
       };
 
   factory WorkoutSession.fromJson(Map<String, dynamic> json) =>
@@ -307,6 +324,13 @@ class WorkoutSession {
             .whereType<Map<String, dynamic>>()
             .map(WorkoutExercise.fromJson)
             .toList(growable: false),
+        pausedAt: json['pausedAt'] != null
+            ? DateTime.tryParse(json['pausedAt'] as String)?.toLocal()
+            : null,
+        totalPausedDuration: Duration(
+          milliseconds:
+              (json['totalPausedDurationMs'] as num?)?.toInt() ?? 0,
+        ),
       );
 
   @override
@@ -315,10 +339,18 @@ class WorkoutSession {
       (other is WorkoutSession &&
           other.id == id &&
           other.startedAt == startedAt &&
-          listEquals(other.exercises, exercises));
+          listEquals(other.exercises, exercises) &&
+          other.pausedAt == pausedAt &&
+          other.totalPausedDuration == totalPausedDuration);
 
   @override
-  int get hashCode => Object.hash(id, startedAt, Object.hashAll(exercises));
+  int get hashCode => Object.hash(
+        id,
+        startedAt,
+        Object.hashAll(exercises),
+        pausedAt,
+        totalPausedDuration,
+      );
 }
 
 /// Returns the effective unit system for [exercise]: the per-exercise

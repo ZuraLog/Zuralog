@@ -30,15 +30,21 @@ class WorkoutPreferences {
 
   final SharedPreferences _prefs;
 
-  /// Storage key for the rest-completion sound toggle.
   static const String kRestSoundEnabledKey = 'workout_rest_sound_enabled';
+  static const String kDefaultRestSecondsKey = 'workout_default_rest_seconds';
+  static const int kDefaultRestSecondsValue = 90;
 
-  /// Whether the rest-complete chime is enabled. Defaults to `true`.
   bool get restSoundEnabled => _prefs.getBool(kRestSoundEnabledKey) ?? true;
 
-  /// Persists the rest-sound toggle.
   Future<void> setRestSoundEnabled(bool value) async {
     await _prefs.setBool(kRestSoundEnabledKey, value);
+  }
+
+  int get defaultRestSeconds =>
+      _prefs.getInt(kDefaultRestSecondsKey) ?? kDefaultRestSecondsValue;
+
+  Future<void> setDefaultRestSeconds(int value) async {
+    await _prefs.setInt(kDefaultRestSecondsKey, value);
   }
 }
 

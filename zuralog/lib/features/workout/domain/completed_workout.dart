@@ -156,7 +156,9 @@ class CompletedWorkout {
 
     final startUtc = session.startedAt.toUtc();
     final endUtc = completedAt.toUtc();
-    final durationSecs = endUtc.difference(startUtc).inSeconds;
+    final rawSecs = endUtc.difference(startUtc).inSeconds;
+    final pausedSecs = session.totalPausedDuration.inSeconds;
+    final durationSecs = (rawSecs - pausedSecs).clamp(0, rawSecs);
 
     return CompletedWorkout(
       id: _uuid.v4(),

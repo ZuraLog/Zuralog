@@ -28,6 +28,7 @@ import 'package:zuralog/features/workout/domain/exercise.dart' show MuscleGroup;
 import 'package:zuralog/features/workout/domain/workout_session.dart';
 import 'package:zuralog/features/workout/presentation/widgets/exercise_grid_tile.dart'
     show muscleGroupColor, muscleGroupIcon;
+import 'package:zuralog/features/workout/presentation/widgets/rest_timer_editor_sheet.dart';
 import 'package:zuralog/features/workout/providers/rest_timer_provider.dart';
 import 'package:zuralog/features/workout/providers/workout_session_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
@@ -314,7 +315,17 @@ class _WorkoutExerciseCardState extends ConsumerState<WorkoutExerciseCard> {
                       const Spacer(),
                       if (ex.restTimerEnabled)
                         GestureDetector(
-                          onTap: () => _comingSoon('Rest timer settings'),
+                          onTap: () async {
+                            HapticFeedback.selectionClick();
+                            await ZBottomSheet.show<void>(
+                              context,
+                              title: 'Rest Timer',
+                              child: RestTimerEditorSheet(
+                                exerciseId: ex.exerciseId,
+                                initialSeconds: ex.restTimerWorkingSeconds,
+                              ),
+                            );
+                          },
                           child: Text(
                             _formatRestSeconds(ex.restTimerWorkingSeconds),
                             style: AppTextStyles.bodyMedium

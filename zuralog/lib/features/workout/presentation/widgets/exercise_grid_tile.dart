@@ -84,8 +84,7 @@ class ExerciseGridTile extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              AspectRatio(
-                aspectRatio: 16 / 10,
+              Expanded(
                 child: Stack(
                   fit: StackFit.expand,
                   children: [

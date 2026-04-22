@@ -414,13 +414,19 @@ List<RouteBase> _buildRoutes() {
       path: RouteNames.workoutSummaryPath,
       name: RouteNames.workoutSummary,
       pageBuilder: (context, state) {
-        final workout = state.extra is CompletedWorkout
-            ? state.extra as CompletedWorkout
-            : null;
+        CompletedWorkout? workout;
+        bool isPreview = false;
+        final extra = state.extra;
+        if (extra is CompletedWorkout) {
+          workout = extra;
+        } else if (extra is Map<String, dynamic>) {
+          workout = extra['workout'] as CompletedWorkout?;
+          isPreview = extra['isPreview'] as bool? ?? false;
+        }
         return MaterialPage(
           child: SentryErrorBoundary(
             module: 'workout.summary',
-            child: WorkoutSummaryScreen(workout: workout),
+            child: WorkoutSummaryScreen(workout: workout, isPreview: isPreview),
           ),
         );
       },

@@ -15,7 +15,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
-import 'package:zuralog/features/workout/domain/completed_workout.dart';
 import 'package:zuralog/features/workout/domain/exercise.dart';
 import 'package:zuralog/features/workout/presentation/widgets/rest_timer_morph.dart';
 import 'package:zuralog/features/workout/presentation/widgets/rest_timer_sheet.dart';
@@ -40,16 +39,6 @@ class _WorkoutSessionScreenState
   @override
   void initState() {
     super.initState();
-    // Register the listener immediately — safe in initState.
-    // Advance the expanded card to the last-added exercise whenever new ones arrive.
-    ref.listen(
-      workoutSessionProvider.select((s) => s?.exercises.length ?? 0),
-      (prev, next) {
-        if (next > (prev ?? 0) && next > 0) {
-          setState(() => _activeExerciseIndex = next - 1);
-        }
-      },
-    );
     // Defer the mutation to after the first frame — required by Riverpod.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -112,18 +101,14 @@ class _WorkoutSessionScreenState
     }
     if (!mounted) return;
 
-    final history = ref.read(workoutHistoryRepositoryProvider);
-    final CompletedWorkout? completed =
-        await ref.read(workoutSessionProvider.notifier).finishSession(history);
+    // Build a preview without saving — the summary screen handles saving.
+    final preview =
+        ref.read(workoutSessionProvider.notifier).buildCompletedPreview();
+    if (!mounted || preview == null) return;
 
-    // Invalidate so the history screen shows this workout on next visit.
-    ref.invalidate(workoutHistoryProvider);
-
-    if (!mounted || completed == null) return;
-    ref.read(restTimerProvider.notifier).skip();
-    context.pushReplacement(
+    context.push(
       RouteNames.workoutSummaryPath,
-      extra: completed,
+      extra: <String, dynamic>{'workout': preview, 'isPreview': true},
     );
   }
 
@@ -163,9 +148,21 @@ class _WorkoutSessionScreenState
 
   @override
   Widget build(BuildContext context) {
+    // Must be in build() — safe per Riverpod spec.
+    // Advance the expanded card whenever new exercises are added.
+    ref.listen(
+      workoutSessionProvider.select((s) => s?.exercises.length ?? 0),
+      (prev, next) {
+        if (next > (prev ?? 0) && next > 0) {
+          setState(() => _activeExerciseIndex = next - 1);
+        }
+      },
+    );
+
     final colors = AppColorsOf(context);
     final session = ref.watch(workoutSessionProvider);
     final exercises = session?.exercises ?? const [];
+    final isPaused = session?.isPaused ?? false;
 
     return ZuralogScaffold(
       appBar: AppBar(
@@ -184,6 +181,23 @@ class _WorkoutSessionScreenState
               context.push(RouteNames.workoutHistoryPath);
             },
           ),
+          if (session != null)
+            IconButton(
+              icon: Icon(
+                isPaused
+                    ? Icons.play_arrow_rounded
+                    : Icons.pause_rounded,
+              ),
+              tooltip: isPaused ? 'Resume workout' : 'Pause workout',
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                if (isPaused) {
+                  ref.read(workoutSessionProvider.notifier).resume();
+                } else {
+                  ref.read(workoutSessionProvider.notifier).pause();
+                }
+              },
+            ),
           TextButton(
             onPressed: _finishWorkout,
             child: Text(

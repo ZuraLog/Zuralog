@@ -41,6 +41,9 @@ class WorkoutStatsRow extends ConsumerWidget {
       data: (d) => d,
       orElse: () => Duration.zero,
     );
+    final isPaused = ref.watch(
+      workoutSessionProvider.select((s) => s?.isPaused ?? false),
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -53,7 +56,8 @@ class WorkoutStatsRow extends ConsumerWidget {
             child: _StatCell(
               label: 'Duration',
               value: formatWorkoutDuration(duration),
-              valueColor: AppColors.categoryActivity,
+              valueColor: isPaused ? colors.primary : AppColors.categoryActivity,
+              sublabel: isPaused ? 'PAUSED' : null,
             ),
           ),
           Expanded(
@@ -81,11 +85,13 @@ class _StatCell extends StatelessWidget {
     required this.label,
     required this.value,
     required this.valueColor,
+    this.sublabel,
   });
 
   final String label;
   final String value;
   final Color valueColor;
+  final String? sublabel;
 
   @override
   Widget build(BuildContext context) {
@@ -105,6 +111,17 @@ class _StatCell extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
+        if (sublabel != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            sublabel!,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: valueColor,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
       ],
     );
   }

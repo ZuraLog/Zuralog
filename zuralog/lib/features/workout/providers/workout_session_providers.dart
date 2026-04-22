@@ -294,6 +294,85 @@ class WorkoutSessionNotifier extends StateNotifier<WorkoutSession?> {
     _globalUnitDefault = newDefault;
   }
 
+  /// Builds a [CompletedWorkout] preview from the current session without
+  /// saving or discarding. Used by the two-phase finish flow — the caller
+  /// shows the summary screen and only persists on explicit confirmation.
+  CompletedWorkout? buildCompletedPreview() {
+    final session = state;
+    if (session == null) return null;
+    return CompletedWorkout.fromSession(
+      session,
+      completedAt: DateTime.now(),
+      globalUnitSystem: _globalUnitDefault,
+    );
+  }
+
+  /// Saves [workout] to history and discards the active session.
+  /// Called from the summary screen when the user confirms "Save Workout".
+  Future<void> saveAndDiscardSession(
+    WorkoutHistoryRepository history,
+    CompletedWorkout workout,
+  ) async {
+    try {
+      await history.saveWorkout(workout);
+    } catch (e, st) {
+      debugPrint(
+          '[WorkoutSessionNotifier] saveAndDiscardSession failed: $e\n$st');
+    }
+    discardSession();
+  }
+
+  void pause() {
+    final session = state;
+    if (session == null || session.isPaused) return;
+    state = session.copyWith(pausedAt: DateTime.now());
+    _saveDraft();
+  }
+
+  void resume() {
+    final session = state;
+    if (session == null || !session.isPaused) return;
+    final added = DateTime.now().difference(session.pausedAt!);
+    state = session.copyWith(
+      clearPausedAt: true,
+      totalPausedDuration: session.totalPausedDuration + added,
+    );
+    _saveDraft();
+  }
+
+  void updateExerciseRestDuration(
+    String exerciseId, {
+    int? warmUpSeconds,
+    int? workingSeconds,
+  }) {
+    _mutateExercise(
+      exerciseId,
+      (ex) => ex.copyWith(
+        restTimerWarmUpSeconds: warmUpSeconds ?? ex.restTimerWarmUpSeconds,
+        restTimerWorkingSeconds: workingSeconds ?? ex.restTimerWorkingSeconds,
+      ),
+    );
+  }
+
+  void updateAllExercisesRestDuration({
+    int? warmUpSeconds,
+    int? workingSeconds,
+  }) {
+    final session = state;
+    if (session == null) return;
+    state = session.copyWith(
+      exercises: session.exercises
+          .map((ex) => ex.copyWith(
+                restTimerWarmUpSeconds:
+                    warmUpSeconds ?? ex.restTimerWarmUpSeconds,
+                restTimerWorkingSeconds:
+                    workingSeconds ?? ex.restTimerWorkingSeconds,
+              ))
+          .toList(growable: false),
+    );
+    _saveDraft();
+  }
+
   /// Converts the current session to a [CompletedWorkout], appends it to
   /// history, and clears the in-memory + draft session. Returns the
   /// persisted record so the caller can navigate to the summary screen.
@@ -398,17 +477,37 @@ final workoutSessionProvider =
 });
 
 final workoutDurationProvider = StreamProvider<Duration>((ref) {
-  // Only watch startedAt — set updates must not restart the timer.
-  final started = ref.watch(
-    workoutSessionProvider.select((s) => s?.startedAt),
+  // Watch only the fields that affect duration computation, not exercises.
+  final started = ref.watch(workoutSessionProvider.select((s) => s?.startedAt));
+  final isPaused =
+      ref.watch(workoutSessionProvider.select((s) => s?.isPaused ?? false));
+  final pausedAt =
+      ref.watch(workoutSessionProvider.select((s) => s?.pausedAt));
+  final totalPaused = ref.watch(
+    workoutSessionProvider.select(
+      (s) => s?.totalPausedDuration ?? Duration.zero,
+    ),
   );
-  if (started == null) {
-    return Stream<Duration>.value(Duration.zero);
+
+  if (started == null) return Stream<Duration>.value(Duration.zero);
+
+  if (isPaused && pausedAt != null) {
+    // Freeze the display at the moment the user paused.
+    final elapsed = pausedAt.difference(started) - totalPaused;
+    return Stream<Duration>.value(
+      elapsed.isNegative ? Duration.zero : elapsed,
+    );
   }
+
   final controller = StreamController<Duration>(sync: true);
-  controller.add(DateTime.now().difference(started));
+  Duration compute() {
+    final elapsed = DateTime.now().difference(started) - totalPaused;
+    return elapsed.isNegative ? Duration.zero : elapsed;
+  }
+
+  controller.add(compute());
   final timer = Timer.periodic(const Duration(seconds: 1), (_) {
-    controller.add(DateTime.now().difference(started));
+    controller.add(compute());
   });
   ref.onDispose(() {
     timer.cancel();
