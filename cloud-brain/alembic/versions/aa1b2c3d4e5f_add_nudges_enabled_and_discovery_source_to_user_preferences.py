@@ -12,7 +12,6 @@ Adds two columns to user_preferences:
 """
 
 from alembic import op
-import sqlalchemy as sa
 
 # revision identifiers, used by Alembic
 revision = "aa1b2c3d4e5f"
