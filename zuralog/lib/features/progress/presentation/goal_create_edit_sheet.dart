@@ -183,42 +183,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
     }
   }
 
-  Future<void> _pickDeadline() async {
-    final colors = AppColorsOf(context);
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _deadline ?? now.add(const Duration(days: 30)),
-      firstDate: now,
-      lastDate: now.add(const Duration(days: 365 * 5)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: AppColors.primary,
-                  onPrimary: AppColors.primaryButtonText,
-                  surface: colors.elevatedSurface,
-                  onSurface: colors.textPrimary,
-                ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) {
-      setState(() => _deadline = picked);
-    }
-  }
-
   void _clearDeadline() => setState(() => _deadline = null);
-
-  String _formatDeadline(DateTime d) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-    return '${months[d.month - 1]} ${d.day}, ${d.year}';
-  }
 
   // ── Icon mapping for goal types ──────────────────────────────────────────
 

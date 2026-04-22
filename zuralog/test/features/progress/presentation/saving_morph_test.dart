@@ -14,6 +14,9 @@ class _HostState extends State<_Host> {
   bool savedOnce = false;
   int completeCount = 0;
 
+  void triggerSaving(bool value) => setState(() => saving = value);
+  void triggerSavedOnce(bool value) => setState(() => savedOnce = value);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -44,7 +47,7 @@ void main() {
     final state = tester.state<_HostState>(find.byType(_Host));
 
     // Trigger collapsing.
-    state.setState(() => state.saving = true);
+    state.triggerSaving(true);
     await tester.pump();                                      // start animation
     await tester.pump(const Duration(milliseconds: 100));    // mid-collapse
     // At mid-collapse, the checkmark CustomPaint should not be in the tree
@@ -54,7 +57,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 150));    // finish collapse (200ms total)
 
     // Trigger checking.
-    state.setState(() => state.savedOnce = true);
+    state.triggerSavedOnce(true);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 260));    // finish check (250ms)
 
