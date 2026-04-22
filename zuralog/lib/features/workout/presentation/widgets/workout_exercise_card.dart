@@ -680,12 +680,12 @@ class _SetRowState extends ConsumerState<_SetRow> {
                   widget.setIndex,
                   isCompleted: completing,
                 );
+                if (completing) widget.onCompleted?.call();
                 if (completing && widget.restTimerEnabled) {
                   ref
                       .read(restTimerProvider.notifier)
                       .start(widget.restTimerDurationSeconds);
                 }
-                if (completing) widget.onCompleted?.call();
               },
             ),
           ),

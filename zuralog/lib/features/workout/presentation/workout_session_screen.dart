@@ -40,20 +40,20 @@ class _WorkoutSessionScreenState
   @override
   void initState() {
     super.initState();
+    // Register the listener immediately — safe in initState.
+    // Advance the expanded card to the last-added exercise whenever new ones arrive.
+    ref.listen(
+      workoutSessionProvider.select((s) => s?.exercises.length ?? 0),
+      (prev, next) {
+        if (next > (prev ?? 0) && next > 0) {
+          setState(() => _activeExerciseIndex = next - 1);
+        }
+      },
+    );
+    // Defer the mutation to after the first frame — required by Riverpod.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(workoutSessionProvider.notifier).startSession();
-      // ref.listen is placed here alongside startSession() for proximity.
-      // It is safe to call outside the callback too, but kept together for clarity.
-      // Auto-expand the last exercise when new ones are added from the catalogue.
-      ref.listen(
-        workoutSessionProvider.select((s) => s?.exercises.length ?? 0),
-        (prev, next) {
-          if (next > (prev ?? 0) && next > 0) {
-            setState(() => _activeExerciseIndex = next - 1);
-          }
-        },
-      );
     });
   }
 
