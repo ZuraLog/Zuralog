@@ -55,6 +55,7 @@ from app.api.v1.nutrition_schemas import (
     ParsedFoodItem,
     RuleSuggestionDismissRequest,
 )
+from app.api.v1.template_schemas import MealTemplateCreate, MealTemplateResponse
 from app.config import settings
 from app.database import get_db
 from app.limiter import limiter
@@ -63,6 +64,7 @@ from app.models.exercise_entry import ExerciseEntry
 from app.models.food_cache import FoodCache
 from app.models.meal import Meal
 from app.models.meal_food import MealFood
+from app.models.meal_template import MealTemplate
 from app.models.nutrition_daily_summary import NutritionDailySummary
 from app.models.nutrition_rule import NutritionRule
 from app.models.rule_suggestion_snooze import RuleSuggestionSnooze
@@ -1751,6 +1753,94 @@ async def lookup_barcode(
         "fat_per_serving": round(float(fat), 2),
         "source": "openfoodfacts",
     }}
+
+
+# ---------------------------------------------------------------------------
+# Meal Template CRUD (Task 2.4)
+# ---------------------------------------------------------------------------
+
+
+@limiter.limit("60/minute")
+@router.get("/templates")
+async def list_templates(
+    request: Request,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """List all meal templates for the authenticated user, newest first."""
+    result = await db.execute(
+        select(MealTemplate)
+        .where(MealTemplate.user_id == user_id)
+        .order_by(MealTemplate.created_at.desc())
+    )
+    templates = result.scalars().all()
+
+    return {
+        "templates": [
+            {
+                "id": str(t.id),
+                "name": t.name,
+                "foods": json.loads(t.foods_json) if t.foods_json else [],
+                "created_at": t.created_at.isoformat(),
+            }
+            for t in templates
+        ]
+    }
+
+
+@limiter.limit("20/minute")
+@router.post("/templates", status_code=status.HTTP_201_CREATED)
+async def create_template(
+    request: Request,
+    body: MealTemplateCreate,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Create a new meal template with a list of food items.
+
+    Returns the created template with status 201.
+    """
+    template = MealTemplate(
+        user_id=user_id,
+        name=body.name,
+        foods_json=json.dumps(body.foods),
+    )
+    db.add(template)
+    await db.commit()
+    await db.refresh(template)
+
+    return {
+        "id": str(template.id),
+        "name": template.name,
+        "foods": json.loads(template.foods_json) if template.foods_json else [],
+        "created_at": template.created_at.isoformat(),
+    }
+
+
+@limiter.limit("20/minute")
+@router.delete("/templates/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_template(
+    request: Request,
+    template_id: str,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Delete a meal template. Returns 404 if not found or not owned by the caller."""
+    result = await db.execute(
+        select(MealTemplate).where(
+            MealTemplate.id == template_id,
+            MealTemplate.user_id == user_id,
+        )
+    )
+    template = result.scalar_one_or_none()
+    if not template:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meal template not found.",
+        )
+
+    await db.delete(template)
+    await db.commit()
 
 
 # ---------------------------------------------------------------------------
