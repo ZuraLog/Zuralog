@@ -59,7 +59,7 @@ import 'package:zuralog/features/auth/presentation/auth/register_screen.dart';
 import 'package:zuralog/features/auth/presentation/auth/forgot_password_screen.dart';
 import 'package:zuralog/features/auth/presentation/auth/check_inbox_screen.dart';
 import 'package:zuralog/features/auth/presentation/auth/reset_password_screen.dart';
-import 'package:zuralog/features/onboarding/presentation/tour/onboarding_tour_screen.dart';
+import 'package:zuralog/features/onboarding/presentation/trailer/trailer_screen.dart';
 import 'package:zuralog/features/onboarding/presentation/onboarding_flow_screen.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/welcome_screen.dart';
 import 'package:zuralog/features/dev/component_showcase_screen.dart';
@@ -247,7 +247,7 @@ List<RouteBase> _buildRoutes() {
       name: RouteNames.onboarding,
       builder: (context, state) => const SentryErrorBoundary(
         module: 'auth.onboarding',
-        child: OnboardingTourScreen(),
+        child: TrailerScreen(),
       ),
     ),
     GoRoute(
