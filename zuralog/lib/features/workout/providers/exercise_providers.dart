@@ -21,10 +21,14 @@ final exerciseSearchQueryProvider =
 final exerciseMuscleGroupFilterProvider =
     StateProvider.autoDispose<MuscleGroup?>((ref) => null);
 
+final exerciseEquipmentFilterProvider =
+    StateProvider.autoDispose<Equipment?>((ref) => null);
+
 final exerciseSearchProvider = FutureProvider<List<Exercise>>((ref) async {
   // Watch state providers before the async gap so autoDispose keeps them alive.
   final query = ref.watch(exerciseSearchQueryProvider);
   final group = ref.watch(exerciseMuscleGroupFilterProvider);
+  final equipment = ref.watch(exerciseEquipmentFilterProvider);
   final bookmarksOnly = ref.watch(exerciseBookmarksOnlyFilterProvider);
   final bookmarkedIds =
       bookmarksOnly ? ref.watch(exerciseBookmarksProvider) : null;
@@ -35,6 +39,7 @@ final exerciseSearchProvider = FutureProvider<List<Exercise>>((ref) async {
   return all.where((e) {
     if (bookmarkedIds != null && !bookmarkedIds.contains(e.id)) return false;
     if (group != null && e.muscleGroup != group) return false;
+    if (equipment != null && e.equipment != equipment) return false;
     if (trimmed.isNotEmpty && !e.name.toLowerCase().contains(trimmed)) {
       return false;
     }

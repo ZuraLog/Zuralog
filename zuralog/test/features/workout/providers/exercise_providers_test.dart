@@ -25,9 +25,10 @@ Future<void> _stubAsset(String assetKey, String payload) async {
 }
 
 const _fixture = '['
-    '{"id":"bench_press","name":"Bench Press","muscleGroup":"chest","equipment":"barbell","instructions":""},'
-    '{"id":"pull_up","name":"Pull-Up","muscleGroup":"back","equipment":"bodyweight","instructions":""},'
-    '{"id":"squat","name":"Back Squat","muscleGroup":"quads","equipment":"barbell","instructions":""}'
+    '{"id":"bench_press","name":"Bench Press","muscleGroup":"chest","secondaryMuscles":["shoulders","triceps"],"equipment":"barbell","instructions":""},'
+    '{"id":"pull_up","name":"Pull-Up","muscleGroup":"back","secondaryMuscles":[],"equipment":"bodyweight","instructions":""},'
+    '{"id":"squat","name":"Back Squat","muscleGroup":"quads","secondaryMuscles":["hamstrings"],"equipment":"barbell","instructions":""},'
+    '{"id":"cable_row","name":"Seated Cable Row","muscleGroup":"back","secondaryMuscles":["biceps"],"equipment":"cable","instructions":""}'
     ']';
 
 void main() {
@@ -44,7 +45,7 @@ void main() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
     final list = await container.read(exerciseListProvider.future);
-    expect(list, hasLength(3));
+    expect(list, hasLength(4));
   });
 
   test('exerciseSearchProvider returns full list when query empty and no filter', () async {
@@ -52,7 +53,7 @@ void main() {
     addTearDown(container.dispose);
     await container.read(exerciseListProvider.future);
     final results = await container.read(exerciseSearchProvider.future);
-    expect(results, hasLength(3));
+    expect(results, hasLength(4));
   });
 
   test('exerciseSearchProvider filters by query', () async {
@@ -72,8 +73,8 @@ void main() {
     container.read(exerciseMuscleGroupFilterProvider.notifier).state =
         MuscleGroup.back;
     final results = await container.read(exerciseSearchProvider.future);
-    expect(results, hasLength(1));
-    expect(results.single.id, 'pull_up');
+    expect(results, hasLength(2));
+    expect(results.map((e) => e.id), containsAll(['pull_up', 'cable_row']));
   });
 
   test('null muscle group filter clears the filter', () async {
@@ -84,6 +85,39 @@ void main() {
         MuscleGroup.back;
     container.read(exerciseMuscleGroupFilterProvider.notifier).state = null;
     final results = await container.read(exerciseSearchProvider.future);
-    expect(results, hasLength(3));
+    expect(results, hasLength(4));
+  });
+
+  test('exerciseSearchProvider filters by equipment', () async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    await container.read(exerciseListProvider.future);
+    container.read(exerciseEquipmentFilterProvider.notifier).state =
+        Equipment.cable;
+    final results = await container.read(exerciseSearchProvider.future);
+    expect(results, hasLength(1));
+    expect(results.single.id, 'cable_row');
+  });
+
+  test('exerciseSearchProvider filters by muscle group AND equipment', () async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    await container.read(exerciseListProvider.future);
+    container.read(exerciseMuscleGroupFilterProvider.notifier).state =
+        MuscleGroup.back;
+    container.read(exerciseEquipmentFilterProvider.notifier).state =
+        Equipment.cable;
+    final results = await container.read(exerciseSearchProvider.future);
+    expect(results, hasLength(1));
+    expect(results.single.id, 'cable_row');
+  });
+
+  test('null equipment filter returns all exercises', () async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    await container.read(exerciseListProvider.future);
+    container.read(exerciseEquipmentFilterProvider.notifier).state = null;
+    final results = await container.read(exerciseSearchProvider.future);
+    expect(results, hasLength(4));
   });
 }
