@@ -1,4 +1,4 @@
-/// Tests for [ZContourAccent] — single drifting sage line used as brand signature.
+/// Tests for [ZContourAccent] — drifting three-line sage contour band used as a brand signature.
 library;
 
 import 'package:flutter/material.dart';
