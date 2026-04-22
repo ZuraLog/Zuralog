@@ -27,6 +27,8 @@ class _NutritionTrendSectionState extends ConsumerState<NutritionTrendSection> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
+    final goalsAsync = ref.watch(nutritionGoalsProvider);
+    final goals = goalsAsync.valueOrNull;
     final trendAsync = ref.watch(nutritionTrendProvider(_range));
     final days = trendAsync.valueOrNull ?? const [];
 
@@ -107,7 +109,7 @@ class _NutritionTrendSectionState extends ConsumerState<NutritionTrendSection> {
                 child: BarRenderer(
                   config: BarChartConfig(
                     bars: calorieBars,
-                    goalValue: 2000,
+                    goalValue: goals?.calorieBudget?.toDouble() ?? 2000.0,
                     showAvgLine: true,
                   ),
                   color: AppColors.categoryNutrition,
@@ -149,7 +151,7 @@ class _NutritionTrendSectionState extends ConsumerState<NutritionTrendSection> {
                 child: BarRenderer(
                   config: BarChartConfig(
                     bars: proteinBars,
-                    goalValue: 150,
+                    goalValue: goals?.proteinMinG?.toDouble() ?? 150.0,
                     showAvgLine: true,
                   ),
                   color: AppColors.categoryNutrition,
