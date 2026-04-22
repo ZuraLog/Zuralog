@@ -158,6 +158,38 @@ The contour-line pattern is the brand's visual signature. It does not appear as 
 - Text input fields
 - Navigation bars
 
+### Animated Pattern Drift
+
+The topographic pattern is alive. On every surface where it appears, it drifts slowly on a diagonal — contour lines moving like slow-flowing terrain. This is not decoration. It is what makes Zuralog feel like a living product rather than a static UI.
+
+**The rule: animation is on by default. Turn it off only where stillness is intentional.**
+
+In Flutter, `ZPatternOverlay` and `ZPatternText` animate unless you explicitly pass `animate: false`. In CSS, the `.ds-pattern-drift` class is the default for all pattern surfaces.
+
+**Animation specs:**
+- **Flutter (`ZPatternOverlay`):** 20-second reverse-repeat loop. The pattern image shifts diagonally between `Alignment(-0.5, -0.5)` and `Alignment(0.5, 0.5)`, creating a continuous slow drift.
+- **Flutter (`ZPatternText`):** 20-second reverse-repeat loop. The `ImageShader` matrix translates ±60px diagonally so the fill texture flows through the letterforms.
+- **Web (`.ds-pattern-drift`):** 40-second linear infinite loop. `background-position` moves from `0px 0px` to `300px 300px` — exactly one tile length, making the loop invisible. Slows to 45 seconds on pattern-filled display text.
+- **Reduced motion:** Both platforms fully respect the system reduced-motion setting. When the user has requested less motion, all pattern animations resolve to static instantly. No exceptions.
+
+**The one exception — feature cards are static:**
+
+Feature card backgrounds use `animate: false`. The card surface stays still so the content inside is easy to read. The living, drifting pattern is reserved for the highest-emphasis elements — hero cards, buttons, pattern text, interactive controls — so that when the user sees motion, it means *this matters*.
+
+| Element type | Animated? | Why |
+|---|---|---|
+| Pattern text (`ZPatternText`) | Yes (default) | Display-size text is the brand's voice — the drift makes numbers and headlines feel alive |
+| Hero cards | Yes (default) | The single most important card on a screen deserves the full treatment |
+| Primary buttons | Yes (default) | The main action the user should take — the drift draws the eye |
+| Destructive buttons | Yes (default) | Same emphasis rule as primary |
+| FAB | Yes (default) | Persistent primary action — must stand out above scrolling content |
+| Toggles, checkboxes, sliders | Yes (default) | Sage-filled interactive surfaces — the motion confirms interactivity |
+| Empty states / onboarding | Yes (default) | These communicate and invite action — pattern motion makes them feel intentional |
+| Avatar (default/fallback) | Yes (default) | Branded placeholder — the drift distinguishes it from a photo |
+| Feature cards | **No — static** | Content is the focus; background motion would compete with the data |
+| Search bar / tab track | Yes (default) | Faint enough that the drift is subtle but present |
+| Data cards / metric tiles | No pattern | Raw numbers stay completely clean |
+
 ---
 
 ## Components
@@ -523,39 +555,44 @@ All feedback components follow the elevation system. Higher urgency = higher ele
 
 A complete summary of every surface that gets the topographic pattern treatment.
 
-| Component | Pattern Variant | Opacity | Blend Mode | Notes |
-|-----------|----------------|---------|------------|-------|
-| Primary button | Sage.PNG | 15% | Color-burn | All sizes |
-| Destructive button | Crimson.PNG | 15% | Color-burn | |
-| FAB | Sage.PNG | 18% | Color-burn | Larger surface = higher opacity |
-| Hero card | Original.PNG | 10% | Screen | One per screen max |
-| Feature card (generic) | Original.PNG | 7% | Screen | AI or celebratory content |
-| Feature card (Sleep) | Periwinkle.PNG | 7% | Screen | Category-colored |
-| Feature card (Activity) | Green.PNG | 7% | Screen | Category-colored |
-| Feature card (Heart) | Rose.PNG | 7% | Screen | Category-colored |
-| Feature card (Nutrition) | Amber.PNG | 7% | Screen | Category-colored |
-| Feature card (Body) | Sky Blue.PNG | 7% | Screen | Category-colored |
-| Feature card (Wellness) | Purple.PNG | 7% | Screen | Category-colored |
-| Feature card (Vitals) | Teal.PNG | 7% | Screen | Category-colored |
-| Feature card (Mobility) | Yellow.PNG | 7% | Screen | Category-colored |
-| Empty state card | Original.PNG | 6% | Screen | Branded empty states |
-| Onboarding / welcome | Original.PNG | 10% | Screen | Richest treatment |
-| Toggle track (on) | Sage.PNG | 15% | Color-burn | |
-| Slider thumb + track | Sage.PNG | 15% / 12% | Color-burn | |
-| Checkbox (checked) | Sage.PNG | 15% | Color-burn | |
-| Progress bar (active) | Sage.PNG | 12% | Color-burn | |
-| Active chip | Original.PNG | 8% | Screen | Sage-tinted dark surface |
-| Default avatar | Original.PNG | 15% | Screen | Branded placeholder |
-| List icon squares | Original.PNG | 12% | Screen | Settings icon containers |
-| Search bar | Original.PNG | 5% | Screen | Very subtle |
-| Tab track (inactive) | Original.PNG | 4% | Screen | Behind active segment |
-| Toast dot (success) | Green.PNG | 15% | Color-burn | Light fill |
-| Hero image/banner | Original.PNG | 10% | Screen | Branded headers |
+| Component | Pattern Variant | Opacity | Blend Mode | Animated |
+|-----------|----------------|---------|------------|----------|
+| Primary button | Sage.PNG | 15% | Color-burn | Yes |
+| Destructive button | Crimson.PNG | 15% | Color-burn | Yes |
+| FAB | Sage.PNG | 18% | Color-burn | Yes |
+| Hero card | Original.PNG | 10% | Screen | Yes |
+| Feature card (generic) | Original.PNG | 7% | Screen | **No** |
+| Feature card (Sleep) | Periwinkle.PNG | 7% | Screen | **No** |
+| Feature card (Activity) | Green.PNG | 7% | Screen | **No** |
+| Feature card (Heart) | Rose.PNG | 7% | Screen | **No** |
+| Feature card (Nutrition) | Amber.PNG | 7% | Screen | **No** |
+| Feature card (Body) | Sky Blue.PNG | 7% | Screen | **No** |
+| Feature card (Wellness) | Purple.PNG | 7% | Screen | **No** |
+| Feature card (Vitals) | Teal.PNG | 7% | Screen | **No** |
+| Feature card (Mobility) | Yellow.PNG | 7% | Screen | **No** |
+| Empty state card | Original.PNG | 6% | Screen | Yes |
+| Onboarding / welcome | Original.PNG | 10% | Screen | Yes |
+| Toggle track (on) | Sage.PNG | 15% | Color-burn | Yes |
+| Slider thumb + track | Sage.PNG | 15% / 12% | Color-burn | Yes |
+| Checkbox (checked) | Sage.PNG | 15% | Color-burn | Yes |
+| Progress bar (active) | Sage.PNG | 12% | Color-burn | Yes |
+| Active chip | Original.PNG | 8% | Screen | Yes |
+| Default avatar | Original.PNG | 15% | Screen | Yes |
+| List icon squares | Original.PNG | 12% | Screen | Yes |
+| Search bar | Original.PNG | 5% | Screen | Yes |
+| Tab track (inactive) | Original.PNG | 4% | Screen | Yes |
+| Toast dot (success) | Green.PNG | 15% | Color-burn | Yes |
+| Hero image/banner | Original.PNG | 10% | Screen | Yes |
 
 **The blend mode rule:**
 - **Light/colored surfaces** → color-burn blend (etches the contour lines into the surface)
 - **Dark surfaces** → screen blend (lightens the pattern onto the surface)
 - Tinted surfaces (low-opacity Sage over dark) count as dark surfaces and use screen blend
+
+**The animation rule:**
+- **Default: animated.** Every pattern surface drifts unless explicitly opted out.
+- **Exception: feature cards.** Pass `animate: false` on feature card overlays. The card is a reading surface — stillness keeps the content in focus.
+- **Reduced motion:** When the system requests less motion, all drifts resolve to static. No conditional logic needed — both `ZPatternOverlay` and `ZPatternText` handle this automatically.
 
 **Category-colored pattern:** When a feature card belongs to a specific health category (e.g., a Sleep insight), use the matching color variant instead of Original.PNG. This makes each health domain feel visually distinct.
 
