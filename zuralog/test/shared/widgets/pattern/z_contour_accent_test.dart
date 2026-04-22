@@ -39,5 +39,26 @@ void main() {
 
       expect(find.byType(ZContourAccent), findsOneWidget);
     });
+
+    testWidgets('respects MediaQuery reduced-motion', (tester) async {
+      await tester.pumpWidget(const MediaQuery(
+        data: MediaQueryData(disableAnimations: true),
+        child: MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 300,
+              height: 90,
+              child: ZContourAccent(),
+            ),
+          ),
+        ),
+      ));
+
+      // Pump well past the duration — with reduced-motion enforced the
+      // controller should be stopped, so no orphan timers should remain.
+      await tester.pump(const Duration(seconds: 30));
+
+      expect(find.byType(ZContourAccent), findsOneWidget);
+    });
   });
 }

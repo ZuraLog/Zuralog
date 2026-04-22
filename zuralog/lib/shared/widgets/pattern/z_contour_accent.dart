@@ -1,8 +1,12 @@
-/// Zuralog Design System — Single Drifting Contour Accent.
+/// Zuralog Design System — Drifting Contour Accent Band.
 ///
-/// Renders a horizontal band of three thin sage contour strokes that
-/// drift slowly on a 20-second loop. The brand's topographic pattern
+/// Renders three thin sage contour strokes, stacked with offset phases,
+/// drifting slowly on a 20-second loop. The brand's topographic pattern
 /// used as a *signature*, never as a wallpaper.
+///
+/// The painter intentionally over-draws horizontally by 20 logical pixels
+/// on each edge; wrap in a clipping parent (e.g. `ClipRect`) if edge
+/// bleed would be visible against the surface underneath.
 ///
 /// ## Usage
 ///
@@ -21,13 +25,13 @@ import 'package:flutter/material.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
 
-/// A horizontal band of drifting sage contour strokes.
+/// A band of three drifting sage contour strokes used as a brand signature.
 class ZContourAccent extends StatefulWidget {
   const ZContourAccent({
     super.key,
     this.animate = true,
     this.opacity = 0.18,
-  });
+  }) : assert(opacity >= 0 && opacity <= 1, 'opacity must be between 0 and 1');
 
   /// When false, the contour holds still. Reduced-motion callers pass false.
   final bool animate;
@@ -102,25 +106,44 @@ class _ContourPainter extends CustomPainter {
   final double opacity;
   final Color color;
 
+  // Three contour lines at slightly different phases — enough variety to
+  // feel alive, not enough to look busy.
+  static const int _lineCount = 3;
+
+  // Stroke weight in logical pixels — deliberately thin so it reads as a
+  // signature accent, not a border.
+  static const double _strokeWidth = 0.7;
+
+  // Peak-to-peak amplitude of each sine line in logical pixels.
+  static const double _amplitude = 14.0;
+
+  // Wavelength of each sine in logical pixels.
+  static const double _wavelength = 90.0;
+
+  // Horizontal sampling step — 6px gives a visually smooth curve without
+  // running the paint loop too hot.
+  static const double _sampleStepPx = 6.0;
+
+  // Phase offset per line so the three curves stay out of sync.
+  static const double _phaseOffsetPerLine = 60.0;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color.withValues(alpha: opacity)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.7
+      ..strokeWidth = _strokeWidth
       ..strokeCap = StrokeCap.round;
 
-    // Three stacked sinusoidal strokes, each with a different phase so the
-    // band feels alive without looking repetitive.
-    for (var i = 0; i < 3; i++) {
+    for (var i = 0; i < _lineCount; i++) {
       final yBase = size.height * (0.35 + i * 0.22);
-      final drift = phase * size.width + i * 60.0;
+      final drift = phase * size.width + i * _phaseOffsetPerLine;
       final path = Path()..moveTo(-20, yBase);
-      for (var x = -20.0; x <= size.width + 20; x += 6) {
+      for (var x = -20.0; x <= size.width + 20; x += _sampleStepPx) {
         final y = yBase +
-            14.0 *
+            _amplitude *
                 (i.isEven ? 1 : -1) *
-                math.sin((x + drift) / 90.0 + i * 1.3);
+                math.sin((x + drift) / _wavelength + i * 1.3);
         path.lineTo(x, y);
       }
       canvas.drawPath(path, paint);
