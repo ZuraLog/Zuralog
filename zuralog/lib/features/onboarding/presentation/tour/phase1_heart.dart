@@ -955,7 +955,7 @@ class HeartScreen4 extends StatelessWidget {
   }
 }
 
-class _EnergyCard extends StatelessWidget {
+class _RecoveryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -982,7 +982,7 @@ class _EnergyCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'ENERGY SCORE',
+                'RESTING HR TREND',
                 style: TextStyle(
                   fontFamily: 'PlusJakartaSans',
                   fontSize: 11,
@@ -992,20 +992,59 @@ class _EnergyCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                '91',
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 68,
-                  fontWeight: FontWeight.w200,
-                  letterSpacing: -3,
-                  color: Colors.white,
-                  height: 1.0,
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Text(
+                    '58',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 68,
+                      fontWeight: FontWeight.w200,
+                      letterSpacing: -3,
+                      color: Colors.white,
+                      height: 1.0,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Text(
+                      'bpm',
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 18,
+                        color: Colors.white.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade400.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: Colors.green.shade400.withValues(alpha: 0.35),
+                    width: 0.8,
+                  ),
+                ),
+                child: Text(
+                  'Down 6 this week',
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
+                    color: Colors.green.shade400,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
               Text(
-                'Your heart has recovered well. A good day to push yourself.',
+                'Your heart is recovering well. A good day to push yourself.',
                 style: TextStyle(
                   fontFamily: 'PlusJakartaSans',
                   fontSize: 14,
@@ -1021,7 +1060,7 @@ class _EnergyCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             child: TopoBG(
               color: AppColors.categoryHeart,
-              seed: 'energy-card',
+              seed: 'recovery-card',
               opacity: 0.25,
               density: 10,
               animate: false,
