@@ -70,6 +70,15 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
   /// 0 = Quick, 1 = Guided.
   int _modeIndex = 0;
 
+  /// Whether the save-as-template inline form is visible.
+  bool _showSaveTemplate = false;
+
+  /// Whether the save-template action is currently running.
+  bool _isSavingTemplate = false;
+
+  /// Controller for the template name text field.
+  final _templateNameController = TextEditingController();
+
   /// Selected meal type — auto-suggested on init based on the current hour.
   MealType? _selectedMealType;
 
@@ -124,6 +133,7 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
     _manualProtein.dispose();
     _manualCarbs.dispose();
     _manualFat.dispose();
+    _templateNameController.dispose();
     super.dispose();
   }
 
@@ -333,6 +343,49 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
       if (!mounted) return;
       setState(() => _isSaving = false);
       ZToast.error(context, 'Failed to save meal. Please try again.');
+    }
+  }
+
+  /// Fills [_mealFoods] with the foods from [template] and selects its meal type.
+  void _applyTemplate(MealTemplate template) {
+    setState(() {
+      _mealFoods
+        ..clear()
+        ..addAll(template.foods);
+      final parsed = MealType.values.cast<MealType?>().firstWhere(
+        (t) => t?.name == template.mealType,
+        orElse: () => null,
+      );
+      if (parsed != null) _selectedMealType = parsed;
+    });
+  }
+
+  /// Saves the current [_mealFoods] as a new template under the name the user
+  /// typed, then dismisses the inline form.
+  Future<void> _handleSaveTemplate() async {
+    final name = _templateNameController.text.trim();
+    if (name.isEmpty || _mealFoods.isEmpty) return;
+
+    setState(() => _isSavingTemplate = true);
+
+    try {
+      await ref.read(nutritionRepositoryProvider).saveTemplate(
+            name: name,
+            mealType: (_selectedMealType ?? _autoSuggestMealType()).name,
+            foods: List.unmodifiable(_mealFoods),
+          );
+      if (!mounted) return;
+      ref.invalidate(mealTemplatesProvider);
+      setState(() {
+        _showSaveTemplate = false;
+        _isSavingTemplate = false;
+        _templateNameController.clear();
+      });
+      ZToast.success(context, 'Template "$name" saved!');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSavingTemplate = false);
+      ZToast.error(context, 'Could not save template. Please try again.');
     }
   }
 
@@ -600,6 +653,9 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
 
                   const SizedBox(height: AppDimens.spaceLg),
 
+                  // ── Templates section ───────────────────────────────────
+                  _buildTemplatesSection(),
+
                   // ── Recents section ─────────────────────────────────────
                   _buildRecentsSection(),
 
@@ -607,9 +663,14 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
 
                   // ── Selected foods list ─────────────────────────────────
                   if (_mealFoods.isNotEmpty) ...[
-                    const SectionHeader(title: 'Your meal'),
+                    _buildYourMealHeader(),
                     const SizedBox(height: AppDimens.spaceSm),
                     _buildSelectedFoodsList(),
+                    // Save-as-template inline form.
+                    if (_showSaveTemplate) ...[
+                      const SizedBox(height: AppDimens.spaceSm),
+                      _buildSaveTemplateForm(),
+                    ],
                     const SizedBox(height: AppDimens.spaceLg),
                   ],
                 ],
@@ -730,6 +791,132 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
           }).toList(),
         );
       },
+    );
+  }
+
+  /// Horizontal row of saved meal template chips shown above the recents.
+  ///
+  /// Hidden when the user has no saved templates. Tapping a chip pre-fills
+  /// [_mealFoods] with that template's foods so the user can log quickly.
+  Widget _buildTemplatesSection() {
+    final templatesAsync = ref.watch(mealTemplatesProvider);
+
+    return templatesAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (templates) {
+        if (templates.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SectionHeader(title: 'Templates'),
+            const SizedBox(height: AppDimens.spaceSm),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: templates.map((template) {
+                  return Padding(
+                    padding:
+                        const EdgeInsets.only(right: AppDimens.spaceSm),
+                    child: ZChip(
+                      label: template.name,
+                      icon: Icons.bookmark_outline,
+                      onTap: () => _applyTemplate(template),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceLg),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Row with "Your meal" header and a bookmark icon button to save the
+  /// current food list as a template.
+  Widget _buildYourMealHeader() {
+    final colors = AppColorsOf(context);
+    return Row(
+      children: [
+        const Expanded(child: SectionHeader(title: 'Your meal')),
+        if (!_showSaveTemplate)
+          GestureDetector(
+            onTap: () => setState(() => _showSaveTemplate = true),
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.all(AppDimens.spaceXs),
+              child: Icon(
+                Icons.bookmark_add_outlined,
+                size: 20,
+                color: colors.textSecondary,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// Inline form for naming and saving the current food list as a template.
+  Widget _buildSaveTemplateForm() {
+    final colors = AppColorsOf(context);
+    return Container(
+      padding: const EdgeInsets.all(AppDimens.spaceSm + 4),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Save as template',
+            style: AppTextStyles.labelMedium.copyWith(
+              color: colors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          ZLabeledTextField(
+            label: 'Template name',
+            controller: _templateNameController,
+            hint: 'e.g. My Lunch',
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          Row(
+            children: [
+              Expanded(
+                child: ZButton(
+                  label: 'Save template',
+                  variant: ZButtonVariant.secondary,
+                  size: ZButtonSize.medium,
+                  isLoading: _isSavingTemplate,
+                  onPressed: _handleSaveTemplate,
+                ),
+              ),
+              const SizedBox(width: AppDimens.spaceSm),
+              GestureDetector(
+                onTap: () => setState(() {
+                  _showSaveTemplate = false;
+                  _templateNameController.clear();
+                }),
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppDimens.spaceXs),
+                  child: Icon(
+                    Icons.close,
+                    size: 20,
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
