@@ -44,6 +44,7 @@ class WorkoutTaskHandler extends TaskHandler {
   int _plannedDurationSeconds = 0;
   int _addedSeconds = 0;
   DateTime? _workoutStartedAt;
+  int _completedSets = 0;
 
   // Keys shared with the UI isolate.
   // Must stay in sync with `RestTimerStorage` and the workout draft writer.
@@ -88,6 +89,14 @@ class WorkoutTaskHandler extends TaskHandler {
       }
     } else {
       _workoutStartedAt = null;
+    }
+
+    // Count completed sets from draft JSON using regex — no full codec needed.
+    if (draft != null) {
+      _completedSets =
+          RegExp(r'"isCompleted"\s*:\s*true').allMatches(draft).length;
+    } else {
+      _completedSets = 0;
     }
   }
 
@@ -174,23 +183,25 @@ class WorkoutTaskHandler extends TaskHandler {
   }
 
   String _buildText() {
+    final setsLabel = _completedSets > 0 ? '  ·  $_completedSets sets' : '';
     if (_restStartedAt != null) {
       final total = Duration(seconds: _plannedDurationSeconds + _addedSeconds);
       final elapsed = DateTime.now().difference(_restStartedAt!);
       final remaining = total - elapsed;
       if (remaining.isNegative) {
-        return 'Rest over — back to work!';
+        return 'Rest over — back to work!$setsLabel';
       }
       final mm = remaining.inMinutes.remainder(60).toString().padLeft(2, '0');
       final ss = remaining.inSeconds.remainder(60).toString().padLeft(2, '0');
-      return 'Rest  $mm:$ss';
+      return 'Rest  $mm:$ss$setsLabel';
     }
     if (_workoutStartedAt != null) {
       final elapsed = DateTime.now().difference(_workoutStartedAt!);
       final hh = elapsed.inHours;
       final mm = elapsed.inMinutes.remainder(60).toString().padLeft(2, '0');
       final ss = elapsed.inSeconds.remainder(60).toString().padLeft(2, '0');
-      return hh > 0 ? '$hh:$mm:$ss' : 'Workout $mm:$ss';
+      final timeStr = hh > 0 ? '$hh:$mm:$ss' : '$mm:$ss';
+      return 'Workout $timeStr$setsLabel';
     }
     return 'Active';
   }

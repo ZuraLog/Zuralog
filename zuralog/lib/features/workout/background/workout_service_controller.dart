@@ -60,6 +60,15 @@ class WorkoutServiceController {
   Future<void> start() async {
     if (!_supported) return;
     _ensureInitialized();
+    // Request the POST_NOTIFICATIONS permission that Android 13+ requires
+    // for foreground service notifications. Idempotent — no-op when already granted.
+    final permission = await FlutterForegroundTask.requestNotificationPermission();
+    if (permission == NotificationPermission.permanently_denied) {
+      // Notification permission permanently denied — the service will start
+      // but the persistent notification will not appear. The user needs to
+      // re-enable it in device Settings.
+      debugPrint('[WorkoutServiceController] Notification permission permanently denied.');
+    }
     final running = await FlutterForegroundTask.isRunningService;
     if (running) return;
     await FlutterForegroundTask.startService(

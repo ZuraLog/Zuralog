@@ -1,7 +1,13 @@
 /// Zuralog — Workout Exercise Card.
 ///
-/// One card per exercise in the active session. Contains:
-/// - Header: muscle-group icon bubble, exercise name, 3-dot action menu.
+/// One card per exercise in the active session. Renders in two modes:
+///
+/// **Collapsed** (default): shows muscle-group icon bubble, exercise name,
+/// a completion badge (e.g. "2 / 3 sets"), and an expand_more chevron.
+/// Tapping anywhere on the header expands the card.
+///
+/// **Expanded**: shows muscle-group icon bubble, exercise name, and a
+/// 3-dot (more_vert) action menu in the header. Below the header:
 /// - Notes field (auto-saved).
 /// - Rest Timer row (switch + duration summary). The duration label taps
 ///   to a "coming soon" toast — Plan 3 builds the popup.
@@ -27,9 +33,18 @@ import 'package:zuralog/features/workout/providers/workout_session_providers.dar
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 class WorkoutExerciseCard extends ConsumerStatefulWidget {
-  const WorkoutExerciseCard({super.key, required this.exercise});
+  const WorkoutExerciseCard({
+    super.key,
+    required this.exercise,
+    this.isExpanded = true,
+    this.onTap,
+    this.onAllSetsCompleted,
+  });
 
   final WorkoutExercise exercise;
+  final bool isExpanded;
+  final VoidCallback? onTap;
+  final VoidCallback? onAllSetsCompleted;
 
   @override
   ConsumerState<WorkoutExerciseCard> createState() =>
@@ -52,6 +67,9 @@ class _WorkoutExerciseCardState extends ConsumerState<WorkoutExerciseCard> {
     if (old.exercise.notes != widget.exercise.notes &&
         _notesCtrl.text != widget.exercise.notes) {
       _notesCtrl.text = widget.exercise.notes;
+    }
+    if (old.isExpanded && !widget.isExpanded) {
+      FocusScope.of(context).unfocus();
     }
   }
 
@@ -159,167 +177,233 @@ class _WorkoutExerciseCardState extends ConsumerState<WorkoutExerciseCard> {
     );
     final unit = unitLabel(unitSystem);
 
+    final completedCount = ex.sets.where((s) => s.isCompleted).length;
+    final totalCount = ex.sets.length;
+    final allDone = totalCount > 0 && completedCount == totalCount;
+
+    final muscleIconBubble = Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: groupColor.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+      ),
+      child: Icon(muscleGroupIcon(muscle), size: 20, color: groupColor),
+    );
+
     return Container(
       margin: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceMd,
         vertical: AppDimens.spaceSm,
       ),
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(AppDimens.shapeMd),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: groupColor.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(AppDimens.shapeSm),
-                ),
-                child: Icon(
-                  muscleGroupIcon(muscle),
-                  size: 20,
-                  color: groupColor,
-                ),
-              ),
-              const SizedBox(width: AppDimens.spaceSm),
-              Expanded(
-                child: Text(
-                  ex.exerciseName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.titleMedium.copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w600,
+          // ── Header ──────────────────────────────────────────────────────
+          InkWell(
+            onTap: widget.isExpanded ? null : widget.onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(AppDimens.spaceMd),
+              child: Row(
+                children: [
+                  muscleIconBubble,
+                  const SizedBox(width: AppDimens.spaceSm),
+                  Expanded(
+                    child: Text(
+                      ex.exerciseName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.titleMedium.copyWith(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                ),
+                  if (widget.isExpanded)
+                    IconButton(
+                      icon: const Icon(Icons.more_vert_rounded),
+                      color: colors.textSecondary,
+                      onPressed: _showMoreMenu,
+                    )
+                  else ...[
+                    const SizedBox(width: AppDimens.spaceSm),
+                    if (allDone)
+                      Icon(
+                        Icons.check_circle_rounded,
+                        size: AppDimens.iconMd,
+                        color: colors.primary,
+                      )
+                    else
+                      Text(
+                        '$completedCount/$totalCount',
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: completedCount > 0
+                              ? colors.primary
+                              : colors.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    const SizedBox(width: AppDimens.spaceSm),
+                    Icon(
+                      Icons.expand_more_rounded,
+                      size: AppDimens.iconMd,
+                      color: colors.textSecondary,
+                    ),
+                  ],
+                ],
               ),
-              IconButton(
-                icon: const Icon(Icons.more_vert_rounded),
-                color: colors.textSecondary,
-                onPressed: _showMoreMenu,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppDimens.spaceSm),
-          TextField(
-            controller: _notesCtrl,
-            maxLines: 2,
-            minLines: 1,
-            maxLength: 500,
-            onChanged: (value) => ref
-                .read(workoutSessionProvider.notifier)
-                .updateExerciseNotes(ex.exerciseId, value),
-            style: AppTextStyles.bodyMedium
-                .copyWith(color: colors.textPrimary),
-            decoration: InputDecoration(
-              hintText: 'Notes...',
-              hintStyle: AppTextStyles.bodyMedium
-                  .copyWith(color: colors.textSecondary),
-              isDense: true,
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              contentPadding: EdgeInsets.zero,
-              counterText: '',
             ),
           ),
-          const SizedBox(height: AppDimens.spaceSm),
-          Row(
-            children: [
-              Icon(Icons.timer_outlined,
-                  size: AppDimens.iconMd, color: colors.textSecondary),
-              const SizedBox(width: AppDimens.spaceSm),
-              Text('Rest Timer',
-                  style: AppTextStyles.bodyMedium
-                      .copyWith(color: colors.textPrimary)),
-              const Spacer(),
-              if (ex.restTimerEnabled)
-                GestureDetector(
-                  onTap: () => _comingSoon('Rest timer settings'),
-                  child: Text(
-                    _formatRestSeconds(ex.restTimerWorkingSeconds),
+          // ── Animated body ────────────────────────────────────────────────
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 260),
+            firstCurve: Curves.easeOutCubic,
+            secondCurve: Curves.easeOutCubic,
+            sizeCurve: Curves.easeOutCubic,
+            crossFadeState: widget.isExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                0,
+                AppDimens.spaceMd,
+                AppDimens.spaceMd,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: AppDimens.spaceSm),
+                  TextField(
+                    controller: _notesCtrl,
+                    maxLines: 2,
+                    minLines: 1,
+                    maxLength: 500,
+                    onChanged: (value) => ref
+                        .read(workoutSessionProvider.notifier)
+                        .updateExerciseNotes(ex.exerciseId, value),
                     style: AppTextStyles.bodyMedium
-                        .copyWith(color: colors.textSecondary),
+                        .copyWith(color: colors.textPrimary),
+                    decoration: InputDecoration(
+                      hintText: 'Notes...',
+                      hintStyle: AppTextStyles.bodyMedium
+                          .copyWith(color: colors.textSecondary),
+                      isDense: true,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                      counterText: '',
+                    ),
                   ),
-                ),
-              const SizedBox(width: AppDimens.spaceSm),
-              ZToggle(
-                value: ex.restTimerEnabled,
-                onChanged: (value) => ref
-                    .read(workoutSessionProvider.notifier)
-                    .updateRestTimer(ex.exerciseId, value),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppDimens.spaceMd),
-          _SetTableHeader(
-            unit: unit,
-            onUnitTap: () => ref
-                .read(workoutSessionProvider.notifier)
-                .toggleUnit(ex.exerciseId),
-          ),
-          for (var i = 0; i < ex.sets.length; i++)
-            // Key uses index — safe for single-swipe use; rapid double-swipe before
-            // rebuild could target the wrong set. Stable set IDs would fix this.
-            Dismissible(
-              key: ValueKey('dismissible-set-${ex.exerciseId}-$i'),
-              direction: DismissDirection.endToStart,
-              background: _DismissBackground(),
-              confirmDismiss: (_) async {
-                // Never remove the last set.
-                if (ex.sets.length <= 1) return false;
-                // Completed sets require confirmation.
-                if (ex.sets[i].isCompleted) {
-                  final confirmed = await ZAlertDialog.show(
-                    context,
-                    title: 'Remove completed set?',
-                    body: 'This set has already been marked as done.',
-                    confirmLabel: 'Remove',
-                    cancelLabel: 'Cancel',
-                    isDestructive: true,
-                  );
-                  if (!mounted) return false;
-                  return confirmed == true;
-                }
-                return true;
-              },
-              onDismissed: (_) {
-                ref
-                    .read(workoutSessionProvider.notifier)
-                    .removeSet(ex.exerciseId, i);
-              },
-              child: _SetRow(
-                key: ValueKey('set-${ex.exerciseId}-$i'),
-                exerciseId: ex.exerciseId,
-                setIndex: i,
-                set: ex.sets[i],
-                restTimerEnabled: ex.restTimerEnabled,
-                restTimerDurationSeconds: ex.sets[i].type == SetType.warmUp
-                    ? ex.restTimerWarmUpSeconds
-                    : ex.restTimerWorkingSeconds,
-                onSetNumberTap: () => _showSetTypeMenu(i),
-              ),
-            ),
-          const SizedBox(height: AppDimens.spaceSm),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () {
-                HapticFeedback.selectionClick();
-                ref
-                    .read(workoutSessionProvider.notifier)
-                    .addSet(ex.exerciseId);
-              },
-              icon: Icon(Icons.add_rounded, color: colors.primary),
-              label: Text(
-                'Add Set',
-                style: AppTextStyles.labelLarge.copyWith(color: colors.primary),
+                  const SizedBox(height: AppDimens.spaceSm),
+                  Row(
+                    children: [
+                      Icon(Icons.timer_outlined,
+                          size: AppDimens.iconMd, color: colors.textSecondary),
+                      const SizedBox(width: AppDimens.spaceSm),
+                      Text('Rest Timer',
+                          style: AppTextStyles.bodyMedium
+                              .copyWith(color: colors.textPrimary)),
+                      const Spacer(),
+                      if (ex.restTimerEnabled)
+                        GestureDetector(
+                          onTap: () => _comingSoon('Rest timer settings'),
+                          child: Text(
+                            _formatRestSeconds(ex.restTimerWorkingSeconds),
+                            style: AppTextStyles.bodyMedium
+                                .copyWith(color: colors.textSecondary),
+                          ),
+                        ),
+                      const SizedBox(width: AppDimens.spaceSm),
+                      ZToggle(
+                        value: ex.restTimerEnabled,
+                        onChanged: (value) => ref
+                            .read(workoutSessionProvider.notifier)
+                            .updateRestTimer(ex.exerciseId, value),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppDimens.spaceMd),
+                  _SetTableHeader(
+                    unit: unit,
+                    onUnitTap: () => ref
+                        .read(workoutSessionProvider.notifier)
+                        .toggleUnit(ex.exerciseId),
+                  ),
+                  for (var i = 0; i < ex.sets.length; i++)
+                    Dismissible(
+                      key: ValueKey('dismissible-set-${ex.exerciseId}-$i'),
+                      direction: DismissDirection.endToStart,
+                      background: _DismissBackground(),
+                      confirmDismiss: (_) async {
+                        if (ex.sets.length <= 1) return false;
+                        if (ex.sets[i].isCompleted) {
+                          final confirmed = await ZAlertDialog.show(
+                            context,
+                            title: 'Remove completed set?',
+                            body: 'This set has already been marked as done.',
+                            confirmLabel: 'Remove',
+                            cancelLabel: 'Cancel',
+                            isDestructive: true,
+                          );
+                          if (!mounted) return false;
+                          return confirmed == true;
+                        }
+                        return true;
+                      },
+                      onDismissed: (_) {
+                        ref
+                            .read(workoutSessionProvider.notifier)
+                            .removeSet(ex.exerciseId, i);
+                      },
+                      child: _SetRow(
+                        key: ValueKey('set-${ex.exerciseId}-$i'),
+                        exerciseId: ex.exerciseId,
+                        setIndex: i,
+                        set: ex.sets[i],
+                        restTimerEnabled: ex.restTimerEnabled,
+                        restTimerDurationSeconds:
+                            ex.sets[i].type == SetType.warmUp
+                                ? ex.restTimerWarmUpSeconds
+                                : ex.restTimerWorkingSeconds,
+                        onSetNumberTap: () => _showSetTypeMenu(i),
+                        // Only fire onCompleted when this is the sole remaining
+                        // incomplete set — meaning checking it finishes the exercise.
+                        onCompleted: (!ex.sets[i].isCompleted &&
+                                ex.sets
+                                        .where((s) => !s.isCompleted)
+                                        .length ==
+                                    1)
+                            ? widget.onAllSetsCompleted
+                            : null,
+                      ),
+                    ),
+                  const SizedBox(height: AppDimens.spaceSm),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () {
+                        HapticFeedback.selectionClick();
+                        ref
+                            .read(workoutSessionProvider.notifier)
+                            .addSet(ex.exerciseId);
+                      },
+                      icon: Icon(Icons.add_rounded, color: colors.primary),
+                      label: Text(
+                        'Add Set',
+                        style: AppTextStyles.labelLarge
+                            .copyWith(color: colors.primary),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -405,6 +489,7 @@ class _SetRow extends ConsumerStatefulWidget {
     required this.restTimerEnabled,
     required this.restTimerDurationSeconds,
     required this.onSetNumberTap,
+    this.onCompleted,
   });
 
   final String exerciseId;
@@ -413,6 +498,7 @@ class _SetRow extends ConsumerStatefulWidget {
   final bool restTimerEnabled;
   final int restTimerDurationSeconds;
   final VoidCallback onSetNumberTap;
+  final VoidCallback? onCompleted;
 
   @override
   ConsumerState<_SetRow> createState() => _SetRowState();
@@ -594,8 +680,11 @@ class _SetRowState extends ConsumerState<_SetRow> {
                   widget.setIndex,
                   isCompleted: completing,
                 );
+                if (completing) widget.onCompleted?.call();
                 if (completing && widget.restTimerEnabled) {
-                  ref.read(restTimerProvider.notifier).start(widget.restTimerDurationSeconds);
+                  ref
+                      .read(restTimerProvider.notifier)
+                      .start(widget.restTimerDurationSeconds);
                 }
               },
             ),
