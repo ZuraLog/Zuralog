@@ -529,7 +529,7 @@ class SleepScreen1 extends StatelessWidget {
   }
 }
 
-// ── Screen 2: Sleep score ─────────────────────────────────────────────────────
+// ── Screen 2: Last night, by the numbers ─────────────────────────────────────
 
 class SleepScreen2 extends StatelessWidget {
   const SleepScreen2({super.key, required this.onContinue, required this.progress});
