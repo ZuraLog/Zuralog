@@ -1,3 +1,32 @@
+## 2026-04-22 — Workout Polish: Pill Spacing, Collapsible Cards, and Android Notifications
+
+**Branch:** `main` (merged from feat/progress-tab-redesign)
+
+Five focused improvements to the active workout experience.
+
+**What was built:**
+
+- **Global workout pill spacing** (`active_workout_global_pill.dart`): Added 8px vertical padding above and below the floating pill so it no longer feels cramped against the navigation bar.
+
+- **Collapsible exercise cards** (`workout_exercise_card.dart`, `workout_session_screen.dart`): Exercise cards now follow a Lyfta-style expand/collapse pattern — only one card is open at a time. A collapsed card shows the muscle icon, exercise name, and a "X/Y sets" badge (swaps to a green checkmark when all sets are done). Tapping expands it. When the last set on a card is checked off, that card auto-collapses and the next one auto-expands.
+
+- **Foreground service notification shows set count** (`workout_notifications.dart`): The persistent Android notification now includes the set count in its text line. During a workout it reads "Workout 12:34  ·  6 sets"; during rest it reads "Rest  01:30  ·  6 sets".
+
+- **Immediate rest-end notification** (`active_workout_provider.dart`): When the rest timer hits zero, the app fires an immediate notification instead of relying on a scheduled future notification. This bypasses Android's Doze mode, which was delaying the alert on some devices. The iOS scheduled notification (used as a background fallback) is unchanged.
+
+- **Notification permission requested before foreground service starts** (`workout_service_controller.dart`, `workout_task_handler.dart`): `requestNotificationPermission()` is now called before the foreground service is started. This fixes a silent failure on Android 13+ where the persistent workout notification would not appear because the POST_NOTIFICATIONS permission had not been granted yet.
+
+**Files modified:**
+- `zuralog/lib/features/workout/presentation/widgets/active_workout_global_pill.dart`
+- `zuralog/lib/features/workout/presentation/widgets/workout_exercise_card.dart`
+- `zuralog/lib/features/workout/presentation/workout_session_screen.dart`
+- `zuralog/lib/features/workout/background/workout_notifications.dart`
+- `zuralog/lib/features/workout/providers/active_workout_provider.dart`
+- `zuralog/lib/features/workout/background/workout_service_controller.dart`
+- `zuralog/lib/features/workout/background/workout_task_handler.dart`
+
+---
+
 ## 2026-04-22 — Workout Rest Timer Redesign
 
 **Branch:** `fix/rest-timer-redesign`

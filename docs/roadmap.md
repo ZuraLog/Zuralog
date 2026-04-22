@@ -16,6 +16,16 @@ What shipped:
 - Workout tile in `ZLogGridSheet` wired to navigate to `/log/workout` (was "coming soon")
 - 26 tests pass; zero new analyzer issues vs main
 
+### Plan 6: Workout Polish — complete (2026-04-22)
+
+**Status:** Shipped on `main`
+
+- Global workout pill now has 8px breathing room above and below so it doesn't crowd the nav bar
+- Exercise cards collapse/expand Lyfta-style — only one open at a time; collapsed cards show muscle icon + name + sets badge or green checkmark; auto-advances to the next card when the last set is checked off
+- Android foreground service notification now shows set count ("Workout 12:34  ·  6 sets" / "Rest  01:30  ·  6 sets")
+- Rest-end alert fires immediately when the timer hits zero instead of scheduling a future notification (fixes Doze mode delays on Android)
+- `requestNotificationPermission()` called before the foreground service starts, fixing silent notification failure on Android 13+
+
 ### Plan 5: Rest Timer Redesign — complete (2026-04-22)
 
 **Status:** Shipped on `fix/rest-timer-redesign`
