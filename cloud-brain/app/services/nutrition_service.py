@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.exercise_entry import ExerciseEntry
 from app.models.meal import Meal
 from app.models.nutrition_daily_summary import NutritionDailySummary
 from app.utils.user_date import get_user_local_date
@@ -60,12 +61,28 @@ async def recompute_nutrition_summary(
     total_protein = 0.0
     total_carbs = 0.0
     total_fat = 0.0
+    total_fiber = 0.0
+    total_sodium = 0.0
+    total_sugar = 0.0
     for meal in meals:
         for food in meal.foods:
             total_calories += food.calories or 0.0
             total_protein += food.protein_g or 0.0
             total_carbs += food.carbs_g or 0.0
             total_fat += food.fat_g or 0.0
+            total_fiber += food.fiber_g or 0.0
+            total_sodium += food.sodium_mg or 0.0
+            total_sugar += food.sugar_g or 0.0
+
+    # Sum calories burned from exercise entries for this date.
+    exercise_result = await db.execute(
+        select(ExerciseEntry).where(
+            ExerciseEntry.user_id == user_id,
+            ExerciseEntry.date == summary_date,
+        )
+    )
+    exercise_entries = exercise_result.scalars().all()
+    total_exercise_calories = sum(e.calories_burned or 0 for e in exercise_entries)
 
     # Upsert into nutrition_daily_summaries.
     stmt = pg_insert(NutritionDailySummary).values(
@@ -76,6 +93,10 @@ async def recompute_nutrition_summary(
         total_carbs_g=round(total_carbs, 2),
         total_fat_g=round(total_fat, 2),
         meal_count=len(meals),
+        total_fiber_g=round(total_fiber, 2),
+        total_sodium_mg=round(total_sodium, 2),
+        total_sugar_g=round(total_sugar, 2),
+        exercise_calories_burned=total_exercise_calories,
     )
     stmt = stmt.on_conflict_do_update(
         index_elements=["user_id", "date"],
@@ -85,6 +106,10 @@ async def recompute_nutrition_summary(
             "total_carbs_g": stmt.excluded.total_carbs_g,
             "total_fat_g": stmt.excluded.total_fat_g,
             "meal_count": stmt.excluded.meal_count,
+            "total_fiber_g": stmt.excluded.total_fiber_g,
+            "total_sodium_mg": stmt.excluded.total_sodium_mg,
+            "total_sugar_g": stmt.excluded.total_sugar_g,
+            "exercise_calories_burned": stmt.excluded.exercise_calories_burned,
         },
     )
     await db.execute(stmt)
@@ -92,13 +117,17 @@ async def recompute_nutrition_summary(
 
     logger.info(
         "Recomputed nutrition summary for user=%s date=%s: "
-        "%.1f cal, %.1f p, %.1f c, %.1f f (%d meals)",
+        "%.1f cal, %.1f p, %.1f c, %.1f f, %.1f fiber, %.1f sodium, %.1f sugar, %d ex_kcal (%d meals)",
         user_id,
         summary_date,
         total_calories,
         total_protein,
         total_carbs,
         total_fat,
+        total_fiber,
+        total_sodium,
+        total_sugar,
+        total_exercise_calories,
         len(meals),
     )
 

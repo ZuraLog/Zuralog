@@ -564,6 +564,10 @@ async def get_today(
             "total_carbs_g": summary_row.total_carbs_g,
             "total_fat_g": summary_row.total_fat_g,
             "meal_count": summary_row.meal_count,
+            "total_fiber_g": summary_row.total_fiber_g if summary_row.total_fiber_g is not None else 0,
+            "total_sodium_mg": summary_row.total_sodium_mg if summary_row.total_sodium_mg is not None else 0,
+            "total_sugar_g": summary_row.total_sugar_g if summary_row.total_sugar_g is not None else 0,
+            "exercise_calories_burned": summary_row.exercise_calories_burned if summary_row.exercise_calories_burned is not None else 0,
         }
 
     # Fetch today's AI nutrition summary from the insights table.
@@ -580,6 +584,10 @@ async def get_today(
             "total_carbs_g": 0,
             "total_fat_g": 0,
             "meal_count": 0,
+            "total_fiber_g": 0,
+            "total_sodium_mg": 0,
+            "total_sugar_g": 0,
+            "exercise_calories_burned": 0,
             "ai_summary": ai["ai_summary"],
             "ai_generated_at": ai["ai_generated_at"],
         }

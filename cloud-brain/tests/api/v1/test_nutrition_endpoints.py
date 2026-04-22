@@ -316,3 +316,42 @@ class TestNutritionDailySummaryNewColumns:
         assert hasattr(NutritionDailySummary, "total_sodium_mg")
         assert hasattr(NutritionDailySummary, "total_sugar_g")
         assert hasattr(NutritionDailySummary, "exercise_calories_burned")
+
+    def test_today_summary_includes_new_fields(self, client_with_auth):
+        client, _, mock_db = client_with_auth
+
+        # Mock a summary row that includes the new columns.
+        mock_summary_row = MagicMock()
+        mock_summary_row.date = date(2026, 4, 23)
+        mock_summary_row.total_calories = 1800.0
+        mock_summary_row.total_protein_g = 60.0
+        mock_summary_row.total_carbs_g = 200.0
+        mock_summary_row.total_fat_g = 50.0
+        mock_summary_row.meal_count = 3
+        mock_summary_row.total_fiber_g = 25.0
+        mock_summary_row.total_sodium_mg = 1200.0
+        mock_summary_row.total_sugar_g = 40.0
+        mock_summary_row.exercise_calories_burned = 300
+
+        meals_result = MagicMock()
+        meals_result.scalars.return_value.all.return_value = []
+
+        summary_result = MagicMock()
+        summary_result.scalar_one_or_none.return_value = mock_summary_row
+
+        mock_db.execute = AsyncMock(side_effect=[meals_result, summary_result])
+
+        with patch("app.api.v1.nutrition_routes.get_nutrition_ai_summary", new_callable=AsyncMock) as mock_ai:
+            mock_ai.return_value = {"ai_summary": None, "ai_generated_at": None}
+            resp = client.get("/api/v1/nutrition/today", headers=AUTH_HEADER)
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "total_fiber_g" in data["summary"]
+        assert "total_sodium_mg" in data["summary"]
+        assert "total_sugar_g" in data["summary"]
+        assert "exercise_calories_burned" in data["summary"]
+        assert data["summary"]["total_fiber_g"] == 25.0
+        assert data["summary"]["total_sodium_mg"] == 1200.0
+        assert data["summary"]["total_sugar_g"] == 40.0
+        assert data["summary"]["exercise_calories_burned"] == 300
