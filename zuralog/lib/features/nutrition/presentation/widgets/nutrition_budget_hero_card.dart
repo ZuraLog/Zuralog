@@ -18,6 +18,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/nutrition/domain/nutrition_goals_model.dart';
 import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
+import 'package:zuralog/features/nutrition/presentation/exercise_entries_sheet.dart';
 import 'package:zuralog/features/nutrition/providers/nutrition_providers.dart';
 import 'package:zuralog/shared/widgets/cards/zuralog_card.dart';
 import 'package:zuralog/shared/widgets/charts/z_goal_progress_ring.dart';
@@ -45,17 +46,28 @@ class NutritionBudgetHeroCard extends ConsumerWidget {
     return ZuralogCard(
       variant: ZCardVariant.feature,
       category: AppColors.categoryNutrition,
-      child: _CardBody(goals: goals, summary: summary),
+      child: _CardBody(
+        goals: goals,
+        summary: summary,
+        onBurnedTap: () => ExerciseEntriesSheet.show(context),
+      ),
     );
   }
 }
 
 /// Inner layout: ring on the left, stat rows on the right.
 class _CardBody extends StatelessWidget {
-  const _CardBody({required this.goals, required this.summary});
+  const _CardBody({
+    required this.goals,
+    required this.summary,
+    this.onBurnedTap,
+  });
 
   final NutritionGoals goals;
   final NutritionDaySummary summary;
+
+  /// Called when the user taps the Burned row to open the exercise sheet.
+  final VoidCallback? onBurnedTap;
 
   @override
   Widget build(BuildContext context) {
@@ -101,10 +113,15 @@ class _CardBody extends StatelessWidget {
                   accent: AppColors.categoryNutrition,
                 ),
                 const SizedBox(height: AppDimens.spaceSm),
-                _StatRow(
-                  label: 'Burned',
-                  value: _fmt(burned),
-                  unit: 'kcal',
+                GestureDetector(
+                  onTap: onBurnedTap,
+                  behavior: HitTestBehavior.opaque,
+                  child: _StatRow(
+                    label: 'Burned',
+                    value: _fmt(burned),
+                    unit: 'kcal',
+                    isTappable: onBurnedTap != null,
+                  ),
                 ),
                 const SizedBox(height: AppDimens.spaceSm),
                 _StatRow(
@@ -162,6 +179,7 @@ class _StatRow extends StatelessWidget {
     this.accent,
     this.isRemaining = false,
     this.remaining,
+    this.isTappable = false,
   });
 
   final String label;
@@ -170,6 +188,9 @@ class _StatRow extends StatelessWidget {
   final Color? accent;
   final bool isRemaining;
   final int? remaining;
+
+  /// When true, renders a small chevron icon to hint the row is interactive.
+  final bool isTappable;
 
   @override
   Widget build(BuildContext context) {
@@ -211,6 +232,14 @@ class _StatRow extends StatelessWidget {
                 style: AppTextStyles.labelSmall.copyWith(
                   color: colors.textTertiary,
                 ),
+              ),
+            ],
+            if (isTappable) ...[
+              const SizedBox(width: 2),
+              Icon(
+                Icons.chevron_right,
+                size: AppDimens.iconSm,
+                color: colors.textTertiary,
               ),
             ],
           ],
