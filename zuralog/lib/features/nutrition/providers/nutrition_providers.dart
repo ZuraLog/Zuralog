@@ -12,11 +12,14 @@
 /// - [nutritionRepositoryProvider]  — singleton repository (mock or API)
 /// - [todayMealsProvider]           — async list of today's meals
 /// - [nutritionDaySummaryProvider]  — async aggregated day summary
+/// - [todayExerciseProvider]        — async list of today's exercise entries
 /// - [mealDetailProvider]           — family: detail for a single meal by ID
 /// - [foodSearchQueryProvider]      — state: current search query text
 /// - [foodSearchResultsProvider]    — async search results for current query
 /// - [recentFoodsProvider]          — async list of recently logged foods
-/// - [nutritionTrendProvider]        — family: per-day calorie/protein for trend charts
+/// - [nutritionRulesProvider]       — async list of user's nutrition rules
+/// - [nutritionGoalsProvider]       — async structured nutrition goals from goal list
+/// - [nutritionTrendProvider]       — family: per-day calorie/protein for trend charts
 library;
 
 import 'dart:async' show Timer;
@@ -27,7 +30,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/nutrition/data/api_nutrition_repository.dart';
 import 'package:zuralog/features/nutrition/data/mock_nutrition_repository.dart';
+import 'package:zuralog/features/nutrition/domain/nutrition_goals_model.dart';
 import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
+import 'package:zuralog/features/progress/providers/progress_providers.dart';
 
 const _useMock = bool.fromEnvironment('USE_MOCK_DATA', defaultValue: false);
 
@@ -162,6 +167,59 @@ final nutritionDaySummaryProvider =
   }
 });
 
+// -- Today Exercise ----------------------------------------------------------
+
+/// Async notifier backing [todayExerciseProvider]. Owns the list of today's
+/// exercise entries and exposes mutations for adding and removing exercises.
+class TodayExerciseNotifier extends AsyncNotifier<List<ExerciseEntry>> {
+  @override
+  Future<List<ExerciseEntry>> build() async {
+    final repo = ref.read(nutritionRepositoryProvider);
+    try {
+      return await repo.getExerciseToday();
+    } catch (e) {
+      debugPrint('todayExerciseProvider failed: $e');
+      return const [];
+    }
+  }
+
+  /// Log a new exercise session and add it to the current list.
+  Future<void> logExercise({
+    required String activity,
+    required int durationMinutes,
+    required int caloriesBurned,
+  }) async {
+    final repo = ref.read(nutritionRepositoryProvider);
+    final entry = await repo.logExercise(
+      activity: activity,
+      durationMinutes: durationMinutes,
+      caloriesBurned: caloriesBurned,
+    );
+    state = AsyncData([...?state.valueOrNull, entry]);
+    ref.invalidate(nutritionDaySummaryProvider);
+  }
+
+  /// Delete an exercise entry by its ID.
+  Future<void> deleteExercise(String id) async {
+    state = AsyncData(
+      (state.valueOrNull ?? []).where((e) => e.id != id).toList(),
+    );
+    await ref.read(nutritionRepositoryProvider).deleteExercise(id);
+    ref.invalidate(nutritionDaySummaryProvider);
+  }
+}
+
+/// Async provider for today's exercise entries.
+///
+/// Never puts the UI into an error state — repo failures resolve to an
+/// empty list so the `data:` branch always renders a sensible empty state.
+/// Backed by [TodayExerciseNotifier], which exposes [logExercise] and
+/// [deleteExercise] for mutations on the Nutrition feature screens.
+final todayExerciseProvider =
+    AsyncNotifierProvider<TodayExerciseNotifier, List<ExerciseEntry>>(
+  TodayExerciseNotifier.new,
+);
+
 // -- Meal Detail --------------------------------------------------------------
 
 /// Async family provider for a single meal's full detail.
@@ -236,6 +294,30 @@ final nutritionRulesProvider =
   } catch (e, st) {
     debugPrint('nutritionRulesProvider failed: $e\n$st');
     return const [];
+  }
+});
+
+// ── Nutrition Goals ──────────────────────────────────────────────────────────
+
+/// Async provider for the user's structured nutrition goals.
+///
+/// Reads from the progress feature's [goalsProvider] and extracts nutrition-relevant
+/// goals (daily calorie budget, macro/mineral targets) into a [NutritionGoals] object.
+///
+/// All fields are optional — null means that goal is not set.
+/// Use [NutritionGoals.hasGoals] to check whether any goal is active.
+///
+/// Invalidate with `ref.invalidate(nutritionGoalsProvider)` after any goal
+/// create, update, or delete operation (the progress feature invalidates
+/// [goalsProvider] which this provider depends on).
+final nutritionGoalsProvider =
+    FutureProvider<NutritionGoals>((ref) async {
+  try {
+    final goalList = await ref.watch(goalsProvider.future);
+    return NutritionGoals.fromGoalList(goalList.goals);
+  } catch (e, st) {
+    debugPrint('nutritionGoalsProvider failed: $e\n$st');
+    return const NutritionGoals();
   }
 });
 
