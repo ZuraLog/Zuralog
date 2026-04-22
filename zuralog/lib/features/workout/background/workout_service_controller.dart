@@ -60,6 +60,9 @@ class WorkoutServiceController {
   Future<void> start() async {
     if (!_supported) return;
     _ensureInitialized();
+    // Request the POST_NOTIFICATIONS permission that Android 13+ requires
+    // for foreground service notifications. Idempotent — no-op when already granted.
+    await FlutterForegroundTask.requestNotificationPermission();
     final running = await FlutterForegroundTask.isRunningService;
     if (running) return;
     await FlutterForegroundTask.startService(
