@@ -72,6 +72,38 @@ void main() {
 
     expect(find.text('STUB_WELCOME'), findsOneWidget);
   });
+
+  testWidgets('tapping Get started persists has_seen_onboarding=true',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+
+    final router = GoRouter(
+      initialLocation: '/onboarding',
+      routes: [
+        GoRoute(path: '/onboarding', builder: (_, _) => const TrailerScreen()),
+        GoRoute(path: '/welcome', builder: (_, _) => const _StubWelcome()),
+      ],
+    );
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        hasSeenOnboardingProvider.overrideWith((ref) async => false),
+      ],
+      child: MaterialApp.router(routerConfig: router),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.tap(find.text('Get started'));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getBool('has_seen_onboarding'), isTrue);
+
+    await tester.pumpWidget(const SizedBox());
+  });
 }
 
 class _StubWelcome extends StatelessWidget {

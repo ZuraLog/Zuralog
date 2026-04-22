@@ -12,10 +12,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/onboarding/presentation/trailer/trailer_data.dart';
 import 'package:zuralog/features/onboarding/presentation/trailer/trailer_slide.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
@@ -45,19 +45,11 @@ class _TrailerScreenState extends ConsumerState<TrailerScreen> {
   static const double _logoChipBackgroundAlpha = 0.18;
   static const double _logoChipBorderAlpha = 0.35;
 
-  // Active / inactive page-dot sizing.
-  static const double _activeDotWidth = 18.0;
-  static const double _activeDotHeight = 3.0;
-  static const double _inactiveDotSize = 5.0;
-  static const double _inactiveDotAlpha = 0.30;
-
-  // Has-seen-onboarding persistence key — shared with the router redirect.
-  static const String _hasSeenOnboardingKey = 'has_seen_onboarding';
-
   final PageController _pageCtrl = PageController();
   int _index = 0;
   Timer? _autoAdvance;
   Timer? _resumeAfterInteraction;
+  bool _programmaticAdvanceInFlight = false;
 
   @override
   void initState() {
@@ -67,14 +59,19 @@ class _TrailerScreenState extends ConsumerState<TrailerScreen> {
 
   void _startAutoAdvance() {
     _autoAdvance?.cancel();
-    _autoAdvance = Timer.periodic(_autoAdvanceInterval, (_) {
+    _autoAdvance = Timer.periodic(_autoAdvanceInterval, (_) async {
       if (!mounted) return;
       final next = (_index + 1) % trailerSlides.length;
-      _pageCtrl.animateToPage(
-        next,
-        duration: _advanceTransitionDuration,
-        curve: Curves.easeInOut,
-      );
+      _programmaticAdvanceInFlight = true;
+      try {
+        await _pageCtrl.animateToPage(
+          next,
+          duration: _advanceTransitionDuration,
+          curve: Curves.easeInOut,
+        );
+      } finally {
+        if (mounted) _programmaticAdvanceInFlight = false;
+      }
     });
   }
 
@@ -89,8 +86,9 @@ class _TrailerScreenState extends ConsumerState<TrailerScreen> {
 
   Future<void> _onGetStarted() async {
     HapticFeedback.mediumImpact();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_hasSeenOnboardingKey, true);
+    await markOnboardingComplete();
+    if (!mounted) return;
+    ref.invalidate(hasSeenOnboardingProvider);
     if (!mounted) return;
     context.go(RouteNames.welcomePath);
   }
@@ -117,6 +115,7 @@ class _TrailerScreenState extends ConsumerState<TrailerScreen> {
             itemCount: trailerSlides.length,
             onPageChanged: (i) {
               setState(() => _index = i);
+              if (_programmaticAdvanceInFlight) return;
               HapticFeedback.lightImpact();
               _pauseAutoAdvanceForInteraction();
             },
@@ -186,6 +185,12 @@ class _PageDots extends StatelessWidget {
   static const Duration _transitionDuration = Duration(milliseconds: 300);
   static const double _dotHorizontalPadding = 3.0;
 
+  // Active / inactive page-dot sizing.
+  static const double _activeDotWidth = 18.0;
+  static const double _activeDotHeight = 3.0;
+  static const double _inactiveDotSize = 5.0;
+  static const double _inactiveDotAlpha = 0.30;
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -196,20 +201,13 @@ class _PageDots extends StatelessWidget {
           duration: _transitionDuration,
           curve: Curves.easeOut,
           margin: const EdgeInsets.symmetric(horizontal: _dotHorizontalPadding),
-          width: isActive
-              ? _TrailerScreenState._activeDotWidth
-              : _TrailerScreenState._inactiveDotSize,
-          height: isActive
-              ? _TrailerScreenState._activeDotHeight
-              : _TrailerScreenState._inactiveDotSize,
+          width: isActive ? _activeDotWidth : _inactiveDotSize,
+          height: isActive ? _activeDotHeight : _inactiveDotSize,
           decoration: BoxDecoration(
             color: isActive
                 ? AppColorsOf(context).primary
-                : Colors.white.withValues(
-                    alpha: _TrailerScreenState._inactiveDotAlpha),
-            borderRadius: BorderRadius.circular(
-              _TrailerScreenState._activeDotHeight,
-            ),
+                : Colors.white.withValues(alpha: _inactiveDotAlpha),
+            borderRadius: BorderRadius.circular(_activeDotHeight),
           ),
         );
       }),
