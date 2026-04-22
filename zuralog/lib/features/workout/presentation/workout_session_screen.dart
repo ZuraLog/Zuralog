@@ -35,18 +35,37 @@ class WorkoutSessionScreen extends ConsumerStatefulWidget {
 
 class _WorkoutSessionScreenState
     extends ConsumerState<WorkoutSessionScreen> {
+  int _activeExerciseIndex = 0;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(workoutSessionProvider.notifier).startSession();
+      // Auto-expand the last exercise when new ones are added from the catalogue.
+      ref.listen(
+        workoutSessionProvider.select((s) => s?.exercises.length ?? 0),
+        (prev, next) {
+          if (next > (prev ?? 0) && next > 0) {
+            setState(() => _activeExerciseIndex = next - 1);
+          }
+        },
+      );
     });
   }
 
   void _minimizeWorkout() {
     HapticFeedback.selectionClick();
     if (context.canPop()) context.pop();
+  }
+
+  void _advanceActiveExercise() {
+    final exercises = ref.read(workoutSessionProvider)?.exercises ?? [];
+    if (_activeExerciseIndex < exercises.length - 1) {
+      setState(() => _activeExerciseIndex++);
+    }
+    // If this was the last exercise, keep it expanded — nothing left to advance to.
   }
 
   Future<void> _openCatalogue() async {
@@ -188,10 +207,19 @@ class _WorkoutSessionScreenState
                     : ListView.builder(
                         padding: const EdgeInsets.only(bottom: AppDimens.spaceLg),
                         itemCount: exercises.length,
-                        itemBuilder: (_, i) => WorkoutExerciseCard(
-                          key: ValueKey(exercises[i].exerciseId),
-                          exercise: exercises[i],
-                        ),
+                        itemBuilder: (_, i) {
+                          final exercises =
+                              ref.watch(workoutSessionProvider)?.exercises ?? [];
+                          if (exercises.isEmpty) return const SizedBox.shrink();
+                          final safeIndex = _activeExerciseIndex.clamp(0, exercises.length - 1);
+                          return WorkoutExerciseCard(
+                            key: ValueKey(exercises[i].exerciseId),
+                            exercise: exercises[i],
+                            isExpanded: i == safeIndex,
+                            onTap: () => setState(() => _activeExerciseIndex = i),
+                            onAllSetsCompleted: _advanceActiveExercise,
+                          );
+                        },
                       ),
               ),
               // Inline morph slot — collapses to zero-height when the full
