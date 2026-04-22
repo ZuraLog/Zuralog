@@ -131,6 +131,26 @@ async def recompute_nutrition_summary(
         len(meals),
     )
 
+    # Evaluate whether the user hit all nutrition goals for this date.
+    # Runs after the summary is committed so the streak sees current totals.
+    # A failure here must never break the summary recompute itself.
+    try:
+        from app.tasks.nutrition_streak_task import (  # noqa: PLC0415
+            evaluate_nutrition_streak_for_user,
+        )
+
+        await evaluate_nutrition_streak_for_user(
+            db=db,
+            user_id=user_id,
+            activity_date=summary_date,
+        )
+    except Exception:
+        logger.exception(
+            "evaluate_nutrition_streak_for_user failed for user=%s date=%s — streak NOT updated",
+            user_id,
+            summary_date,
+        )
+
 
 # ---------------------------------------------------------------------------
 # Range helpers
