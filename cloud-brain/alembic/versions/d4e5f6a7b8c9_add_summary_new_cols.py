@@ -1,7 +1,7 @@
 """Add fiber/sodium/sugar/exercise_calories to NutritionDailySummary.
 
-Revision ID: c3d4e5f6a7b8
-Revises: a1b2c3d4e5f6
+Revision ID: d4e5f6a7b8c9
+Revises: c3d4e5f6a7b8
 Create Date: 2026-04-23
 
 Extends the nutrition_daily_summaries table with four new non-nullable columns
@@ -19,8 +19,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = "c3d4e5f6a7b8"
-down_revision = "a1b2c3d4e5f6"
+revision = "d4e5f6a7b8c9"
+down_revision = "c3d4e5f6a7b8"
 branch_labels = None
 depends_on = None
 
