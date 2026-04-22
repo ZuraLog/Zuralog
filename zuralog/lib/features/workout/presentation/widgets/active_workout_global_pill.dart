@@ -80,17 +80,19 @@ class ActivePillBody extends ConsumerWidget {
 
   final ActiveWorkoutSnapshot snapshot;
 
+  static const double _separatorHeight = 32;
+
   Future<void> _discard(BuildContext context, WidgetRef ref) async {
     HapticFeedback.selectionClick();
     final confirmed = await ZAlertDialog.show(
       context,
-      title: 'Discard workout?',
+      title: 'Discard this workout?',
       body: "Your exercises and sets won't be saved.",
       confirmLabel: 'Discard',
-      cancelLabel: 'Keep',
+      cancelLabel: 'Cancel',
       isDestructive: true,
     );
-    if (confirmed == true) {
+    if (confirmed == true && context.mounted) {
       ref.read(workoutSessionProvider.notifier).discardSession();
       ref.read(restTimerProvider.notifier).skip();
     }
@@ -98,7 +100,7 @@ class ActivePillBody extends ConsumerWidget {
 
   void _resume(BuildContext context) {
     HapticFeedback.selectionClick();
-    GoRouter.of(context).push(RouteNames.workoutSessionPath);
+    context.push(RouteNames.workoutSessionPath);
   }
 
   @override
@@ -162,7 +164,7 @@ class ActivePillBody extends ConsumerWidget {
                   ),
                 ),
                 // Separator.
-                Container(width: 1, height: 32, color: borderColor),
+                Container(width: 1, height: _separatorHeight, color: borderColor),
                 // Resume.
                 TextButton(
                   onPressed: () => _resume(context),
@@ -185,7 +187,7 @@ class ActivePillBody extends ConsumerWidget {
                   ),
                 ),
                 // Separator.
-                Container(width: 1, height: 32, color: borderColor),
+                Container(width: 1, height: _separatorHeight, color: borderColor),
                 // Discard.
                 IconButton(
                   onPressed: () => _discard(context, ref),
