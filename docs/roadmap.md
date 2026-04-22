@@ -16,6 +16,16 @@ What shipped:
 - Workout tile in `ZLogGridSheet` wired to navigate to `/log/workout` (was "coming soon")
 - 26 tests pass; zero new analyzer issues vs main
 
+### Plan 7: Exercise Catalogue Expansion — complete (2026-04-23)
+
+**Status:** Shipped on `feat/exercise-catalogue-expansion`
+
+- Exercise catalogue expanded from 50 to 839 exercises
+- Secondary muscle group targeting added to `Exercise` model
+- Equipment filtering (Barbell, Dumbbell, Kettlebell, Machine, Bodyweight, Bands) with real-time grid updates
+- Image asset pipeline with fallback to muscle-group icons
+- All filtering dimensions (muscle group + equipment + search) combined in the catalogue screen
+
 ### Plan 6: Workout Polish — complete (2026-04-22)
 
 **Status:** Shipped on `main`

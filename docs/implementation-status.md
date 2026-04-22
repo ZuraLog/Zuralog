@@ -1,3 +1,39 @@
+## 2026-04-23 — Exercise Catalogue Expansion: 839 Exercises, Equipment Filter, Image Assets
+
+**Branch:** `feat/exercise-catalogue-expansion`
+
+Expanded the exercise catalogue from 50 bundled exercises to 839, added secondary muscle targeting, equipment filtering, and image asset support for exercise icons.
+
+**What was built:**
+
+- **`exercises.json` expanded** (`assets/data/exercises.json`): 839 exercises across all muscle groups and equipment types, sourced from authoritative fitness databases. Each exercise now includes a `secondaryMuscles` array in addition to the primary `muscleGroup`.
+
+- **`Exercise` model extended** (`zuralog/lib/features/workout/domain/exercise.dart`): Added `secondaryMuscles` field (list of `MuscleGroup` enums) to capture exercises that work multiple muscle groups. Domain model remains immutable with full JSON round-trip support.
+
+- **Equipment filter added** (`zuralog/lib/features/workout/presentation/exercise_catalogue_screen.dart`): Horizontal scrollable chip row of equipment types (Barbell, Dumbbell, Kettlebell, Machine, Bodyweight, Bands) plus "All". Chips filter the exercise grid in real time. Chips use `AppColorsOf(context).primary` for active state.
+
+- **Equipment filter provider** (`zuralog/lib/features/workout/providers/exercise_providers.dart`): New `exerciseEquipmentFilterProvider` (state) works alongside existing `exerciseMuscleGroupFilterProvider` and `exerciseSearchQueryProvider` for combined filtering across all three dimensions (muscle group + equipment + search).
+
+- **Equipment repository support** (`zuralog/lib/features/workout/data/exercise_repository.dart`): `filter()` method now accepts an optional `Equipment` parameter and combines it with existing muscle-group and search filters.
+
+- **Image asset pipeline** (`assets/images/exercises/`): Directory structure created with PNG icons for each exercise. `Exercise` model supports optional `imageAsset` field pointing to `assets/images/exercises/{exerciseId}.png`. UI renders real images where available, falls back to muscle-group icon when missing.
+
+- **Image rendering** (`zuralog/lib/features/workout/presentation/widgets/exercise_grid_tile.dart`): `ExerciseGridTile` updated to display exercise images via `Image.asset()` with `fit: BoxFit.cover`. Fallback to muscle-group icon (`MuscleGroup.icon`) when image asset is not found (via `onError` callback).
+
+**Files created:**
+- `zuralog/lib/features/workout/providers/exercise_filter_provider.dart` (equipment filter logic)
+
+**Files modified:**
+- `assets/data/exercises.json` (expanded from 50 to 839 exercises, added `secondaryMuscles` field)
+- `zuralog/lib/features/workout/domain/exercise.dart` (added `secondaryMuscles` field)
+- `zuralog/lib/features/workout/presentation/exercise_catalogue_screen.dart` (equipment chip filter UI)
+- `zuralog/lib/features/workout/providers/exercise_providers.dart` (equipment filter state)
+- `zuralog/lib/features/workout/data/exercise_repository.dart` (equipment filtering logic)
+- `zuralog/lib/features/workout/presentation/widgets/exercise_grid_tile.dart` (image asset rendering + fallback)
+- `pubspec.yaml` (asset path registration for `assets/images/exercises/`)
+
+---
+
 ## 2026-04-22 — Workout Polish: Pill Spacing, Collapsible Cards, and Android Notifications
 
 **Branch:** `main` (merged from feat/progress-tab-redesign)
