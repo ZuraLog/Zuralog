@@ -287,3 +287,18 @@ class TestExerciseEntryModel:
         assert entry.activity_name == "Morning run"
         assert entry.source == "manual"
         assert entry.session_id is None
+
+
+# ---------------------------------------------------------------------------
+# Class 7: MealTemplate model — saved sets of foods for quick re-logging
+# ---------------------------------------------------------------------------
+
+
+class TestMealTemplateModel:
+    def test_meal_template_model_fields(self):
+        import json
+        from app.models.meal_template import MealTemplate
+        t = MealTemplate(user_id="user-1", name="My breakfast",
+                         foods_json=json.dumps([{"food_name": "Oats"}]))
+        assert t.name == "My breakfast"
+        assert json.loads(t.foods_json)[0]["food_name"] == "Oats"
