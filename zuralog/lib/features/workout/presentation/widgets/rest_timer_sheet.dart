@@ -180,6 +180,10 @@ class _FullSheetBody extends ConsumerWidget {
                         HapticFeedback.selectionClick();
                         ref.read(restTimerProvider.notifier).addTime(30);
                       },
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                        side: BorderSide(color: colors.primary),
+                      ),
                       child: Text(
                         '+30s',
                         style: AppTextStyles.labelLarge
@@ -196,6 +200,7 @@ class _FullSheetBody extends ConsumerWidget {
                       },
                       style: FilledButton.styleFrom(
                         backgroundColor: colors.primary,
+                        minimumSize: const Size.fromHeight(48),
                       ),
                       child: Text(
                         'Skip',
