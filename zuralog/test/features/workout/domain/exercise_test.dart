@@ -71,8 +71,33 @@ void main() {
       expect(exercise.id, 'bench_press');
       expect(exercise.name, 'Bench Press');
       expect(exercise.muscleGroup, MuscleGroup.chest);
+      expect(exercise.secondaryMuscles, isEmpty);
       expect(exercise.equipment, Equipment.barbell);
       expect(exercise.instructions, 'Lie down, press up.');
+    });
+
+    test('parses secondaryMuscles when present', () {
+      final json = <String, dynamic>{
+        'id': 'bench_press',
+        'name': 'Bench Press',
+        'muscleGroup': 'chest',
+        'secondaryMuscles': ['shoulders', 'triceps'],
+        'equipment': 'barbell',
+        'instructions': 'Press.',
+      };
+      final exercise = Exercise.fromJson(json);
+      expect(exercise.secondaryMuscles, [MuscleGroup.shoulders, MuscleGroup.triceps]);
+    });
+
+    test('secondaryMuscles defaults to empty list when field absent', () {
+      final json = <String, dynamic>{
+        'id': 'pull_up',
+        'name': 'Pull-Up',
+        'muscleGroup': 'back',
+        'equipment': 'bodyweight',
+        'instructions': 'Pull.',
+      };
+      expect(Exercise.fromJson(json).secondaryMuscles, isEmpty);
     });
 
     test('falls back to MuscleGroup.other on unknown muscleGroup', () {
@@ -84,6 +109,19 @@ void main() {
         'instructions': '',
       };
       expect(Exercise.fromJson(json).muscleGroup, MuscleGroup.other);
+    });
+
+    test('unknown slug in secondaryMuscles falls back to MuscleGroup.other', () {
+      final json = <String, dynamic>{
+        'id': 'x',
+        'name': 'X',
+        'muscleGroup': 'chest',
+        'secondaryMuscles': ['triceps', 'notARealMuscle'],
+        'equipment': 'barbell',
+        'instructions': '',
+      };
+      final exercise = Exercise.fromJson(json);
+      expect(exercise.secondaryMuscles, [MuscleGroup.triceps, MuscleGroup.other]);
     });
 
     test('equality is value-based via id', () {

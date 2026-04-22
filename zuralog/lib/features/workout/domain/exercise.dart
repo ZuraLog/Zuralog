@@ -58,6 +58,7 @@ class Exercise {
     required this.id,
     required this.name,
     required this.muscleGroup,
+    this.secondaryMuscles = const [],
     required this.equipment,
     required this.instructions,
   });
@@ -65,14 +66,22 @@ class Exercise {
   final String id;
   final String name;
   final MuscleGroup muscleGroup;
+  final List<MuscleGroup> secondaryMuscles;
   final Equipment equipment;
   final String instructions;
 
   factory Exercise.fromJson(Map<String, dynamic> json) => Exercise(
         id: json['id'] as String? ?? '',
         name: json['name'] as String? ?? '',
-        muscleGroup: MuscleGroup.fromString(json['muscleGroup'] as String? ?? ''),
-        equipment: Equipment.fromString(json['equipment'] as String? ?? ''),
+        muscleGroup:
+            MuscleGroup.fromString(json['muscleGroup'] as String? ?? ''),
+        secondaryMuscles:
+            ((json['secondaryMuscles'] as List<dynamic>?) ?? const [])
+                .cast<String>()
+                .map(MuscleGroup.fromString)
+                .toList(growable: false),
+        equipment:
+            Equipment.fromString(json['equipment'] as String? ?? ''),
         instructions: json['instructions'] as String? ?? '',
       );
 
