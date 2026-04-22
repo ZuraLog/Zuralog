@@ -23,6 +23,9 @@ import 'package:go_router/go_router.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/workout/providers/active_workout_provider.dart';
+import 'package:zuralog/features/workout/providers/rest_timer_provider.dart';
+import 'package:zuralog/features/workout/providers/workout_session_providers.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 /// Floating pill shown above the bottom-nav cluster when a workout is
 /// active. Tap returns the user to the live workout session screen.
@@ -72,19 +75,39 @@ class ActiveWorkoutGlobalPill extends ConsumerWidget {
 /// Rendered body of the pill. Exposed (non-private) so widget tests can
 /// target it with `find.byType`.
 @visibleForTesting
-class ActivePillBody extends StatelessWidget {
+class ActivePillBody extends ConsumerWidget {
   const ActivePillBody({required this.snapshot, super.key});
 
   final ActiveWorkoutSnapshot snapshot;
 
+  Future<void> _discard(BuildContext context, WidgetRef ref) async {
+    HapticFeedback.selectionClick();
+    final confirmed = await ZAlertDialog.show(
+      context,
+      title: 'Discard workout?',
+      body: "Your exercises and sets won't be saved.",
+      confirmLabel: 'Discard',
+      cancelLabel: 'Keep',
+      isDestructive: true,
+    );
+    if (confirmed == true) {
+      ref.read(workoutSessionProvider.notifier).discardSession();
+      ref.read(restTimerProvider.notifier).skip();
+    }
+  }
+
+  void _resume(BuildContext context) {
+    HapticFeedback.selectionClick();
+    GoRouter.of(context).push(RouteNames.workoutSessionPath);
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
     final isResting = snapshot.isResting;
 
     final elapsed = snapshot.workoutElapsed;
     final rest = snapshot.rest.remaining;
-
     final elapsedStr = _fmtDuration(elapsed);
     final restStr = _fmtDuration(rest);
 
@@ -97,53 +120,89 @@ class ActivePillBody extends StatelessWidget {
         ? colors.primary.withValues(alpha: 0.40)
         : colors.textSecondary.withValues(alpha: 0.18);
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceXs,
-        AppDimens.spaceMd,
-        0,
-      ),
-      child: Material(
-        color: bgColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDimens.shapeMd),
-          side: BorderSide(color: borderColor),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            GoRouter.of(context).push(RouteNames.workoutSessionPath);
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppDimens.spaceMd,
-              vertical: AppDimens.spaceXs,
-            ),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(0, AppDimens.spaceXs, 0, 0),
+        child: Material(
+          color: bgColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+            side: BorderSide(color: borderColor),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: IntrinsicWidth(
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  isResting
-                      ? Icons.timer_outlined
-                      : Icons.fitness_center_rounded,
-                  size: AppDimens.iconMd,
-                  color: iconColor,
+                // Status label — icon + live timer text.
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceMd,
+                    vertical: AppDimens.spaceXs,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isResting
+                            ? Icons.timer_outlined
+                            : Icons.fitness_center_rounded,
+                        size: AppDimens.iconMd,
+                        color: iconColor,
+                      ),
+                      const SizedBox(width: AppDimens.spaceSm),
+                      Text(
+                        isResting ? 'Rest  $restStr' : 'Workout  $elapsedStr',
+                        style: AppTextStyles.labelLarge.copyWith(
+                          color: textColor,
+                          fontFeatures: [const FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(width: AppDimens.spaceSm),
-                Expanded(
+                // Separator.
+                Container(width: 1, height: 32, color: borderColor),
+                // Resume.
+                TextButton(
+                  onPressed: () => _resume(context),
+                  style: TextButton.styleFrom(
+                    foregroundColor: colors.primary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimens.spaceMd,
+                      vertical: AppDimens.spaceXs,
+                    ),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    minimumSize: Size.zero,
+                    shape: const RoundedRectangleBorder(),
+                  ),
                   child: Text(
-                    isResting ? 'Rest  $restStr' : 'Workout  $elapsedStr',
-                    style: AppTextStyles.labelLarge.copyWith(
-                      color: textColor,
-                      fontFeatures: [const FontFeature.tabularFigures()],
+                    'Resume',
+                    style: AppTextStyles.labelMedium.copyWith(
+                      color: colors.primary,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: AppDimens.iconMd,
-                  color: colors.textSecondary,
+                // Separator.
+                Container(width: 1, height: 32, color: borderColor),
+                // Discard.
+                IconButton(
+                  onPressed: () => _discard(context, ref),
+                  icon: Icon(
+                    Icons.delete_outline_rounded,
+                    size: AppDimens.iconSm,
+                    color: colors.error,
+                  ),
+                  style: IconButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimens.spaceMd,
+                      vertical: AppDimens.spaceXs,
+                    ),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    minimumSize: Size.zero,
+                    shape: const RoundedRectangleBorder(),
+                  ),
                 ),
               ],
             ),
