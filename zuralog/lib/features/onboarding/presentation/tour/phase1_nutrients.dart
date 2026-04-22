@@ -260,13 +260,13 @@ class _NutrientsScreen2State extends State<NutrientsScreen2>
   static const _sampleText = '2 eggs, toast with avocado, black coffee';
 
   static const _foodMap = <String, Map<String, dynamic>>{
-    'egg':     {'name': '2 eggs, scrambled',       'kcal': 156, 'p': 12, 'c': 2,  'f': 11},
-    'toast':   {'name': 'Sourdough toast',          'kcal': 110, 'p': 4,  'c': 20, 'f': 1},
-    'avocado': {'name': 'Half avocado',             'kcal': 120, 'p': 1,  'c': 6,  'f': 11},
-    'coffee':  {'name': 'Black coffee',             'kcal': 2,   'p': 0,  'c': 0,  'f': 0},
-    'chicken': {'name': 'Grilled chicken 150g',     'kcal': 248, 'p': 46, 'c': 0,  'f': 5},
-    'quinoa':  {'name': 'Quinoa 1 cup',             'kcal': 222, 'p': 8,  'c': 39, 'f': 4},
-    'banana':  {'name': 'Medium banana',            'kcal': 105, 'p': 1,  'c': 27, 'f': 0},
+    'egg':     {'name': 'Eggs',            'portion': '2 large',  'kcal': 156, 'p': 12, 'c': 2,  'f': 11, 'note': 'Complete protein source'},
+    'toast':   {'name': 'Sourdough toast', 'portion': '1 slice',  'kcal': 110, 'p': 4,  'c': 20, 'f': 1,  'note': 'Complex carbohydrates'},
+    'avocado': {'name': 'Avocado',         'portion': 'Half',     'kcal': 120, 'p': 1,  'c': 6,  'f': 11, 'note': 'Heart-healthy fats'},
+    'coffee':  {'name': 'Black coffee',    'portion': '1 cup',    'kcal': 2,   'p': 0,  'c': 0,  'f': 0,  'note': 'Zero calorie'},
+    'chicken': {'name': 'Grilled chicken', 'portion': '150g',     'kcal': 248, 'p': 46, 'c': 0,  'f': 5,  'note': 'Lean protein'},
+    'quinoa':  {'name': 'Quinoa',          'portion': '1 cup',    'kcal': 222, 'p': 8,  'c': 39, 'f': 4,  'note': 'Complete plant protein'},
+    'banana':  {'name': 'Banana',          'portion': 'Medium',   'kcal': 105, 'p': 1,  'c': 27, 'f': 0,  'note': 'Quick energy'},
   };
 
   @override
@@ -631,27 +631,43 @@ class _ResultsArea extends StatelessWidget {
                   width: 0.5,
                 ),
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      item['name'] as String,
-                      style: const TextStyle(
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${item['name']} — ${item['portion']}',
+                          style: const TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${item['kcal']} kcal',
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 13,
+                          color: AppColors.categoryNutrition,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (item['note'] != null && (item['note'] as String).isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      item['note'] as String,
+                      style: TextStyle(
                         fontFamily: 'PlusJakartaSans',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white,
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.4),
                       ),
                     ),
-                  ),
-                  Text(
-                    '${item['kcal']} kcal',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 13,
-                      color: AppColors.categoryNutrition,
-                    ),
-                  ),
+                  ],
                 ],
               ),
             ),
