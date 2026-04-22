@@ -5,6 +5,13 @@
 ///
 /// Used on every screen of the Act 3 personalization flow and anywhere
 /// else a short multi-step progress is communicated.
+///
+/// ## Usage
+///
+/// ```dart
+/// ZProgressPill(totalSteps: 3, currentStep: 0) // first step of three
+/// ZProgressPill(totalSteps: 5, currentStep: 4) // last step (all filled)
+/// ```
 library;
 
 import 'package:flutter/material.dart';
@@ -20,7 +27,8 @@ class ZProgressPill extends StatelessWidget {
     this.height = 3,
     this.gap = 6,
   })  : assert(totalSteps > 0),
-        assert(currentStep >= 0);
+        assert(currentStep >= 0),
+        assert(currentStep < totalSteps, 'currentStep must be < totalSteps');
 
   /// Total number of segments.
   final int totalSteps;
@@ -36,6 +44,7 @@ class ZProgressPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final children = <Widget>[];
     for (var i = 0; i < totalSteps; i++) {
       final isActive = i <= currentStep;
@@ -46,9 +55,7 @@ class ZProgressPill extends StatelessWidget {
           curve: Curves.easeOut,
           height: height,
           decoration: BoxDecoration(
-            color: isActive
-                ? AppColors.primary
-                : Colors.white.withValues(alpha: 0.12),
+            color: isActive ? colors.primary : colors.surfaceRaised,
             borderRadius: BorderRadius.circular(height / 2),
           ),
         ),

@@ -29,6 +29,10 @@ void main() {
         ),
       ));
 
+      // Resolve theme-aware colors from the same context the widget sees, so
+      // the expectation works in both light and dark default theme environments.
+      final colors = AppColorsOf(tester.element(find.byType(ZProgressPill)));
+
       final seg0 = tester.widget<AnimatedContainer>(
         find.byKey(const ValueKey('z_progress_segment_0')),
       );
@@ -38,10 +42,9 @@ void main() {
       final seg2 = tester.widget<AnimatedContainer>(
         find.byKey(const ValueKey('z_progress_segment_2')),
       );
-      expect((seg0.decoration as BoxDecoration).color, AppColors.primary);
-      expect((seg1.decoration as BoxDecoration).color, AppColors.primary);
-      expect((seg2.decoration as BoxDecoration).color,
-          isNot(AppColors.primary));
+      expect((seg0.decoration as BoxDecoration).color, colors.primary);
+      expect((seg1.decoration as BoxDecoration).color, colors.primary);
+      expect((seg2.decoration as BoxDecoration).color, isNot(colors.primary));
     });
   });
 }
