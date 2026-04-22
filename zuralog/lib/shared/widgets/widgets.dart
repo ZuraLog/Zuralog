@@ -106,6 +106,7 @@ export 'states/z_error_state.dart';
 export 'coach_input_bar.dart';
 export 'z_avatar.dart';
 export 'z_badge.dart';
+export 'pattern/z_contour_accent.dart';
 export 'pattern/z_pattern_overlay.dart';
 export 'pattern/z_pattern_text.dart';
 export 'z_divider.dart';
