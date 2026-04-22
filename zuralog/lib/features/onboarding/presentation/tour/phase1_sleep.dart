@@ -730,8 +730,8 @@ class SleepScreen3 extends StatelessWidget {
                     ),
                     _WindDownStep(
                       number: 4,
-                      title: 'Gentle wake at 6:45am',
-                      subtitle: 'Light sleep stage alarm',
+                      title: 'Smart wake window',
+                      subtitle: 'Set your target time. We nudge you early if your pattern suggests light sleep nearby.',
                       color: _sleep,
                       delay: const Duration(milliseconds: 520),
                     ),
