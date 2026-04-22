@@ -2,6 +2,58 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
 
 void main() {
+  // ── ExerciseEntry ────────────────────────────────────────────────────────────
+
+  test('ExerciseEntry.fromJson parses correctly', () {
+    final json = {
+      'id': 'entry-1',
+      'activity': 'Running',
+      'duration_minutes': 30,
+      'calories_burned': 320,
+      'logged_at': '2026-04-23T10:00:00.000Z',
+    };
+    final entry = ExerciseEntry.fromJson(json);
+    expect(entry.id, 'entry-1');
+    expect(entry.activity, 'Running');
+    expect(entry.durationMinutes, 30);
+    expect(entry.caloriesBurned, 320);
+    expect(entry.loggedAt, DateTime.parse('2026-04-23T10:00:00.000Z'));
+  });
+
+  // ── MealTemplate ─────────────────────────────────────────────────────────────
+
+  test('MealTemplate.fromJson parses foods list', () {
+    final json = {
+      'id': 'tmpl-1',
+      'name': 'My Lunch',
+      'meal_type': 'lunch',
+      'foods': [
+        {
+          'food_name': 'chicken',
+          'calories': 330.0,
+          'protein_g': 62.0,
+          'carbs_g': 0.0,
+          'fat_g': 7.0,
+          'portion_amount': 200.0,
+          'portion_unit': 'g',
+          'fiber_g': 0.0,
+          'sodium_mg': 80.0,
+          'sugar_g': 0.0,
+        }
+      ],
+      'created_at': '2026-04-23T10:00:00.000Z',
+    };
+    final tmpl = MealTemplate.fromJson(json);
+    expect(tmpl.id, 'tmpl-1');
+    expect(tmpl.name, 'My Lunch');
+    expect(tmpl.mealType, 'lunch');
+    expect(tmpl.foods.length, 1);
+    expect(tmpl.foods.first.proteinG, 62.0);
+    expect(tmpl.createdAt, DateTime.parse('2026-04-23T10:00:00.000Z'));
+  });
+
+  // ── MealFood ─────────────────────────────────────────────────────────────────
+
   test('MealFood fromJson maps fiberG sodiumMg sugarG', () {
     final json = {
       'food_name': 'oats',

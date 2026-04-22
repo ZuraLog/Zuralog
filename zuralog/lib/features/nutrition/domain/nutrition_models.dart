@@ -866,6 +866,107 @@ class SuggestedRule {
       };
 }
 
+// -- ExerciseEntry ------------------------------------------------------------
+
+/// A single exercise session logged by the user.
+///
+/// Stores the activity name, how long it lasted, and how many calories were
+/// burned so the nutrition dashboard can display net-calorie figures.
+class ExerciseEntry {
+  /// Creates an immutable [ExerciseEntry].
+  const ExerciseEntry({
+    required this.id,
+    required this.activity,
+    required this.durationMinutes,
+    required this.caloriesBurned,
+    required this.loggedAt,
+  });
+
+  /// Unique identifier for this entry.
+  final String id;
+
+  /// Human-readable activity name (e.g. `'Running'`, `'Cycling'`).
+  final String activity;
+
+  /// Duration of the session in whole minutes.
+  final int durationMinutes;
+
+  /// Calories burned during the session (kilocalories).
+  final int caloriesBurned;
+
+  /// When the exercise was logged.
+  final DateTime loggedAt;
+
+  /// Deserialises an [ExerciseEntry] from a backend JSON map.
+  factory ExerciseEntry.fromJson(Map<String, dynamic> j) => ExerciseEntry(
+        id: j['id'] as String,
+        activity: j['activity'] as String,
+        durationMinutes: (j['duration_minutes'] as num?)?.toInt() ?? 0,
+        caloriesBurned: (j['calories_burned'] as num).toInt(),
+        loggedAt: DateTime.parse(j['logged_at'] as String),
+      );
+
+  /// Serialises this [ExerciseEntry] to a JSON map matching the backend schema.
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'activity': activity,
+        'duration_minutes': durationMinutes,
+        'calories_burned': caloriesBurned,
+        'logged_at': loggedAt.toUtc().toIso8601String(),
+      };
+}
+
+// -- MealTemplate -------------------------------------------------------------
+
+/// A saved meal template that the user can quickly re-log.
+///
+/// Templates store a named collection of [MealFood] items so the user can
+/// log a frequently eaten meal without re-entering every food every time.
+class MealTemplate {
+  /// Creates an immutable [MealTemplate].
+  const MealTemplate({
+    required this.id,
+    required this.name,
+    required this.mealType,
+    required this.foods,
+    required this.createdAt,
+  });
+
+  /// Unique identifier for this template.
+  final String id;
+
+  /// User-chosen name for the template (e.g. `'My Lunch'`).
+  final String name;
+
+  /// The default meal category for this template (e.g. `'lunch'`).
+  final String mealType;
+
+  /// Food items that make up this template.
+  final List<MealFood> foods;
+
+  /// When the template was first saved.
+  final DateTime createdAt;
+
+  /// Deserialises a [MealTemplate] from a backend JSON map.
+  factory MealTemplate.fromJson(Map<String, dynamic> j) => MealTemplate(
+        id: j['id'] as String,
+        name: j['name'] as String,
+        mealType: j['meal_type'] as String,
+        foods: (j['foods'] as List)
+            .map((f) => MealFood.fromJson(f as Map<String, dynamic>))
+            .toList(),
+        createdAt: DateTime.parse(j['created_at'] as String),
+      );
+
+  /// Total calories across all foods in this template.
+  int get totalCalories =>
+      foods.fold(0, (sum, food) => sum + food.caloriesKcal);
+
+  /// Total protein (grams) across all foods in this template.
+  double get totalProtein =>
+      foods.fold(0.0, (sum, food) => sum + food.proteinG);
+}
+
 /// Extracts a [SuggestedRule] from a JSON payload defensively.
 ///
 /// Returns `null` when the key is missing, null, or not a `Map` — never

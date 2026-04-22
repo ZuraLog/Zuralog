@@ -151,6 +151,36 @@ abstract interface class NutritionRepositoryInterface {
   /// Returns per-day rows for every nutrition metric. Valid range values:
   /// '7d', '30d', '3m', '6m', '1y'. Throws [ArgumentError] for unknown ranges.
   Future<List<AllDataDay>> getNutritionAllData(String range);
+
+  // ── Exercise ────────────────────────────────────────────────────────────────
+
+  /// Returns all exercise entries logged today.
+  Future<List<ExerciseEntry>> getExerciseToday();
+
+  /// Logs a new exercise session for today.
+  Future<ExerciseEntry> logExercise({
+    required String activity,
+    required int durationMinutes,
+    required int caloriesBurned,
+  });
+
+  /// Deletes the exercise entry matching [id].
+  Future<void> deleteExercise(String id);
+
+  // ── Meal Templates ──────────────────────────────────────────────────────────
+
+  /// Returns all saved meal templates for the current user.
+  Future<List<MealTemplate>> getTemplates();
+
+  /// Saves a new meal template.
+  Future<MealTemplate> saveTemplate({
+    required String name,
+    required String mealType,
+    required List<MealFood> foods,
+  });
+
+  /// Deletes the meal template matching [id].
+  Future<void> deleteTemplate(String id);
 }
 
 // -- MockNutritionRepository --------------------------------------------------
@@ -386,6 +416,46 @@ class MockNutritionRepository implements NutritionRepositoryInterface {
   }) async {
     throw UnimplementedError('Mock does not support dismissRuleSuggestion');
   }
+
+  // ── Exercise ────────────────────────────────────────────────────────────────
+
+  @override
+  Future<List<ExerciseEntry>> getExerciseToday() async {
+    await Future<void>.delayed(_readDelay);
+    return const [];
+  }
+
+  @override
+  Future<ExerciseEntry> logExercise({
+    required String activity,
+    required int durationMinutes,
+    required int caloriesBurned,
+  }) =>
+      throw UnimplementedError('Mock does not support logExercise');
+
+  @override
+  Future<void> deleteExercise(String id) =>
+      throw UnimplementedError('Mock does not support deleteExercise');
+
+  // ── Meal Templates ──────────────────────────────────────────────────────────
+
+  @override
+  Future<List<MealTemplate>> getTemplates() async {
+    await Future<void>.delayed(_readDelay);
+    return const [];
+  }
+
+  @override
+  Future<MealTemplate> saveTemplate({
+    required String name,
+    required String mealType,
+    required List<MealFood> foods,
+  }) =>
+      throw UnimplementedError('Mock does not support saveTemplate');
+
+  @override
+  Future<void> deleteTemplate(String id) =>
+      throw UnimplementedError('Mock does not support deleteTemplate');
 
   // -- Fixture Builder --------------------------------------------------------
 
