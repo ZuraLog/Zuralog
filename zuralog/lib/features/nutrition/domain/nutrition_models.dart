@@ -83,6 +83,9 @@ class MealFood {
     required this.proteinG,
     required this.carbsG,
     required this.fatG,
+    this.fiberG = 0.0,
+    this.sodiumMg = 0.0,
+    this.sugarG = 0.0,
     this.origin,
     this.sourceQuestionId,
     this.sourceAnswerValue,
@@ -108,6 +111,15 @@ class MealFood {
 
   /// Fat content in grams.
   final double fatG;
+
+  /// Dietary fibre content in grams.
+  final double fiberG;
+
+  /// Sodium content in milligrams.
+  final double sodiumMg;
+
+  /// Sugar content in grams.
+  final double sugarG;
 
   /// Where this food came from when it was added to the meal.
   ///
@@ -138,6 +150,9 @@ class MealFood {
       proteinG: (json['protein_g'] as num?)?.toDouble() ?? 0.0,
       carbsG: (json['carbs_g'] as num?)?.toDouble() ?? 0.0,
       fatG: (json['fat_g'] as num?)?.toDouble() ?? 0.0,
+      fiberG: (json['fiber_g'] as num?)?.toDouble() ?? 0.0,
+      sodiumMg: (json['sodium_mg'] as num?)?.toDouble() ?? 0.0,
+      sugarG: (json['sugar_g'] as num?)?.toDouble() ?? 0.0,
       origin: json['origin'] as String?,
       sourceQuestionId: json['source_question_id'] as String?,
       sourceAnswerValue: json['source_answer_value'] as String?,
@@ -157,6 +172,9 @@ class MealFood {
       'protein_g': proteinG,
       'carbs_g': carbsG,
       'fat_g': fatG,
+      'fiber_g': fiberG,
+      'sodium_mg': sodiumMg,
+      'sugar_g': sugarG,
     };
     if (origin != null) {
       json['origin'] = origin;
@@ -168,6 +186,39 @@ class MealFood {
       json['source_answer_value'] = sourceAnswerValue;
     }
     return json;
+  }
+
+  /// Returns a new [MealFood] with the given fields replaced.
+  MealFood copyWith({
+    String? name,
+    int? portionGrams,
+    String? portionUnit,
+    int? caloriesKcal,
+    double? proteinG,
+    double? carbsG,
+    double? fatG,
+    double? fiberG,
+    double? sodiumMg,
+    double? sugarG,
+    String? origin,
+    String? sourceQuestionId,
+    String? sourceAnswerValue,
+  }) {
+    return MealFood(
+      name: name ?? this.name,
+      portionGrams: portionGrams ?? this.portionGrams,
+      portionUnit: portionUnit ?? this.portionUnit,
+      caloriesKcal: caloriesKcal ?? this.caloriesKcal,
+      proteinG: proteinG ?? this.proteinG,
+      carbsG: carbsG ?? this.carbsG,
+      fatG: fatG ?? this.fatG,
+      fiberG: fiberG ?? this.fiberG,
+      sodiumMg: sodiumMg ?? this.sodiumMg,
+      sugarG: sugarG ?? this.sugarG,
+      origin: origin ?? this.origin,
+      sourceQuestionId: sourceQuestionId ?? this.sourceQuestionId,
+      sourceAnswerValue: sourceAnswerValue ?? this.sourceAnswerValue,
+    );
   }
 }
 
@@ -244,6 +295,10 @@ class NutritionDaySummary {
     required this.totalCarbsG,
     required this.totalFatG,
     required this.mealCount,
+    this.fiberG = 0.0,
+    this.sodiumMg = 0.0,
+    this.sugarG = 0.0,
+    this.exerciseCaloriesBurned = 0,
     this.aiSummary,
     this.aiGeneratedAt,
   });
@@ -263,6 +318,18 @@ class NutritionDaySummary {
   /// Number of meals logged today.
   final int mealCount;
 
+  /// Total dietary fibre consumed today (grams).
+  final double fiberG;
+
+  /// Total sodium consumed today (milligrams).
+  final double sodiumMg;
+
+  /// Total sugar consumed today (grams).
+  final double sugarG;
+
+  /// Calories burned through exercise today (kilocalories).
+  final int exerciseCaloriesBurned;
+
   /// AI-generated observation about today's nutrition. Null until the backend
   /// has processed enough data to produce a summary.
   final String? aiSummary;
@@ -278,10 +345,45 @@ class NutritionDaySummary {
       totalCarbsG: (json['total_carbs_g'] as num?)?.toDouble() ?? 0.0,
       totalFatG: (json['total_fat_g'] as num?)?.toDouble() ?? 0.0,
       mealCount: (json['meal_count'] as num?)?.toInt() ?? 0,
+      fiberG: (json['total_fiber_g'] as num?)?.toDouble() ?? 0.0,
+      sodiumMg: (json['total_sodium_mg'] as num?)?.toDouble() ?? 0.0,
+      sugarG: (json['total_sugar_g'] as num?)?.toDouble() ?? 0.0,
+      exerciseCaloriesBurned:
+          (json['exercise_calories_burned'] as num?)?.toInt() ?? 0,
       aiSummary: json['ai_summary'] as String?,
       aiGeneratedAt: json['ai_generated_at'] != null
           ? DateTime.tryParse(json['ai_generated_at'] as String)
           : null,
+    );
+  }
+
+  /// Returns a new [NutritionDaySummary] with the given fields replaced.
+  NutritionDaySummary copyWith({
+    int? totalCalories,
+    double? totalProteinG,
+    double? totalCarbsG,
+    double? totalFatG,
+    int? mealCount,
+    double? fiberG,
+    double? sodiumMg,
+    double? sugarG,
+    int? exerciseCaloriesBurned,
+    String? aiSummary,
+    DateTime? aiGeneratedAt,
+  }) {
+    return NutritionDaySummary(
+      totalCalories: totalCalories ?? this.totalCalories,
+      totalProteinG: totalProteinG ?? this.totalProteinG,
+      totalCarbsG: totalCarbsG ?? this.totalCarbsG,
+      totalFatG: totalFatG ?? this.totalFatG,
+      mealCount: mealCount ?? this.mealCount,
+      fiberG: fiberG ?? this.fiberG,
+      sodiumMg: sodiumMg ?? this.sodiumMg,
+      sugarG: sugarG ?? this.sugarG,
+      exerciseCaloriesBurned:
+          exerciseCaloriesBurned ?? this.exerciseCaloriesBurned,
+      aiSummary: aiSummary ?? this.aiSummary,
+      aiGeneratedAt: aiGeneratedAt ?? this.aiGeneratedAt,
     );
   }
 
@@ -346,6 +448,9 @@ class ParsedFoodItem {
     required this.proteinG,
     required this.carbsG,
     required this.fatG,
+    this.fiberG = 0.0,
+    this.sodiumMg = 0.0,
+    this.sugarG = 0.0,
     this.confidence = 0.5,
     this.appliedRules = const [],
     this.origin = 'user',
@@ -373,6 +478,15 @@ class ParsedFoodItem {
 
   /// Fat content in grams.
   final double fatG;
+
+  /// Dietary fibre content in grams.
+  final double fiberG;
+
+  /// Sodium content in milligrams.
+  final double sodiumMg;
+
+  /// Sugar content in grams.
+  final double sugarG;
 
   /// Parser confidence score (0.0–1.0). Defaults to 0.5.
   final double confidence;
@@ -420,6 +534,9 @@ class ParsedFoodItem {
       proteinG: (json['protein_g'] as num?)?.toDouble() ?? 0.0,
       carbsG: (json['carbs_g'] as num?)?.toDouble() ?? 0.0,
       fatG: (json['fat_g'] as num?)?.toDouble() ?? 0.0,
+      fiberG: (json['fiber_g'] as num?)?.toDouble() ?? 0.0,
+      sodiumMg: (json['sodium_mg'] as num?)?.toDouble() ?? 0.0,
+      sugarG: (json['sugar_g'] as num?)?.toDouble() ?? 0.0,
       confidence: (json['confidence'] as num?)?.toDouble() ?? 0.5,
       appliedRules: parsedApplied,
       origin: json['origin'] as String? ?? 'user',
@@ -438,6 +555,9 @@ class ParsedFoodItem {
         'protein_g': proteinG,
         'carbs_g': carbsG,
         'fat_g': fatG,
+        'fiber_g': fiberG,
+        'sodium_mg': sodiumMg,
+        'sugar_g': sugarG,
         'confidence': confidence,
         'applied_rules': appliedRules,
         'origin': origin,
@@ -458,6 +578,9 @@ class ParsedFoodItem {
     double? proteinG,
     double? carbsG,
     double? fatG,
+    double? fiberG,
+    double? sodiumMg,
+    double? sugarG,
     double? confidence,
     List<String>? appliedRules,
     String? origin,
@@ -472,6 +595,9 @@ class ParsedFoodItem {
       proteinG: proteinG ?? this.proteinG,
       carbsG: carbsG ?? this.carbsG,
       fatG: fatG ?? this.fatG,
+      fiberG: fiberG ?? this.fiberG,
+      sodiumMg: sodiumMg ?? this.sodiumMg,
+      sugarG: sugarG ?? this.sugarG,
       confidence: confidence ?? this.confidence,
       appliedRules: appliedRules ?? this.appliedRules,
       origin: origin ?? this.origin,
@@ -493,6 +619,9 @@ class ParsedFoodItem {
         proteinG: proteinG,
         carbsG: carbsG,
         fatG: fatG,
+        fiberG: fiberG,
+        sodiumMg: sodiumMg,
+        sugarG: sugarG,
         origin: origin,
         sourceQuestionId: sourceQuestionId,
         sourceAnswerValue: sourceAnswerValue,
