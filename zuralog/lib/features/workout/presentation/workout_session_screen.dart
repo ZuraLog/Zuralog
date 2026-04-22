@@ -44,6 +44,11 @@ class _WorkoutSessionScreenState
     });
   }
 
+  void _minimizeWorkout() {
+    HapticFeedback.selectionClick();
+    if (context.canPop()) context.pop();
+  }
+
   Future<void> _openCatalogue() async {
     HapticFeedback.selectionClick();
     final result = await context.push<List<Exercise>>(
@@ -145,7 +150,7 @@ class _WorkoutSessionScreenState
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.keyboard_arrow_down_rounded),
-          onPressed: _confirmDiscard,
+          onPressed: _minimizeWorkout,
         ),
         title: Icon(Icons.timer_outlined, color: colors.textPrimary),
         centerTitle: true,
