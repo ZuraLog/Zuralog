@@ -321,6 +321,26 @@ final nutritionGoalsProvider =
   }
 });
 
+// ── Meal Templates ───────────────────────────────────────────────────────────
+
+/// Async provider for the user's saved meal templates.
+///
+/// Never puts the UI into an error state — repo failures resolve to an
+/// empty list so screens can safely assume a list is available.
+///
+/// Invalidate with `ref.invalidate(mealTemplatesProvider)` after any
+/// create, update, or delete operation on meal templates.
+final mealTemplatesProvider =
+    FutureProvider<List<MealTemplate>>((ref) async {
+  final repo = ref.read(nutritionRepositoryProvider);
+  try {
+    return await repo.getTemplates();
+  } catch (e, st) {
+    debugPrint('mealTemplatesProvider failed: $e\n$st');
+    return const [];
+  }
+});
+
 // ── Nutrition Trend ──────────────────────────────────────────────────────────
 
 /// Async family provider for per-day calorie and protein totals.
