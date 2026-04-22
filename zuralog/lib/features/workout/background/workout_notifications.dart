@@ -232,6 +232,9 @@ class WorkoutNotifications {
           autoCancel: true,
         ),
         iOS: DarwinNotificationDetails(
+          // categoryIdentifier included for consistency; action buttons are
+          // not rendered on foreground show() banners on iOS — the
+          // scheduleRestEnd() path handles background action buttons.
           categoryIdentifier: _categoryId,
           presentAlert: true,
           presentSound: true,

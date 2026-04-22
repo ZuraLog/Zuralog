@@ -346,8 +346,11 @@ final workoutServiceBridgeProvider = Provider<void>((ref) {
       if (prev == false && next == true) {
         unawaited(notifications.showRestComplete());
       } else if (prev == true && next == false) {
-        // Rest was extended via +30s — cancel the stale "rest complete" alert.
-        unawaited(notifications.cancelRestEnd());
+        // Only cancel when the timer was extended (+30s) — if restStartedAt is
+        // null, the timer was skipped/dismissed and the notification should
+        // remain visible so the user can see it.
+        final stillHasTimer = ref.read(restTimerProvider).restStartedAt != null;
+        if (stillHasTimer) unawaited(notifications.cancelRestEnd());
       }
     },
   );
