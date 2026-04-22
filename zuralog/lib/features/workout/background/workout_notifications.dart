@@ -208,6 +208,38 @@ class WorkoutNotifications {
     );
   }
 
+  /// Shows an immediate "rest complete" notification. Use this on Android
+  /// where the foreground service bridge can detect expiry live via
+  /// [restTimerProvider]. Replaces the unreliable [scheduleRestEnd] approach
+  /// for Android — [scheduleRestEnd] is kept as the iOS background fallback.
+  Future<void> showRestComplete({
+    String title = 'Rest complete',
+    String body = 'Back to work!',
+  }) async {
+    if (!_initialized) return;
+    await _plugin.show(
+      _kRestEndNotificationId,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          'Rest completion',
+          channelDescription: 'Alerts when your rest timer finishes.',
+          importance: Importance.high,
+          priority: Priority.high,
+          category: AndroidNotificationCategory.alarm,
+          autoCancel: true,
+        ),
+        iOS: DarwinNotificationDetails(
+          categoryIdentifier: _categoryId,
+          presentAlert: true,
+          presentSound: true,
+        ),
+      ),
+    );
+  }
+
   /// Cancels any scheduled rest-end notification. No-op when not scheduled.
   Future<void> cancelRestEnd() async {
     if (!_initialized) return;

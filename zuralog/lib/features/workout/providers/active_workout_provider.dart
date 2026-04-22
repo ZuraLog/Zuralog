@@ -335,4 +335,20 @@ final workoutServiceBridgeProvider = Provider<void>((ref) {
       broadcastToCompanion();
     },
   );
+
+  // Fire an immediate rest-end notification the instant the timer expires.
+  // On Android this is the primary rest-end alert (replaces the scheduled
+  // approach which is delayed by Doze mode). On iOS this path only fires
+  // when the app is foregrounded; the scheduled notification covers background.
+  ref.listen<bool>(
+    restTimerProvider.select((s) => s.hasExpired),
+    (prev, next) {
+      if (prev == false && next == true) {
+        unawaited(notifications.showRestComplete());
+      } else if (prev == true && next == false) {
+        // Rest was extended via +30s — cancel the stale "rest complete" alert.
+        unawaited(notifications.cancelRestEnd());
+      }
+    },
+  );
 });
