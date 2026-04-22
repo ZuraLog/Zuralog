@@ -37,6 +37,7 @@ class ExerciseRepository {
 
   List<Exercise> filter({
     MuscleGroup? muscleGroup,
+    Equipment? equipment,
     String query = '',
   }) {
     final list = _cache;
@@ -46,6 +47,7 @@ class ExerciseRepository {
 
     return list.where((e) {
       if (muscleGroup != null && e.muscleGroup != muscleGroup) return false;
+      if (equipment != null && e.equipment != equipment) return false;
       if (trimmed.isNotEmpty && !e.name.toLowerCase().contains(trimmed)) {
         return false;
       }
