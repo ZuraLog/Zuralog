@@ -44,9 +44,11 @@ class BodyNowCoachStrip extends StatelessWidget {
                   alignment: Alignment.center,
                   children: [
                     Container(color: AppColors.primary),
+                    // Avatar pattern drifts per brand-bible animation rule.
                     const ZPatternOverlay(
                       variant: ZPatternVariant.sage,
                       opacity: 0.18,
+                      animate: true,
                     ),
                     Text(
                       'Z',
