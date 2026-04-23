@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/settings/presentation/help_center_screen.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -58,7 +59,11 @@ class _AboutScreenState extends State<AboutScreen> {
                 iconColor: AppColors.categoryBody,
                 title: 'Help Center',
                 subtitle: 'FAQs, guides, and tutorials',
-                onTap: () => _showSnackBar(context, 'Opening Help Center'),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const HelpCenterScreen(),
+                  ),
+                ),
               ),
               ZSettingsTile(
                 icon: Icons.mail_rounded,
