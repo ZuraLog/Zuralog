@@ -184,15 +184,12 @@ class UpdateProfileRequest(BaseModel):
     All fields are optional. Fields not sent are left unchanged; sending null
     explicitly will clear the field in the database.
 
-    Attributes:
-        display_name: New full display name.
-        nickname: New coach-facing nickname.
-        birthday: New date of birth.
-        gender: New self-identified gender.
-        height_cm: New height in centimetres (30–300 cm).
-        onboarding_complete: Mark onboarding as done or undone.
+    Basic fields live on ``users``; the onboarding profile fields
+    (focus_area, tone, diet, etc.) live on ``user_preferences`` and are
+    routed there by the handler.
     """
 
+    # Basic profile fields (users table)
     display_name: Optional[str] = None
     nickname: Optional[str] = None
     birthday: Optional[date] = None
@@ -200,6 +197,55 @@ class UpdateProfileRequest(BaseModel):
     height_cm: Optional[float] = Field(default=None, ge=30, le=300)
     weight_kg: Optional[float] = Field(default=None, ge=1, le=500)
     onboarding_complete: Optional[bool] = None
+
+    # Onboarding profile fields (user_preferences table)
+    focus_area: Optional[Literal["sleep", "activity", "nutrition", "overall"]] = None
+    primary_goal: Optional[str] = Field(default=None, max_length=200)
+    tone: Optional[Literal["direct", "warm", "minimal", "thorough"]] = None
+    dietary_restrictions: Optional[list[str]] = Field(default=None, max_length=10)
+    injuries: Optional[list[str]] = Field(default=None, max_length=10)
+    sleep_pattern: Optional[
+        Literal["great", "hard_to_fall_asleep", "wake_up_a_lot", "short_hours"]
+    ] = None
+    health_frustration: Optional[str] = Field(default=None, max_length=120)
+    fitness_level: Optional[Literal["beginner", "active", "athletic"]] = None
+    profile_catchup_status: Optional[
+        Literal["not_shown", "in_progress", "completed", "dismissed"]
+    ] = None
+
+    @field_validator("primary_goal", "health_frustration")
+    @classmethod
+    def _strip_text(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        v = v.strip()
+        return v or None  # empty/whitespace-only becomes null
+
+    @field_validator("dietary_restrictions")
+    @classmethod
+    def _check_diet_items(cls, v: Optional[list[str]]) -> Optional[list[str]]:
+        if v is None:
+            return None
+        cleaned: list[str] = []
+        for item in v:
+            stripped = item.strip()
+            if not 1 <= len(stripped) <= 40:
+                raise ValueError("dietary_restrictions items must be 1–40 chars each")
+            cleaned.append(stripped)
+        return cleaned
+
+    @field_validator("injuries")
+    @classmethod
+    def _check_injury_items(cls, v: Optional[list[str]]) -> Optional[list[str]]:
+        if v is None:
+            return None
+        cleaned: list[str] = []
+        for item in v:
+            stripped = item.strip()
+            if not 1 <= len(stripped) <= 60:
+                raise ValueError("injuries items must be 1–60 chars each")
+            cleaned.append(stripped)
+        return cleaned
 
 
 class AvatarUploadResponse(BaseModel):
