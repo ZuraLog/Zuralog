@@ -18,6 +18,7 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/catchup/presentation/catchup_flow_screen.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -94,6 +95,21 @@ class SettingsHubScreen extends ConsumerWidget {
                 title: 'Coach',
                 subtitle: 'AI persona, proactivity level',
                 onTap: () => openSection('Coach', RouteNames.settingsCoachPath),
+              ),
+              ZSettingsTile(
+                icon: Icons.person_outline_rounded,
+                iconColor: AppColors.categoryWellness,
+                title: 'About you',
+                subtitle: 'What your coach knows — tone, focus, diet, limits',
+                onTap: () {
+                  ref.read(analyticsServiceProvider).capture(
+                    event: AnalyticsEvents.settingsSectionOpened,
+                    properties: {'section': 'about_you'},
+                  );
+                  Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const CatchupFlowScreen(),
+                  ));
+                },
               ),
               ZSettingsTile(
                 icon: Icons.book_outlined,
