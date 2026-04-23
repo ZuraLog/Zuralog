@@ -15,7 +15,6 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/features/nutrition/presentation/log_meal_sheet.dart';
 import 'package:zuralog/features/nutrition/presentation/meal_edit_screen.dart' show MealEditArgs;
 import 'package:zuralog/features/nutrition/presentation/nutrition_goals_edit_sheet.dart';
-import 'package:zuralog/features/nutrition/presentation/nutrition_goals_setup_sheet.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -94,7 +93,7 @@ class NutritionHomeScreen extends ConsumerWidget {
             tooltip: goals.hasGoals ? 'Edit goals' : 'Set up goals',
             onPressed: () => goals.hasGoals
                 ? NutritionGoalsEditSheet.show(context)
-                : NutritionGoalsSetupSheet.show(context),
+                : context.push(RouteNames.nutritionGoalsSetupPath),
           ),
         ],
       ),
@@ -291,8 +290,7 @@ class NutritionHomeScreen extends ConsumerWidget {
                                     const SizedBox(width: AppDimens.spaceSm),
                                     TextButton(
                                       onPressed: () =>
-                                          NutritionGoalsSetupSheet.show(
-                                              context),
+                                          context.push(RouteNames.nutritionGoalsSetupPath),
                                       child: const Text('Set up'),
                                     ),
                                   ],
@@ -466,7 +464,7 @@ class NutritionHomeScreen extends ConsumerWidget {
                             const SizedBox(width: AppDimens.spaceSm),
                             TextButton(
                               onPressed: () =>
-                                  NutritionGoalsSetupSheet.show(context),
+                                  context.push(RouteNames.nutritionGoalsSetupPath),
                               child: const Text('Set up'),
                             ),
                           ],
