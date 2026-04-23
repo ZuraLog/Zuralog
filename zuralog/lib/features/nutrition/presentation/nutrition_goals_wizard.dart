@@ -226,7 +226,7 @@ class _NutritionGoalsWizardState extends ConsumerState<NutritionGoalsWizard> {
         );
       case _StepId.goal:
         return _GoalStep(
-          profileWasComplete: _heightCm != null && _weightKg != null && _birthday != null && _gender != null,
+          showStatsSummary: _heightCm != null && _weightKg != null && _birthday != null && _gender != null,
           heightCm: _heightCm,
           weightKg: _weightKg,
           birthday: _birthday,
@@ -684,7 +684,7 @@ class _SexStepState extends State<_SexStep> {
 
 class _GoalStep extends StatefulWidget {
   const _GoalStep({
-    required this.profileWasComplete,
+    required this.showStatsSummary,
     required this.heightCm,
     required this.weightKg,
     required this.birthday,
@@ -694,7 +694,7 @@ class _GoalStep extends StatefulWidget {
     required this.colors,
   });
 
-  final bool profileWasComplete;
+  final bool showStatsSummary;
   final double? heightCm;
   final double? weightKg;
   final DateTime? birthday;
@@ -734,7 +734,7 @@ class _GoalStepState extends State<_GoalStep> {
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (widget.profileWasComplete) ...[
+          if (widget.showStatsSummary) ...[
             Container(
               padding: const EdgeInsets.all(AppDimens.spaceMd),
               decoration: BoxDecoration(
