@@ -102,80 +102,50 @@ class _NutritionGoalsEditSheetState
   Future<void> _save() async {
     setState(() => _isSaving = true);
     final repo = ref.read(progressRepositoryProvider);
-
     try {
-      // Helper: create a goal only when the field has a parseable value.
-      Future<void> maybeCreate({
-        required String raw,
-        required GoalType type,
-        required String title,
-        required String unit,
-      }) async {
-        final v = double.tryParse(raw.trim());
-        if (v == null || v <= 0) return;
+      await repo.deleteNutritionGoals();
+
+      final fields = <(GoalType, String, double, String)>[
+        if (_calorieController.text.isNotEmpty)
+          (GoalType.dailyCalorieLimit, 'Daily Calorie Limit',
+              double.parse(_calorieController.text), 'kcal'),
+        if (_proteinController.text.isNotEmpty)
+          (GoalType.dailyProteinMin, 'Daily Protein Minimum',
+              double.parse(_proteinController.text), 'g'),
+        if (_carbsController.text.isNotEmpty)
+          (GoalType.dailyCarbsMax, 'Daily Carbs Maximum',
+              double.parse(_carbsController.text), 'g'),
+        if (_fatController.text.isNotEmpty)
+          (GoalType.dailyFatMax, 'Daily Fat Maximum',
+              double.parse(_fatController.text), 'g'),
+        if (_fiberController.text.isNotEmpty)
+          (GoalType.dailyFiberMin, 'Daily Fiber Minimum',
+              double.parse(_fiberController.text), 'g'),
+        if (_sodiumController.text.isNotEmpty)
+          (GoalType.dailySodiumMax, 'Daily Sodium Maximum',
+              double.parse(_sodiumController.text), 'mg'),
+        if (_sugarController.text.isNotEmpty)
+          (GoalType.dailySugarMax, 'Daily Sugar Maximum',
+              double.parse(_sugarController.text), 'g'),
+      ];
+
+      for (final (type, title, value, unit) in fields) {
         await repo.createGoal(
           type: type,
           period: GoalPeriod.daily,
           title: title,
-          targetValue: v,
+          targetValue: value,
           unit: unit,
         );
       }
 
-      await maybeCreate(
-        raw: _calorieController.text,
-        type: GoalType.dailyCalorieLimit,
-        title: 'Daily Calorie Limit',
-        unit: 'kcal',
-      );
-      await maybeCreate(
-        raw: _proteinController.text,
-        type: GoalType.custom,
-        title: 'daily_protein_min',
-        unit: 'g',
-      );
-      await maybeCreate(
-        raw: _carbsController.text,
-        type: GoalType.custom,
-        title: 'daily_carbs_max',
-        unit: 'g',
-      );
-      await maybeCreate(
-        raw: _fatController.text,
-        type: GoalType.custom,
-        title: 'daily_fat_max',
-        unit: 'g',
-      );
-      await maybeCreate(
-        raw: _fiberController.text,
-        type: GoalType.custom,
-        title: 'daily_fiber_min',
-        unit: 'g',
-      );
-      await maybeCreate(
-        raw: _sodiumController.text,
-        type: GoalType.custom,
-        title: 'daily_sodium_max',
-        unit: 'mg',
-      );
-      await maybeCreate(
-        raw: _sugarController.text,
-        type: GoalType.custom,
-        title: 'daily_sugar_max',
-        unit: 'g',
-      );
-
-      // Refresh nutrition and goals state.
       ref.invalidate(nutritionGoalsProvider);
       ref.invalidate(goalsProvider);
-
       if (mounted) Navigator.of(context).pop();
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to save goals. Please try again.'),
-          ),
+          const SnackBar(content: Text('Failed to save goals. Please try again.')),
         );
       }
     } finally {
@@ -194,7 +164,7 @@ class _NutritionGoalsEditSheetState
         padding: EdgeInsets.all(AppDimens.spaceLg),
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (_, __) => const Padding(
+      error: (e, s) => const Padding(
         padding: EdgeInsets.all(AppDimens.spaceLg),
         child: Center(child: Text('Unable to load your goals.')),
       ),

@@ -51,6 +51,9 @@ abstract interface class ProgressRepositoryInterface {
   /// Deletes a goal by ID. Invalidates goals cache on success.
   Future<void> deleteGoal(String goalId);
 
+  /// Deactivates all nutrition goals (clean-slate before re-saving).
+  Future<void> deleteNutritionGoals();
+
   /// Fetches the full achievement gallery (locked and unlocked).
   Future<AchievementList> getAchievements();
 
@@ -210,6 +213,14 @@ class ProgressRepository implements ProgressRepositoryInterface {
   @override
   Future<void> deleteGoal(String goalId) async {
     await _api.delete('/api/v1/goals/$goalId');
+    _goalsCache = null;
+    _homeCache = null;
+  }
+
+  /// Deactivates all nutrition goals (clean-slate before re-saving).
+  @override
+  Future<void> deleteNutritionGoals() async {
+    await _api.delete('/api/v1/goals/nutrition');
     _goalsCache = null;
     _homeCache = null;
   }
