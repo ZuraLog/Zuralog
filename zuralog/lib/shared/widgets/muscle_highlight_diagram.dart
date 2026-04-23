@@ -138,50 +138,125 @@ Future<String> _buildSvg(
 String _toHex(Color c) =>
     '#${c.value.toRadixString(16).padLeft(8, '0').substring(2)}';
 
+/// Multi-zone variant: every muscle id in [zones] gets re-tinted to its
+/// mapped colour. Every other path uses [base]. When [strokeless] is true,
+/// all stroke-widths are zeroed so adjacent same-colour zones merge.
+Future<String> _buildSvgZones(
+  Map<MuscleGroup, Color> zones,
+  Color base,
+  Color stroke,
+  bool strokeless,
+) async {
+  final zonesKey = zones.entries
+      .map((e) => '${e.key.slug}:${e.value.value}')
+      .toList(growable: false)
+    ..sort();
+  final key = 'zones_${zonesKey.join(',')}_'
+      '${base.value}_${stroke.value}_${strokeless ? 1 : 0}';
+  final cached = _svgCache[key];
+  if (cached != null) return cached;
+
+  final raw = await _loadRawSvg();
+  final baseHex = _toHex(base);
+  final strokeHex = _toHex(stroke);
+
+  var out = raw.replaceAll(RegExp(r'fill:#[0-9a-fA-F]{3,6}'), 'fill:$baseHex');
+  out = out.replaceAll(RegExp(r'stroke:#[0-9a-fA-F]{3,6}'), 'stroke:$strokeHex');
+  if (strokeless) {
+    out = out.replaceAll(RegExp(r'stroke-width:[0-9.]+'), 'stroke-width:0');
+  }
+
+  zones.forEach((group, color) {
+    final ids = _muscleIdMap[group] ?? const [];
+    final hex = _toHex(color);
+    for (final id in ids) {
+      final pattern = RegExp(
+        r'<path\b[^>]*?id="' + RegExp.escape(id) + r'"[^>]*?/>',
+        multiLine: true,
+        dotAll: true,
+      );
+      out = out.replaceAllMapped(pattern, (m) {
+        return m.group(0)!.replaceFirst(
+          RegExp(r'fill:#[0-9a-fA-F]+'),
+          'fill:$hex',
+        );
+      });
+    }
+  });
+
+  _svgCache[key] = out;
+  return out;
+}
+
 /// Renders the body diagram with [muscleGroup] highlighted.
 ///
 /// Pass [onlyFront] = true to show just the front-view half (right half of
 /// the source SVG), which reads better at small tile sizes.
 class MuscleHighlightDiagram extends StatelessWidget {
+  /// Highlights a single [muscleGroup] — the legacy API. Unchanged callers
+  /// keep working.
   const MuscleHighlightDiagram({
     super.key,
-    required this.muscleGroup,
+    required MuscleGroup this.muscleGroup,
     this.highlightColor,
     this.baseColor,
     this.strokeColor,
     this.onlyFront = false,
+    this.onlyBack = false,
+    this.strokeless = false,
     this.fit = BoxFit.contain,
-  });
+  }) : zones = null;
 
-  final MuscleGroup muscleGroup;
+  /// Multi-zone variant — colours each muscle in [zones] independently.
+  const MuscleHighlightDiagram.zones({
+    super.key,
+    required Map<MuscleGroup, Color> this.zones,
+    this.baseColor,
+    this.strokeColor,
+    this.onlyFront = false,
+    this.onlyBack = false,
+    this.strokeless = true,
+    this.fit = BoxFit.contain,
+  })  : muscleGroup = null,
+        highlightColor = null;
+
+  final MuscleGroup? muscleGroup;
+  final Map<MuscleGroup, Color>? zones;
   final Color? highlightColor;
   final Color? baseColor;
   final Color? strokeColor;
   final bool onlyFront;
+  final bool onlyBack;
+  final bool strokeless;
   final BoxFit fit;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final highlight = highlightColor ?? colors.primary;
     final base = baseColor ?? colors.surfaceRaised;
     final stroke = strokeColor ?? colors.textSecondary.withValues(alpha: 0.35);
 
+    final Future<String> svgFuture = zones != null
+        ? _buildSvgZones(zones!, base, stroke, strokeless)
+        : _buildSvg(
+            muscleGroup!,
+            highlightColor ?? colors.primary,
+            base,
+            stroke,
+          );
+
     return FutureBuilder<String>(
-      future: _buildSvg(muscleGroup, highlight, base, stroke),
+      future: svgFuture,
       builder: (context, snap) {
         if (!snap.hasData) {
-          return const SizedBox.expand();
+          return const SizedBox.shrink();
         }
-        final svg = SvgPicture.string(
-          snap.data!,
-          fit: fit,
-        );
-        if (!onlyFront) return svg;
-        // Clip to the right half of the source (the front-view figure).
+        final svg = SvgPicture.string(snap.data!, fit: fit);
+        if (!onlyFront && !onlyBack) return svg;
         return ClipRect(
           child: Align(
-            alignment: Alignment.centerRight,
+            alignment:
+                onlyFront ? Alignment.centerRight : Alignment.centerLeft,
             widthFactor: 0.5,
             child: svg,
           ),
