@@ -88,17 +88,21 @@ class ExerciseGridTile extends ConsumerWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
+                    // Tier 1: per-exercise image (if we ship one for this
+                    // exercise id); Tier 2: per-muscle-group illustration;
+                    // Tier 3: a richly-styled graphic fallback. Each tier
+                    // falls through silently via errorBuilder so we never
+                    // flash a broken-image glyph.
                     Image.asset(
                       'assets/images/exercises/${exercise.id}.webp',
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stack) => Container(
-                        color: groupColor.withValues(alpha: 0.18),
-                        child: Center(
-                          child: Icon(
-                            muscleGroupIcon(exercise.muscleGroup),
-                            size: AppDimens.emojiMd,
-                            color: groupColor,
-                          ),
+                      errorBuilder: (_, __, ___) => Image.asset(
+                        'assets/images/exercises/muscle_groups/${exercise.muscleGroup.slug}.webp',
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _ExerciseTileFallback(
+                          muscleGroup: exercise.muscleGroup,
+                          equipment: exercise.equipment,
+                          groupColor: groupColor,
                         ),
                       ),
                     ),
@@ -174,6 +178,92 @@ class ExerciseGridTile extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Richly-styled placeholder shown when neither a per-exercise image nor
+/// a muscle-group illustration is available. Designed to feel intentional
+/// rather than like a missing asset: diagonal gradient in the muscle-group
+/// colour, a soft glow behind a prominent icon, and a small equipment badge.
+class _ExerciseTileFallback extends StatelessWidget {
+  const _ExerciseTileFallback({
+    required this.muscleGroup,
+    required this.equipment,
+    required this.groupColor,
+  });
+
+  final MuscleGroup muscleGroup;
+  final Equipment equipment;
+  final Color groupColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            groupColor.withValues(alpha: 0.38),
+            groupColor.withValues(alpha: 0.10),
+          ],
+        ),
+      ),
+      child: Stack(
+        children: [
+          // Soft glow halo behind the icon — adds depth so the fallback
+          // reads as a designed surface rather than a flat chip.
+          Center(
+            child: Container(
+              width: 84,
+              height: 84,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    groupColor.withValues(alpha: 0.35),
+                    groupColor.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Icon hero — larger than before for more visual weight.
+          Center(
+            child: Icon(
+              muscleGroupIcon(muscleGroup),
+              size: 40,
+              color: groupColor,
+            ),
+          ),
+          // Equipment badge — bottom-right, adds useful info without clutter.
+          Positioned(
+            right: AppDimens.spaceSm,
+            bottom: AppDimens.spaceSm,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.spaceSm,
+                vertical: 3,
+              ),
+              decoration: BoxDecoration(
+                color: colors.surface.withValues(alpha: 0.82),
+                borderRadius: BorderRadius.circular(AppDimens.shapePill),
+              ),
+              child: Text(
+                equipment.label,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 10,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
