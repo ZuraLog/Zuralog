@@ -40,8 +40,6 @@ class _NutritionGoalsWizardState extends ConsumerState<NutritionGoalsWizard> {
   String? _gender;
   WeightGoalChoice? _goalChoice;
   bool? _isPaceAggressive;
-  ActivityLevel? _activityLevel;
-
   bool _profileWasComplete = false;
   bool _isSavingStats = false;
 
@@ -114,8 +112,6 @@ class _NutritionGoalsWizardState extends ConsumerState<NutritionGoalsWizard> {
   }
 
   Future<void> _onActivityContinue(ActivityLevel level) async {
-    setState(() => _activityLevel = level);
-
     if (!_profileWasComplete) {
       await _saveStatsToProfile();
     }
