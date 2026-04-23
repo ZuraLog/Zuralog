@@ -75,7 +75,7 @@ final dailySummaryProvider = FutureProvider.autoDispose<DailySummary>((
 
   // 1. Fetch primary data from the Cloud Brain API (cached for 15 min).
   final summary = await ref
-      .watch(analyticsRepositoryProvider)
+      .read(analyticsRepositoryProvider)
       .getDailySummary(today);
 
   // 2. Determine which fields need a native fallback read.
@@ -182,7 +182,7 @@ final dailySummaryProvider = FutureProvider.autoDispose<DailySummary>((
 ///
 /// Exposes a [DioException] as [AsyncError] if the backend is unreachable.
 final weeklyTrendsProvider = FutureProvider.autoDispose<WeeklyTrends>((ref) {
-  return ref.watch(analyticsRepositoryProvider).getWeeklyTrends();
+  return ref.read(analyticsRepositoryProvider).getWeeklyTrends();
 });
 
 /// Fetches the AI-generated [DashboardInsight] from the analytics repository.
@@ -194,5 +194,5 @@ final weeklyTrendsProvider = FutureProvider.autoDispose<WeeklyTrends>((ref) {
 /// Exposes a [DioException] as [AsyncError] if the backend is unreachable.
 final dashboardInsightProvider =
     FutureProvider.autoDispose<DashboardInsight>((ref) {
-  return ref.watch(analyticsRepositoryProvider).getDashboardInsight();
+  return ref.read(analyticsRepositoryProvider).getDashboardInsight();
 });

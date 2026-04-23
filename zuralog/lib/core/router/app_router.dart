@@ -59,7 +59,6 @@ import 'package:zuralog/features/auth/presentation/auth/register_screen.dart';
 import 'package:zuralog/features/auth/presentation/auth/forgot_password_screen.dart';
 import 'package:zuralog/features/auth/presentation/auth/check_inbox_screen.dart';
 import 'package:zuralog/features/auth/presentation/auth/reset_password_screen.dart';
-import 'package:zuralog/features/onboarding/presentation/tour/onboarding_tour_screen.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/chat_onboarding_screen.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/welcome_screen.dart';
 import 'package:zuralog/features/dev/component_showcase_screen.dart';
@@ -152,10 +151,6 @@ import 'package:zuralog/shared/layout/app_shell.dart';
 class _RouterRefreshListenable extends ChangeNotifier {
   _RouterRefreshListenable(Ref ref) {
     ref.listen<AuthState>(authStateProvider, (prev, next) => notifyListeners());
-    ref.listen<AsyncValue<bool>>(
-      hasSeenOnboardingProvider,
-      (prev, next) => notifyListeners(),
-    );
     ref.listen<UserProfile?>(userProfileProvider, (prev, next) => notifyListeners());
     ref.listen<bool>(isLoadingProfileProvider, (prev, next) => notifyListeners());
     ref.listen<bool>(profileLoadFailedProvider, (prev, next) => notifyListeners());
@@ -189,27 +184,21 @@ final routerProvider = Provider<GoRouter>((ref) {
         return authRedirect;
       }
 
-      final onboardingAsync = ref.read(hasSeenOnboardingProvider);
-      if (location == RouteNames.welcomePath) {
-        if (onboardingAsync.isLoading) return null;
-        final hasSeen = onboardingAsync.valueOrNull ?? true;
-        if (!hasSeen) return RouteNames.onboardingPath;
-      }
-
       if (authState == AuthState.authenticated) {
         final isLoadingProfile = ref.read(isLoadingProfileProvider);
         if (isLoadingProfile) {
           return null;
         }
         final profile = ref.read(userProfileProvider);
-        // If onboarding is complete and we're on any pre-app screen
-        // (welcome, onboarding pages, questionnaire), redirect to Today.
+        final isReplaying = ref.read(isReplayingOnboardingProvider);
+        // Pre-app paths that should redirect to Today once onboarding is done.
+        // onboardingPath is no longer in this set — the old tour was removed.
         final preAppPaths = {
           RouteNames.welcomePath,
-          RouteNames.onboardingPath,
           RouteNames.profileQuestionnairePath,
         };
-        if (preAppPaths.contains(location) &&
+        if (!isReplaying &&
+            preAppPaths.contains(location) &&
             profile != null &&
             profile.onboardingComplete) {
           return RouteNames.todayPath;
@@ -240,14 +229,6 @@ List<RouteBase> _buildRoutes() {
       builder: (context, state) => const SentryErrorBoundary(
         module: 'auth.welcome',
         child: WelcomeScreen(),
-      ),
-    ),
-    GoRoute(
-      path: RouteNames.onboardingPath,
-      name: RouteNames.onboarding,
-      builder: (context, state) => const SentryErrorBoundary(
-        module: 'auth.onboarding',
-        child: OnboardingTourScreen(),
       ),
     ),
     GoRoute(

@@ -17,6 +17,7 @@ import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -159,6 +160,24 @@ class SettingsHubScreen extends ConsumerWidget {
                 title: 'About ZuraLog',
                 subtitle: 'Version, licenses, support',
                 onTap: () => openSection('About ZuraLog', RouteNames.settingsAboutPath),
+              ),
+            ],
+          ),
+
+          // ── Section 6: Getting Started ────────────────────────────────
+          const SettingsSectionLabel('Getting Started'),
+
+          ZSettingsGroup(
+            tiles: [
+              ZSettingsTile(
+                icon: Icons.replay_rounded,
+                iconColor: AppColors.categoryWellness,
+                title: 'Replay Onboarding',
+                subtitle: 'Go through the setup conversation again',
+                onTap: () {
+                  ref.read(isReplayingOnboardingProvider.notifier).state = true;
+                  context.push(RouteNames.profileQuestionnairePath);
+                },
               ),
             ],
           ),

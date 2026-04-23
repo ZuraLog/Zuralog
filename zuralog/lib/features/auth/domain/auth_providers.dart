@@ -76,6 +76,13 @@ final authStateProvider = NotifierProvider<AuthStateNotifier, AuthState>(
   AuthStateNotifier.new,
 );
 
+/// Signals that the user triggered "Replay Onboarding" from settings.
+///
+/// When true, the router's onboarding-complete guard is bypassed so the user
+/// can revisit [ChatOnboardingScreen] without being redirected to Today.
+/// Reset to false by [ChatOnboardingScreen] after it finishes.
+final isReplayingOnboardingProvider = StateProvider<bool>((ref) => false);
+
 /// Notifier that manages [AuthState] transitions.
 ///
 /// Wraps [AuthRepository] calls and updates the state accordingly.
@@ -307,15 +314,23 @@ class AuthStateNotifier extends Notifier<AuthState> {
   /// profile, email state, and all user-specific caches so the router
   /// redirects to the login screen without leaking stale health data.
   void forceLogout() {
-    // Analytics: reset identity on force logout (fire-and-forget).
+    // Guard: if already unauthenticated, do nothing. Without this, every
+    // concurrent 401 calls forceLogout again, re-invalidating providers that
+    // are already being rebuilt and creating an infinite request loop.
+    if (state == AuthState.unauthenticated) return;
+
     ref.read(analyticsServiceProvider).reset();
     SentryBreadcrumbs.authEvent(event: 'force_logout');
     ref.read(userEmailProvider.notifier).state = '';
     ref.read(userProfileProvider.notifier).clear();
-    // forceLogout is synchronous — fire-and-forget the async cleanup.
-    // The critical thing is transitioning to unauthenticated immediately.
-    _clearUserState();
+
+    // Set unauthenticated BEFORE clearing state. The router reacts to this
+    // change and navigates away, which disposes the widgets that are watching
+    // the analytics/preferences providers. If we called _clearUserState()
+    // first, those providers would be invalidated while widgets were still
+    // watching them, causing an immediate re-run → new 401 → infinite loop.
     state = AuthState.unauthenticated;
+    _clearUserState();
   }
 
   /// Clears all user-specific cached data so the next login starts fresh.

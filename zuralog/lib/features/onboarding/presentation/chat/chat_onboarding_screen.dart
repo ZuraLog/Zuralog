@@ -125,9 +125,6 @@ class _ChatOnboardingScreenState extends ConsumerState<ChatOnboardingScreen> {
   }
 
   Future<void> _handleFinale(OnboardingProfile profile) async {
-    // Persist onboarding-complete + preferred name. Backend wiring for the
-    // rest of the profile (sex/age/height/weight/focus/goal/tone) is a
-    // follow-up once the schema supports it.
     try {
       await ref.read(userProfileProvider.notifier).update(
             onboardingComplete: true,
@@ -137,6 +134,8 @@ class _ChatOnboardingScreenState extends ConsumerState<ChatOnboardingScreen> {
       // Non-fatal for the UX — router will route by auth state anyway.
     }
     if (!mounted) return;
+    // Clear the replay flag so the router guard resumes normal behaviour.
+    ref.read(isReplayingOnboardingProvider.notifier).state = false;
     ctxGo(context);
   }
 

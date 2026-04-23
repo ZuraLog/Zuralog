@@ -120,6 +120,16 @@ class ApiClient {
       return handler.next(e);
     }
 
+    // Fast-fail when there is no refresh token — no point attempting a refresh.
+    // Calling completeError on an unlistened Completer would produce an
+    // "Unhandled Exception" log, which spams the console on every polling cycle.
+    final storedRefreshToken = await _storage.read(key: 'refresh_token');
+    if (storedRefreshToken == null) {
+      await _storage.deleteAll();
+      onUnauthenticated?.call();
+      return handler.next(e);
+    }
+
     if (_refreshCompleter != null) {
       // Another refresh is in flight — wait for it, then retry.
       try {

@@ -391,16 +391,22 @@ class AuthRepository {
     return data['avatar_url'] as String;
   }
 
-  /// Checks if the user has a stored auth token.
+  /// Checks if the user has a complete set of stored auth tokens.
   ///
-  /// This is a quick local check — it does NOT validate the token
+  /// This is a quick local check — it does NOT validate the tokens
   /// with the server. Used for initial routing on app launch.
   ///
+  /// Requires BOTH the access token and the refresh token to be present.
+  /// An access token alone is insufficient — when it expires (typically
+  /// within minutes) there would be no way to silently renew it, causing
+  /// every API call to fail with a 401 and spam the error log.
+  ///
   /// Returns:
-  ///   `true` if an access token exists in secure storage.
+  ///   `true` if both access and refresh tokens exist in secure storage.
   Future<bool> isLoggedIn() async {
-    final token = await _secureStorage.getAuthToken();
-    return token != null;
+    final accessToken = await _secureStorage.getAuthToken();
+    final refreshToken = await _secureStorage.read('refresh_token');
+    return accessToken != null && refreshToken != null;
   }
 
   /// Saves user ID and auth tokens to secure storage.
