@@ -59,7 +59,7 @@ class _AboutScreenState extends State<AboutScreen> {
                 iconColor: AppColors.categoryBody,
                 title: 'Help Center',
                 subtitle: 'FAQs, guides, and tutorials',
-                onTap: () => Navigator.of(context).push(
+                onTap: () => Navigator.of(context, rootNavigator: true).push(
                   MaterialPageRoute(
                     builder: (_) => const HelpCenterScreen(),
                   ),
