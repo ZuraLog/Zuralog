@@ -38,6 +38,7 @@ export 'indicators/z_icon_badge.dart';
 export 'indicators/z_category_icon_tile.dart';
 export 'indicators/z_password_strength_bar.dart';
 export 'indicators/z_pro_badge.dart';
+export 'indicators/z_progress_pill.dart';
 export 'cards/z_onboarding_card.dart';
 export 'display/z_accordion.dart';
 export 'display/z_carousel.dart';
