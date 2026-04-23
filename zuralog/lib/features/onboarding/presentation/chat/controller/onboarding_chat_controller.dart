@@ -367,6 +367,7 @@ class OnboardingChatController extends StateNotifier<ChatState> {
   }
 
   void _userSays(String text) {
+    if (_disposed) return;
     state = state.copyWith(
       messages: [
         ...state.messages,
@@ -381,6 +382,7 @@ class OnboardingChatController extends StateNotifier<ChatState> {
   }
 
   void _showTyping() {
+    if (_disposed) return;
     // Drop a typing placeholder at the end of the transcript.
     state = state.copyWith(
       isCoachComposing: true,
@@ -396,6 +398,7 @@ class OnboardingChatController extends StateNotifier<ChatState> {
   }
 
   void _replaceTypingWith(ChatMessage real) {
+    if (_disposed) return;
     final withoutTyping = state.messages
         .where((m) => m.kind != MessageKind.typing)
         .toList();
@@ -406,6 +409,7 @@ class OnboardingChatController extends StateNotifier<ChatState> {
   }
 
   void _advanceTo(ChatStep step) {
+    if (_disposed) return;
     state = state.copyWith(currentStep: step);
   }
 

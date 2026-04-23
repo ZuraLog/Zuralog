@@ -70,7 +70,10 @@ class _AboutScreenState extends State<AboutScreen> {
                 iconColor: colors.primary,
                 title: 'Contact Support',
                 subtitle: 'support@zuralog.com',
-                onTap: () => _showSnackBar(context, 'Opening email\u2026'),
+                onTap: () => launchUrl(
+                  Uri.parse('mailto:support@zuralog.com'),
+                  mode: LaunchMode.externalApplication,
+                ),
               ),
               ZSettingsTile(
                 icon: Icons.people_rounded,
