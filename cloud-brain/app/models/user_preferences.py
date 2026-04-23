@@ -299,6 +299,57 @@ class UserPreferences(Base):
         comment="How the user discovered ZuraLog (set once during onboarding)",
     )
 
+    # Onboarding profile — extended context for AI (set during onboarding or catch-up)
+    focus_area: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+        comment="sleep | activity | nutrition | overall — user's main health focus",
+    )
+    primary_goal: Mapped[str | None] = mapped_column(
+        String(200),
+        nullable=True,
+        comment="User's narrative primary goal, max 200 chars",
+    )
+    tone: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+        comment="direct | warm | minimal | thorough — shapes AI personality",
+    )
+    dietary_restrictions: Mapped[list | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="Array of diet tags. Empty array means 'no restrictions'.",
+    )
+    injuries: Mapped[list | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="Array of injury/limitation tags. Empty array means 'none'.",
+    )
+    sleep_pattern: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+        comment="great | hard_to_fall_asleep | wake_up_a_lot | short_hours",
+    )
+    health_frustration: Mapped[str | None] = mapped_column(
+        String(120),
+        nullable=True,
+        comment="User's free-text description of what's in their way, max 120 chars",
+    )
+
+    # Catch-up flow tracking (for existing users who onboarded before these fields existed)
+    profile_catchup_status: Mapped[str] = mapped_column(
+        String,
+        default="not_shown",
+        server_default="not_shown",
+        nullable=False,
+        comment="not_shown | in_progress | completed | dismissed",
+    )
+    profile_catchup_dismissed_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Set when the user dismisses the catch-up intro; used for 7-day re-offer",
+    )
+
     # Timezone for scheduling fan-out (e.g. 6 AM local)
     timezone: Mapped[str] = mapped_column(
         String(50),
