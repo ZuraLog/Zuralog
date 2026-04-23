@@ -344,7 +344,9 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
         content: text,
         createdAt: DateTime.now(),
         attachmentUrls: attachments
-            .map((a) => (a['signed_url'] ?? a['storage_path'] ?? '') as String)
+            .map((a) =>
+                (a['data_url'] ?? a['signed_url'] ?? a['storage_path'] ?? '')
+                    as String)
             .where((u) => u.isNotEmpty)
             .toList(),
       );

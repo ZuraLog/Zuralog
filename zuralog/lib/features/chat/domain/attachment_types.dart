@@ -37,6 +37,12 @@ class ChatAttachment {
   final String localPath;
   final String? storagePath;
   final String? signedUrl;
+
+  /// Base64 `data:image/...;base64,...` URI returned by the backend for
+  /// image uploads. Forwarded to the WebSocket so the vision LLM can see
+  /// the image without needing external storage.
+  final String? dataUrl;
+
   final int? sizeBytes;
   final String? mimeType;
   final AttachmentStatus status;
@@ -48,6 +54,7 @@ class ChatAttachment {
     required this.localPath,
     this.storagePath,
     this.signedUrl,
+    this.dataUrl,
     this.sizeBytes,
     this.mimeType,
     required this.status,
@@ -60,6 +67,7 @@ class ChatAttachment {
     'local_path': localPath,
     'storage_path': storagePath,
     'signed_url': signedUrl,
+    'data_url': dataUrl,
     'size_bytes': sizeBytes,
     'mime_type': mimeType,
     'status': status.name,

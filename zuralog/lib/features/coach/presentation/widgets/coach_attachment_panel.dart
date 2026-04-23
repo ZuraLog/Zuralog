@@ -22,6 +22,12 @@ export 'package:zuralog/features/chat/domain/attachment_types.dart'
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const int _kCameraQuality = 85;
+
+/// Cap images at 1600×1600 before sending. Keeps the payload small for the
+/// WebSocket + base64 path (a typical photo lands around 300 KB after this)
+/// without throwing away detail the vision LLM cares about.
+const double _kMaxImageSide = 1600;
+
 const int _kMaxFileSizeBytes = 10 * 1024 * 1024;
 
 // ── Persona data ───────────────────────────────────────────────────────────────
@@ -111,6 +117,8 @@ class _CoachAttachmentPanelState extends ConsumerState<CoachAttachmentPanel> {
       final xFile = await picker.pickImage(
         source: source,
         imageQuality: _kCameraQuality,
+        maxWidth: _kMaxImageSide,
+        maxHeight: _kMaxImageSide,
       );
       if (xFile == null) {
         if (context.mounted) Navigator.of(context).pop();

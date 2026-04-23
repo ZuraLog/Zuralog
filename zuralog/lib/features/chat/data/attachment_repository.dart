@@ -106,6 +106,7 @@ class AttachmentRepository {
       localPath: filePath,
       storagePath: data['storage_path'] as String?,
       signedUrl: data['signed_url'] as String?,
+      dataUrl: data['data_url'] as String?,
       // Fix M20: safe cast for sizeBytes.
       sizeBytes: (data['size_bytes'] as num?)?.toInt(),
       mimeType: data['mime_type'] as String?,
