@@ -41,14 +41,54 @@ class NutritionHomeScreen extends ConsumerWidget {
     final mealsAsync = ref.watch(todayMealsProvider);
     final summaryAsync = ref.watch(nutritionDaySummaryProvider);
     final goalsAsync = ref.watch(nutritionGoalsProvider);
+    final trendAsync = ref.watch(nutritionTrendProvider('7d'));
     final goals = goalsAsync.valueOrNull ?? const NutritionGoals();
+    final trend = trendAsync.valueOrNull ?? const <NutritionTrendDay>[];
     const catColor = AppColors.categoryNutrition;
+
+    // Compute streak for the app bar badge.
+    final streak = _computeNutritionStreak(trend, goals.calorieBudget);
 
     return ZuralogScaffold(
       appBar: ZuralogAppBar(
         title: 'Nutrition',
         showProfileAvatar: false,
         actions: [
+          // Streak badge
+          if (goals.hasGoals && streak > 0)
+            Padding(
+              padding: const EdgeInsets.only(right: AppDimens.spaceSm),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceSm,
+                    vertical: AppDimens.spaceXxs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: catColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.local_fire_department_rounded,
+                        size: 14,
+                        color: catColor,
+                      ),
+                      const SizedBox(width: AppDimens.spaceXxs),
+                      Text(
+                        '$streak',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: catColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.tune_rounded),
             tooltip: goals.hasGoals ? 'Edit goals' : 'Set up goals',
@@ -607,6 +647,32 @@ class NutritionHomeScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Computes the nutrition goal streak from trend data.
+  ///
+  /// Counts consecutive days (backwards from most recent) where
+  /// calories <= calorieBudget. Returns 0 if no budget is set or if
+  /// the most recent day doesn't meet the goal.
+  static int _computeNutritionStreak(
+    List<NutritionTrendDay> trend,
+    double? calorieBudget,
+  ) {
+    if (calorieBudget == null || calorieBudget <= 0) return 0;
+
+    final sorted = [...trend]..sort((a, b) => b.date.compareTo(a.date));
+
+    var streak = 0;
+    for (final day in sorted) {
+      final calories = day.calories;
+      if (calories == null) break;
+      if (calories <= calorieBudget) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return streak;
   }
 }
 
