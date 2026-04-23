@@ -147,11 +147,13 @@ Future<String> _buildSvgZones(
   Color stroke,
   bool strokeless,
 ) async {
-  final zonesKey = zones.entries
-      .map((e) => '${e.key.slug}:${e.value.value}')
-      .toList(growable: false)
-    ..sort();
-  final key = 'zones_${zonesKey.join(',')}_'
+  // Order-independent hash of the zones map so two equivalent inputs
+  // (same muscle→colour pairs in any order) share a single cache entry,
+  // and arbitrary slugs can't collide via delimiter tricks.
+  final zonesHash = Object.hashAllUnordered(
+    zones.entries.map((e) => Object.hash(e.key, e.value.value)),
+  );
+  final key = 'zones_${zonesHash}_'
       '${base.value}_${stroke.value}_${strokeless ? 1 : 0}';
   final cached = _svgCache[key];
   if (cached != null) return cached;
@@ -249,6 +251,9 @@ class MuscleHighlightDiagram extends StatelessWidget {
       future: svgFuture,
       builder: (context, snap) {
         if (!snap.hasData) {
+          // Callers supply external size constraints (fixed-height tiles,
+          // 44×44 thumbnails, the hero figure). SizedBox.expand would throw
+          // in an unconstrained parent; shrink is the safe placeholder.
           return const SizedBox.shrink();
         }
         final svg = SvgPicture.string(snap.data!, fit: fit);
