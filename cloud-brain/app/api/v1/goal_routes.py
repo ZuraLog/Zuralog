@@ -25,6 +25,7 @@ from app.api.v1.goal_schemas import (
     GoalListResponse,
     GoalResponse,
     GoalUpdateRequest,
+    NUTRITION_GOAL_TYPES,
 )
 from app.database import get_db
 from app.limiter import limiter
@@ -300,3 +301,40 @@ async def delete_goal(
     await db.delete(goal)
     await db.commit()
     logger.info("Deleted goal %s for user %s", goal_id, user_id)
+
+
+@router.delete(
+    "/nutrition",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Deactivate all nutrition goals",
+)
+@limiter.limit("10/minute")
+async def delete_nutrition_goals(
+    request: Request,  # noqa: ARG001 — required by slowapi
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Set is_active=False on all nutrition-type goals for the authenticated user.
+
+    This is used by the wizard to do a clean-slate replacement of nutrition goals
+    before creating fresh ones. Idempotent — safe to call even when no goals exist.
+
+    Args:
+        user_id: Authenticated user ID.
+        db: Async database session.
+
+    Returns:
+        204 No Content on success.
+    """
+    result = await db.execute(
+        select(UserGoal).where(
+            UserGoal.user_id == user_id,
+            UserGoal.type.in_(NUTRITION_GOAL_TYPES),
+            UserGoal.is_active.is_(True),
+        )
+    )
+    goals = result.scalars().all()
+    for goal in goals:
+        goal.is_active = False
+    await db.commit()
+    logger.info("Deactivated %d nutrition goals for user %s", len(goals), user_id)
