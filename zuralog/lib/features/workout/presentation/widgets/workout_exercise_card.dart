@@ -29,6 +29,7 @@ import 'package:zuralog/features/workout/domain/workout_session.dart';
 import 'package:zuralog/features/workout/presentation/widgets/exercise_grid_tile.dart'
     show muscleGroupColor, muscleGroupIcon;
 import 'package:zuralog/features/workout/presentation/widgets/rest_timer_editor_sheet.dart';
+import 'package:zuralog/features/workout/providers/exercise_providers.dart';
 import 'package:zuralog/features/workout/providers/rest_timer_provider.dart';
 import 'package:zuralog/features/workout/providers/workout_session_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
@@ -78,6 +79,27 @@ class _WorkoutExerciseCardState extends ConsumerState<WorkoutExerciseCard> {
   void dispose() {
     _notesCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _showHowTo() async {
+    HapticFeedback.selectionClick();
+    final ex = widget.exercise;
+    final catalogueEntry = ref.read(exerciseByIdProvider(ex.exerciseId));
+    final muscle = MuscleGroup.fromString(ex.muscleGroup);
+    final groupColor = muscleGroupColor(muscle);
+
+    await ZBottomSheet.show<void>(
+      context,
+      title: ex.exerciseName,
+      child: _HowToSheetBody(
+        exerciseId: ex.exerciseId,
+        exerciseName: ex.exerciseName,
+        muscleLabel: muscle.label,
+        equipmentLabel: catalogueEntry?.equipment.label ?? 'Bodyweight',
+        instructions: catalogueEntry?.instructions ?? '',
+        groupColor: groupColor,
+      ),
+    );
   }
 
   Future<void> _showMoreMenu() async {
@@ -182,14 +204,31 @@ class _WorkoutExerciseCardState extends ConsumerState<WorkoutExerciseCard> {
     final totalCount = ex.sets.length;
     final allDone = totalCount > 0 && completedCount == totalCount;
 
-    final muscleIconBubble = Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: groupColor.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+    // Exercise thumbnail — real photo if bundled, gradient+icon fallback
+    // otherwise. Same image/fallback contract as the picker grid.
+    final exerciseThumbnail = ClipRRect(
+      borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+      child: SizedBox(
+        width: 44,
+        height: 44,
+        child: Image.asset(
+          'assets/images/exercises/${ex.exerciseId}.webp',
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  groupColor.withValues(alpha: 0.38),
+                  groupColor.withValues(alpha: 0.12),
+                ],
+              ),
+            ),
+            child: Icon(muscleGroupIcon(muscle), size: 20, color: groupColor),
+          ),
+        ),
       ),
-      child: Icon(muscleGroupIcon(muscle), size: 20, color: groupColor),
     );
 
     return Container(
@@ -212,7 +251,7 @@ class _WorkoutExerciseCardState extends ConsumerState<WorkoutExerciseCard> {
               padding: const EdgeInsets.all(AppDimens.spaceMd),
               child: Row(
                 children: [
-                  muscleIconBubble,
+                  exerciseThumbnail,
                   const SizedBox(width: AppDimens.spaceSm),
                   Expanded(
                     child: Text(
@@ -225,12 +264,19 @@ class _WorkoutExerciseCardState extends ConsumerState<WorkoutExerciseCard> {
                       ),
                     ),
                   ),
-                  if (widget.isExpanded)
+                  if (widget.isExpanded) ...[
+                    IconButton(
+                      icon: const Icon(Icons.info_outline_rounded),
+                      color: colors.textSecondary,
+                      tooltip: 'How to do this',
+                      onPressed: _showHowTo,
+                    ),
                     IconButton(
                       icon: const Icon(Icons.more_vert_rounded),
                       color: colors.textSecondary,
                       onPressed: _showMoreMenu,
-                    )
+                    ),
+                  ]
                   else ...[
                     const SizedBox(width: AppDimens.spaceSm),
                     if (allDone)
@@ -745,6 +791,231 @@ class _SheetTile extends StatelessWidget {
         label,
         style: AppTextStyles.bodyLarge.copyWith(color: color),
       ),
+    );
+  }
+}
+
+/// Bottom sheet body shown when the user taps the ⓘ button on an expanded
+/// exercise card. Renders a large photo, muscle / equipment chips, and the
+/// step-by-step instructions from the catalogue.
+class _HowToSheetBody extends StatelessWidget {
+  const _HowToSheetBody({
+    required this.exerciseId,
+    required this.exerciseName,
+    required this.muscleLabel,
+    required this.equipmentLabel,
+    required this.instructions,
+    required this.groupColor,
+  });
+
+  final String exerciseId;
+  final String exerciseName;
+  final String muscleLabel;
+  final String equipmentLabel;
+  final String instructions;
+  final Color groupColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final steps = _splitIntoSteps(instructions);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(
+        AppDimens.spaceLg,
+        0,
+        AppDimens.spaceLg,
+        AppDimens.spaceLg,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Large photo card — taller than the thumbnail so users can actually
+          // see the form. Falls back to a gradient + name overlay.
+          AspectRatio(
+            aspectRatio: 4 / 3,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+              child: Image.asset(
+                'assets/images/exercises/$exerciseId.webp',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        groupColor.withValues(alpha: 0.38),
+                        groupColor.withValues(alpha: 0.12),
+                      ],
+                    ),
+                  ),
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppDimens.spaceLg),
+                      child: Text(
+                        exerciseName,
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.titleLarge.copyWith(
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppDimens.spaceMd),
+
+          // Muscle + equipment chips
+          Wrap(
+            spacing: AppDimens.spaceSm,
+            runSpacing: AppDimens.spaceSm,
+            children: [
+              _MetaChip(
+                icon: Icons.fitness_center_rounded,
+                label: muscleLabel,
+                color: groupColor,
+              ),
+              _MetaChip(
+                icon: Icons.build_rounded,
+                label: equipmentLabel,
+                color: colors.textSecondary,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppDimens.spaceLg),
+
+          // Instructions heading + steps
+          Text(
+            'How to do it',
+            style: AppTextStyles.labelMedium.copyWith(
+              color: colors.textSecondary,
+              letterSpacing: 1.2,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          if (steps.isEmpty)
+            Text(
+              "We don't have step-by-step instructions for this exercise yet. "
+              "The picture above shows the starting position.",
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: colors.textSecondary,
+                height: 1.5,
+              ),
+            )
+          else
+            for (int i = 0; i < steps.length; i++) ...[
+              _InstructionStep(number: i + 1, text: steps[i]),
+              if (i < steps.length - 1)
+                const SizedBox(height: AppDimens.spaceSm),
+            ],
+        ],
+      ),
+    );
+  }
+
+  /// Splits a paragraph of instructions into numbered steps. The catalogue
+  /// stores these as one run-on sentence; we split on terminal punctuation
+  /// and filter empty fragments so the list reads like a recipe.
+  static List<String> _splitIntoSteps(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return const [];
+    final parts = trimmed
+        .split(RegExp(r'(?<=[.!?])\s+'))
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList(growable: false);
+    return parts.isEmpty ? [trimmed] : parts;
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimens.spaceMd,
+        vertical: AppDimens.spaceXs,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppDimens.shapePill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InstructionStep extends StatelessWidget {
+  const _InstructionStep({required this.number, required this.text});
+
+  final int number;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: colors.primary.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            '$number',
+            style: AppTextStyles.labelSmall.copyWith(
+              color: colors.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(width: AppDimens.spaceSm),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              text,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: colors.textPrimary,
+                height: 1.5,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
