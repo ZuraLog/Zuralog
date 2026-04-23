@@ -30,7 +30,8 @@ class BodyNowMetricsRail extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: deep,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        // 16pt radius per brand bible for inner rails inside hero cards.
+        borderRadius: BorderRadius.circular(AppDimens.radiusChip),
       ),
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
       child: Row(
