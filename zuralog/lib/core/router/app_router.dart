@@ -124,6 +124,7 @@ import 'package:zuralog/features/nutrition/presentation/meal_edit_screen.dart';
 import 'package:zuralog/features/nutrition/domain/guided_question.dart';
 import 'package:zuralog/features/nutrition/presentation/meal_review_screen.dart';
 import 'package:zuralog/features/nutrition/presentation/meal_walkthrough_screen.dart';
+import 'package:zuralog/features/nutrition/presentation/nutrition_goals_wizard.dart';
 
 // ── Settings (pushed over shell) ──────────────────────────────────────────────
 import 'package:zuralog/features/settings/presentation/settings_hub_screen.dart';
@@ -749,6 +750,13 @@ List<RouteBase> _buildRoutes() {
           ),
         ),
       ],
+    ),
+
+    // ── Nutrition Goals Setup (full-screen — no bottom nav) ──────────────
+    GoRoute(
+      path: RouteNames.nutritionGoalsSetupPath,
+      name: RouteNames.nutritionGoalsSetup,
+      builder: (context, state) => const NutritionGoalsWizard(),
     ),
 
     // ── Settings (pushed over shell — full-screen) ────────────────────────
