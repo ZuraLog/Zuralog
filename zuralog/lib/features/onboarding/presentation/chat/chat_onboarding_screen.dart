@@ -59,39 +59,50 @@ class _ChatOnboardingScreenState extends ConsumerState<ChatOnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    final state = ref.watch(onboardingChatControllerProvider);
+    // Force dark mode for the onboarding surface regardless of the system
+    // theme — per docs/design.md "Dark mode is the primary experience."
+    // All descendants using AppColorsOf(context) will resolve to dark tokens.
+    return Theme(
+      data: Theme.of(context).copyWith(brightness: Brightness.dark),
+      child: Builder(
+        builder: (ctx) {
+          final colors = AppColorsOf(ctx);
+          final state = ref.watch(onboardingChatControllerProvider);
 
-    // Auto-scroll whenever the transcript changes length.
-    ref.listen<ChatState>(
-      onboardingChatControllerProvider,
-      (prev, next) {
-        if (prev == null || prev.messages.length != next.messages.length) {
-          _autoScrollToBottom();
-        }
-      },
-    );
+          // Auto-scroll whenever the transcript changes length.
+          ref.listen<ChatState>(
+            onboardingChatControllerProvider,
+            (prev, next) {
+              if (prev == null ||
+                  prev.messages.length != next.messages.length) {
+                _autoScrollToBottom();
+              }
+            },
+          );
 
-    return Scaffold(
-      backgroundColor: colors.canvas,
-      resizeToAvoidBottomInset: true,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            _TopBar(currentStep: state.currentStep),
-            Expanded(
-              child: _Transcript(
-                scrollController: _scrollController,
-                messages: state.messages,
+          return Scaffold(
+            backgroundColor: colors.canvas,
+            resizeToAvoidBottomInset: true,
+            body: SafeArea(
+              bottom: false,
+              child: Column(
+                children: [
+                  _TopBar(currentStep: state.currentStep),
+                  Expanded(
+                    child: _Transcript(
+                      scrollController: _scrollController,
+                      messages: state.messages,
+                    ),
+                  ),
+                  _InputArea(
+                    currentStep: state.currentStep,
+                    isCoachComposing: state.isCoachComposing,
+                  ),
+                ],
               ),
             ),
-            _InputArea(
-              currentStep: state.currentStep,
-              isCoachComposing: state.isCoachComposing,
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
