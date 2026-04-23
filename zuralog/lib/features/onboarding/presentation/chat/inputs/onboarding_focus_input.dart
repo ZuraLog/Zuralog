@@ -72,7 +72,7 @@ class _OnboardingFocusInputState extends State<OnboardingFocusInput> {
         crossAxisCount: 2,
         mainAxisSpacing: _gridSpacing,
         crossAxisSpacing: _gridSpacing,
-        childAspectRatio: 1.55,
+        childAspectRatio: 1.25,
       ),
       itemBuilder: (context, i) {
         final opt = widget.options[i];

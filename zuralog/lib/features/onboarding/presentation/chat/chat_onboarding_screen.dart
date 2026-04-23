@@ -22,11 +22,12 @@ import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_blob.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/cards/onboarding_bmr_card.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/cards/onboarding_profile_card.dart';
+import 'package:zuralog/features/onboarding/presentation/chat/cards/onboarding_tone_sample_card.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/controller/onboarding_chat_controller.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/domain/chat_types.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_chip_input.dart';
-import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_connect_input.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_focus_input.dart';
+import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_integrations_input.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_pill_input.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_text_input.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_wheel_input.dart';
@@ -247,6 +248,8 @@ class _CardMessage extends StatelessWidget {
         return OnboardingBmrCard(
           bmrCalories: _estimateBmr(profile),
         );
+      case ChatCardKind.toneSample:
+        return OnboardingToneSampleCard(toneId: profile.tone ?? 'warm');
       case ChatCardKind.finaleProfile:
         return OnboardingProfileCard(profile: profile);
       case ChatCardKind.focusPreview:
@@ -387,9 +390,22 @@ class _InputArea extends ConsumerWidget {
           onSelect: controller.submitTone,
         );
       case ChatStep.connect:
-        input = OnboardingConnectInput(
-          onConnect: () => controller.submitHealthConnect(granted: true),
-          onSkip: () => controller.submitHealthConnect(granted: false),
+        input = OnboardingIntegrationsInput(
+          onSubmit: controller.submitIntegrations,
+        );
+      case ChatStep.source:
+        input = OnboardingPillInput(
+          layout: PillLayout.wrap,
+          options: const [
+            OnboardingPillOption(id: 'friend', label: 'Friend'),
+            OnboardingPillOption(id: 'instagram', label: 'Instagram'),
+            OnboardingPillOption(id: 'tiktok', label: 'TikTok'),
+            OnboardingPillOption(id: 'podcast', label: 'Podcast'),
+            OnboardingPillOption(id: 'app_store', label: 'App Store'),
+            OnboardingPillOption(id: 'doctor', label: 'Doctor'),
+            OnboardingPillOption(id: 'other', label: 'Somewhere else'),
+          ],
+          onSelect: controller.submitDiscoverySource,
         );
       case ChatStep.finale:
         input = _MeetYourCoachButton(onPressed: onFinale);

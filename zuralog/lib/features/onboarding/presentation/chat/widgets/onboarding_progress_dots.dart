@@ -18,9 +18,9 @@ class OnboardingProgressDots extends StatelessWidget {
 
   final ChatStep currentStep;
 
-  // Only the first 9 steps (name through connect) are user-input steps.
-  // The finale is a reveal, not a progress slot.
-  static const int _progressSlotCount = 9;
+  // Steps name through source are the ten user-input steps the progress
+  // bar tracks. The finale is a reveal, not a progress slot.
+  static const int _progressSlotCount = 10;
 
   // Dot sizing.
   static const double _dotWidth = 10;

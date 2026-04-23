@@ -160,24 +160,60 @@ class OnboardingChatController extends StateNotifier<ChatState> {
     );
 
     await _coachSays(_toneAck(toneId));
+    // Drop a sample message card so the user sees what the chosen tone
+    // actually sounds like — makes the abstract pick land concretely.
+    await _coachSends(ChatCardKind.toneSample, pause: _cardPause);
     await _coachSays(
-      "Last step — share your health history with me so I can start spotting patterns.",
+      'Now let\'s hook up your health data so I can start spotting patterns.',
       pause: _mediumPause,
+    );
+    await _coachSays(
+      'Pick any apps you already use — you can add more later.',
     );
     _advanceTo(ChatStep.connect);
   }
 
-  Future<void> submitHealthConnect({required bool granted}) async {
-    _userSays(granted ? 'Connected' : 'Skip for now');
+  /// Called by the integrations picker when the user submits their set
+  /// (an empty list means they tapped "Skip for now").
+  Future<void> submitIntegrations(List<String> integrationIds) async {
+    if (integrationIds.isEmpty) {
+      _userSays('Skip for now');
+      await _coachSays(
+        "All good — you can connect your health apps any time from Settings.",
+      );
+    } else {
+      _userSays(_formatIntegrationList(integrationIds));
+      state = state.copyWith(
+        profile: state.profile.copyWith(
+          connectedIntegrations: integrationIds,
+        ),
+      );
+      if (integrationIds.length == 1) {
+        await _coachSays(
+          "Nice — I'll pull from ${_integrationName(integrationIds.first)}.",
+        );
+      } else {
+        await _coachSays(
+          "Nice — I'll pull from all ${integrationIds.length}.",
+        );
+      }
+    }
+
+    await _coachSays(
+      'Last quick one — where did you hear about us?',
+      pause: _mediumPause,
+    );
+    _advanceTo(ChatStep.source);
+  }
+
+  /// Called by the discovery-source pill input.
+  Future<void> submitDiscoverySource(String sourceId) async {
+    _userSays(_sourceLabel(sourceId));
     state = state.copyWith(
-      profile: state.profile.copyWith(healthConnected: granted),
+      profile: state.profile.copyWith(discoverySource: sourceId),
     );
 
-    if (granted) {
-      await _coachSays("Done — I've got your history.");
-    } else {
-      await _coachSays("All good — you can connect any time from settings.");
-    }
+    await _coachSays("Good to know — thanks.");
     await _coachSays(
       "Here's what I'll remember about you.",
       pause: _mediumPause,
@@ -325,15 +361,61 @@ class OnboardingChatController extends StateNotifier<ChatState> {
   String _toneAck(String id) {
     switch (id) {
       case 'direct':
-        return "Direct it is. I'll keep it to the numbers.";
+        return "Direct it is.";
       case 'warm':
-        return "Warm it is. I've got you.";
+        return "Warm it is.";
       case 'minimal':
-        return "Minimal it is. I'll only chime in when it matters.";
+        return "Minimal it is.";
       case 'thorough':
-        return "Thorough it is. You'll get the full picture.";
+        return "Thorough it is.";
       default:
         return "Got it.";
+    }
+  }
+
+  // ── Integration / source label helpers ──────────────────────────────────
+
+  String _integrationName(String id) {
+    switch (id) {
+      case 'apple_health':
+        return 'Apple Health';
+      case 'oura':
+        return 'Oura';
+      case 'strava':
+        return 'Strava';
+      case 'fitbit':
+        return 'Fitbit';
+      default:
+        return id;
+    }
+  }
+
+  String _formatIntegrationList(List<String> ids) {
+    final names = ids.map(_integrationName).toList();
+    if (names.length == 1) return names.first;
+    if (names.length == 2) return '${names[0]} & ${names[1]}';
+    final last = names.removeLast();
+    return '${names.join(', ')} & $last';
+  }
+
+  String _sourceLabel(String id) {
+    switch (id) {
+      case 'friend':
+        return 'Friend';
+      case 'instagram':
+        return 'Instagram';
+      case 'tiktok':
+        return 'TikTok';
+      case 'podcast':
+        return 'Podcast';
+      case 'app_store':
+        return 'App Store';
+      case 'doctor':
+        return 'Doctor';
+      case 'other':
+        return 'Somewhere else';
+      default:
+        return id;
     }
   }
 }

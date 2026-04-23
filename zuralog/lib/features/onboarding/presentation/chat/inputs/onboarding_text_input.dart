@@ -76,16 +76,15 @@ class _OnboardingTextInputState extends State<OnboardingTextInput> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
+    // Use STATIC dark tokens so the input always renders correctly on
+    // the dark canvas, regardless of the ambient theme propagation.
+    // Matches the forced-dark Theme override on the parent screen.
 
     return Container(
       height: _fieldHeight,
-      padding: const EdgeInsets.only(
-        left: 18,
-        right: 6,
-      ),
+      padding: const EdgeInsets.only(left: 18, right: 6),
       decoration: BoxDecoration(
-        color: colors.surface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(_fieldHeight / 2),
       ),
       child: Row(
@@ -96,15 +95,15 @@ class _OnboardingTextInputState extends State<OnboardingTextInput> {
               focusNode: _focusNode,
               textCapitalization: widget.textCapitalization,
               textInputAction: TextInputAction.send,
-              cursorColor: colors.primary,
+              cursorColor: AppColors.primary,
               style: AppTextStyles.bodyLarge.copyWith(
-                color: colors.textPrimary,
+                color: AppColors.warmWhite,
                 letterSpacing: -0.1,
               ),
               decoration: InputDecoration(
                 hintText: widget.hint,
                 hintStyle: AppTextStyles.bodyLarge.copyWith(
-                  color: colors.textSecondary,
+                  color: AppColors.textSecondaryDark,
                   letterSpacing: -0.1,
                 ),
                 border: InputBorder.none,
@@ -133,8 +132,8 @@ class _OnboardingTextInputState extends State<OnboardingTextInput> {
                   margin: const EdgeInsets.all(AppDimens.spaceXs),
                   decoration: BoxDecoration(
                     color: _canSend
-                        ? colors.primary
-                        : colors.surfaceRaised,
+                        ? AppColors.primary
+                        : AppColors.surfaceRaised,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -142,7 +141,7 @@ class _OnboardingTextInputState extends State<OnboardingTextInput> {
                     size: 20,
                     color: _canSend
                         ? const Color(0xFF1A2E22)
-                        : colors.textSecondary,
+                        : AppColors.textSecondaryDark,
                   ),
                 ),
               ),

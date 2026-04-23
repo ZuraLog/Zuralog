@@ -25,6 +25,7 @@ enum ChatCardKind {
   bmr,
   focusPreview,
   activityBaseline,
+  toneSample,
   finaleProfile,
 }
 
@@ -40,6 +41,7 @@ enum ChatStep {
   goal,
   tone,
   connect,
+  source,
   finale,
 }
 
@@ -78,7 +80,8 @@ class OnboardingProfile {
     this.focus,
     this.goal,
     this.tone,
-    this.healthConnected = false,
+    this.connectedIntegrations = const <String>[],
+    this.discoverySource,
   });
 
   final String? name;
@@ -89,7 +92,15 @@ class OnboardingProfile {
   final String? focus;
   final String? goal;
   final String? tone;
-  final bool healthConnected;
+
+  /// Integration IDs the user opted into on the connect step.
+  /// Empty list = they tapped Skip.
+  final List<String> connectedIntegrations;
+
+  /// How the user found Zuralog (analytics-grade optional question).
+  final String? discoverySource;
+
+  bool get hasAnyIntegration => connectedIntegrations.isNotEmpty;
 
   OnboardingProfile copyWith({
     String? name,
@@ -100,7 +111,8 @@ class OnboardingProfile {
     String? focus,
     String? goal,
     String? tone,
-    bool? healthConnected,
+    List<String>? connectedIntegrations,
+    String? discoverySource,
   }) {
     return OnboardingProfile(
       name: name ?? this.name,
@@ -111,7 +123,9 @@ class OnboardingProfile {
       focus: focus ?? this.focus,
       goal: goal ?? this.goal,
       tone: tone ?? this.tone,
-      healthConnected: healthConnected ?? this.healthConnected,
+      connectedIntegrations:
+          connectedIntegrations ?? this.connectedIntegrations,
+      discoverySource: discoverySource ?? this.discoverySource,
     );
   }
 }

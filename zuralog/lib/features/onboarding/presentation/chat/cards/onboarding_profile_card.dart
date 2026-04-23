@@ -60,11 +60,17 @@ class OnboardingProfileCard extends StatelessWidget {
           label: 'Tone',
           value: _toneLabel(profile.tone!),
         ),
-      if (profile.healthConnected)
+      if (profile.hasAnyIntegration)
         _ProfileRow(
           color: AppColors.categoryActivity,
           label: 'Data',
-          value: 'Health data connected',
+          value: _integrationSummary(profile.connectedIntegrations),
+        ),
+      if (profile.discoverySource != null)
+        _ProfileRow(
+          color: AppColors.categoryBody,
+          label: 'Via',
+          value: _sourceLabel(profile.discoverySource!),
         ),
     ];
 
@@ -190,15 +196,60 @@ class OnboardingProfileCard extends StatelessWidget {
   static String _toneLabel(String toneId) {
     switch (toneId) {
       case 'direct':
-        return 'Direct &amp; data-driven';
+        return 'Direct & data-driven';
       case 'warm':
-        return 'Warm &amp; encouraging';
+        return 'Warm & encouraging';
       case 'minimal':
         return 'Minimal nudges';
       case 'thorough':
-        return 'Thorough &amp; detailed';
+        return 'Thorough & detailed';
       default:
         return toneId;
+    }
+  }
+
+  static String _integrationSummary(List<String> ids) {
+    if (ids.isEmpty) return 'None';
+    if (ids.length == 1) return _integrationName(ids.first);
+    if (ids.length == 2) {
+      return '${_integrationName(ids[0])} & ${_integrationName(ids[1])}';
+    }
+    return '${ids.length} apps connected';
+  }
+
+  static String _integrationName(String id) {
+    switch (id) {
+      case 'apple_health':
+        return 'Apple Health';
+      case 'oura':
+        return 'Oura';
+      case 'strava':
+        return 'Strava';
+      case 'fitbit':
+        return 'Fitbit';
+      default:
+        return id;
+    }
+  }
+
+  static String _sourceLabel(String id) {
+    switch (id) {
+      case 'friend':
+        return 'Friend';
+      case 'instagram':
+        return 'Instagram';
+      case 'tiktok':
+        return 'TikTok';
+      case 'podcast':
+        return 'Podcast';
+      case 'app_store':
+        return 'App Store';
+      case 'doctor':
+        return 'Doctor';
+      case 'other':
+        return 'Somewhere else';
+      default:
+        return id;
     }
   }
 }
