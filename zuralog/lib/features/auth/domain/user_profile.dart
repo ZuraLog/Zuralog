@@ -38,6 +38,9 @@ class UserProfile {
   /// Optional height in centimetres.
   final double? heightCm;
 
+  /// Optional weight in kilograms.
+  final double? weightKg;
+
   /// Optional URL of the user's avatar image.
   final String? avatarUrl;
 
@@ -61,6 +64,7 @@ class UserProfile {
     this.birthday,
     this.gender,
     this.heightCm,
+    this.weightKg,
     this.avatarUrl,
     required this.onboardingComplete,
     this.createdAt,
@@ -92,6 +96,7 @@ class UserProfile {
           : null,
       gender: json['gender'] as String?,
       heightCm: (json['height_cm'] as num?)?.toDouble(),
+      weightKg: (json['weight_kg'] as num?)?.toDouble(),
       avatarUrl: json['avatar_url'] as String?,
       onboardingComplete: json['onboarding_complete'] as bool? ?? false,
       createdAt: json['created_at'] != null
@@ -117,6 +122,7 @@ class UserProfile {
     Object? birthday = _copyWithSentinel,
     Object? gender = _copyWithSentinel,
     Object? heightCm = _copyWithSentinel,
+    Object? weightKg = _copyWithSentinel,
     Object? avatarUrl = _copyWithSentinel,
     bool? onboardingComplete,
   }) {
@@ -136,6 +142,9 @@ class UserProfile {
       heightCm: heightCm == _copyWithSentinel
           ? this.heightCm
           : heightCm as double?,
+      weightKg: weightKg == _copyWithSentinel
+          ? this.weightKg
+          : weightKg as double?,
       avatarUrl: avatarUrl == _copyWithSentinel
           ? this.avatarUrl
           : avatarUrl as String?,
@@ -156,6 +165,7 @@ class UserProfile {
           birthday == other.birthday &&
           gender == other.gender &&
           heightCm == other.heightCm &&
+          weightKg == other.weightKg &&
           avatarUrl == other.avatarUrl &&
           onboardingComplete == other.onboardingComplete &&
           createdAt == other.createdAt;
@@ -169,6 +179,7 @@ class UserProfile {
         birthday,
         gender,
         heightCm,
+        weightKg,
         avatarUrl,
         onboardingComplete,
         createdAt,

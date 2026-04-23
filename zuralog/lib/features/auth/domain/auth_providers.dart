@@ -509,6 +509,7 @@ class UserProfileNotifier extends Notifier<UserProfile?> {
   ///   [birthday]: New date of birth (optional).
   ///   [gender]: New gender identifier (optional).
   ///   [heightCm]: New height in centimetres (optional).
+  ///   [weightKg]: New weight in kilograms (optional).
   ///   [onboardingComplete]: Marks onboarding as complete (optional).
   ///
   /// Throws:
@@ -519,6 +520,7 @@ class UserProfileNotifier extends Notifier<UserProfile?> {
     DateTime? birthday,
     String? gender,
     double? heightCm,
+    double? weightKg,
     bool? onboardingComplete,
   }) async {
     final repo = ref.read(authRepositoryProvider);
@@ -528,6 +530,7 @@ class UserProfileNotifier extends Notifier<UserProfile?> {
       birthday: birthday,
       gender: gender,
       heightCm: heightCm,
+      weightKg: weightKg,
       onboardingComplete: onboardingComplete,
     );
   }
