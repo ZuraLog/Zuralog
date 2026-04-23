@@ -2,21 +2,34 @@
 ///
 /// Post-sign-up onboarding as a conversation with the AI coach. The user
 /// answers each question inline (text, pill, wheel, tile — depending on
-/// the step) and their answers appear as their own message bubbles.
+/// the step) and their answers appear as their own message bubbles. The
+/// coach reacts dynamically, drops info cards (BMR, finale profile), and
+/// ends with a "Meet your coach" CTA that persists the profile and lands
+/// the user on Today.
 ///
-/// This screen replaces the old [PersonalizationFlowScreen] wizard.
+/// This screen replaces the old form-style [PersonalizationFlowScreen].
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_blob.dart';
+import 'package:zuralog/features/onboarding/presentation/chat/cards/onboarding_bmr_card.dart';
+import 'package:zuralog/features/onboarding/presentation/chat/cards/onboarding_profile_card.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/controller/onboarding_chat_controller.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/domain/chat_types.dart';
+import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_chip_input.dart';
+import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_connect_input.dart';
+import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_focus_input.dart';
+import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_pill_input.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_text_input.dart';
+import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_wheel_input.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/widgets/onboarding_coach_bubble.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/widgets/onboarding_progress_dots.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/widgets/onboarding_typing_indicator.dart';
@@ -46,7 +59,6 @@ class _ChatOnboardingScreenState extends ConsumerState<ChatOnboardingScreen> {
   }
 
   void _autoScrollToBottom() {
-    // Run after the frame so the new message's height is known.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scrollController.hasClients) return;
       _scrollController.animateTo(
@@ -59,27 +71,27 @@ class _ChatOnboardingScreenState extends ConsumerState<ChatOnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(onboardingChatControllerProvider);
+
+    // ref.listen MUST be called directly in the build method of a
+    // ConsumerStatefulWidget — never inside a nested Builder.
+    ref.listen<ChatState>(
+      onboardingChatControllerProvider,
+      (prev, next) {
+        if (prev == null || prev.messages.length != next.messages.length) {
+          _autoScrollToBottom();
+        }
+      },
+    );
+
     // Force dark mode for the onboarding surface regardless of the system
     // theme — per docs/design.md "Dark mode is the primary experience."
-    // All descendants using AppColorsOf(context) will resolve to dark tokens.
+    // Descendants using AppColorsOf(context) resolve to dark tokens inside.
     return Theme(
       data: Theme.of(context).copyWith(brightness: Brightness.dark),
       child: Builder(
         builder: (ctx) {
           final colors = AppColorsOf(ctx);
-          final state = ref.watch(onboardingChatControllerProvider);
-
-          // Auto-scroll whenever the transcript changes length.
-          ref.listen<ChatState>(
-            onboardingChatControllerProvider,
-            (prev, next) {
-              if (prev == null ||
-                  prev.messages.length != next.messages.length) {
-                _autoScrollToBottom();
-              }
-            },
-          );
-
           return Scaffold(
             backgroundColor: colors.canvas,
             resizeToAvoidBottomInset: true,
@@ -92,11 +104,12 @@ class _ChatOnboardingScreenState extends ConsumerState<ChatOnboardingScreen> {
                     child: _Transcript(
                       scrollController: _scrollController,
                       messages: state.messages,
+                      profile: state.profile,
                     ),
                   ),
                   _InputArea(
-                    currentStep: state.currentStep,
-                    isCoachComposing: state.isCoachComposing,
+                    state: state,
+                    onFinale: () => _handleFinale(state.profile),
                   ),
                 ],
               ),
@@ -105,6 +118,26 @@ class _ChatOnboardingScreenState extends ConsumerState<ChatOnboardingScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _handleFinale(OnboardingProfile profile) async {
+    // Persist onboarding-complete + preferred name. Backend wiring for the
+    // rest of the profile (sex/age/height/weight/focus/goal/tone) is a
+    // follow-up once the schema supports it.
+    try {
+      await ref.read(userProfileProvider.notifier).update(
+            onboardingComplete: true,
+            nickname: (profile.name ?? '').isNotEmpty ? profile.name : null,
+          );
+    } catch (_) {
+      // Non-fatal for the UX — router will route by auth state anyway.
+    }
+    if (!mounted) return;
+    ctxGo(context);
+  }
+
+  void ctxGo(BuildContext context) {
+    context.go(RouteNames.todayPath);
   }
 }
 
@@ -122,9 +155,7 @@ class _TopBar extends StatelessWidget {
     return SizedBox(
       height: _ChatOnboardingScreenState._topBarHeight,
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceLg,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceLg),
         child: Row(
           children: [
             const CoachBlob(state: BlobState.idle, size: 28),
@@ -151,10 +182,12 @@ class _Transcript extends StatelessWidget {
   const _Transcript({
     required this.scrollController,
     required this.messages,
+    required this.profile,
   });
 
   final ScrollController scrollController;
   final List<ChatMessage> messages;
+  final OnboardingProfile profile;
 
   @override
   Widget build(BuildContext context) {
@@ -170,8 +203,6 @@ class _Transcript extends StatelessWidget {
       itemCount: messages.length,
       itemBuilder: (context, index) {
         final msg = messages[index];
-        // Hide the avatar on consecutive coach messages so only the first
-        // in a cluster carries the blob. Feels like real chat grouping.
         final showAvatar = index == 0 ||
             messages[index - 1].author != MessageAuthor.coach ||
             msg.author != MessageAuthor.coach;
@@ -188,11 +219,60 @@ class _Transcript extends StatelessWidget {
             }
             return OnboardingUserBubble(text: msg.text);
           case MessageKind.card:
-            // Placeholder until card variants land — renders nothing for now.
-            return const SizedBox.shrink();
+            return _CardMessage(
+              cardKind: msg.cardKind ?? ChatCardKind.bmr,
+              profile: profile,
+            );
         }
       },
     );
+  }
+}
+
+/// Renders whichever card variant the coach "sent" — BMR, focus preview,
+/// activity baseline, or the finale profile.
+class _CardMessage extends StatelessWidget {
+  const _CardMessage({
+    required this.cardKind,
+    required this.profile,
+  });
+
+  final ChatCardKind cardKind;
+  final OnboardingProfile profile;
+
+  @override
+  Widget build(BuildContext context) {
+    switch (cardKind) {
+      case ChatCardKind.bmr:
+        return OnboardingBmrCard(
+          bmrCalories: _estimateBmr(profile),
+        );
+      case ChatCardKind.finaleProfile:
+        return OnboardingProfileCard(profile: profile);
+      case ChatCardKind.focusPreview:
+      case ChatCardKind.activityBaseline:
+        // Placeholder for future card variants.
+        return const SizedBox.shrink();
+    }
+  }
+
+  /// Mifflin-St Jeor — widely used clinical BMR estimator. Falls back to a
+  /// reasonable default if we don't have the full picture yet.
+  static int _estimateBmr(OnboardingProfile p) {
+    if (p.heightCm == null || p.weightKg == null || p.age == null) {
+      return 1700;
+    }
+    final kg = p.weightKg!;
+    final cm = p.heightCm!;
+    final age = p.age!.toDouble();
+    // Male: 10w + 6.25h − 5a + 5 | Female: − 161.  For "other" we average.
+    final offset = p.sex == 'male'
+        ? 5
+        : p.sex == 'female'
+            ? -161
+            : -78;
+    final bmr = (10 * kg) + (6.25 * cm) - (5 * age) + offset;
+    return bmr.round();
   }
 }
 
@@ -200,25 +280,22 @@ class _Transcript extends StatelessWidget {
 
 class _InputArea extends ConsumerWidget {
   const _InputArea({
-    required this.currentStep,
-    required this.isCoachComposing,
+    required this.state,
+    required this.onFinale,
   });
 
-  final ChatStep currentStep;
-  final bool isCoachComposing;
+  final ChatState state;
+  final VoidCallback onFinale;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bottomSafe = MediaQuery.paddingOf(context).bottom;
     final keyboard = MediaQuery.viewInsetsOf(context).bottom;
     final controller = ref.read(onboardingChatControllerProvider.notifier);
-
-    // While the coach is composing, hide the input so the user isn't
-    // tempted to type over a reply in-flight.
-    final showInput = !isCoachComposing;
+    final showInput = !state.isCoachComposing;
 
     Widget input;
-    switch (currentStep) {
+    switch (state.currentStep) {
       case ChatStep.name:
         input = OnboardingTextInput(
           hint: 'Your name',
@@ -226,20 +303,100 @@ class _InputArea extends ConsumerWidget {
           onSubmit: controller.submitName,
         );
       case ChatStep.sex:
+        input = OnboardingPillInput(
+          layout: PillLayout.row,
+          options: const [
+            OnboardingPillOption(id: 'female', label: 'Female'),
+            OnboardingPillOption(id: 'male', label: 'Male'),
+            OnboardingPillOption(id: 'other', label: 'Other'),
+          ],
+          onSelect: controller.submitSex,
+        );
       case ChatStep.age:
+        input = OnboardingWheelInput(
+          minValue: 14,
+          maxValue: 90,
+          initialValue: 30,
+          unit: 'years',
+          onSubmit: controller.submitAge,
+        );
       case ChatStep.height:
+        input = OnboardingWheelInput(
+          minValue: 120,
+          maxValue: 220,
+          initialValue: 170,
+          unit: 'cm',
+          onSubmit: controller.submitHeight,
+        );
       case ChatStep.weight:
+        input = OnboardingWheelInput(
+          minValue: 30,
+          maxValue: 200,
+          initialValue: 70,
+          unit: 'kg',
+          onSubmit: controller.submitWeight,
+        );
       case ChatStep.focus:
+        input = OnboardingFocusInput(
+          options: [
+            OnboardingFocusOption(
+              id: 'sleep',
+              icon: Icons.nightlight_round,
+              accent: AppColors.categorySleep,
+              title: 'Sleep',
+              subtitle: 'Deeper nights',
+            ),
+            OnboardingFocusOption(
+              id: 'activity',
+              icon: Icons.directions_run_rounded,
+              accent: AppColors.categoryActivity,
+              title: 'Activity',
+              subtitle: 'Move more',
+            ),
+            OnboardingFocusOption(
+              id: 'nutrition',
+              icon: Icons.eco_rounded,
+              accent: AppColors.categoryNutrition,
+              title: 'Nutrition',
+              subtitle: 'Eat smarter',
+            ),
+            OnboardingFocusOption(
+              id: 'overall',
+              icon: Icons.spa_rounded,
+              accent: AppColors.primary,
+              title: 'Overall',
+              subtitle: 'Feel better',
+            ),
+          ],
+          onSelect: controller.submitFocus,
+        );
       case ChatStep.goal:
+        input = OnboardingChipInput(
+          options: _goalOptionsForFocus(state.profile.focus),
+          onSubmit: controller.submitGoal,
+        );
       case ChatStep.tone:
+        input = OnboardingPillInput(
+          layout: PillLayout.wrap,
+          options: const [
+            OnboardingPillOption(id: 'warm', label: 'Warm'),
+            OnboardingPillOption(id: 'direct', label: 'Direct'),
+            OnboardingPillOption(id: 'minimal', label: 'Minimal'),
+            OnboardingPillOption(id: 'thorough', label: 'Thorough'),
+          ],
+          onSelect: controller.submitTone,
+        );
       case ChatStep.connect:
+        input = OnboardingConnectInput(
+          onConnect: () => controller.submitHealthConnect(granted: true),
+          onSkip: () => controller.submitHealthConnect(granted: false),
+        );
       case ChatStep.finale:
-        // Placeholder — each step's custom input will land as we build it.
-        input = const SizedBox.shrink();
+        input = _MeetYourCoachButton(onPressed: onFinale);
     }
 
     return AnimatedSize(
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 220),
       curve: Curves.easeOut,
       alignment: Alignment.topCenter,
       child: AnimatedOpacity(
@@ -250,10 +407,92 @@ class _InputArea extends ConsumerWidget {
             left: AppDimens.spaceLg,
             right: AppDimens.spaceLg,
             bottom: bottomSafe +
-                (keyboard > 0 ? AppDimens.spaceSm : _ChatOnboardingScreenState._inputAreaBottomInset),
+                (keyboard > 0
+                    ? AppDimens.spaceSm
+                    : _ChatOnboardingScreenState._inputAreaBottomInset),
             top: AppDimens.spaceSm,
           ),
           child: input,
+        ),
+      ),
+    );
+  }
+
+  // Goals adapt to the user's focus pick so the suggestions feel tailored.
+  List<String> _goalOptionsForFocus(String? focus) {
+    switch (focus) {
+      case 'sleep':
+        return const [
+          'Sleep 8 hours',
+          'Fall asleep faster',
+          'Fewer wake-ups',
+          'Morning energy',
+          'Consistent schedule',
+        ];
+      case 'activity':
+        return const [
+          'Train 4x a week',
+          'Build strength',
+          'Run a 5K',
+          'Walk 10k steps',
+          'Stay consistent',
+        ];
+      case 'nutrition':
+        return const [
+          'Eat more protein',
+          'Cut processed food',
+          'Lose weight',
+          'Gain muscle',
+          'Drink more water',
+        ];
+      case 'overall':
+      default:
+        return const [
+          'More energy',
+          'Less stress',
+          'Better mood',
+          'Build habits',
+          'Feel balanced',
+        ];
+    }
+  }
+}
+
+/// Final CTA that shows only at the finale step.
+class _MeetYourCoachButton extends StatelessWidget {
+  const _MeetYourCoachButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  static const double _buttonHeight = 52;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return GestureDetector(
+      onTap: onPressed,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        height: _buttonHeight,
+        decoration: BoxDecoration(
+          color: colors.primary,
+          borderRadius: BorderRadius.circular(_buttonHeight / 2),
+          boxShadow: [
+            BoxShadow(
+              color: colors.primary.withValues(alpha: 0.18),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          'Meet your coach',
+          style: AppTextStyles.labelLarge.copyWith(
+            color: const Color(0xFF1A2E22),
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.1,
+          ),
         ),
       ),
     );
