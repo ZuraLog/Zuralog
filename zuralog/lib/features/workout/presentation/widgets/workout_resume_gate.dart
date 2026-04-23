@@ -64,13 +64,23 @@ class _WorkoutResumeGateState extends ConsumerState<WorkoutResumeGate> {
 
     if (!mounted) return;
 
-    final confirmed = await ZAlertDialog.show(
-      context,
-      title: 'Resume your workout?',
-      body: _formatBody(resumable),
-      confirmLabel: 'Resume',
-      cancelLabel: 'Discard',
-    );
+    // Gate sits in MaterialApp.router's builder — ABOVE the Navigator
+    // GoRouter installs, so our own context doesn't carry one. The
+    // showDialog call will fall through without raising on startup; if
+    // a descendant ever mounts us inside a Navigator, the prompt just
+    // starts working again without further changes.
+    bool? confirmed;
+    try {
+      confirmed = await ZAlertDialog.show(
+        context,
+        title: 'Resume your workout?',
+        body: _formatBody(resumable),
+        confirmLabel: 'Resume',
+        cancelLabel: 'Discard',
+      );
+    } catch (_) {
+      return;
+    }
 
     if (!mounted) return;
 
