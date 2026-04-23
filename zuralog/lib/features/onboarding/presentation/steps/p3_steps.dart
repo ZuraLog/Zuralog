@@ -145,7 +145,8 @@ class _P3NameStepState extends State<P3NameStep> {
 
   @override
   Widget build(BuildContext context) {
-    final canContinue = _ctrl.text.trim().isNotEmpty;
+    final trimmed = _ctrl.text.trim();
+    final canContinue = trimmed.length >= 2;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: _kHPad),
@@ -159,67 +160,131 @@ class _P3NameStepState extends State<P3NameStep> {
           const SizedBox(height: 12),
           RevealAnimation(
             delay: const Duration(milliseconds: 80),
-            child: Text('What should we call you?', style: _headingStyle().copyWith(fontSize: 32)),
+            child: Text(
+              "Let's start with your name.",
+              style: _headingStyle().copyWith(fontSize: 32),
+            ),
+          ),
+          const SizedBox(height: 12),
+          RevealAnimation(
+            delay: const Duration(milliseconds: 140),
+            child: Text(
+              'Your coach will use it when we talk.',
+              style: _bodyStyle(),
+            ),
           ),
           const SizedBox(height: 40),
 
-          // Underline text field
+          // Underline text field with a live confirm-check icon on the right.
           RevealAnimation(
-            delay: const Duration(milliseconds: 160),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            delay: const Duration(milliseconds: 220),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                TextField(
-                  controller: _ctrl,
-                  autofocus: true,
-                  textCapitalization: TextCapitalization.words,
-                  style: const TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 28,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.white,
-                    letterSpacing: -0.4,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Your name',
-                    hintStyle: TextStyle(
+                Expanded(
+                  child: TextField(
+                    controller: _ctrl,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.words,
+                    textInputAction: TextInputAction.done,
+                    cursorColor: AppColors.primary,
+                    style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
                       fontSize: 28,
                       fontWeight: FontWeight.w400,
-                      color: Colors.white.withValues(alpha: 0.25),
+                      color: Colors.white,
                       letterSpacing: -0.4,
                     ),
-                    border: InputBorder.none,
-                    enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(
-                        color: AppColors.primary.withValues(alpha: 0.5),
-                        width: 1.5,
+                    decoration: InputDecoration(
+                      hintText: 'Your name',
+                      hintStyle: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 28,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.white.withValues(alpha: 0.25),
+                        letterSpacing: -0.4,
                       ),
-                    ),
-                    focusedBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(
-                        color: AppColors.primary,
-                        width: 1.5,
+                      border: InputBorder.none,
+                      enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(
+                          color: AppColors.primary.withValues(alpha: 0.5),
+                          width: 1.5,
+                        ),
                       ),
+                      focusedBorder: const UnderlineInputBorder(
+                        borderSide: BorderSide(
+                          color: AppColors.primary,
+                          width: 1.5,
+                        ),
+                      ),
+                      filled: false,
+                      contentPadding: const EdgeInsets.only(bottom: 8),
                     ),
-                    filled: false,
-                    contentPadding: const EdgeInsets.only(bottom: 8),
+                    onChanged: (v) {
+                      widget.onChanged(v);
+                      setState(() {});
+                    },
+                    onSubmitted: (_) {
+                      if (canContinue) widget.onNext();
+                    },
                   ),
-                  onChanged: (v) {
-                    widget.onChanged(v);
-                    setState(() {});
-                  },
-                  onSubmitted: (_) {
-                    if (canContinue) widget.onNext();
-                  },
+                ),
+                // Tiny confirmation tick — fades in when the name is valid.
+                Padding(
+                  padding: const EdgeInsets.only(left: 12, bottom: 14),
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 240),
+                    curve: Curves.easeOut,
+                    opacity: canContinue ? 1 : 0,
+                    child: AnimatedScale(
+                      duration: const Duration(milliseconds: 240),
+                      curve: Curves.easeOutBack,
+                      scale: canContinue ? 1 : 0.6,
+                      child: Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(11),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.check_rounded,
+                          color: Color(0xFF1A2E22),
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
 
+          // Gentle greeting that appears once the user has entered a valid name.
+          const SizedBox(height: 20),
+          AnimatedOpacity(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOut,
+            opacity: canContinue ? 1 : 0,
+            child: AnimatedSlide(
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOut,
+              offset: canContinue ? Offset.zero : const Offset(0, 0.2),
+              child: Text(
+                canContinue ? 'Nice to meet you, $trimmed.' : '',
+                style: _bodyStyle().copyWith(
+                  color: AppColors.primary.withValues(alpha: 0.85),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+
           const Spacer(),
           RevealAnimation(
-            delay: const Duration(milliseconds: 240),
+            delay: const Duration(milliseconds: 300),
             child: Padding(
               padding: const EdgeInsets.only(bottom: 32),
               child: TourPrimaryButton(
