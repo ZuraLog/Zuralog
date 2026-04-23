@@ -52,6 +52,9 @@ class UserProfile:
     injuries: list[str] | None = None
     sleep_pattern: str | None = None
     health_frustration: str | None = None
+    # AI style preference (not printed in the profile block; passed through
+    # to build_system_prompt so the Tone Preference directive is injected).
+    tone: str | None = None
 
 
 # Human-readable labels for the sleep_pattern enum.

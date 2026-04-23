@@ -325,6 +325,15 @@ async def _load_user_profile(
         birthday=None,
         height_cm=None,
         platform=None,
+        gender=None,
+        weight_kg=None,
+        focus_area=None,
+        primary_goal=None,
+        dietary_restrictions=None,
+        injuries=None,
+        sleep_pattern=None,
+        health_frustration=None,
+        tone=None,
     )
     try:
         result = await db.execute(
@@ -356,6 +365,15 @@ async def _load_user_profile(
             birthday=user.birthday,
             height_cm=user.height_cm,
             platform=platform,
+            gender=user.gender,
+            weight_kg=user.weight_kg,
+            focus_area=prefs.focus_area if prefs else None,
+            primary_goal=prefs.primary_goal if prefs else None,
+            dietary_restrictions=prefs.dietary_restrictions if prefs else None,
+            injuries=prefs.injuries if prefs else None,
+            sleep_pattern=prefs.sleep_pattern if prefs else None,
+            health_frustration=prefs.health_frustration if prefs else None,
+            tone=prefs.tone if prefs else None,
         )
         persona = (prefs.coach_persona or "balanced") if prefs else "balanced"
         proactivity = (prefs.proactivity_level or "medium") if prefs else "medium"
