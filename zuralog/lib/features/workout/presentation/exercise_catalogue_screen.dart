@@ -1,5 +1,7 @@
 library;
 
+import 'dart:math' show min;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -24,6 +26,9 @@ class _ExerciseCatalogueScreenState
   final _searchCtrl = TextEditingController();
   final Set<Exercise> _selected = {};
 
+  static const int _kPageSize = 20;
+  int _visibleCount = _kPageSize;
+
   @override
   void dispose() {
     _searchCtrl.dispose();
@@ -38,6 +43,10 @@ class _ExerciseCatalogueScreenState
         _selected.add(e);
       }
     });
+  }
+
+  void _resetPagination() {
+    if (mounted) setState(() => _visibleCount = _kPageSize);
   }
 
   String get _buttonLabel {
@@ -55,9 +64,14 @@ class _ExerciseCatalogueScreenState
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final resultsAsync = ref.watch(exerciseSearchProvider);
-    final currentFilter = ref.watch(exerciseMuscleGroupFilterProvider);
-    final currentEquipmentFilter = ref.watch(exerciseEquipmentFilterProvider);
+    final currentMuscle = ref.watch(exerciseMuscleGroupFilterProvider);
+    final currentEquipment = ref.watch(exerciseEquipmentFilterProvider);
     final bookmarksOnly = ref.watch(exerciseBookmarksOnlyFilterProvider);
+
+    ref.listen(exerciseSearchQueryProvider, (_, _) => _resetPagination());
+    ref.listen(exerciseMuscleGroupFilterProvider, (_, _) => _resetPagination());
+    ref.listen(exerciseEquipmentFilterProvider, (_, _) => _resetPagination());
+    ref.listen(exerciseBookmarksOnlyFilterProvider, (_, _) => _resetPagination());
 
     return ZuralogScaffold(
       appBar: AppBar(
@@ -85,107 +99,97 @@ class _ExerciseCatalogueScreenState
               },
             ),
           ),
-          // Muscle group filter chips
-          SizedBox(
-            height: AppDimens.iconContainerMd,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+          // Filter row — bookmarks toggle + two dropdowns
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimens.spaceMd,
+              vertical: AppDimens.spaceSm,
+            ),
+            child: Row(
               children: [
-                // Bookmarks chip — first in row
-                Padding(
-                  padding: const EdgeInsets.only(right: AppDimens.spaceSm),
-                  child: ZChip(
-                    label: 'Bookmarks',
-                    icon: Icons.bookmark_rounded,
-                    isActive: bookmarksOnly,
-                    onTap: () {
-                      ref.read(exerciseBookmarksOnlyFilterProvider.notifier).state =
-                          !bookmarksOnly;
-                      if (!bookmarksOnly) {
-                        ref.read(exerciseMuscleGroupFilterProvider.notifier).state = null;
-                        ref.read(exerciseEquipmentFilterProvider.notifier).state = null;
-                      }
-                    },
-                  ),
+                // Bookmarks toggle
+                ZChip(
+                  label: 'Bookmarks',
+                  icon: Icons.bookmark_rounded,
+                  isActive: bookmarksOnly,
+                  onTap: () {
+                    ref
+                        .read(exerciseBookmarksOnlyFilterProvider.notifier)
+                        .state = !bookmarksOnly;
+                    if (!bookmarksOnly) {
+                      ref
+                          .read(exerciseMuscleGroupFilterProvider.notifier)
+                          .state = null;
+                      ref
+                          .read(exerciseEquipmentFilterProvider.notifier)
+                          .state = null;
+                    }
+                  },
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(right: AppDimens.spaceSm),
-                  child: ZChip(
-                    label: 'All',
-                    isActive: currentFilter == null && !bookmarksOnly,
-                    onTap: () {
+                const SizedBox(width: AppDimens.spaceSm),
+                // Muscle group dropdown
+                Expanded(
+                  child: _FilterDropdown<MuscleGroup>(
+                    label: currentMuscle?.label ?? 'Muscle Group',
+                    isActive: currentMuscle != null,
+                    items: [
+                      _DropdownItem(
+                        label: 'All',
+                        value: null,
+                        isSelected: currentMuscle == null,
+                      ),
+                      for (final g in MuscleGroup.values
+                          .where((g) => g != MuscleGroup.other))
+                        _DropdownItem(
+                          label: g.label,
+                          value: g,
+                          isSelected: currentMuscle == g,
+                        ),
+                    ],
+                    onSelected: (value) {
                       ref
                           .read(exerciseBookmarksOnlyFilterProvider.notifier)
                           .state = false;
                       ref
                           .read(exerciseMuscleGroupFilterProvider.notifier)
-                          .state = null;
+                          .state = value;
                     },
                   ),
                 ),
-                for (final group in MuscleGroup.values
-                    .where((g) => g != MuscleGroup.other))
-                  Padding(
-                    padding: const EdgeInsets.only(right: AppDimens.spaceSm),
-                    child: ZChip(
-                      label: group.label,
-                      isActive: currentFilter == group,
-                      onTap: () {
-                        ref
-                            .read(exerciseBookmarksOnlyFilterProvider.notifier)
-                            .state = false;
-                        ref
-                            .read(exerciseMuscleGroupFilterProvider.notifier)
-                            .state = currentFilter == group ? null : group;
-                      },
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          // Equipment filter chips
-          SizedBox(
-            height: AppDimens.iconContainerMd,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceMd),
-              children: [
-                Padding(
-                  padding:
-                      const EdgeInsets.only(right: AppDimens.spaceSm),
-                  child: ZChip(
-                    label: 'All',
-                    isActive: currentEquipmentFilter == null,
-                    onTap: () {
+                const SizedBox(width: AppDimens.spaceSm),
+                // Equipment dropdown
+                Expanded(
+                  child: _FilterDropdown<Equipment>(
+                    label: currentEquipment?.label ?? 'Equipment',
+                    isActive: currentEquipment != null,
+                    items: [
+                      _DropdownItem(
+                        label: 'All',
+                        value: null,
+                        isSelected: currentEquipment == null,
+                      ),
+                      for (final eq in Equipment.values
+                          .where((e) => e != Equipment.other))
+                        _DropdownItem(
+                          label: eq.label,
+                          value: eq,
+                          isSelected: currentEquipment == eq,
+                        ),
+                    ],
+                    onSelected: (value) {
+                      ref
+                          .read(exerciseBookmarksOnlyFilterProvider.notifier)
+                          .state = false;
                       ref
                           .read(exerciseEquipmentFilterProvider.notifier)
-                          .state = null;
+                          .state = value;
                     },
                   ),
                 ),
-                for (final eq in Equipment.values
-                    .where((e) => e != Equipment.other))
-                  Padding(
-                    padding:
-                        const EdgeInsets.only(right: AppDimens.spaceSm),
-                    child: ZChip(
-                      label: eq.label,
-                      isActive: currentEquipmentFilter == eq,
-                      onTap: () {
-                        ref
-                            .read(exerciseEquipmentFilterProvider.notifier)
-                            .state =
-                            currentEquipmentFilter == eq ? null : eq;
-                      },
-                    ),
-                  ),
               ],
             ),
           ),
-          const SizedBox(height: AppDimens.spaceSm),
-          // Exercise grid
+          // Exercise grid with pagination
           Expanded(
             child: resultsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -210,32 +214,65 @@ class _ExerciseCatalogueScreenState
                     ),
                   );
                 }
-                return GridView.builder(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimens.spaceMd,
-                    vertical: AppDimens.spaceSm,
-                  ),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: AppDimens.spaceMd,
-                    crossAxisSpacing: AppDimens.spaceMd,
-                    childAspectRatio: 0.85,
-                  ),
-                  itemCount: results.length,
-                  itemBuilder: (_, i) {
-                    final exercise = results[i];
-                    return ExerciseGridTile(
-                      key: ValueKey('exercise-${exercise.id}'),
-                      exercise: exercise,
-                      isSelected: _selected.contains(exercise),
-                      onTap: () => _toggle(exercise),
-                    );
+
+                final visibleCount = _visibleCount.clamp(0, results.length);
+                final hasMore = visibleCount < results.length;
+
+                return NotificationListener<ScrollUpdateNotification>(
+                  onNotification: (notification) {
+                    if (notification.metrics.extentAfter < 300 && hasMore) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          setState(() => _visibleCount =
+                              min(_visibleCount + _kPageSize, results.length));
+                        }
+                      });
+                    }
+                    return false;
                   },
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimens.spaceMd,
+                          vertical: AppDimens.spaceSm,
+                        ),
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: AppDimens.spaceMd,
+                            crossAxisSpacing: AppDimens.spaceMd,
+                            childAspectRatio: 0.85,
+                          ),
+                          delegate: SliverChildBuilderDelegate(
+                            (_, i) {
+                              final exercise = results[i];
+                              return ExerciseGridTile(
+                                key: ValueKey('exercise-${exercise.id}'),
+                                exercise: exercise,
+                                isSelected: _selected.contains(exercise),
+                                onTap: () => _toggle(exercise),
+                              );
+                            },
+                            childCount: visibleCount,
+                          ),
+                        ),
+                      ),
+                      if (hasMore)
+                        const SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 24),
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                        ),
+                    ],
+                  ),
                 );
               },
             ),
           ),
-          // Add button — tight bottom bar
+          // Add button — pinned to bottom
           SafeArea(
             top: false,
             child: Column(
@@ -258,6 +295,116 @@ class _ExerciseCatalogueScreenState
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────
+// Dropdown filter button
+// ──────────────────────────────────────────
+
+class _DropdownItem<T> {
+  const _DropdownItem({
+    required this.label,
+    required this.value,
+    required this.isSelected,
+  });
+
+  final String label;
+  final T? value;
+  final bool isSelected;
+}
+
+class _FilterDropdown<T> extends StatelessWidget {
+  const _FilterDropdown({
+    super.key,
+    required this.label,
+    required this.isActive,
+    required this.items,
+    required this.onSelected,
+  });
+
+  final String label;
+  final bool isActive;
+  final List<_DropdownItem<T>> items;
+  final void Function(T? value) onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final borderColor = isActive ? colors.primary : colors.divider;
+    final labelColor = isActive ? colors.primary : colors.textSecondary;
+
+    return PopupMenuButton<T?>(
+      offset: const Offset(0, 4),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppDimens.radiusInput),
+        side: BorderSide(color: colors.divider),
+      ),
+      color: colors.surface,
+      elevation: 4,
+      // onSelected is not used because Flutter skips the callback when value is
+      // null. Each item fires onSelected directly via onTap instead.
+      itemBuilder: (_) => items
+          .map(
+            (item) => PopupMenuItem<T?>(
+              value: item.value,
+              onTap: () => onSelected(item.value),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.spaceMd,
+                vertical: AppDimens.spaceSm,
+              ),
+              child: Row(
+                children: [
+                  if (item.isSelected)
+                    Icon(Icons.check_rounded,
+                        size: 16, color: colors.primary)
+                  else
+                    const SizedBox(width: 16),
+                  const SizedBox(width: AppDimens.spaceSm),
+                  Text(
+                    item.label,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: item.isSelected ? colors.primary : colors.textPrimary,
+                      fontWeight: item.isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+          .toList(),
+      child: Container(
+        height: AppDimens.iconContainerMd,
+        padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceSm),
+        decoration: BoxDecoration(
+          border: Border.all(color: borderColor),
+          borderRadius: BorderRadius.circular(AppDimens.radiusInput),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: labelColor,
+                  fontWeight:
+                      isActive ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 16,
+              color: labelColor,
+            ),
+          ],
+        ),
       ),
     );
   }
