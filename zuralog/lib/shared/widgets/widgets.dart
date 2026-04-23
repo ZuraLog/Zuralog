@@ -90,6 +90,7 @@ export 'list/z_list_item.dart';
 export 'list/z_settings_group.dart';
 export 'list/z_settings_tile.dart';
 export 'loading/z_loading_skeleton.dart';
+export 'metric_chip.dart';
 export 'metric_grid/metric_grid.dart';
 export 'metric_grid/metric_picker_sheet.dart';
 export 'metric_grid/metric_tile.dart';
