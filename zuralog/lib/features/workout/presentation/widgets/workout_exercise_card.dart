@@ -94,7 +94,7 @@ class _WorkoutExerciseCardState extends ConsumerState<WorkoutExerciseCard> {
       child: _HowToSheetBody(
         exerciseId: ex.exerciseId,
         exerciseName: ex.exerciseName,
-        muscleLabel: muscle.label,
+        muscle: muscle,
         equipmentLabel: catalogueEntry?.equipment.label ?? 'Bodyweight',
         instructions: catalogueEntry?.instructions ?? '',
         groupColor: groupColor,
@@ -204,30 +204,21 @@ class _WorkoutExerciseCardState extends ConsumerState<WorkoutExerciseCard> {
     final totalCount = ex.sets.length;
     final allDone = totalCount > 0 && completedCount == totalCount;
 
-    // Exercise thumbnail — real photo if bundled, gradient+icon fallback
-    // otherwise. Same image/fallback contract as the picker grid.
-    final exerciseThumbnail = ClipRRect(
-      borderRadius: BorderRadius.circular(AppDimens.shapeSm),
-      child: SizedBox(
-        width: 44,
-        height: 44,
-        child: Image.asset(
-          'assets/images/exercises/${ex.exerciseId}.webp',
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  groupColor.withValues(alpha: 0.38),
-                  groupColor.withValues(alpha: 0.12),
-                ],
-              ),
-            ),
-            child: Icon(muscleGroupIcon(muscle), size: 20, color: groupColor),
-          ),
-        ),
+    // Exercise thumbnail — vector body diagram with the target muscle
+    // highlighted. Tile = 44px, so show only the front view (clipped by
+    // the widget) for legibility at this size.
+    final exerciseThumbnail = Container(
+      width: 44,
+      height: 44,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: groupColor.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+      ),
+      child: MuscleHighlightDiagram(
+        muscleGroup: muscle,
+        highlightColor: groupColor,
+        onlyFront: true,
       ),
     );
 
@@ -802,7 +793,7 @@ class _HowToSheetBody extends StatelessWidget {
   const _HowToSheetBody({
     required this.exerciseId,
     required this.exerciseName,
-    required this.muscleLabel,
+    required this.muscle,
     required this.equipmentLabel,
     required this.instructions,
     required this.groupColor,
@@ -810,7 +801,7 @@ class _HowToSheetBody extends StatelessWidget {
 
   final String exerciseId;
   final String exerciseName;
-  final String muscleLabel;
+  final MuscleGroup muscle;
   final String equipmentLabel;
   final String instructions;
   final Color groupColor;
@@ -831,38 +822,27 @@ class _HowToSheetBody extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Large photo card — taller than the thumbnail so users can actually
-          // see the form. Falls back to a gradient + name overlay.
+          // Hero visual: large vector diagram (front + back) so the user
+          // clearly sees which muscles the exercise targets.
           AspectRatio(
             aspectRatio: 4 / 3,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(AppDimens.shapeMd),
-              child: Image.asset(
-                'assets/images/exercises/$exerciseId.webp',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        groupColor.withValues(alpha: 0.38),
-                        groupColor.withValues(alpha: 0.12),
-                      ],
-                    ),
+              child: Container(
+                padding: const EdgeInsets.all(AppDimens.spaceMd),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      groupColor.withValues(alpha: 0.22),
+                      groupColor.withValues(alpha: 0.06),
+                    ],
                   ),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppDimens.spaceLg),
-                      child: Text(
-                        exerciseName,
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.titleLarge.copyWith(
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                    ),
-                  ),
+                ),
+                child: MuscleHighlightDiagram(
+                  muscleGroup: muscle,
+                  highlightColor: groupColor,
                 ),
               ),
             ),
@@ -876,7 +856,7 @@ class _HowToSheetBody extends StatelessWidget {
             children: [
               _MetaChip(
                 icon: Icons.fitness_center_rounded,
-                label: muscleLabel,
+                label: muscle.label,
                 color: groupColor,
               ),
               _MetaChip(

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/workout/domain/exercise.dart';
 import 'package:zuralog/features/workout/providers/exercise_bookmarks_provider.dart';
+import 'package:zuralog/shared/widgets/muscle_highlight_diagram.dart';
 
 Color muscleGroupColor(MuscleGroup group) {
   switch (group) {
@@ -88,22 +89,25 @@ class ExerciseGridTile extends ConsumerWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    // Tier 1: per-exercise image (if we ship one for this
-                    // exercise id); Tier 2: per-muscle-group illustration;
-                    // Tier 3: a richly-styled graphic fallback. Each tier
-                    // falls through silently via errorBuilder so we never
-                    // flash a broken-image glyph.
-                    Image.asset(
-                      'assets/images/exercises/${exercise.id}.webp',
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Image.asset(
-                        'assets/images/exercises/muscle_groups/${exercise.muscleGroup.slug}.webp',
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _ExerciseTileFallback(
-                          muscleGroup: exercise.muscleGroup,
-                          equipment: exercise.equipment,
-                          groupColor: groupColor,
+                    // Primary visual: vector muscle-highlight diagram with
+                    // the target muscle group tinted in the brand colour.
+                    // Matches the Hevy / Fitbod aesthetic and stays sharp at
+                    // every resolution because it's an SVG.
+                    Container(
+                      padding: const EdgeInsets.all(AppDimens.spaceSm),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            groupColor.withValues(alpha: 0.18),
+                            groupColor.withValues(alpha: 0.04),
+                          ],
                         ),
+                      ),
+                      child: MuscleHighlightDiagram(
+                        muscleGroup: exercise.muscleGroup,
+                        highlightColor: groupColor,
                       ),
                     ),
                     // Bookmark icon — top-left
