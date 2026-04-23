@@ -26,6 +26,7 @@ import 'package:zuralog/features/nutrition/presentation/widgets/nutrition_ai_sum
 import 'package:zuralog/features/nutrition/presentation/widgets/nutrition_budget_hero_card.dart';
 import 'package:zuralog/features/nutrition/presentation/widgets/nutrition_macro_progress_card.dart';
 import 'package:zuralog/features/nutrition/presentation/widgets/nutrition_trend_section.dart';
+import 'package:zuralog/features/nutrition/presentation/widgets/nutrition_weekly_summary_card.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── NutritionHomeScreen ──────────────────────────────────────────────────────
@@ -462,6 +463,20 @@ class NutritionHomeScreen extends ConsumerWidget {
                       0,
                     ),
                     child: NutritionTrendSection(),
+                  ),
+                ),
+
+                // ── Weekly Summary Card ──────────────────────────────────
+                const ZFadeSlideIn(
+                  delay: Duration(milliseconds: 210),
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppDimens.spaceMd,
+                      AppDimens.spaceMd,
+                      AppDimens.spaceMd,
+                      0,
+                    ),
+                    child: NutritionWeeklySummaryCard(),
                   ),
                 ),
 
