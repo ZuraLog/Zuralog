@@ -170,6 +170,98 @@ class OnboardingChatController extends StateNotifier<ChatState> {
     // actually sounds like — makes the abstract pick land concretely.
     await _coachSends(ChatCardKind.toneSample, pause: _cardPause);
     await _coachSays(
+      'A few more quick ones so I can actually be useful.',
+      pause: _mediumPause,
+    );
+    await _coachSays('Any dietary style I should stick to?');
+    _advanceTo(ChatStep.diet);
+  }
+
+  /// Called by the dietary-restrictions multi-select. Empty list means
+  /// the user tapped "None" (i.e. no restrictions).
+  Future<void> submitDiet(List<String> tags) async {
+    _userSays(_dietEcho(tags));
+    state = state.copyWith(
+      profile: state.profile.copyWith(dietaryRestrictions: tags),
+    );
+
+    await _coachSays(
+      tags.isEmpty ? "Good to know — no restrictions." : "Got it.",
+    );
+    await _coachSays(
+      "Anything I should avoid suggesting because of an injury?",
+      pause: _mediumPause,
+    );
+    _advanceTo(ChatStep.limitations);
+  }
+
+  /// Called by the injuries/limitations multi-select. Empty list means
+  /// the user tapped "I'm good".
+  Future<void> submitLimitations(List<String> tags) async {
+    _userSays(_injuriesEcho(tags));
+    state = state.copyWith(
+      profile: state.profile.copyWith(injuries: tags),
+    );
+
+    await _coachSays(
+      tags.isEmpty
+          ? "Perfect — I'll program without limitations."
+          : "Noted — I'll steer clear.",
+    );
+    await _coachSays(
+      "Where are you at with training right now?",
+      pause: _mediumPause,
+    );
+    _advanceTo(ChatStep.training);
+  }
+
+  /// Called by the training-experience single-select. Maps to
+  /// user_preferences.fitness_level on the backend.
+  Future<void> submitTraining(String levelId) async {
+    _userSays(trainingLabels[levelId] ?? levelId);
+    state = state.copyWith(
+      profile: state.profile.copyWith(trainingExperience: levelId),
+    );
+
+    await _coachSays("Good to know — I'll pitch things at that level.");
+    await _coachSays("How's your sleep usually?", pause: _mediumPause);
+    _advanceTo(ChatStep.sleep);
+  }
+
+  /// Called by the sleep-pattern single-select.
+  Future<void> submitSleep(String patternId) async {
+    _userSays(sleepLabels[patternId] ?? patternId);
+    state = state.copyWith(
+      profile: state.profile.copyWith(sleepPattern: patternId),
+    );
+
+    await _coachSays(_sleepAck(patternId));
+    await _coachSays(
+      "Last one — what's the biggest thing in your way?",
+      pause: _mediumPause,
+    );
+    await _coachSays(
+      "One sentence is fine, or skip.",
+    );
+    _advanceTo(ChatStep.frustration);
+  }
+
+  /// Called by the biggest-frustration free-text input. Pass null for a
+  /// skip; pass a non-empty string for a real answer.
+  Future<void> submitFrustration(String? text) async {
+    final cleaned = text?.trim();
+    if (cleaned != null && cleaned.isNotEmpty) {
+      _userSays(cleaned);
+      state = state.copyWith(
+        profile: state.profile.copyWith(healthFrustration: cleaned),
+      );
+      await _coachSays("Thanks — I'll keep that front of mind.");
+    } else {
+      _userSays('Skip');
+      await _coachSays("All good — you can tell me later.");
+    }
+
+    await _coachSays(
       'Now let\'s hook up your health data so I can start spotting patterns.',
       pause: _mediumPause,
     );
@@ -433,6 +525,49 @@ class OnboardingChatController extends StateNotifier<ChatState> {
     if (names.length == 2) return '${names[0]} & ${names[1]}';
     final last = names.removeLast();
     return '${names.join(', ')} & $last';
+  }
+
+  // ── Shared option maps (reused by catch-up flow) ────────────────────────
+
+  /// Human labels for the training-experience pick. Also used by the
+  /// catch-up flow and the About You settings screen.
+  static const Map<String, String> trainingLabels = {
+    'beginner': 'New to this',
+    'active': 'Consistently active',
+    'athletic': 'Highly trained',
+  };
+
+  /// Human labels for the sleep-pattern pick.
+  static const Map<String, String> sleepLabels = {
+    'great': 'I sleep great',
+    'hard_to_fall_asleep': 'Hard to fall asleep',
+    'wake_up_a_lot': 'Wake up a lot',
+    'short_hours': 'Short hours',
+  };
+
+  String _dietEcho(List<String> tags) {
+    if (tags.isEmpty) return 'No restrictions';
+    return tags.join(', ');
+  }
+
+  String _injuriesEcho(List<String> tags) {
+    if (tags.isEmpty) return "I'm good";
+    return tags.join(', ');
+  }
+
+  String _sleepAck(String id) {
+    switch (id) {
+      case 'great':
+        return "That's a great foundation to build on.";
+      case 'hard_to_fall_asleep':
+        return "Got it — falling asleep can be tough. We'll work on that.";
+      case 'wake_up_a_lot':
+        return "Noted — those wake-ups add up. We'll look at the pattern.";
+      case 'short_hours':
+        return "Understood — we'll see if we can find you a bit more.";
+      default:
+        return "Got it.";
+    }
   }
 
   String _sourceLabel(String id) {

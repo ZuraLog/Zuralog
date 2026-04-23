@@ -299,6 +299,16 @@ class AuthRepository {
     bool? onboardingComplete,
     double? heightCm,
     double? weightKg,
+    // Onboarding profile fields (live on user_preferences server-side)
+    String? focusArea,
+    String? primaryGoal,
+    String? tone,
+    List<String>? dietaryRestrictions,
+    List<String>? injuries,
+    String? fitnessLevel,
+    String? sleepPattern,
+    String? healthFrustration,
+    String? profileCatchupStatus,
   }) async {
     final body = <String, dynamic>{};
     if (displayName != null) body['display_name'] = displayName;
@@ -312,6 +322,21 @@ class AuthRepository {
     }
     if (heightCm != null) body['height_cm'] = heightCm;
     if (weightKg != null) body['weight_kg'] = weightKg;
+    if (focusArea != null) body['focus_area'] = focusArea;
+    if (primaryGoal != null) body['primary_goal'] = primaryGoal;
+    if (tone != null) body['tone'] = tone;
+    if (dietaryRestrictions != null) {
+      body['dietary_restrictions'] = dietaryRestrictions;
+    }
+    if (injuries != null) body['injuries'] = injuries;
+    if (fitnessLevel != null) body['fitness_level'] = fitnessLevel;
+    if (sleepPattern != null) body['sleep_pattern'] = sleepPattern;
+    if (healthFrustration != null) {
+      body['health_frustration'] = healthFrustration;
+    }
+    if (profileCatchupStatus != null) {
+      body['profile_catchup_status'] = profileCatchupStatus;
+    }
     final response = await _apiClient.patch(
       '/api/v1/users/me/profile',
       body: body,

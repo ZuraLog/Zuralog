@@ -41,6 +41,14 @@ enum ChatStep {
   focus,
   goal,
   tone,
+  // Extended profile (landed after tone so the AI has full context before
+  // the integrations step).
+  diet,
+  limitations,
+  training,
+  sleep,
+  frustration,
+  // Tail of flow
   connect,
   source,
   finale,
@@ -81,6 +89,11 @@ class OnboardingProfile {
     this.focus,
     this.goal,
     this.tone,
+    this.dietaryRestrictions = const <String>[],
+    this.injuries = const <String>[],
+    this.trainingExperience,
+    this.sleepPattern,
+    this.healthFrustration,
     this.connectedIntegrations = const <String>[],
     this.discoverySource,
   });
@@ -93,6 +106,26 @@ class OnboardingProfile {
   final String? focus;
   final String? goal;
   final String? tone;
+
+  /// Selected dietary tags. Empty list means "no restrictions" (user picked
+  /// the exclusive "None" option).
+  final List<String> dietaryRestrictions;
+
+  /// Selected injury/limitation tags. Empty list means "no limitations"
+  /// (user picked the exclusive "I'm good" option).
+  final List<String> injuries;
+
+  /// Self-assessed training experience — maps 1:1 to
+  /// user_preferences.fitness_level on the backend.
+  /// One of: 'beginner', 'active', 'athletic'.
+  final String? trainingExperience;
+
+  /// Sleep pattern keyword.
+  /// One of: 'great', 'hard_to_fall_asleep', 'wake_up_a_lot', 'short_hours'.
+  final String? sleepPattern;
+
+  /// Short free-text description of the user's biggest blocker.
+  final String? healthFrustration;
 
   /// Integration IDs the user opted into on the connect step.
   /// Empty list = they tapped Skip.
@@ -112,6 +145,11 @@ class OnboardingProfile {
     String? focus,
     String? goal,
     String? tone,
+    List<String>? dietaryRestrictions,
+    List<String>? injuries,
+    String? trainingExperience,
+    String? sleepPattern,
+    String? healthFrustration,
     List<String>? connectedIntegrations,
     String? discoverySource,
   }) {
@@ -124,6 +162,11 @@ class OnboardingProfile {
       focus: focus ?? this.focus,
       goal: goal ?? this.goal,
       tone: tone ?? this.tone,
+      dietaryRestrictions: dietaryRestrictions ?? this.dietaryRestrictions,
+      injuries: injuries ?? this.injuries,
+      trainingExperience: trainingExperience ?? this.trainingExperience,
+      sleepPattern: sleepPattern ?? this.sleepPattern,
+      healthFrustration: healthFrustration ?? this.healthFrustration,
       connectedIntegrations:
           connectedIntegrations ?? this.connectedIntegrations,
       discoverySource: discoverySource ?? this.discoverySource,
