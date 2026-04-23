@@ -11,7 +11,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/catchup/presentation/catchup_flow_screen.dart';
-import 'package:zuralog/features/catchup/providers/catchup_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 /// Show the catch-up intro sheet as a modal bottom sheet.
@@ -61,18 +60,22 @@ class _CatchupIntroSheet extends ConsumerWidget {
             const SizedBox(height: AppDimens.spaceLg),
             PrimaryButton(
               label: "Let's do it",
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await Navigator.of(context).push(MaterialPageRoute(
+              onPressed: () {
+                // Pop the sheet first, then push the flow from the parent
+                // navigator. Don't touch ref after pop — the sheet widget
+                // is disposed the moment we leave this callback.
+                final navigator = Navigator.of(context);
+                navigator.pop();
+                navigator.push(MaterialPageRoute(
                   builder: (_) => const CatchupFlowScreen(),
                 ));
-                ref.invalidate(catchupStatusProvider);
               },
             ),
             const SizedBox(height: AppDimens.spaceSm),
             SecondaryButton(
               label: 'Maybe later',
               onPressed: () async {
+                // PATCH first (ref is alive), then pop the sheet.
                 try {
                   await ref
                       .read(userProfileProvider.notifier)
@@ -81,7 +84,6 @@ class _CatchupIntroSheet extends ConsumerWidget {
                   // Non-fatal — sheet closes regardless.
                 }
                 if (context.mounted) Navigator.of(context).pop();
-                ref.invalidate(catchupStatusProvider);
               },
             ),
           ],
