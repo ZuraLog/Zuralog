@@ -6,6 +6,7 @@ such as coaching persona, subscription tier, and onboarding profile fields.
 """
 
 import logging
+from datetime import datetime, timedelta, timezone as _tz
 
 import filetype
 import sentry_sdk
@@ -20,6 +21,7 @@ from app.api.v1.schemas import AvatarUploadResponse, ChangeEmailRequest, ChangeP
 from app.config import settings
 from app.database import get_db
 from app.models.user import User
+from app.models.user_preferences import UserPreferences
 from app.services.auth_service import AuthService
 from app.services.storage_service import StorageService
 from app.api.deps import _get_auth_service, get_authenticated_user_id
@@ -51,7 +53,8 @@ security = HTTPBearer()
 
 VALID_PERSONAS = {"tough_love", "balanced", "gentle"}
 
-_PROFILE_WRITABLE_FIELDS: frozenset[str] = frozenset({
+# Fields that live on the `users` table.
+_USER_FIELDS: frozenset[str] = frozenset({
     "display_name",
     "nickname",
     "birthday",
@@ -60,6 +63,22 @@ _PROFILE_WRITABLE_FIELDS: frozenset[str] = frozenset({
     "weight_kg",
     "onboarding_complete",
 })
+
+# Fields that live on the `user_preferences` table. Written in the same
+# transaction as user fields by the profile update handler.
+_USER_PREF_FIELDS: frozenset[str] = frozenset({
+    "focus_area",
+    "primary_goal",
+    "tone",
+    "dietary_restrictions",
+    "injuries",
+    "sleep_pattern",
+    "health_frustration",
+    "fitness_level",
+    "profile_catchup_status",
+})
+
+_PROFILE_WRITABLE_FIELDS: frozenset[str] = _USER_FIELDS | _USER_PREF_FIELDS
 
 
 class UpdatePreferencesRequest(BaseModel):
@@ -159,6 +178,45 @@ async def update_preferences(
     return {"message": "Preferences updated", "coach_persona": body.coach_persona}
 
 
+@router.get("/me/catchup_status")
+async def get_catchup_status(
+    request: Request,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Return whether the existing-user catch-up flow should be offered.
+
+    Status values:
+      - not_shown: catch-up has never been shown for this user
+      - in_progress: user started catch-up but hasn't finished
+      - completed: all catch-up questions answered (or user is post-new-onboarding)
+      - dismissed: user tapped "Maybe later"
+
+    should_reoffer is true when status == 'dismissed' AND it has been more
+    than 7 days since dismissal — the mobile client can choose to re-offer
+    the intro sheet.
+    """
+    request.state.user_id = user_id
+    sentry_sdk.set_user({"id": user_id})
+    result = await db.execute(
+        select(
+            UserPreferences.profile_catchup_status,
+            UserPreferences.profile_catchup_dismissed_at,
+        ).where(UserPreferences.user_id == user_id)
+    )
+    row = result.first()
+    if row is None:
+        return {"status": "not_shown", "should_reoffer": False}
+    status_val = row[0] or "not_shown"
+    dismissed_at = row[1]
+    should_reoffer = (
+        status_val == "dismissed"
+        and dismissed_at is not None
+        and datetime.now(_tz.utc) - dismissed_at > timedelta(days=7)
+    )
+    return {"status": status_val, "should_reoffer": should_reoffer}
+
+
 @router.get("/me/profile", response_model=UserProfileResponse)
 @cached(prefix="users.profile", ttl=900, key_params=["user_id"])
 async def get_profile(
@@ -233,13 +291,39 @@ async def update_profile(
     update_data = body.model_dump(exclude_unset=True)
     if not update_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields to update")
+
+    user_updates: dict[str, object] = {}
+    pref_updates: dict[str, object] = {}
     for field, value in update_data.items():
-        if field not in _PROFILE_WRITABLE_FIELDS:
+        if field in _USER_FIELDS:
+            user_updates[field] = value
+        elif field in _USER_PREF_FIELDS:
+            pref_updates[field] = value
+        else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Field '{field}' cannot be updated",
             )
+
+    # Apply user-table writes
+    for field, value in user_updates.items():
         setattr(db_user, field, value)
+
+    # Apply user_preferences writes (create row if missing — some users predate prefs).
+    if pref_updates:
+        pref_result = await db.execute(
+            select(UserPreferences).where(UserPreferences.user_id == user_id)
+        )
+        prefs = pref_result.scalars().first()
+        if prefs is None:
+            prefs = UserPreferences(user_id=user_id)
+            db.add(prefs)
+        for field, value in pref_updates.items():
+            setattr(prefs, field, value)
+        # Stamp dismissal timestamp when catch-up flips to 'dismissed'.
+        if pref_updates.get("profile_catchup_status") == "dismissed":
+            from sqlalchemy.sql import func as _sql_func
+            prefs.profile_catchup_dismissed_at = _sql_func.now()
 
     await db.commit()
     await db.refresh(db_user)

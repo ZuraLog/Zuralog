@@ -86,17 +86,38 @@ class _OnboardingDatePickerInputState
         ),
 
         // CupertinoDatePicker in date-only mode.
+        //
+        // Wrapped in a CupertinoTheme with an explicit dateTimePickerTextStyle
+        // so all three wheel columns (months/days/years) share the same font,
+        // size, and colour. Without this override the picker inherits odd
+        // styling from the surrounding Material theme (serif italic on months,
+        // sans-serif on numbers).
         SizedBox(
-          height: 160,
-          child: CupertinoDatePicker(
-            mode: CupertinoDatePickerMode.date,
-            initialDateTime: _selected,
-            minimumDate: _minDate,
-            maximumDate: _maxDate,
-            onDateTimeChanged: (date) {
-              HapticFeedback.selectionClick();
-              setState(() => _selected = date);
-            },
+          height: 180,
+          child: CupertinoTheme(
+            data: CupertinoThemeData(
+              brightness: Brightness.dark,
+              textTheme: CupertinoTextThemeData(
+                dateTimePickerTextStyle: AppTextStyles.bodyLarge.copyWith(
+                  color: colors.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w500,
+                  fontStyle: FontStyle.normal,
+                  letterSpacing: -0.2,
+                  height: 1.1,
+                ),
+              ),
+            ),
+            child: CupertinoDatePicker(
+              mode: CupertinoDatePickerMode.date,
+              initialDateTime: _selected,
+              minimumDate: _minDate,
+              maximumDate: _maxDate,
+              onDateTimeChanged: (date) {
+                HapticFeedback.selectionClick();
+                setState(() => _selected = date);
+              },
+            ),
           ),
         ),
 

@@ -39,6 +39,11 @@ import 'package:zuralog/features/onboarding/presentation/chat/widgets/onboarding
 import 'package:zuralog/features/onboarding/presentation/chat/widgets/onboarding_progress_dots.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/widgets/onboarding_typing_indicator.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/widgets/onboarding_user_bubble.dart';
+import 'package:zuralog/shared/widgets/widgets.dart' show
+    ZChipSingleSelect,
+    ZChipMultiSelect,
+    ZChipOption,
+    ZChatTextField;
 
 class ChatOnboardingScreen extends ConsumerStatefulWidget {
   const ChatOnboardingScreen({super.key});
@@ -135,6 +140,21 @@ class _ChatOnboardingScreenState extends ConsumerState<ChatOnboardingScreen> {
             weightKg: profile.weightKg,
             birthday: profile.birthday,
             gender: profile.sex,
+            focusArea: profile.focus,
+            primaryGoal:
+                (profile.goal ?? '').trim().isNotEmpty ? profile.goal : null,
+            tone: profile.tone,
+            dietaryRestrictions: profile.dietaryRestrictions,
+            injuries: profile.injuries,
+            fitnessLevel: profile.trainingExperience,
+            sleepPattern: profile.sleepPattern,
+            healthFrustration:
+                (profile.healthFrustration ?? '').trim().isNotEmpty
+                    ? profile.healthFrustration
+                    : null,
+            // Mark catch-up as completed for fresh users so they never see
+            // the catch-up intro sheet.
+            profileCatchupStatus: 'completed',
           );
     } catch (_) {
       // Non-fatal — router navigates by auth state regardless.
@@ -416,6 +436,62 @@ class _InputArea extends ConsumerWidget {
             OnboardingPillOption(id: 'thorough', label: 'Thorough'),
           ],
           onSelect: controller.submitTone,
+        );
+      case ChatStep.diet:
+        input = ZChipMultiSelect<String>(
+          options: const [
+            ZChipOption(value: 'vegetarian', label: 'Vegetarian'),
+            ZChipOption(value: 'vegan', label: 'Vegan'),
+            ZChipOption(value: 'gluten_free', label: 'Gluten-free'),
+            ZChipOption(value: 'keto', label: 'Keto'),
+            ZChipOption(value: 'halal', label: 'Halal'),
+            ZChipOption(value: 'kosher', label: 'Kosher'),
+            ZChipOption(value: 'other', label: 'Other'),
+          ],
+          values: state.profile.dietaryRestrictions,
+          exclusiveLabel: 'None',
+          onChanged: controller.submitDiet,
+        );
+      case ChatStep.limitations:
+        input = ZChipMultiSelect<String>(
+          options: const [
+            ZChipOption(value: 'lower_back', label: 'Lower back'),
+            ZChipOption(value: 'knees', label: 'Knees'),
+            ZChipOption(value: 'shoulders', label: 'Shoulders'),
+            ZChipOption(value: 'wrists', label: 'Wrists'),
+            ZChipOption(value: 'other', label: 'Other'),
+          ],
+          values: state.profile.injuries,
+          exclusiveLabel: "I'm good",
+          onChanged: controller.submitLimitations,
+        );
+      case ChatStep.training:
+        input = ZChipSingleSelect<String>(
+          options: const [
+            ZChipOption(value: 'beginner', label: 'New to this'),
+            ZChipOption(value: 'active', label: 'Consistently active'),
+            ZChipOption(value: 'athletic', label: 'Highly trained'),
+          ],
+          value: state.profile.trainingExperience,
+          onChanged: controller.submitTraining,
+        );
+      case ChatStep.sleep:
+        input = ZChipSingleSelect<String>(
+          options: const [
+            ZChipOption(value: 'great', label: 'I sleep great'),
+            ZChipOption(value: 'hard_to_fall_asleep', label: 'Hard to fall asleep'),
+            ZChipOption(value: 'wake_up_a_lot', label: 'Wake up a lot'),
+            ZChipOption(value: 'short_hours', label: 'Short hours'),
+          ],
+          value: state.profile.sleepPattern,
+          onChanged: controller.submitSleep,
+        );
+      case ChatStep.frustration:
+        input = ZChatTextField(
+          maxLength: 120,
+          placeholder: "One sentence — or tap send to skip.",
+          allowEmptySubmit: true,
+          onSubmit: (text) => controller.submitFrustration(text),
         );
       case ChatStep.connect:
         input = OnboardingIntegrationsInput(

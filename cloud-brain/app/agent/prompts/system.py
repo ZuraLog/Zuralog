@@ -31,17 +31,8 @@ class UserProfile:
 
     All fields except units_system and timezone are optional. Birthday
     is used only to compute current age — it is never stored in the prompt.
-
-    Attributes:
-        display_name: User's display name (e.g. "Alex").
-        goals: Goal type strings from user_preferences.goals
-            (e.g. ["weight_loss", "sleep"]).
-        fitness_level: Self-assessed level — beginner | active | athletic.
-        units_system: metric | imperial.
-        timezone: IANA timezone name (e.g. "America/New_York").
-        birthday: Date of birth for age calculation only.
-        height_cm: Height in centimetres.
-        platform: Device platform — 'ios', 'android', or None when unknown.
+    Free-text fields (primary_goal, health_frustration) run through the
+    prompt-injection sanitizer before being printed.
     """
 
     display_name: str | None
@@ -52,19 +43,34 @@ class UserProfile:
     birthday: date | None
     height_cm: float | None
     platform: str | None = None
+    # Onboarding profile (extended context)
+    gender: str | None = None
+    weight_kg: float | None = None
+    focus_area: str | None = None
+    primary_goal: str | None = None
+    dietary_restrictions: list[str] | None = None
+    injuries: list[str] | None = None
+    sleep_pattern: str | None = None
+    health_frustration: str | None = None
+    # AI style preference (not printed in the profile block; passed through
+    # to build_system_prompt so the Tone Preference directive is injected).
+    tone: str | None = None
+
+
+# Human-readable labels for the sleep_pattern enum.
+_SLEEP_LABELS: dict[str, str] = {
+    "great": "sleeps well",
+    "hard_to_fall_asleep": "struggles to fall asleep",
+    "wake_up_a_lot": "wakes up often during the night",
+    "short_hours": "tends to get short hours of sleep",
+}
 
 
 def _build_profile_block(profile: UserProfile) -> str:
     """Build the '## About This User' section from a UserProfile.
 
     Only includes fields that have values. Birthday is converted to age.
-    Stays under 300 tokens using concise bullet-point format.
-
-    Args:
-        profile: The user's profile data.
-
-    Returns:
-        A formatted markdown section string.
+    Free-text fields that fail the prompt-injection sanitizer are omitted.
     """
     lines = ["## About This User"]
     if profile.display_name is not None:
@@ -83,12 +89,43 @@ def _build_profile_block(profile: UserProfile) -> str:
             )
         )
         lines.append(f"- Age: {age}")
+    if profile.gender:
+        lines.append(f"- Sex: {sanitize_for_llm(profile.gender)}")
     if profile.height_cm is not None:
         lines.append(f"- Height: {profile.height_cm:.0f} cm")
+    if profile.weight_kg is not None:
+        lines.append(f"- Weight: {profile.weight_kg:.0f} kg")
     if profile.fitness_level is not None:
         lines.append(f"- Fitness level: {sanitize_for_llm(profile.fitness_level)}")
+    if profile.focus_area:
+        lines.append(f"- Main focus: {sanitize_for_llm(profile.focus_area)}")
+    if profile.primary_goal and not is_memory_injection_attempt(profile.primary_goal):
+        lines.append(f"- Goal: {sanitize_for_llm(profile.primary_goal)}")
     if profile.goals:
-        lines.append(f"- Goals: {', '.join(sanitize_for_llm(g) for g in profile.goals)}")
+        lines.append(
+            f"- Goal categories: {', '.join(sanitize_for_llm(g) for g in profile.goals)}"
+        )
+    if profile.dietary_restrictions is not None:
+        if not profile.dietary_restrictions:
+            lines.append("- Diet: no restrictions")
+        else:
+            safe = [sanitize_for_llm(d) for d in profile.dietary_restrictions]
+            lines.append(f"- Diet: {', '.join(safe)}")
+    if profile.injuries is not None:
+        if not profile.injuries:
+            lines.append("- Limitations: none")
+        else:
+            safe = [sanitize_for_llm(i) for i in profile.injuries]
+            lines.append(f"- Limitations: {', '.join(safe)}")
+    if profile.sleep_pattern and profile.sleep_pattern in _SLEEP_LABELS:
+        lines.append(f"- Sleep: {_SLEEP_LABELS[profile.sleep_pattern]}")
+    if (
+        profile.health_frustration
+        and not is_memory_injection_attempt(profile.health_frustration)
+    ):
+        lines.append(
+            f'- Biggest frustration: "{sanitize_for_llm(profile.health_frustration)}"'
+        )
     lines.append(f"- Units: {sanitize_for_llm(profile.units_system)}")
     lines.append(f"- Timezone: {sanitize_for_llm(profile.timezone)}")
     return "\n".join(lines)
@@ -384,6 +421,35 @@ GENTLE_PROMPT = (
 SYSTEM_PROMPT = BALANCED_PROMPT
 
 # ---------------------------------------------------------------------------
+# Tone preference modifiers (set during onboarding — shapes AI style)
+# ---------------------------------------------------------------------------
+
+TONE_DIRECTIVES: dict[str, str] = {
+    "direct": (
+        "\n\n## Tone Preference\n"
+        "The user prefers a direct tone: be concise and actionable. Skip "
+        "pleasantries. Lead with data or the next step; save context for last."
+    ),
+    "warm": (
+        "\n\n## Tone Preference\n"
+        "The user prefers a warm tone: be supportive and encouraging. Acknowledge "
+        "effort and context before offering suggestions. Frame improvements "
+        "as possibilities, not demands."
+    ),
+    "minimal": (
+        "\n\n## Tone Preference\n"
+        "The user prefers minimal responses: answer in one or two sentences when "
+        "possible. No preamble. No trailing check-ins."
+    ),
+    "thorough": (
+        "\n\n## Tone Preference\n"
+        "The user prefers thorough explanations: include the reasoning and the "
+        "'why' behind every recommendation so they can learn from each reply."
+    ),
+}
+
+
+# ---------------------------------------------------------------------------
 # Proactivity modifiers
 # ---------------------------------------------------------------------------
 
@@ -437,6 +503,7 @@ def build_system_prompt(
     # Legacy kwarg — kept for backward compat with existing orchestrator call
     user_context_suffix: str | None = None,
     user_profile: UserProfile | None = None,
+    tone: str | None = None,
 ) -> str:
     """Assemble the complete system prompt for an AI agent session.
 
@@ -492,6 +559,10 @@ def build_system_prompt(
     # Append proactivity modifier
     modifier = PROACTIVITY_MODIFIERS[proactivity]
     prompt = base + modifier
+
+    # Append tone preference (from onboarding). Silently ignores invalid values.
+    if tone is not None and tone in TONE_DIRECTIVES:
+        prompt += TONE_DIRECTIVES[tone]
 
     # Inject current date so the AI always knows what "today" means.
     # This is the authoritative reference for all date-relative queries.

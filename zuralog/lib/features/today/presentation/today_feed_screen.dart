@@ -18,6 +18,8 @@ import 'package:zuralog/core/state/log_sheet_provider.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/catchup/presentation/catchup_intro_sheet.dart';
+import 'package:zuralog/features/catchup/providers/catchup_providers.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
@@ -49,6 +51,31 @@ class TodayFeedScreen extends ConsumerStatefulWidget {
 }
 
 class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
+  bool _catchupChecked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // One-shot: after first frame, check whether the user should see the
+    // catch-up intro sheet. Runs once per app launch.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (_catchupChecked || !mounted) return;
+      _catchupChecked = true;
+      try {
+        final status = await ref.read(catchupStatusProvider.future);
+        if (!mounted) return;
+        if (status.shouldShowIntro) {
+          // Give the screen a moment to settle before the sheet appears.
+          await Future<void>.delayed(const Duration(milliseconds: 400));
+          if (!mounted) return;
+          await showCatchupIntroSheet(context);
+        }
+      } catch (_) {
+        // Silent — catch-up is a nice-to-have, never blocks the Today feed.
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final openSheet = ref.watch(logSheetCallbackProvider) ?? () {};

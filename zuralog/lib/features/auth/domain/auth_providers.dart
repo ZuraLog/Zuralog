@@ -537,6 +537,16 @@ class UserProfileNotifier extends Notifier<UserProfile?> {
     double? heightCm,
     double? weightKg,
     bool? onboardingComplete,
+    // Onboarding profile fields (forwarded to user_preferences server-side)
+    String? focusArea,
+    String? primaryGoal,
+    String? tone,
+    List<String>? dietaryRestrictions,
+    List<String>? injuries,
+    String? fitnessLevel,
+    String? sleepPattern,
+    String? healthFrustration,
+    String? profileCatchupStatus,
   }) async {
     final repo = ref.read(authRepositoryProvider);
     state = await repo.updateProfile(
@@ -547,6 +557,15 @@ class UserProfileNotifier extends Notifier<UserProfile?> {
       heightCm: heightCm,
       weightKg: weightKg,
       onboardingComplete: onboardingComplete,
+      focusArea: focusArea,
+      primaryGoal: primaryGoal,
+      tone: tone,
+      dietaryRestrictions: dietaryRestrictions,
+      injuries: injuries,
+      fitnessLevel: fitnessLevel,
+      sleepPattern: sleepPattern,
+      healthFrustration: healthFrustration,
+      profileCatchupStatus: profileCatchupStatus,
     );
   }
 

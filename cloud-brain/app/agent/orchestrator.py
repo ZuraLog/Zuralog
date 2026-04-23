@@ -342,6 +342,7 @@ class Orchestrator:
                 connected_integrations=connected_integrations,
                 user_context_suffix=user_context_suffix,
                 user_profile=user_profile,
+                tone=user_profile.tone if user_profile else None,
             )
 
             # 2. Build initial messages (with optional history for multi-turn context)

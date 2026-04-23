@@ -60,6 +60,36 @@ class OnboardingProfileCard extends StatelessWidget {
           label: 'Tone',
           value: _toneLabel(profile.tone!),
         ),
+      // Any diet pick is meaningful — "no restrictions" is useful context too.
+      if (profile.dietaryRestrictions.isNotEmpty ||
+          _dietAnswered(profile))
+        _ProfileRow(
+          color: AppColors.categoryNutrition,
+          label: 'Diet',
+          value: profile.dietaryRestrictions.isEmpty
+              ? 'No restrictions'
+              : profile.dietaryRestrictions.map(_dietLabel).join(', '),
+        ),
+      if (profile.injuries.isNotEmpty || _limitsAnswered(profile))
+        _ProfileRow(
+          color: AppColors.categoryBody,
+          label: 'Limits',
+          value: profile.injuries.isEmpty
+              ? 'None'
+              : profile.injuries.map(_injuryLabel).join(', '),
+        ),
+      if (profile.trainingExperience != null)
+        _ProfileRow(
+          color: AppColors.categoryActivity,
+          label: 'Training',
+          value: _trainingLabel(profile.trainingExperience!),
+        ),
+      if (profile.sleepPattern != null)
+        _ProfileRow(
+          color: AppColors.categorySleep,
+          label: 'Sleep',
+          value: _sleepLabel(profile.sleepPattern!),
+        ),
       if (profile.hasAnyIntegration)
         _ProfileRow(
           color: AppColors.categoryActivity,
@@ -239,6 +269,80 @@ class OnboardingProfileCard extends StatelessWidget {
         return 'Strava';
       case 'fitbit':
         return 'Fitbit';
+      default:
+        return id;
+    }
+  }
+
+  // Heuristic: treat "empty list" as "answered" only when it coexists with a
+  // full onboarding (at least name + tone chosen). Otherwise a blank array
+  // on a partially-completed profile shouldn't generate a row.
+  static bool _dietAnswered(OnboardingProfile p) =>
+      p.name != null && p.tone != null;
+  static bool _limitsAnswered(OnboardingProfile p) =>
+      p.name != null && p.tone != null;
+
+  static String _dietLabel(String id) {
+    switch (id) {
+      case 'vegetarian':
+        return 'Vegetarian';
+      case 'vegan':
+        return 'Vegan';
+      case 'gluten_free':
+        return 'Gluten-free';
+      case 'keto':
+        return 'Keto';
+      case 'halal':
+        return 'Halal';
+      case 'kosher':
+        return 'Kosher';
+      case 'other':
+        return 'Other';
+      default:
+        return id;
+    }
+  }
+
+  static String _injuryLabel(String id) {
+    switch (id) {
+      case 'lower_back':
+        return 'Lower back';
+      case 'knees':
+        return 'Knees';
+      case 'shoulders':
+        return 'Shoulders';
+      case 'wrists':
+        return 'Wrists';
+      case 'other':
+        return 'Other';
+      default:
+        return id;
+    }
+  }
+
+  static String _trainingLabel(String id) {
+    switch (id) {
+      case 'beginner':
+        return 'New to this';
+      case 'active':
+        return 'Consistently active';
+      case 'athletic':
+        return 'Highly trained';
+      default:
+        return id;
+    }
+  }
+
+  static String _sleepLabel(String id) {
+    switch (id) {
+      case 'great':
+        return 'Sleeps well';
+      case 'hard_to_fall_asleep':
+        return 'Hard to fall asleep';
+      case 'wake_up_a_lot':
+        return 'Wakes up often';
+      case 'short_hours':
+        return 'Short hours';
       default:
         return id;
     }
