@@ -42,3 +42,25 @@ final hrvBaselineNormalizedProvider =
 /// TODO(body): wire to HealthKit/Health Connect RHR samples. Null = no data.
 final rhrBaselineNormalizedProvider =
     FutureProvider<double?>((ref) async => null);
+
+/// Today's HRV reading + delta vs 14-day baseline. Null = no data.
+class HrvTodayReading {
+  const HrvTodayReading({required this.valueMs, required this.deltaPct});
+  final int valueMs;
+  final int? deltaPct;
+}
+
+/// TODO(body): wire to the real HRV source. Null = no data today.
+final hrvTodayProvider =
+    FutureProvider<HrvTodayReading?>((ref) async => null);
+
+/// Today's resting HR + delta vs 14-day baseline. Null = no data.
+class RhrTodayReading {
+  const RhrTodayReading({required this.valueBpm, required this.deltaBpm});
+  final int valueBpm;
+  final int? deltaBpm;
+}
+
+/// TODO(body): wire to the real RHR source. Null = no data today.
+final rhrTodayProvider =
+    FutureProvider<RhrTodayReading?>((ref) async => null);
