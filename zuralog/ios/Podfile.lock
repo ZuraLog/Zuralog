@@ -83,6 +83,10 @@ PODS:
     - GoogleUtilities/UserDefaults (~> 8.1)
     - nanopb (~> 3.30910.0)
   - Flutter (1.0.0)
+  - flutter_foreground_task (0.0.1):
+    - Flutter
+  - flutter_local_notifications (0.0.1):
+    - Flutter
   - flutter_native_splash (2.4.3):
     - Flutter
   - flutter_secure_storage_darwin (10.0.0):
@@ -223,6 +227,8 @@ DEPENDENCIES:
   - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
   - firebase_messaging (from `.symlinks/plugins/firebase_messaging/ios`)
   - Flutter (from `Flutter`)
+  - flutter_foreground_task (from `.symlinks/plugins/flutter_foreground_task/ios`)
+  - flutter_local_notifications (from `.symlinks/plugins/flutter_local_notifications/ios`)
   - flutter_native_splash (from `.symlinks/plugins/flutter_native_splash/ios`)
   - flutter_secure_storage_darwin (from `.symlinks/plugins/flutter_secure_storage_darwin/darwin`)
   - google_sign_in_ios (from `.symlinks/plugins/google_sign_in_ios/darwin`)
@@ -284,6 +290,10 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/firebase_messaging/ios"
   Flutter:
     :path: Flutter
+  flutter_foreground_task:
+    :path: ".symlinks/plugins/flutter_foreground_task/ios"
+  flutter_local_notifications:
+    :path: ".symlinks/plugins/flutter_local_notifications/ios"
   flutter_native_splash:
     :path: ".symlinks/plugins/flutter_native_splash/ios"
   flutter_secure_storage_darwin:
@@ -337,6 +347,8 @@ SPEC CHECKSUMS:
   FirebaseInstallations: 6a14ab3d694ebd9f839c48d330da5547e9ca9dc0
   FirebaseMessaging: 7f42cfd10ec64181db4e01b305a613791c8e782c
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  flutter_foreground_task: a159d2c2173b33699ddb3e6c2a067045d7cebb89
+  flutter_local_notifications: a5a732f069baa862e728d839dd2ebb904737effb
   flutter_native_splash: c32d145d68aeda5502d5f543ee38c192065986cf
   flutter_secure_storage_darwin: acdb3f316ed05a3e68f856e0353b133eec373a23
   google_sign_in_ios: b48bb9af78576358a168361173155596c845f0b9
@@ -371,6 +383,6 @@ SPEC CHECKSUMS:
   SwiftyGif: 706c60cf65fa2bc5ee0313beece843c8eb8194d4
   url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
 
-PODFILE CHECKSUM: 1857a7cdb7dfafe45f2b0e9a9af44644190f7506
+PODFILE CHECKSUM: 260cf8962b698ec7150840c2db395321e4973166
 
 COCOAPODS: 1.16.2

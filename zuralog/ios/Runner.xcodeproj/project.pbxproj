@@ -9,7 +9,9 @@
 /* Begin PBXBuildFile section */
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
+		361735ED4C2C1C46D31A3A1E /* WorkoutCompanionBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C782ECEB50CE823F6E614315 /* WorkoutCompanionBridge.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
+		5A9B2A58A0960ECB4091E985 /* WorkoutLiveActivityBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A094CCDAA8D92175C04F1493 /* WorkoutLiveActivityBridge.swift */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
 		8237963BD5D3451CBC86E5C4 /* HealthKitBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF9B8382603D436F83F83757 /* HealthKitBridge.swift */; };
@@ -65,9 +67,11 @@
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A094CCDAA8D92175C04F1493 /* WorkoutLiveActivityBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivityBridge.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718091A2B3C /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718091A2B4E /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
 		B6CD3535AC4714F2FF9A39DD /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		C782ECEB50CE823F6E614315 /* WorkoutCompanionBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutCompanionBridge.swift; sourceTree = "<group>"; };
 		CE53E1A8DC1E2C5C23A8FA94 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 		CF9B8382603D436F83F83757 /* HealthKitBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitBridge.swift; sourceTree = "<group>"; };
 		D1E4E1C8322967D0AF940DC2 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
@@ -158,6 +162,8 @@
 				CF9B8382603D436F83F83757 /* HealthKitBridge.swift */,
 				A1B2C3D4E5F60718091A2B4E /* KeychainHelper.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
+				A094CCDAA8D92175C04F1493 /* WorkoutLiveActivityBridge.swift */,
+				C782ECEB50CE823F6E614315 /* WorkoutCompanionBridge.swift */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -410,6 +416,8 @@
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
 				8237963BD5D3451CBC86E5C4 /* HealthKitBridge.swift in Sources */,
 				A1B2C3D4E5F60718091A2B4D /* KeychainHelper.swift in Sources */,
+				5A9B2A58A0960ECB4091E985 /* WorkoutLiveActivityBridge.swift in Sources */,
+				361735ED4C2C1C46D31A3A1E /* WorkoutCompanionBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -506,6 +514,7 @@
 				DEVELOPMENT_TEAM = 9PL2ZWG733;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -690,6 +699,7 @@
 				DEVELOPMENT_TEAM = 9PL2ZWG733;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -714,6 +724,7 @@
 				DEVELOPMENT_TEAM = 9PL2ZWG733;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

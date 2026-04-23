@@ -11,6 +11,7 @@ library;
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -308,6 +309,44 @@ class _CheckInboxScreenState extends ConsumerState<CheckInboxScreen> {
                         ],
                       ),
                     ),
+
+                    // ── DEBUG-ONLY skip button (dev affordance) ─────────────
+                    // Supabase creates a session on sign-up, so the user is
+                    // already authenticated — the auth guard just keeps them
+                    // on this screen until they confirm their email. In debug
+                    // builds, allow jumping straight to the onboarding flow so
+                    // we don't need a real inbox to iterate on the UI.
+                    if (kDebugMode && inboxContext == 'verification') ...[
+                      const SizedBox(height: AppDimens.spaceLg),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            context.go(RouteNames.profileQuestionnairePath);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(
+                              color: colors.warning.withValues(alpha: 0.5),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                AppDimens.shapePill,
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: AppDimens.spaceMd,
+                            ),
+                          ),
+                          child: Text(
+                            'Skip verification (debug) →',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: colors.warning,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
