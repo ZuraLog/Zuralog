@@ -162,11 +162,15 @@ class Orchestrator:
         system_prompt: str,
         message: str,
         conversation_history: list[dict[str, Any]] | None = None,
+        image_urls: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         """Build the initial messages list for an LLM request.
 
         Injects the system prompt, optional conversation history (for
-        multi-turn context), and the current user message.
+        multi-turn context), and the current user message. When
+        ``image_urls`` is provided, the current user message is built as
+        a multimodal content array (OpenAI / OpenRouter vision format)
+        so a vision-capable model can see the images.
 
         Args:
             system_prompt: The fully-assembled system prompt string.
@@ -174,6 +178,9 @@ class Orchestrator:
             conversation_history: Optional prior messages in
                 ``[{"role": ..., "content": ...}]`` format. Injected
                 between the system prompt and the new user message.
+            image_urls: Optional HTTPS URLs of image attachments. Each
+                becomes an ``image_url`` block in the user message's
+                content array.
 
         Returns:
             A list of message dicts ready for the LLM API.
@@ -183,7 +190,19 @@ class Orchestrator:
         ]
         if conversation_history:
             messages.extend(conversation_history)
-        messages.append({"role": "user", "content": message})
+
+        if image_urls:
+            user_content: list[dict[str, Any]] = []
+            if message:
+                user_content.append({"type": "text", "text": message})
+            for url in image_urls:
+                user_content.append({
+                    "type": "image_url",
+                    "image_url": {"url": url},
+                })
+            messages.append({"role": "user", "content": user_content})
+        else:
+            messages.append({"role": "user", "content": message})
         return messages
 
     def _truncate_tool_results_if_needed(
@@ -547,6 +566,7 @@ class Orchestrator:
         model_tier: str | None = None,
         write_confirm_token: str | None = None,
         write_confirm_tool: str | None = None,
+        image_urls: list[str] | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """Process a user message and stream the final response token-by-token.
 
@@ -594,7 +614,12 @@ class Orchestrator:
                     user_profile=user_profile,
                 )
 
-                messages = self._build_messages(system_prompt, message, conversation_history)
+                messages = self._build_messages(
+                    system_prompt,
+                    message,
+                    conversation_history,
+                    image_urls=image_urls,
+                )
 
                 if db is not None:
                     mcp_tools = await self.mcp_client.get_tools_for_user(db, user_id)

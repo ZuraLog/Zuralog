@@ -140,17 +140,21 @@ async def _authenticate_ws(
         return None
 
 
-def _process_attachments(attachments: list[dict]) -> str:
-    """Process attachments and return text to augment the user message.
+def _process_attachments(attachments: list[dict]) -> tuple[str, list[str]]:
+    """Process attachments and split them into text context and image URLs.
 
-    Image attachments are noted as metadata for the LLM.
-    Attachment text is sanitized against prompt injection (Fix 6.17 / C-11).
+    Images are returned as a list of HTTPS URLs that the orchestrator
+    forwards to a vision-capable LLM. Non-image attachments (with a
+    ``context_message`` field extracted upstream) are sanitized and
+    appended to the user message as additional text.
 
     Args:
         attachments: List of attachment dicts from the client.
 
     Returns:
-        Combined text fragments to append to the user message.
+        (text_to_append, image_urls):
+            - text_to_append: Combined text fragments to append to the user message.
+            - image_urls: HTTPS URLs of image attachments to pass to the LLM.
     """
     # Fix 6.15 (M-6): Validate attachment refs and cap count
     if len(attachments) > 3:
@@ -158,6 +162,7 @@ def _process_attachments(attachments: list[dict]) -> str:
         attachments = attachments[:3]
 
     parts: list[str] = []
+    image_urls: list[str] = []
     for att in attachments:
         # Fix 6.15 (M-6): Validate required fields
         if not isinstance(att, dict):
@@ -168,12 +173,27 @@ def _process_attachments(attachments: list[dict]) -> str:
             continue
 
         if att.get("type") == "image":
-            parts.append(f"[User attached image: {att.get('filename', 'image')}]")
+            # Forward the signed URL to the vision-capable LLM. Fall back to
+            # the generic url/path fields if the mobile client didn't populate
+            # signed_url. Skip silently if no HTTPS URL is available — never
+            # leak a bad reference into the model.
+            url = (
+                att.get("signed_url")
+                or att.get("url")
+                or att.get("path")
+            )
+            if isinstance(url, str) and url.startswith("https://"):
+                image_urls.append(url)
+            else:
+                logger.warning(
+                    "_process_attachments: skipping image with no https signed_url (filename=%s)",
+                    att.get("filename"),
+                )
         elif att.get("context_message"):
             # Fix 6.17 (C-11): Sanitize extracted attachment text before LLM injection
             safe_context = sanitize_for_llm(att["context_message"])[:2000]
             parts.append(safe_context)
-    return "\n".join(parts)
+    return "\n".join(parts), image_urls
 
 
 async def _refresh_attachment_urls(
@@ -774,8 +794,9 @@ async def websocket_chat(
 
             # ── Attachment processing ─────────────────────────────────────────
             augmented_text = message_text
+            image_urls: list[str] = []
             if raw_attachments:
-                extra_context = _process_attachments(raw_attachments)
+                extra_context, image_urls = _process_attachments(raw_attachments)
                 if extra_context:
                     augmented_text = f"{message_text}\n\n{extra_context}" if message_text else extra_context
 
@@ -860,6 +881,7 @@ async def websocket_chat(
                         model_tier=routed_model_tier,
                         write_confirm_token=confirmed_write_token,
                         write_confirm_tool=_pending_write_tool if confirmed_write_token else None,
+                        image_urls=image_urls or None,
                     ):
                         etype = event.get("type")
 
