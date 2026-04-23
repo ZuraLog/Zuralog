@@ -35,7 +35,7 @@ enum ChatCardKind {
 enum ChatStep {
   name,
   sex,
-  age,
+  birthday,
   height,
   weight,
   focus,
@@ -75,7 +75,7 @@ class OnboardingProfile {
   const OnboardingProfile({
     this.name,
     this.sex,
-    this.age,
+    this.birthday,
     this.heightCm,
     this.weightKg,
     this.focus,
@@ -87,7 +87,7 @@ class OnboardingProfile {
 
   final String? name;
   final String? sex;
-  final int? age;
+  final DateTime? birthday;
   final double? heightCm;
   final double? weightKg;
   final String? focus;
@@ -106,7 +106,7 @@ class OnboardingProfile {
   OnboardingProfile copyWith({
     String? name,
     String? sex,
-    int? age,
+    DateTime? birthday,
     double? heightCm,
     double? weightKg,
     String? focus,
@@ -118,7 +118,7 @@ class OnboardingProfile {
     return OnboardingProfile(
       name: name ?? this.name,
       sex: sex ?? this.sex,
-      age: age ?? this.age,
+      birthday: birthday ?? this.birthday,
       heightCm: heightCm ?? this.heightCm,
       weightKg: weightKg ?? this.weightKg,
       focus: focus ?? this.focus,
