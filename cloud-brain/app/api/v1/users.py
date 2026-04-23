@@ -6,6 +6,7 @@ such as coaching persona, subscription tier, and onboarding profile fields.
 """
 
 import logging
+from datetime import datetime, timedelta, timezone as _tz
 
 import filetype
 import sentry_sdk
@@ -175,6 +176,45 @@ async def update_preferences(
         await cache.delete(CacheService.make_key("users.preferences", user_id))
 
     return {"message": "Preferences updated", "coach_persona": body.coach_persona}
+
+
+@router.get("/me/catchup_status")
+async def get_catchup_status(
+    request: Request,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Return whether the existing-user catch-up flow should be offered.
+
+    Status values:
+      - not_shown: catch-up has never been shown for this user
+      - in_progress: user started catch-up but hasn't finished
+      - completed: all catch-up questions answered (or user is post-new-onboarding)
+      - dismissed: user tapped "Maybe later"
+
+    should_reoffer is true when status == 'dismissed' AND it has been more
+    than 7 days since dismissal — the mobile client can choose to re-offer
+    the intro sheet.
+    """
+    request.state.user_id = user_id
+    sentry_sdk.set_user({"id": user_id})
+    result = await db.execute(
+        select(
+            UserPreferences.profile_catchup_status,
+            UserPreferences.profile_catchup_dismissed_at,
+        ).where(UserPreferences.user_id == user_id)
+    )
+    row = result.first()
+    if row is None:
+        return {"status": "not_shown", "should_reoffer": False}
+    status_val = row[0] or "not_shown"
+    dismissed_at = row[1]
+    should_reoffer = (
+        status_val == "dismissed"
+        and dismissed_at is not None
+        and datetime.now(_tz.utc) - dismissed_at > timedelta(days=7)
+    )
+    return {"status": status_val, "should_reoffer": should_reoffer}
 
 
 @router.get("/me/profile", response_model=UserProfileResponse)
