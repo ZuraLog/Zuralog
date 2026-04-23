@@ -1,7 +1,7 @@
 """Create meal_templates table for saving reusable meal templates.
 
-Revision ID: c3d4e5f6a7b8
-Revises: b2c3d4e5f6a7
+Revision ID: 4cd17a8411b1
+Revises: 7aacd9a46e9f
 Create Date: 2026-04-23
 
 Adds a new table to store meal templates — reusable sets of foods that users can
@@ -18,8 +18,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = "c3d4e5f6a7b8"
-down_revision = "b2c3d4e5f6a7"
+revision = "4cd17a8411b1"
+down_revision = "7aacd9a46e9f"
 branch_labels = None
 depends_on = None
 

@@ -1,7 +1,7 @@
 """Add fiber_g, sodium_mg, and sugar_g columns to meal_foods table.
 
-Revision ID: a1b2c3d4e5f6
-Revises: x9y0z1a2b3c4
+Revision ID: 897ba7021291
+Revises: aa1b2c3d4e5f, e3f4a5b6c7d8
 Create Date: 2026-04-23
 
 Extends the meal_foods table with optional nullable numeric fields to track
@@ -17,8 +17,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = "a1b2c3d4e5f6"
-down_revision = "x9y0z1a2b3c4"
+revision = "897ba7021291"
+down_revision = ("aa1b2c3d4e5f", "e3f4a5b6c7d8")
 branch_labels = None
 depends_on = None
 
