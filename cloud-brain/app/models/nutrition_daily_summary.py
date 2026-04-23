@@ -45,6 +45,18 @@ class NutritionDailySummary(Base):
     meal_count: Mapped[int] = mapped_column(
         sa.Integer, nullable=False, server_default=sa.text("0")
     )
+    total_fiber_g: Mapped[float] = mapped_column(
+        sa.Numeric(10, 2, asdecimal=False), nullable=False, server_default=sa.text("0")
+    )
+    total_sodium_mg: Mapped[float] = mapped_column(
+        sa.Numeric(10, 2, asdecimal=False), nullable=False, server_default=sa.text("0")
+    )
+    total_sugar_g: Mapped[float] = mapped_column(
+        sa.Numeric(10, 2, asdecimal=False), nullable=False, server_default=sa.text("0")
+    )
+    exercise_calories_burned: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, server_default=sa.text("0")
+    )
     updated_at: Mapped[datetime] = mapped_column(
         sa.TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )

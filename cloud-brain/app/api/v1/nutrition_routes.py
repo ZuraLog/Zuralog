@@ -55,12 +55,16 @@ from app.api.v1.nutrition_schemas import (
     ParsedFoodItem,
     RuleSuggestionDismissRequest,
 )
+from app.api.v1.template_schemas import MealTemplateCreate, MealTemplateResponse
 from app.config import settings
 from app.database import get_db
 from app.limiter import limiter
+from app.api.v1.exercise_schemas import ExerciseEntryCreate, ExerciseEntryResponse
+from app.models.exercise_entry import ExerciseEntry
 from app.models.food_cache import FoodCache
 from app.models.meal import Meal
 from app.models.meal_food import MealFood
+from app.models.meal_template import MealTemplate
 from app.models.nutrition_daily_summary import NutritionDailySummary
 from app.models.nutrition_rule import NutritionRule
 from app.models.rule_suggestion_snooze import RuleSuggestionSnooze
@@ -93,6 +97,9 @@ Rules:
    - "protein_g": number (estimated protein in grams)
    - "carbs_g": number (estimated carbohydrates in grams)
    - "fat_g": number (estimated fat in grams)
+   - "fiber_g": number (optional, grams of dietary fiber)
+   - "sodium_mg": number (optional, milligrams of sodium)
+   - "sugar_g": number (optional, grams of total sugar)
    - "confidence": number (0.0 to 1.0 — how confident you are in this specific item's nutritional estimate. Use 0.8+ for well-known standard foods, 0.5-0.8 for reasonable guesses, below 0.5 for very uncertain items)
    - "applied_rules": array of strings (which user rules you used while estimating this food — see APPLIED RULES below)
 3. Separate compound items. "Toast with butter" becomes two items: toast and butter.
@@ -196,6 +203,9 @@ Rules:
    - "protein_g": number (estimated protein in grams)
    - "carbs_g": number (estimated carbohydrates in grams)
    - "fat_g": number (estimated fat in grams)
+   - "fiber_g": number (optional, grams of dietary fiber)
+   - "sodium_mg": number (optional, milligrams of sodium)
+   - "sugar_g": number (optional, grams of total sugar)
    - "confidence": number (0.0 to 1.0)
    - "applied_rules": array of strings (which user rules you used while estimating this food — see APPLIED RULES below)
 3. For nutrition labels: read exact values. Set confidence to 0.95.
@@ -564,6 +574,10 @@ async def get_today(
             "total_carbs_g": summary_row.total_carbs_g,
             "total_fat_g": summary_row.total_fat_g,
             "meal_count": summary_row.meal_count,
+            "total_fiber_g": summary_row.total_fiber_g if summary_row.total_fiber_g is not None else 0,
+            "total_sodium_mg": summary_row.total_sodium_mg if summary_row.total_sodium_mg is not None else 0,
+            "total_sugar_g": summary_row.total_sugar_g if summary_row.total_sugar_g is not None else 0,
+            "exercise_calories_burned": summary_row.exercise_calories_burned if summary_row.exercise_calories_burned is not None else 0,
         }
 
     # Fetch today's AI nutrition summary from the insights table.
@@ -580,6 +594,10 @@ async def get_today(
             "total_carbs_g": 0,
             "total_fat_g": 0,
             "meal_count": 0,
+            "total_fiber_g": 0,
+            "total_sodium_mg": 0,
+            "total_sugar_g": 0,
+            "exercise_calories_burned": 0,
             "ai_summary": ai["ai_summary"],
             "ai_generated_at": ai["ai_generated_at"],
         }
@@ -681,6 +699,9 @@ async def create_meal(
             protein_g=food_req.protein_g,
             carbs_g=food_req.carbs_g,
             fat_g=food_req.fat_g,
+            fiber_g=food_req.fiber_g,
+            sodium_mg=food_req.sodium_mg,
+            sugar_g=food_req.sugar_g,
             origin=food_req.origin,
             source_question_id=food_req.source_question_id,
             source_answer_value=food_req.source_answer_value,
@@ -791,6 +812,9 @@ async def update_meal(
             protein_g=food_req.protein_g,
             carbs_g=food_req.carbs_g,
             fat_g=food_req.fat_g,
+            fiber_g=food_req.fiber_g,
+            sodium_mg=food_req.sodium_mg,
+            sugar_g=food_req.sugar_g,
             origin=food_req.origin,
             source_question_id=food_req.source_question_id,
             source_answer_value=food_req.source_answer_value,
@@ -1729,3 +1753,202 @@ async def lookup_barcode(
         "fat_per_serving": round(float(fat), 2),
         "source": "openfoodfacts",
     }}
+
+
+# ---------------------------------------------------------------------------
+# Meal Template CRUD (Task 2.4)
+# ---------------------------------------------------------------------------
+
+
+@limiter.limit("60/minute")
+@router.get("/templates")
+async def list_templates(
+    request: Request,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """List all meal templates for the authenticated user, newest first."""
+    result = await db.execute(
+        select(MealTemplate)
+        .where(MealTemplate.user_id == user_id)
+        .order_by(MealTemplate.created_at.desc())
+    )
+    templates = result.scalars().all()
+
+    return {
+        "templates": [
+            {
+                "id": str(t.id),
+                "name": t.name,
+                "foods": json.loads(t.foods_json) if t.foods_json else [],
+                "created_at": t.created_at.isoformat(),
+            }
+            for t in templates
+        ]
+    }
+
+
+@limiter.limit("20/minute")
+@router.post("/templates", status_code=status.HTTP_201_CREATED)
+async def create_template(
+    request: Request,
+    body: MealTemplateCreate,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Create a new meal template with a list of food items.
+
+    Returns the created template with status 201.
+    """
+    template = MealTemplate(
+        user_id=user_id,
+        name=body.name,
+        foods_json=json.dumps(body.foods),
+    )
+    db.add(template)
+    await db.commit()
+    await db.refresh(template)
+
+    return {
+        "id": str(template.id),
+        "name": template.name,
+        "foods": json.loads(template.foods_json) if template.foods_json else [],
+        "created_at": template.created_at.isoformat(),
+    }
+
+
+@limiter.limit("20/minute")
+@router.delete("/templates/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_template(
+    request: Request,
+    template_id: str,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Delete a meal template. Returns 404 if not found or not owned by the caller."""
+    result = await db.execute(
+        select(MealTemplate).where(
+            MealTemplate.id == template_id,
+            MealTemplate.user_id == user_id,
+        )
+    )
+    template = result.scalar_one_or_none()
+    if not template:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meal template not found.",
+        )
+
+    await db.delete(template)
+    await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Exercise Calorie Endpoints (Task 2.3)
+# ---------------------------------------------------------------------------
+
+
+def _exercise_to_response(entry: ExerciseEntry) -> ExerciseEntryResponse:
+    """Convert an ExerciseEntry ORM row to the API response shape."""
+    return ExerciseEntryResponse(
+        id=str(entry.id),
+        activity=entry.activity_name,
+        # duration_minutes is not stored in the DB — default to 0 for now.
+        duration_minutes=0,
+        calories_burned=entry.calories_burned,
+        # Use created_at as the user-visible timestamp.
+        logged_at=entry.created_at,
+    )
+
+
+@limiter.limit("30/minute")
+@router.post(
+    "/exercise",
+    status_code=status.HTTP_201_CREATED,
+    response_model=ExerciseEntryResponse,
+)
+async def create_exercise_entry(
+    request: Request,
+    body: ExerciseEntryCreate,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> ExerciseEntryResponse:
+    """Log a manual exercise entry and recompute the daily calorie summary.
+
+    Returns the saved entry with status 201.
+    """
+    entry = ExerciseEntry(
+        user_id=user_id,
+        date=date.today(),
+        activity_name=body.activity,
+        calories_burned=body.calories_burned,
+        source="manual",
+    )
+    db.add(entry)
+    await db.commit()
+    await db.refresh(entry)
+
+    # Recompute daily summary so the net-calorie budget stays accurate.
+    try:
+        await recompute_nutrition_summary(db, user_id, date.today())
+    except Exception:
+        logger.exception("Failed to recompute nutrition summary after exercise entry create")
+
+    return _exercise_to_response(entry)
+
+
+@limiter.limit("60/minute")
+@router.get(
+    "/exercise/today",
+    response_model=list[ExerciseEntryResponse],
+)
+async def get_today_exercise_entries(
+    request: Request,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> list[ExerciseEntryResponse]:
+    """Return all exercise entries the user has logged today."""
+    result = await db.execute(
+        select(ExerciseEntry).where(
+            ExerciseEntry.user_id == user_id,
+            ExerciseEntry.date == date.today(),
+        )
+    )
+    entries = result.scalars().all()
+    return [_exercise_to_response(e) for e in entries]
+
+
+@limiter.limit("30/minute")
+@router.delete(
+    "/exercise/{entry_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_exercise_entry(
+    request: Request,
+    entry_id: str,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Delete an exercise entry. Returns 404 if not found or not owned by the caller."""
+    result = await db.execute(
+        select(ExerciseEntry).where(
+            ExerciseEntry.id == entry_id,
+            ExerciseEntry.user_id == user_id,
+        )
+    )
+    entry = result.scalar_one_or_none()
+    if not entry:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Exercise entry not found.",
+        )
+
+    entry_date = entry.date
+    await db.delete(entry)
+    await db.commit()
+
+    # Recompute so the daily budget reflects the removed burn.
+    try:
+        await recompute_nutrition_summary(db, user_id, entry_date)
+    except Exception:
+        logger.exception("Failed to recompute nutrition summary after exercise entry delete")

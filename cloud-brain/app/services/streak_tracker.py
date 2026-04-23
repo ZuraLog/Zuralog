@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-_VALID_STREAK_TYPES = frozenset({"engagement", "steps", "workouts", "checkin"})
+_VALID_STREAK_TYPES = frozenset({"engagement", "steps", "workouts", "checkin", "nutrition_goals"})
 _MILESTONE_DAYS = frozenset({7, 14, 30, 60, 90, 180, 365})
 _MAX_FREEZE_TOKENS = 2
 

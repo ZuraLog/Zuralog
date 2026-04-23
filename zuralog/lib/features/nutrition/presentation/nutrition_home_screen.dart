@@ -14,13 +14,19 @@ import 'package:intl/intl.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/features/nutrition/presentation/log_meal_sheet.dart';
 import 'package:zuralog/features/nutrition/presentation/meal_edit_screen.dart' show MealEditArgs;
+import 'package:zuralog/features/nutrition/presentation/nutrition_goals_edit_sheet.dart';
+import 'package:zuralog/features/nutrition/presentation/nutrition_goals_setup_sheet.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/nutrition/domain/nutrition_goals_model.dart';
 import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
 import 'package:zuralog/features/nutrition/providers/nutrition_providers.dart';
 import 'package:zuralog/features/nutrition/presentation/widgets/nutrition_ai_summary_card.dart';
+import 'package:zuralog/features/nutrition/presentation/widgets/nutrition_budget_hero_card.dart';
+import 'package:zuralog/features/nutrition/presentation/widgets/nutrition_macro_progress_card.dart';
 import 'package:zuralog/features/nutrition/presentation/widgets/nutrition_trend_section.dart';
+import 'package:zuralog/features/nutrition/presentation/widgets/nutrition_weekly_summary_card.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── NutritionHomeScreen ──────────────────────────────────────────────────────
@@ -34,17 +40,61 @@ class NutritionHomeScreen extends ConsumerWidget {
     final colors = AppColorsOf(context);
     final mealsAsync = ref.watch(todayMealsProvider);
     final summaryAsync = ref.watch(nutritionDaySummaryProvider);
+    final goalsAsync = ref.watch(nutritionGoalsProvider);
+    final trendAsync = ref.watch(nutritionTrendProvider('7d'));
+    final goals = goalsAsync.valueOrNull ?? const NutritionGoals();
+    final trend = trendAsync.valueOrNull ?? const <NutritionTrendDay>[];
     const catColor = AppColors.categoryNutrition;
+
+    // Compute streak for the app bar badge.
+    final streak = _computeNutritionStreak(trend, goals.calorieBudget);
 
     return ZuralogScaffold(
       appBar: ZuralogAppBar(
         title: 'Nutrition',
         showProfileAvatar: false,
         actions: [
+          // Streak badge
+          if (goals.hasGoals && streak > 0)
+            Padding(
+              padding: const EdgeInsets.only(right: AppDimens.spaceSm),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceSm,
+                    vertical: AppDimens.spaceXxs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: catColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.local_fire_department_rounded,
+                        size: 14,
+                        color: catColor,
+                      ),
+                      const SizedBox(width: AppDimens.spaceXxs),
+                      Text(
+                        '$streak',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: catColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           IconButton(
-            icon: const Icon(Icons.rule_outlined),
-            tooltip: 'My rules',
-            onPressed: () => context.pushNamed(RouteNames.nutritionRules),
+            icon: const Icon(Icons.tune_rounded),
+            tooltip: goals.hasGoals ? 'Edit goals' : 'Set up goals',
+            onPressed: () => goals.hasGoals
+                ? NutritionGoalsEditSheet.show(context)
+                : NutritionGoalsSetupSheet.show(context),
           ),
         ],
       ),
@@ -160,6 +210,99 @@ class NutritionHomeScreen extends ConsumerWidget {
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
+                  SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // ── Budget hero card ─────────────────────────────
+                        const ZFadeSlideIn(
+                          delay: Duration(milliseconds: 60),
+                          child: Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              AppDimens.spaceMd,
+                              AppDimens.spaceMd,
+                              AppDimens.spaceMd,
+                              0,
+                            ),
+                            child: NutritionBudgetHeroCard(),
+                          ),
+                        ),
+
+                        // ── Macro progress card (goals set) ──────────────
+                        if (goals.hasGoals)
+                          const ZFadeSlideIn(
+                            delay: Duration(milliseconds: 90),
+                            child: Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                AppDimens.spaceMd,
+                                AppDimens.spaceMd,
+                                AppDimens.spaceMd,
+                                0,
+                              ),
+                              child: NutritionMacroProgressCard(),
+                            ),
+                          ),
+
+                        // ── Goals empty-state banner (no goals) ──────────
+                        if (!goals.hasGoals)
+                          ZFadeSlideIn(
+                            delay: const Duration(milliseconds: 90),
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppDimens.spaceMd,
+                                AppDimens.spaceMd,
+                                AppDimens.spaceMd,
+                                0,
+                              ),
+                              child: ZuralogCard(
+                                variant: ZCardVariant.plain,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.flag_outlined,
+                                      size: AppDimens.iconMd,
+                                      color: catColor,
+                                    ),
+                                    const SizedBox(width: AppDimens.spaceMd),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'No goals set yet',
+                                            style:
+                                                AppTextStyles.titleMedium.copyWith(
+                                              color: colors.textPrimary,
+                                            ),
+                                          ),
+                                          const SizedBox(
+                                              height: AppDimens.spaceXxs),
+                                          Text(
+                                            'Set up your calorie budget and macro targets.',
+                                            style:
+                                                AppTextStyles.bodySmall.copyWith(
+                                              color: colors.textSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppDimens.spaceSm),
+                                    TextButton(
+                                      onPressed: () =>
+                                          NutritionGoalsSetupSheet.show(
+                                              context),
+                                      child: const Text('Set up'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                   SliverFillRemaining(
                     hasScrollBody: false,
                     child: Column(
@@ -250,46 +393,87 @@ class NutritionHomeScreen extends ConsumerWidget {
                   ),
                 ),
 
-                // ── Daily summary card ─────────────────────────────────
-                ZFadeSlideIn(
-                  delay: const Duration(milliseconds: 60),
+                // ── Budget hero card ───────────────────────────────────
+                const ZFadeSlideIn(
+                  delay: Duration(milliseconds: 60),
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
+                    padding: EdgeInsets.fromLTRB(
                       AppDimens.spaceMd,
                       AppDimens.spaceMd,
                       AppDimens.spaceMd,
                       0,
                     ),
-                    child: ZuralogCard(
-                      variant: ZCardVariant.feature,
-                      category: catColor,
-                      child: Row(
-                        children: [
-                          _SummaryStat(
-                            value: '${summary.totalCalories}',
-                            label: 'kcal',
-                            color: colors,
-                          ),
-                          _SummaryStat(
-                            value: '${summary.totalProteinG.round()}',
-                            label: 'protein',
-                            color: colors,
-                          ),
-                          _SummaryStat(
-                            value: '${summary.totalCarbsG.round()}',
-                            label: 'carbs',
-                            color: colors,
-                          ),
-                          _SummaryStat(
-                            value: '${summary.totalFatG.round()}',
-                            label: 'fat',
-                            color: colors,
-                          ),
-                        ],
+                    child: NutritionBudgetHeroCard(),
+                  ),
+                ),
+
+                // ── Macro progress card (only when goals are set) ───────
+                if (goals.hasGoals)
+                  const ZFadeSlideIn(
+                    delay: Duration(milliseconds: 90),
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        AppDimens.spaceMd,
+                        AppDimens.spaceMd,
+                        AppDimens.spaceMd,
+                        0,
+                      ),
+                      child: NutritionMacroProgressCard(),
+                    ),
+                  ),
+
+                // ── Goals empty-state banner ────────────────────────────
+                if (!goals.hasGoals)
+                  ZFadeSlideIn(
+                    delay: const Duration(milliseconds: 90),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppDimens.spaceMd,
+                        AppDimens.spaceMd,
+                        AppDimens.spaceMd,
+                        0,
+                      ),
+                      child: ZuralogCard(
+                        variant: ZCardVariant.plain,
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.flag_outlined,
+                              size: AppDimens.iconMd,
+                              color: catColor,
+                            ),
+                            const SizedBox(width: AppDimens.spaceMd),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'No goals set yet',
+                                    style: AppTextStyles.titleMedium.copyWith(
+                                      color: colors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppDimens.spaceXxs),
+                                  Text(
+                                    'Set up your calorie budget and macro targets.',
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: colors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: AppDimens.spaceSm),
+                            TextButton(
+                              onPressed: () =>
+                                  NutritionGoalsSetupSheet.show(context),
+                              child: const Text('Set up'),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
 
                 // ── AI Summary card ─────────────────────────────────────
                 ZFadeSlideIn(
@@ -319,6 +503,20 @@ class NutritionHomeScreen extends ConsumerWidget {
                       0,
                     ),
                     child: NutritionTrendSection(),
+                  ),
+                ),
+
+                // ── Weekly Summary Card ──────────────────────────────────
+                const ZFadeSlideIn(
+                  delay: Duration(milliseconds: 210),
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppDimens.spaceMd,
+                      AppDimens.spaceMd,
+                      AppDimens.spaceMd,
+                      0,
+                    ),
+                    child: NutritionWeeklySummaryCard(),
                   ),
                 ),
 
@@ -450,44 +648,36 @@ class NutritionHomeScreen extends ConsumerWidget {
       ),
     );
   }
+
+  /// Computes the nutrition goal streak from trend data.
+  ///
+  /// Counts consecutive days (backwards from most recent) where
+  /// calories <= calorieBudget. Returns 0 if no budget is set or if
+  /// the most recent day doesn't meet the goal.
+  static int _computeNutritionStreak(
+    List<NutritionTrendDay> trend,
+    double? calorieBudget,
+  ) {
+    if (calorieBudget == null || calorieBudget <= 0) return 0;
+
+    final sorted = [...trend]..sort((a, b) => b.date.compareTo(a.date));
+
+    var streak = 0;
+    for (final day in sorted) {
+      final calories = day.calories;
+      if (calories == null) break;
+      if (calories <= calorieBudget) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }
 }
 
 // ── _SummaryStat ─────────────────────────────────────────────────────────────
 
-class _SummaryStat extends StatelessWidget {
-  const _SummaryStat({
-    required this.value,
-    required this.label,
-    required this.color,
-  });
-
-  final String value;
-  final String label;
-  final AppColorsOf color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: AppTextStyles.titleLarge.copyWith(
-              color: color.textPrimary,
-            ),
-          ),
-          const SizedBox(height: AppDimens.spaceXxs),
-          Text(
-            label,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: color.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ── _MealCard ────────────────────────────────────────────────────────────────
 

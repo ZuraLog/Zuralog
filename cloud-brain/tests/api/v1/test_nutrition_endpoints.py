@@ -250,3 +250,138 @@ class TestNutritionTodayAiSummary:
 
         assert resp.status_code == 200
         assert resp.json()["summary"] is None
+
+
+# ---------------------------------------------------------------------------
+# Class 5: MealFood model — new columns for nutrition tracking
+# ---------------------------------------------------------------------------
+
+
+class TestMealFoodNewColumns:
+    def test_meal_food_model_has_fiber_sodium_sugar(self):
+        from app.models.meal_food import MealFood
+        import uuid
+        food = MealFood(
+            meal_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+            food_name="Apple", portion_amount=150.0, portion_unit="g",
+            calories=78.0, protein_g=0.4, carbs_g=21.0, fat_g=0.2,
+        )
+        assert hasattr(food, "fiber_g")
+        assert hasattr(food, "sodium_mg")
+        assert hasattr(food, "sugar_g")
+
+
+class TestMealFoodSchemaFiberSodiumSugar:
+    def test_food_item_request_has_fiber_sodium_sugar_defaults(self):
+        from app.api.v1.nutrition_schemas import FoodItemRequest
+        item = FoodItemRequest(
+            food_name="oatmeal", portion_amount=1, portion_unit="cup",
+            calories=300, protein_g=10, carbs_g=54, fat_g=5,
+        )
+        assert hasattr(item, "fiber_g")
+        assert hasattr(item, "sodium_mg")
+        assert hasattr(item, "sugar_g")
+        assert item.fiber_g == 0.0
+        assert item.sodium_mg == 0.0
+        assert item.sugar_g == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Class 9: Nutrition goal type slugs
+# ---------------------------------------------------------------------------
+
+
+class TestNutritionGoalTypeSlugs:
+    @pytest.mark.parametrize("slug", [
+        "daily_protein_min", "daily_carbs_max", "daily_fat_max",
+        "daily_fiber_min", "daily_sodium_max", "daily_sugar_max",
+    ])
+    def test_new_nutrition_goal_slugs_are_in_valid_types(self, slug):
+        from app.api.v1.goal_schemas import VALID_TYPES
+        assert slug in VALID_TYPES
+
+
+# ---------------------------------------------------------------------------
+# Class 6: ExerciseEntry model — manual exercise calorie tracking
+# ---------------------------------------------------------------------------
+
+
+class TestExerciseEntryModel:
+    def test_exercise_entry_model_fields(self):
+        from app.models.exercise_entry import ExerciseEntry
+        from datetime import date
+        entry = ExerciseEntry(
+            user_id="user-1", date=date.today(),
+            activity_name="Morning run", calories_burned=350, source="manual",
+        )
+        assert entry.activity_name == "Morning run"
+        assert entry.source == "manual"
+        assert entry.session_id is None
+
+
+# ---------------------------------------------------------------------------
+# Class 7: MealTemplate model — saved sets of foods for quick re-logging
+# ---------------------------------------------------------------------------
+
+
+class TestMealTemplateModel:
+    def test_meal_template_model_fields(self):
+        import json
+        from app.models.meal_template import MealTemplate
+        t = MealTemplate(user_id="user-1", name="My breakfast",
+                         foods_json=json.dumps([{"food_name": "Oats"}]))
+        assert t.name == "My breakfast"
+        assert json.loads(t.foods_json)[0]["food_name"] == "Oats"
+
+
+# ---------------------------------------------------------------------------
+# Class 8: NutritionDailySummary model — new columns for nutrition tracking
+# ---------------------------------------------------------------------------
+
+
+class TestNutritionDailySummaryNewColumns:
+    def test_summary_model_has_new_fields(self):
+        from app.models.nutrition_daily_summary import NutritionDailySummary
+        assert hasattr(NutritionDailySummary, "total_fiber_g")
+        assert hasattr(NutritionDailySummary, "total_sodium_mg")
+        assert hasattr(NutritionDailySummary, "total_sugar_g")
+        assert hasattr(NutritionDailySummary, "exercise_calories_burned")
+
+    def test_today_summary_includes_new_fields(self, client_with_auth):
+        client, _, mock_db = client_with_auth
+
+        # Mock a summary row that includes the new columns.
+        mock_summary_row = MagicMock()
+        mock_summary_row.date = date(2026, 4, 23)
+        mock_summary_row.total_calories = 1800.0
+        mock_summary_row.total_protein_g = 60.0
+        mock_summary_row.total_carbs_g = 200.0
+        mock_summary_row.total_fat_g = 50.0
+        mock_summary_row.meal_count = 3
+        mock_summary_row.total_fiber_g = 25.0
+        mock_summary_row.total_sodium_mg = 1200.0
+        mock_summary_row.total_sugar_g = 40.0
+        mock_summary_row.exercise_calories_burned = 300
+
+        meals_result = MagicMock()
+        meals_result.scalars.return_value.all.return_value = []
+
+        summary_result = MagicMock()
+        summary_result.scalar_one_or_none.return_value = mock_summary_row
+
+        mock_db.execute = AsyncMock(side_effect=[meals_result, summary_result])
+
+        with patch("app.api.v1.nutrition_routes.get_nutrition_ai_summary", new_callable=AsyncMock) as mock_ai:
+            mock_ai.return_value = {"ai_summary": None, "ai_generated_at": None}
+            resp = client.get("/api/v1/nutrition/today", headers=AUTH_HEADER)
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "total_fiber_g" in data["summary"]
+        assert "total_sodium_mg" in data["summary"]
+        assert "total_sugar_g" in data["summary"]
+        assert "exercise_calories_burned" in data["summary"]
+        assert data["summary"]["total_fiber_g"] == 25.0
+        assert data["summary"]["total_sodium_mg"] == 1200.0
+        assert data["summary"]["total_sugar_g"] == 40.0
+        assert data["summary"]["exercise_calories_burned"] == 300

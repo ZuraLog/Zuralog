@@ -26,6 +26,12 @@ VALID_TYPES: set[str] = {
     "sleep_duration",
     "step_count",
     "water_intake",
+    "daily_protein_min",
+    "daily_carbs_max",
+    "daily_fat_max",
+    "daily_fiber_min",
+    "daily_sodium_max",
+    "daily_sugar_max",
     "custom",
 }
 

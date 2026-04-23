@@ -300,6 +300,66 @@ class ApiNutritionRepository implements NutritionRepositoryInterface {
     );
   }
 
+  // ── Exercise ──────────────────────────────────────────────────────────────
+
+  @override
+  Future<List<ExerciseEntry>> getExerciseToday() async {
+    final response = await _api.get('/api/v1/nutrition/exercise/today');
+    final entries = response.data['entries'] as List<dynamic>? ?? [];
+    return entries
+        .map((e) => ExerciseEntry.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<ExerciseEntry> logExercise({
+    required String activity,
+    required int durationMinutes,
+    required int caloriesBurned,
+  }) async {
+    final response = await _api.post('/api/v1/nutrition/exercise', data: {
+      'activity': activity,
+      'duration_minutes': durationMinutes,
+      'calories_burned': caloriesBurned,
+    });
+    return ExerciseEntry.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<void> deleteExercise(String id) async {
+    await _api.delete('/api/v1/nutrition/exercise/$id');
+  }
+
+  // ── Meal Templates ─────────────────────────────────────────────────────────
+
+  @override
+  Future<List<MealTemplate>> getTemplates() async {
+    final response = await _api.get('/api/v1/nutrition/templates');
+    final templates = response.data['templates'] as List<dynamic>? ?? [];
+    return templates
+        .map((e) => MealTemplate.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<MealTemplate> saveTemplate({
+    required String name,
+    required String mealType,
+    required List<MealFood> foods,
+  }) async {
+    final response = await _api.post('/api/v1/nutrition/templates', data: {
+      'name': name,
+      'meal_type': mealType,
+      'foods': foods.map((f) => f.toJson()).toList(),
+    });
+    return MealTemplate.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<void> deleteTemplate(String id) async {
+    await _api.delete('/api/v1/nutrition/templates/$id');
+  }
+
   // ── Trend ──────────────────────────────────────────────────────────────────
 
   @override

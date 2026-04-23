@@ -46,6 +46,15 @@ class MealFood(Base):
     fat_g: Mapped[float] = mapped_column(
         sa.Numeric(10, 2, asdecimal=False), nullable=False
     )
+    fiber_g: Mapped[float | None] = mapped_column(
+        sa.Numeric(10, 2, asdecimal=False), nullable=True, server_default=sa.text("0")
+    )
+    sodium_mg: Mapped[float | None] = mapped_column(
+        sa.Numeric(10, 2, asdecimal=False), nullable=True, server_default=sa.text("0")
+    )
+    sugar_g: Mapped[float | None] = mapped_column(
+        sa.Numeric(10, 2, asdecimal=False), nullable=True, server_default=sa.text("0")
+    )
 
     # Populated when the food was added via the guided walkthrough —
     # mined by the rule-suggestion detector.
