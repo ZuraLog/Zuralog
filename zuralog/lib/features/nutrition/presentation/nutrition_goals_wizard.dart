@@ -40,7 +40,6 @@ class _NutritionGoalsWizardState extends ConsumerState<NutritionGoalsWizard> {
   String? _gender;
   WeightGoalChoice? _goalChoice;
   bool? _isPaceAggressive;
-  bool _profileWasComplete = false;
   bool _isSavingStats = false;
 
   @override
@@ -57,8 +56,6 @@ class _NutritionGoalsWizardState extends ConsumerState<NutritionGoalsWizard> {
     if (_weightKg == null) missing.add(_StepId.weight);
     if (_birthday == null) missing.add(_StepId.birthday);
     if (_gender == null) missing.add(_StepId.sex);
-
-    _profileWasComplete = missing.isEmpty;
 
     _steps = [
       ...missing,
@@ -112,9 +109,7 @@ class _NutritionGoalsWizardState extends ConsumerState<NutritionGoalsWizard> {
   }
 
   Future<void> _onActivityContinue(ActivityLevel level) async {
-    if (!_profileWasComplete) {
-      await _saveStatsToProfile();
-    }
+    await _saveStatsToProfile();
 
     if (!mounted) return;
 
@@ -231,7 +226,7 @@ class _NutritionGoalsWizardState extends ConsumerState<NutritionGoalsWizard> {
         );
       case _StepId.goal:
         return _GoalStep(
-          profileWasComplete: _profileWasComplete,
+          profileWasComplete: _heightCm != null && _weightKg != null && _birthday != null && _gender != null,
           heightCm: _heightCm,
           weightKg: _weightKg,
           birthday: _birthday,
