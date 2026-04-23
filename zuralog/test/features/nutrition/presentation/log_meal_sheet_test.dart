@@ -15,7 +15,6 @@ import 'package:zuralog/features/nutrition/data/mock_nutrition_repository.dart';
 import 'package:zuralog/features/nutrition/domain/nutrition_models.dart';
 import 'package:zuralog/features/nutrition/providers/nutrition_providers.dart';
 import 'package:zuralog/features/nutrition/presentation/log_meal_sheet.dart';
-import 'package:zuralog/shared/widgets/inputs/z_chip.dart';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

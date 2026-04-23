@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:zuralog/features/nutrition/domain/nutrition_goals_model.dart';
 import 'package:zuralog/features/nutrition/providers/nutrition_providers.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
