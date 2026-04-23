@@ -30,3 +30,15 @@ final heartTrendProvider =
     return const [];
   }
 });
+
+/// Today's HRV normalized against the user's 28-day baseline (0–100).
+///
+/// TODO(body): wire to HealthKit/Health Connect HRV samples. Null = no data.
+final hrvBaselineNormalizedProvider =
+    FutureProvider<double?>((ref) async => null);
+
+/// Today's resting heart rate normalized against the user's 28-day baseline (0–100).
+///
+/// TODO(body): wire to HealthKit/Health Connect RHR samples. Null = no data.
+final rhrBaselineNormalizedProvider =
+    FutureProvider<double?>((ref) async => null);
