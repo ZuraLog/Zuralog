@@ -26,6 +26,7 @@ enum ChatCardKind {
   focusPreview,
   activityBaseline,
   toneSample,
+  autonomousAction,
   finaleProfile,
 }
 

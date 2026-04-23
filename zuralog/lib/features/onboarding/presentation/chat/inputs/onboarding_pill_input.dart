@@ -14,6 +14,7 @@ import 'package:flutter/services.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 
 class OnboardingPillOption {
   const OnboardingPillOption({
@@ -82,11 +83,8 @@ class _OnboardingPillInputState extends State<OnboardingPillInput> {
         duration: _tapAnimDuration,
         curve: Curves.easeOut,
         height: _pillHeight,
-        padding: _pillPadding,
         decoration: BoxDecoration(
-          color: isActive
-              ? colors.primary
-              : colors.surface,
+          color: isActive ? colors.primary : colors.surface,
           borderRadius: BorderRadius.circular(_pillHeight / 2),
           boxShadow: isActive
               ? [
@@ -98,17 +96,39 @@ class _OnboardingPillInputState extends State<OnboardingPillInput> {
                 ]
               : null,
         ),
-        child: Center(
-          child: Text(
-            opt.label,
-            style: AppTextStyles.labelLarge.copyWith(
-              color: isActive
-                  ? const Color(0xFF1A2E22)
-                  : colors.textPrimary,
-              fontWeight: FontWeight.w600,
-              letterSpacing: -0.1,
+        // Stack so active pills carry the brand pattern per the bible's
+        // "Sage fill + pattern" rule. Inactive pills stay plain.
+        child: Stack(
+          children: [
+            if (isActive)
+              Positioned.fill(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(_pillHeight / 2),
+                  child: const IgnorePointer(
+                    child: ZPatternOverlay(
+                      variant: ZPatternVariant.sage,
+                      opacity: 0.55,
+                      animate: true,
+                    ),
+                  ),
+                ),
+              ),
+            Padding(
+              padding: _pillPadding,
+              child: Center(
+                child: Text(
+                  opt.label,
+                  style: AppTextStyles.labelLarge.copyWith(
+                    color: isActive
+                        ? const Color(0xFF1A2E22)
+                        : colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.1,
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       );
     }

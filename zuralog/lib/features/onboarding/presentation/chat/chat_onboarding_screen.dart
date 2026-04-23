@@ -20,6 +20,8 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_blob.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
+import 'package:zuralog/features/onboarding/presentation/chat/cards/onboarding_autonomous_action_card.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/cards/onboarding_bmr_card.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/cards/onboarding_profile_card.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/cards/onboarding_tone_sample_card.dart';
@@ -250,12 +252,33 @@ class _CardMessage extends StatelessWidget {
         );
       case ChatCardKind.toneSample:
         return OnboardingToneSampleCard(toneId: profile.tone ?? 'warm');
+      case ChatCardKind.autonomousAction:
+        return OnboardingAutonomousActionCard(
+          focusLabel: _focusDisplayLabel(profile.focus),
+        );
       case ChatCardKind.finaleProfile:
         return OnboardingProfileCard(profile: profile);
       case ChatCardKind.focusPreview:
       case ChatCardKind.activityBaseline:
         // Placeholder for future card variants.
         return const SizedBox.shrink();
+    }
+  }
+
+  /// Friendly display label for the user's picked focus. Used by the
+  /// autonomous-action card to personalize task #2.
+  static String _focusDisplayLabel(String? focusId) {
+    switch (focusId) {
+      case 'sleep':
+        return 'Sleep';
+      case 'activity':
+        return 'Activity';
+      case 'nutrition':
+        return 'Nutrition';
+      case 'overall':
+        return 'Overall wellness';
+      default:
+        return 'your focus';
     }
   }
 
@@ -501,14 +524,30 @@ class _MeetYourCoachButton extends StatelessWidget {
             ),
           ],
         ),
-        alignment: Alignment.center,
-        child: Text(
-          'Meet your coach',
-          style: AppTextStyles.labelLarge.copyWith(
-            color: const Color(0xFF1A2E22),
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.1,
-          ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(_buttonHeight / 2),
+                child: const IgnorePointer(
+                  child: ZPatternOverlay(
+                    variant: ZPatternVariant.sage,
+                    opacity: 0.55,
+                    animate: true,
+                  ),
+                ),
+              ),
+            ),
+            Text(
+              'Meet your coach',
+              style: AppTextStyles.labelLarge.copyWith(
+                color: const Color(0xFF1A2E22),
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.1,
+              ),
+            ),
+          ],
         ),
       ),
     );

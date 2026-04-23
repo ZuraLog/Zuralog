@@ -13,6 +13,63 @@ import 'package:flutter/services.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
+
+/// Internal sage-filled pill button with the brand pattern overlay.
+/// Local to this file — OnboardingIntegrationsInput and the finale CTA
+/// each have their own tailored variants.
+class _SagePatternButton extends StatelessWidget {
+  const _SagePatternButton({
+    required this.height,
+    required this.enabled,
+    required this.label,
+  });
+
+  final double height;
+  final bool enabled;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: enabled ? colors.primary : colors.surfaceRaised,
+        borderRadius: BorderRadius.circular(height / 2),
+      ),
+      child: Stack(
+        children: [
+          if (enabled)
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(height / 2),
+                child: const IgnorePointer(
+                  child: ZPatternOverlay(
+                    variant: ZPatternVariant.sage,
+                    opacity: 0.55,
+                    animate: true,
+                  ),
+                ),
+              ),
+            ),
+          Center(
+            child: Text(
+              label,
+              style: AppTextStyles.labelLarge.copyWith(
+                color: enabled
+                    ? const Color(0xFF1A2E22)
+                    : colors.textSecondary,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.1,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class OnboardingChipInput extends StatefulWidget {
   const OnboardingChipInput({
@@ -83,24 +140,45 @@ class _OnboardingChipInputState extends State<OnboardingChipInput> {
                 duration: const Duration(milliseconds: 180),
                 curve: Curves.easeOut,
                 height: _chipHeight,
-                padding: _chipPadding,
                 decoration: BoxDecoration(
-                  color: on
-                      ? colors.primary
-                      : colors.surface,
+                  color: on ? colors.primary : colors.surface,
                   borderRadius: BorderRadius.circular(_chipHeight / 2),
                 ),
-                child: Center(
-                  child: Text(
-                    opt,
-                    style: AppTextStyles.labelMedium.copyWith(
-                      color: on
-                          ? const Color(0xFF1A2E22)
-                          : colors.textPrimary,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.1,
+                // Stack so the sage chip gets the topographic pattern
+                // overlaid per the brand bible's "Sage fill + pattern"
+                // rule. Inactive chips stay plain Surface.
+                child: Stack(
+                  children: [
+                    if (on)
+                      Positioned.fill(
+                        child: ClipRRect(
+                          borderRadius:
+                              BorderRadius.circular(_chipHeight / 2),
+                          child: const IgnorePointer(
+                            child: ZPatternOverlay(
+                              variant: ZPatternVariant.sage,
+                              opacity: 0.55,
+                              animate: true,
+                            ),
+                          ),
+                        ),
+                      ),
+                    Padding(
+                      padding: _chipPadding,
+                      child: Center(
+                        child: Text(
+                          opt,
+                          style: AppTextStyles.labelMedium.copyWith(
+                            color: on
+                                ? const Color(0xFF1A2E22)
+                                : colors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.1,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             );
@@ -113,27 +191,14 @@ class _OnboardingChipInputState extends State<OnboardingChipInput> {
           child: GestureDetector(
             onTap: canSubmit ? _submit : null,
             behavior: HitTestBehavior.opaque,
-            child: Container(
+            child: _SagePatternButton(
               height: 48,
-              decoration: BoxDecoration(
-                color: canSubmit ? colors.primary : colors.surfaceRaised,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                canSubmit
-                    ? _picked.length == 1
-                        ? 'Continue'
-                        : 'Continue with ${_picked.length}'
-                    : 'Pick one or two',
-                style: AppTextStyles.labelLarge.copyWith(
-                  color: canSubmit
-                      ? const Color(0xFF1A2E22)
-                      : colors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -0.1,
-                ),
-              ),
+              enabled: canSubmit,
+              label: canSubmit
+                  ? _picked.length == 1
+                      ? 'Continue'
+                      : 'Continue with ${_picked.length}'
+                  : 'Pick one or two',
             ),
           ),
         ),

@@ -214,6 +214,19 @@ class OnboardingChatController extends StateNotifier<ChatState> {
     );
 
     await _coachSays("Good to know — thanks.");
+    // The coach takes initiative — plays a short autonomous action
+    // card to demo what it can DO for the user, not just observe.
+    await _coachSays(
+      "Hang on, let me get a few things set up for you...",
+      pause: _mediumPause,
+    );
+    await _coachSends(ChatCardKind.autonomousAction, pause: _cardPause);
+    await _coachSays(
+      'All set.',
+      // Longer pause lets the ~3.8s card animation land visually
+      // before the coach speaks again.
+      pause: const Duration(milliseconds: 4200),
+    );
     await _coachSays(
       "Here's what I'll remember about you.",
       pause: _mediumPause,

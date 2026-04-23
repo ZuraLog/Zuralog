@@ -74,13 +74,43 @@ class _OnboardingTextInputState extends State<OnboardingTextInput> {
     _controller.clear();
   }
 
+  // Full dark ColorScheme so the TextField's internal Material + cursor
+  // + selection all read brand-dark regardless of system theme. Just
+  // flipping Theme.brightness at the parent ISN'T enough — the Material
+  // inside TextField reads colorScheme.surface directly.
+  static final ThemeData _darkFieldTheme = ThemeData(
+    brightness: Brightness.dark,
+    colorScheme: const ColorScheme.dark(
+      surface: AppColors.surface,
+      onSurface: AppColors.warmWhite,
+      primary: AppColors.primary,
+      onPrimary: Color(0xFF1A2E22),
+    ),
+    scaffoldBackgroundColor: AppColors.surface,
+    textSelectionTheme: const TextSelectionThemeData(
+      cursorColor: AppColors.primary,
+      selectionColor: Color(0x33CFE1B9),
+      selectionHandleColor: AppColors.primary,
+    ),
+    inputDecorationTheme: const InputDecorationTheme(
+      filled: false,
+      border: InputBorder.none,
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
-    // Use STATIC dark tokens so the input always renders correctly on
-    // the dark canvas, regardless of the ambient theme propagation.
-    // Matches the forced-dark Theme override on the parent screen.
-
-    return Container(
+    // Wrap the field in a proper dark Theme so nested Material widgets
+    // read dark tokens from the colorScheme. Also disable iOS autofill
+    // suggestion overlays (which render a light pill on top of the field
+    // and look out of place on our dark canvas).
+    return Theme(
+      data: _darkFieldTheme,
+      child: Material(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(_fieldHeight / 2),
+        clipBehavior: Clip.antiAlias,
+        child: Container(
       height: _fieldHeight,
       padding: const EdgeInsets.only(left: 18, right: 6),
       decoration: BoxDecoration(
@@ -96,6 +126,10 @@ class _OnboardingTextInputState extends State<OnboardingTextInput> {
               textCapitalization: widget.textCapitalization,
               textInputAction: TextInputAction.send,
               cursorColor: AppColors.primary,
+              keyboardAppearance: Brightness.dark,
+              autofillHints: const <String>[],
+              autocorrect: false,
+              enableSuggestions: false,
               style: AppTextStyles.bodyLarge.copyWith(
                 color: AppColors.warmWhite,
                 letterSpacing: -0.1,
@@ -109,6 +143,7 @@ class _OnboardingTextInputState extends State<OnboardingTextInput> {
                 border: InputBorder.none,
                 isCollapsed: true,
                 contentPadding: EdgeInsets.zero,
+                filled: false,
               ),
               onChanged: (_) => setState(() {}),
               onSubmitted: (_) => _submit(),
@@ -148,6 +183,8 @@ class _OnboardingTextInputState extends State<OnboardingTextInput> {
             ),
           ),
         ],
+      ),
+        ),
       ),
     );
   }

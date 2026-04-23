@@ -12,6 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 
 class OnboardingWheelInput extends StatefulWidget {
   const OnboardingWheelInput({
@@ -170,28 +171,46 @@ class _OnboardingWheelInputState extends State<OnboardingWheelInput> {
             behavior: HitTestBehavior.opaque,
             child: Container(
               height: 46,
-              padding: const EdgeInsets.symmetric(horizontal: 28),
               decoration: BoxDecoration(
                 color: colors.primary,
                 borderRadius: BorderRadius.circular(23),
               ),
-              alignment: Alignment.center,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+              child: Stack(
+                alignment: Alignment.center,
                 children: [
-                  Text(
-                    'Confirm',
-                    style: AppTextStyles.labelLarge.copyWith(
-                      color: const Color(0xFF1A2E22),
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.1,
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(23),
+                      child: const IgnorePointer(
+                        child: ZPatternOverlay(
+                          variant: ZPatternVariant.sage,
+                          opacity: 0.55,
+                          animate: true,
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  const Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 18,
-                    color: Color(0xFF1A2E22),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 28),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Confirm',
+                          style: AppTextStyles.labelLarge.copyWith(
+                            color: const Color(0xFF1A2E22),
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.1,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 18,
+                          color: Color(0xFF1A2E22),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

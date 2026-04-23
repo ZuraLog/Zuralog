@@ -14,6 +14,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 
 class OnboardingIntegrationOption {
   const OnboardingIntegrationOption({
@@ -241,23 +242,43 @@ class _OnboardingIntegrationsInputState
             child: Container(
               height: 48,
               decoration: BoxDecoration(
-                color: canContinue ? AppColors.primary : AppColors.surfaceRaised,
+                color: canContinue
+                    ? AppColors.primary
+                    : AppColors.surfaceRaised,
                 borderRadius: BorderRadius.circular(24),
               ),
-              alignment: Alignment.center,
-              child: Text(
-                canContinue
-                    ? _picked.length == 1
-                        ? 'Connect 1 app'
-                        : 'Connect ${_picked.length} apps'
-                    : 'Tap to connect',
-                style: AppTextStyles.labelLarge.copyWith(
-                  color: canContinue
-                      ? const Color(0xFF1A2E22)
-                      : AppColors.textSecondaryDark,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -0.1,
-                ),
+              child: Stack(
+                children: [
+                  if (canContinue)
+                    Positioned.fill(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: const IgnorePointer(
+                          child: ZPatternOverlay(
+                            variant: ZPatternVariant.sage,
+                            opacity: 0.55,
+                            animate: true,
+                          ),
+                        ),
+                      ),
+                    ),
+                  Center(
+                    child: Text(
+                      canContinue
+                          ? _picked.length == 1
+                              ? 'Connect 1 app'
+                              : 'Connect ${_picked.length} apps'
+                          : 'Tap to connect',
+                      style: AppTextStyles.labelLarge.copyWith(
+                        color: canContinue
+                            ? const Color(0xFF1A2E22)
+                            : AppColors.textSecondaryDark,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.1,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
