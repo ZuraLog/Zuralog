@@ -490,6 +490,7 @@ class _InputArea extends ConsumerWidget {
         input = ZChatTextField(
           maxLength: 120,
           placeholder: "One sentence — or tap send to skip.",
+          allowEmptySubmit: true,
           onSubmit: (text) => controller.submitFrustration(text),
         );
       case ChatStep.connect:
