@@ -134,6 +134,10 @@ class OnboardingChatController extends StateNotifier<ChatState> {
     );
 
     await _coachSays("${_focusLabel(focusId)} it is.");
+    // Drop a focus-preview card — shows a chart tailored to the picked
+    // category so the abstract "Sleep" or "Activity" answer immediately
+    // gets a visual payoff.
+    await _coachSends(ChatCardKind.focusPreview, pause: _cardPause);
     await _coachSays(_focusFollowUp(focusId), pause: _mediumPause);
     _advanceTo(ChatStep.goal);
   }

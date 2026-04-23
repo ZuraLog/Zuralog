@@ -23,6 +23,7 @@ import 'package:zuralog/features/coach/presentation/widgets/coach_blob.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/cards/onboarding_autonomous_action_card.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/cards/onboarding_bmr_card.dart';
+import 'package:zuralog/features/onboarding/presentation/chat/cards/onboarding_focus_preview_card.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/cards/onboarding_profile_card.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/cards/onboarding_tone_sample_card.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/controller/onboarding_chat_controller.dart';
@@ -256,11 +257,14 @@ class _CardMessage extends StatelessWidget {
         return OnboardingAutonomousActionCard(
           focusLabel: _focusDisplayLabel(profile.focus),
         );
+      case ChatCardKind.focusPreview:
+        return OnboardingFocusPreviewCard(
+          focusId: profile.focus ?? 'overall',
+        );
       case ChatCardKind.finaleProfile:
         return OnboardingProfileCard(profile: profile);
-      case ChatCardKind.focusPreview:
       case ChatCardKind.activityBaseline:
-        // Placeholder for future card variants.
+        // Reserved for a future card variant.
         return const SizedBox.shrink();
     }
   }
