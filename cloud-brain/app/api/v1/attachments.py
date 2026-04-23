@@ -24,6 +24,7 @@ Notes
 from __future__ import annotations
 
 import asyncio
+import base64
 import logging
 
 import filetype  # Fix 7.4 (C-10): Server-side MIME type detection from magic bytes
@@ -261,5 +262,14 @@ async def upload_attachment(
         processed["size_bytes"],
         len(processed["health_facts"]),
     )
+
+    # For images, return a base64 data URI the mobile client can forward to
+    # the WebSocket. The LLM orchestrator then threads this into the vision
+    # model's image_url block. We do this inline (no persistent storage) so
+    # the upload → chat round-trip has no external dependencies.
+    if processed.get("type") == "image":
+        image_mime = actual_mime or content_type or "image/jpeg"
+        b64 = base64.b64encode(file_bytes).decode("ascii")
+        processed["data_url"] = f"data:{image_mime};base64,{b64}"
 
     return processed

@@ -162,6 +162,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
           padding: const EdgeInsets.only(bottom: AppDimens.spaceMd),
           child: CoachUserMessage(
             content: message.content,
+            attachmentUrls: message.attachmentUrls,
             onEdit: () => widget.onEditMessage?.call(index),
           ),
         );

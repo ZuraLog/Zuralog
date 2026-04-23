@@ -173,20 +173,22 @@ def _process_attachments(attachments: list[dict]) -> tuple[str, list[str]]:
             continue
 
         if att.get("type") == "image":
-            # Forward the signed URL to the vision-capable LLM. Fall back to
-            # the generic url/path fields if the mobile client didn't populate
-            # signed_url. Skip silently if no HTTPS URL is available — never
-            # leak a bad reference into the model.
+            # Forward either a data URI (inline base64 from the upload endpoint)
+            # or an https signed URL. Skip silently if neither is present so
+            # we never leak a bad reference into the model.
             url = (
-                att.get("signed_url")
+                att.get("data_url")
+                or att.get("signed_url")
                 or att.get("url")
                 or att.get("path")
             )
-            if isinstance(url, str) and url.startswith("https://"):
+            if isinstance(url, str) and (
+                url.startswith("https://") or url.startswith("data:image/")
+            ):
                 image_urls.append(url)
             else:
                 logger.warning(
-                    "_process_attachments: skipping image with no https signed_url (filename=%s)",
+                    "_process_attachments: skipping image with no data_url or https url (filename=%s)",
                     att.get("filename"),
                 )
         elif att.get("context_message"):
@@ -637,7 +639,10 @@ async def websocket_chat(
             except asyncio.TimeoutError:
                 await websocket.close(code=1001)
                 break
-            if len(raw.encode("utf-8")) > 65536:
+            # 2 MB cap per WebSocket frame. Comfortably fits one downscaled
+            # image (≤1600×1600, JPEG q=85, base64-encoded → typically <500 KB)
+            # plus text + metadata, while still guarding against DoS payloads.
+            if len(raw.encode("utf-8")) > 2 * 1024 * 1024:
                 _oversized_message_count += 1
                 await websocket.send_json({"type": "error", "content": "Message payload too large"})
                 if _oversized_message_count >= _MAX_OVERSIZED:
@@ -799,6 +804,14 @@ async def websocket_chat(
                 extra_context, image_urls = _process_attachments(raw_attachments)
                 if extra_context:
                     augmented_text = f"{message_text}\n\n{extra_context}" if message_text else extra_context
+
+            # When the user sends an image, force-route to the vision-capable
+            # Zura model. The Flash tier is text-only — routing there would
+            # cause the coach to respond as if the image didn't exist.
+            if image_urls:
+                from app.config import ROUTER_MODEL_ZURA
+                routed_model = ROUTER_MODEL_ZURA
+                routed_model_tier = "zura"
 
             # ── Persist user message ──────────────────────────────────────────
             # When regenerating, the user message is already in the DB from the

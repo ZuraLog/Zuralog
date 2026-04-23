@@ -192,12 +192,17 @@ final class ApiCoachRepository implements CoachRepository {
       _ => MessageRole.assistant,
     };
 
-    // Extract signed URLs from the attachments JSONB array.
+    // Extract preview URLs from the attachments JSONB array. For images sent
+    // via the deferred path, data_url carries an inline base64 URI that the
+    // user-bubble widget renders with Image.memory.
     final List<dynamic>? rawAttachments = m['attachments'] as List<dynamic>?;
     final List<String> attachmentUrls = rawAttachments
             ?.map((a) {
               final att = a as Map<String, dynamic>;
-              return (att['signed_url'] ?? att['storage_path'] ?? '') as String;
+              return (att['data_url'] ??
+                      att['signed_url'] ??
+                      att['storage_path'] ??
+                      '') as String;
             })
             .where((url) => url.isNotEmpty)
             .toList() ??

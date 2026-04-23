@@ -29,6 +29,27 @@ class TestProcessAttachmentsImageHandling:
         # Image no longer injected as a text placeholder in the message body.
         assert "[User attached image" not in text
 
+    def test_data_url_captured(self):
+        data_url = "data:image/jpeg;base64,/9j/4AAQSkZJRg==abc"
+        atts = [{
+            "type": "image",
+            "filename": "photo.jpg",
+            "data_url": data_url,
+        }]
+        _, images = _process_attachments(atts)
+        assert images == [data_url]
+
+    def test_data_url_preferred_over_signed_url(self):
+        data_url = "data:image/jpeg;base64,/9j/==abc"
+        atts = [{
+            "type": "image",
+            "filename": "photo.jpg",
+            "data_url": data_url,
+            "signed_url": "https://cdn.example.com/photo.jpg",
+        }]
+        _, images = _process_attachments(atts)
+        assert images == [data_url]
+
     def test_non_https_url_dropped(self):
         atts = [{
             "type": "image",

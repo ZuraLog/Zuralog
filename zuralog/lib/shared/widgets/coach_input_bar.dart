@@ -14,10 +14,13 @@
 ///   The stop-generation button is shown when [isSending] is true.
 library;
 
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mime/mime.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'package:zuralog/core/di/providers.dart';
@@ -137,17 +140,51 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
       final conversationId = widget.conversationId;
 
       if (conversationId == null) {
-        // Deferred mode — pass raw file paths to the caller for later upload.
-        final rawAttachments = _attachments
-            .map((a) => {'path': a.file.path, 'name': a.name})
-            .toList();
+        // Deferred mode — no real conversation ID yet, so we can't hit the
+        // upload endpoint. Encode images inline as base64 data URIs here so
+        // the WebSocket payload still carries the actual image bytes for the
+        // vision LLM. Non-image files fall back to the legacy raw-path
+        // handoff so NewChatScreen can upload them after the conversation is
+        // created.
+        final attachmentPayloads = <Map<String, dynamic>>[];
+        final rawAttachments = <Map<String, String>>[];
+        for (final a in _attachments) {
+          if (a.type == AttachmentType.image) {
+            try {
+              final bytes = await a.file.readAsBytes();
+              final mime = lookupMimeType(a.file.path) ?? 'image/jpeg';
+              final dataUrl = 'data:$mime;base64,${base64Encode(bytes)}';
+              attachmentPayloads.add({
+                'type': 'image',
+                'filename': a.name,
+                'data_url': dataUrl,
+                'size_bytes': bytes.length,
+                'mime_type': mime,
+              });
+            } catch (_) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to read ${a.name}. Please try again.'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            }
+          } else {
+            rawAttachments.add({'path': a.file.path, 'name': a.name});
+          }
+        }
 
         setState(() {
           _attachments.clear();
           _updateAttachmentCount();
           widget.stagedAttachmentsNotifier?.value = List.unmodifiable(_attachments);
         });
-        widget.onSend(rawAttachments: rawAttachments, attachments: const []);
+        widget.onSend(
+          rawAttachments: rawAttachments,
+          attachments: attachmentPayloads,
+        );
         return;
       }
 
@@ -185,6 +222,7 @@ class CoachInputBarState extends ConsumerState<CoachInputBar> {
               'filename': a.name,
               'storage_path': uploaded.storagePath ?? '',
               'signed_url': uploaded.signedUrl ?? '',
+              if (uploaded.dataUrl != null) 'data_url': uploaded.dataUrl,
               'size_bytes': uploaded.sizeBytes ?? 0,
               'mime_type': uploaded.mimeType ?? '',
             });

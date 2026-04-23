@@ -3,6 +3,8 @@
 /// Right-aligned bubble with a long-press context menu for Copy / Edit.
 library;
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
@@ -112,13 +114,7 @@ class CoachUserMessage extends StatelessWidget {
                             .map(
                               (url) => ClipRRect(
                                 borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                                child: Image.network(
-                                  url,
-                                  width: 120,
-                                  height: 90,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                                ),
+                                child: _AttachmentThumbnail(url: url),
                               ),
                             )
                             .toList(),
@@ -138,6 +134,46 @@ class CoachUserMessage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Renders a chat-message attachment thumbnail. Handles both remote HTTPS
+/// URLs (via Image.network) and inline base64 data URIs (via Image.memory).
+class _AttachmentThumbnail extends StatelessWidget {
+  const _AttachmentThumbnail({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    const double width = 160;
+    const double height = 120;
+    const fit = BoxFit.cover;
+
+    if (url.startsWith('data:')) {
+      final commaIdx = url.indexOf(',');
+      if (commaIdx < 0) return const SizedBox.shrink();
+      try {
+        final bytes = base64Decode(url.substring(commaIdx + 1));
+        return Image.memory(
+          bytes,
+          width: width,
+          height: height,
+          fit: fit,
+          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+        );
+      } catch (_) {
+        return const SizedBox.shrink();
+      }
+    }
+
+    return Image.network(
+      url,
+      width: width,
+      height: height,
+      fit: fit,
+      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
     );
   }
 }
