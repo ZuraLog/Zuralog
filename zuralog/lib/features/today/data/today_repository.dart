@@ -492,6 +492,12 @@ class TodayRepository implements TodayRepositoryInterface {
       GoalType.sleepDuration => 'Sleep',
       GoalType.weightTarget => 'Weight',
       GoalType.weeklyRunCount => 'Runs',
+      GoalType.dailyProteinMin => 'Protein',
+      GoalType.dailyCarbsMax => 'Carbs',
+      GoalType.dailyFatMax => 'Fat',
+      GoalType.dailyFiberMin => 'Fiber',
+      GoalType.dailySodiumMax => 'Sodium',
+      GoalType.dailySugarMax => 'Sugar',
       GoalType.custom => goal.title.isNotEmpty ? goal.title : 'Goal',
     };
   }

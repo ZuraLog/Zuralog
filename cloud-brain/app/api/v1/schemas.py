@@ -139,6 +139,7 @@ class UserProfileResponse(BaseModel):
     birthday: Optional[date]
     gender: Optional[str]
     height_cm: Optional[float] = None
+    weight_kg: Optional[float] = None
     avatar_url: Optional[str] = None
     onboarding_complete: bool
     created_at: Optional[datetime] = None
@@ -197,6 +198,7 @@ class UpdateProfileRequest(BaseModel):
     birthday: Optional[date] = None
     gender: Optional[str] = None
     height_cm: Optional[float] = Field(default=None, ge=30, le=300)
+    weight_kg: Optional[float] = Field(default=None, ge=1, le=500)
     onboarding_complete: Optional[bool] = None
 
 

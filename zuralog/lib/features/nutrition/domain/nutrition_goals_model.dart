@@ -96,9 +96,6 @@ class NutritionGoals {
   /// Only includes goals with [isCompleted] == false. If a goal type is not
   /// found or is inactive, the corresponding field is null.
   ///
-  /// Note: This will be updated to use the nutrition-specific GoalType enum values
-  /// once they are added: dailyProteinTarget, dailyCarbLimit, dailyFatLimit,
-  /// dailyFiberTarget, dailySodiumLimit, dailySugarLimit.
   factory NutritionGoals.fromGoalList(List<Goal> goals) {
     double? find(GoalType type) => goals
         .where((g) => g.type == type && !g.isCompleted)
@@ -108,13 +105,12 @@ class NutritionGoals {
 
     return NutritionGoals(
       calorieBudget: find(GoalType.dailyCalorieLimit),
-      // TODO: Update these to use actual enum values once added
-      // proteinMinG: find(GoalType.dailyProteinTarget),
-      // carbsMaxG: find(GoalType.dailyCarbLimit),
-      // fatMaxG: find(GoalType.dailyFatLimit),
-      // fiberMinG: find(GoalType.dailyFiberTarget),
-      // sodiumMaxMg: find(GoalType.dailySodiumLimit),
-      // sugarMaxG: find(GoalType.dailySugarLimit),
+      proteinMinG: find(GoalType.dailyProteinMin),
+      carbsMaxG: find(GoalType.dailyCarbsMax),
+      fatMaxG: find(GoalType.dailyFatMax),
+      fiberMinG: find(GoalType.dailyFiberMin),
+      sodiumMaxMg: find(GoalType.dailySodiumMax),
+      sugarMaxG: find(GoalType.dailySugarMax),
     );
   }
 }

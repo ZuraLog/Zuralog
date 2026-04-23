@@ -80,17 +80,19 @@ class OnboardingChatController extends StateNotifier<ChatState> {
     );
 
     await _coachSays('Got it.');
-    await _coachSays('How old are you?', pause: _mediumPause);
-    _advanceTo(ChatStep.age);
+    await _coachSays('When were you born?', pause: _mediumPause);
+    _advanceTo(ChatStep.birthday);
   }
 
-  Future<void> submitAge(int age) async {
-    _userSays('$age');
+  Future<void> submitBirthday(DateTime birthday) async {
+    final age = _ageFromBirthday(birthday);
+    final formatted = _formatBirthday(birthday);
+    _userSays(formatted);
     state = state.copyWith(
-      profile: state.profile.copyWith(age: age),
+      profile: state.profile.copyWith(birthday: birthday),
     );
 
-    await _coachSays("$age — I'll use that for your heart-rate zones.");
+    await _coachSays("You're $age — I'll keep that for your health math.");
     await _coachSays('How tall are you?', pause: _mediumPause);
     _advanceTo(ChatStep.height);
   }
@@ -388,6 +390,24 @@ class OnboardingChatController extends StateNotifier<ChatState> {
       default:
         return "Got it.";
     }
+  }
+
+  static int _ageFromBirthday(DateTime birthday) {
+    final now = DateTime.now();
+    int age = now.year - birthday.year;
+    if (now.month < birthday.month ||
+        (now.month == birthday.month && now.day < birthday.day)) {
+      age--;
+    }
+    return age;
+  }
+
+  static String _formatBirthday(DateTime birthday) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${months[birthday.month - 1]} ${birthday.day}, ${birthday.year}';
   }
 
   // ── Integration / source label helpers ──────────────────────────────────

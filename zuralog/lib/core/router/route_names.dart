@@ -354,6 +354,12 @@ abstract final class RouteNames {
   /// Path for the Nutrition All-Data screen.
   static const String nutritionAllDataPath = '/nutrition/all-data';
 
+  /// Name for the Nutrition Goals Setup wizard.
+  static const String nutritionGoalsSetup = 'nutritionGoalsSetup';
+
+  /// Path for the Nutrition Goals Setup wizard.
+  static const String nutritionGoalsSetupPath = '/nutrition/goals/setup';
+
   // ── Settings (pushed over shell) ─────────────────────────────────────────
 
   /// Name for the Settings Hub screen (pushed over the shell, not a tab).

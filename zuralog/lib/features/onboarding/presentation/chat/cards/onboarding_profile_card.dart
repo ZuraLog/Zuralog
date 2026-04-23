@@ -36,7 +36,7 @@ class OnboardingProfileCard extends StatelessWidget {
           label: 'Name',
           value: profile.name!,
         ),
-      if (profile.age != null && profile.sex != null)
+      if (profile.birthday != null && profile.sex != null)
         _ProfileRow(
           color: AppColors.categoryHeart,
           label: 'Basics',
@@ -160,7 +160,19 @@ class OnboardingProfileCard extends StatelessWidget {
   static String _formatBasics(OnboardingProfile p) {
     final sexShort =
         p.sex == 'female' ? 'F' : (p.sex == 'male' ? 'M' : '—');
-    return '$sexShort · ${p.age} yrs · ${p.heightCm?.round()} cm · ${p.weightKg?.round()} kg';
+    final age = p.birthday != null ? _ageFromBirthday(p.birthday!) : null;
+    final agePart = age != null ? ' · $age yrs' : '';
+    return '$sexShort$agePart · ${p.heightCm?.round()} cm · ${p.weightKg?.round()} kg';
+  }
+
+  static int _ageFromBirthday(DateTime birthday) {
+    final now = DateTime.now();
+    int age = now.year - birthday.year;
+    if (now.month < birthday.month ||
+        (now.month == birthday.month && now.day < birthday.day)) {
+      age--;
+    }
+    return age;
   }
 
   static String _focusLabel(String focusId) {

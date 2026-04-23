@@ -37,6 +37,16 @@ VALID_TYPES: set[str] = {
 
 VALID_PERIODS: set[str] = {"daily", "weekly", "long_term"}
 
+NUTRITION_GOAL_TYPES: set[str] = {
+    "daily_calorie_limit",
+    "daily_protein_min",
+    "daily_carbs_max",
+    "daily_fat_max",
+    "daily_fiber_min",
+    "daily_sodium_max",
+    "daily_sugar_max",
+}
+
 
 # ---------------------------------------------------------------------------
 # Response schemas

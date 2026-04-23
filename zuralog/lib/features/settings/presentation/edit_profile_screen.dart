@@ -45,6 +45,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   DateTime? _birthday;
   String? _gender;
   double? _heightCm;
+  double? _weightKg;
 
   // ── Upload / save state ────────────────────────────────────────────────────
   bool _avatarUploading = false;
@@ -57,6 +58,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late DateTime? _originalBirthday;
   late String? _originalGender;
   late double? _originalHeightCm;
+  late double? _originalWeightKg;
 
   // ── Has the user changed anything? ────────────────────────────────────────
   bool get _hasChanges =>
@@ -64,7 +66,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       _nicknameController.text != _originalNickname ||
       _birthday != _originalBirthday ||
       _gender != _originalGender ||
-      _heightCm != _originalHeightCm;
+      _heightCm != _originalHeightCm ||
+      _weightKg != _originalWeightKg;
 
   @override
   void initState() {
@@ -81,6 +84,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _birthday = _originalBirthday;
     _gender = _originalGender;
     _heightCm = _originalHeightCm;
+    _originalWeightKg = profile?.weightKg;
+    _weightKg = _originalWeightKg;
 
     // Rebuild the Save button whenever text changes.
     _nameController.addListener(_onTextChanged);
@@ -164,6 +169,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             birthday: _birthday,
             gender: _gender,
             heightCm: _heightCm,
+            weightKg: _weightKg,
           );
       if (mounted) context.pop();
     } on DioException catch (e) {
@@ -331,6 +337,20 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     );
   }
 
+  void _showWeightPicker() {
+    final units = ref.read(unitsSystemProvider);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _WeightPickerSheet(
+        initialWeightKg: _weightKg,
+        units: units,
+        onSave: (kg) => setState(() => _weightKg = kg),
+      ),
+    );
+  }
+
   // ── Formatters ──────────────────────────────────────────────────────────────
 
   String _formatDate(DateTime d) {
@@ -338,6 +358,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final dd = d.day.toString().padLeft(2, '0');
     final yyyy = d.year.toString();
     return '$mm/$dd/$yyyy';
+  }
+
+  String _formatWeight() {
+    if (_weightKg == null) return 'Not set';
+    final units = ref.watch(unitsSystemProvider);
+    if (units == UnitsSystem.metric) {
+      return '${_weightKg!.toStringAsFixed(1)} kg';
+    }
+    final lbs = (_weightKg! / 0.453592).round();
+    return '$lbs lbs';
   }
 
   String _formatHeight() {
@@ -459,6 +489,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 title: 'Height',
                 subtitle: _formatHeight(),
                 onTap: _showHeightPicker,
+              ),
+              ZSettingsTile(
+                icon: Icons.monitor_weight_outlined,
+                iconColor: AppColors.categoryNutrition,
+                title: 'Weight',
+                subtitle: _formatWeight(),
+                onTap: _showWeightPicker,
               ),
             ],
           ),
@@ -807,6 +844,117 @@ class _HeightPickerSheetState extends State<_HeightPickerSheet> {
               label: 'Save',
               onPressed: _save,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── _WeightPickerSheet ─────────────────────────────────────────────────────────
+
+/// Bottom sheet for entering weight — adapts to metric (kg) or imperial (lbs).
+class _WeightPickerSheet extends StatefulWidget {
+  const _WeightPickerSheet({
+    required this.initialWeightKg,
+    required this.units,
+    required this.onSave,
+  });
+
+  final double? initialWeightKg;
+  final UnitsSystem units;
+  final ValueChanged<double?> onSave;
+
+  @override
+  State<_WeightPickerSheet> createState() => _WeightPickerSheetState();
+}
+
+class _WeightPickerSheetState extends State<_WeightPickerSheet> {
+  late TextEditingController _controller;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final w = widget.initialWeightKg;
+    if (widget.units == UnitsSystem.metric) {
+      _controller = TextEditingController(
+        text: w != null ? w.toStringAsFixed(1) : '',
+      );
+    } else {
+      _controller = TextEditingController(
+        text: w != null ? (w / 0.453592).round().toString() : '',
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    double? kg;
+    if (widget.units == UnitsSystem.metric) {
+      final raw = double.tryParse(_controller.text.trim());
+      if (raw == null || raw < 1 || raw > 500) {
+        setState(() => _error = 'Please enter a weight between 1 and 500 kg.');
+        return;
+      }
+      kg = raw;
+    } else {
+      final lbs = double.tryParse(_controller.text.trim());
+      if (lbs == null || lbs < 2 || lbs > 1100) {
+        setState(() => _error = 'Please enter a weight between 2 and 1,100 lbs.');
+        return;
+      }
+      kg = lbs * 0.453592;
+    }
+    widget.onSave(kg);
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final isMetric = widget.units == UnitsSystem.metric;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        margin: const EdgeInsets.all(AppDimens.spaceMd),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(AppDimens.shapeLg),
+        ),
+        padding: const EdgeInsets.all(AppDimens.spaceLg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Weight',
+              style: AppTextStyles.displaySmall.copyWith(color: colors.textPrimary),
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            AppTextField(
+              hintText: isMetric ? 'Weight (kg)' : 'Weight (lbs)',
+              controller: _controller,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              autofocus: true,
+              textInputAction: TextInputAction.done,
+              onSubmitted: _save,
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: AppDimens.spaceSm),
+              Text(
+                _error!,
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.statusError),
+              ),
+            ],
+            const SizedBox(height: AppDimens.spaceMd),
+            ZButton(label: 'Save', onPressed: _save),
           ],
         ),
       ),

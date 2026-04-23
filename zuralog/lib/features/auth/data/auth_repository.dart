@@ -284,6 +284,7 @@ class AuthRepository {
   ///   [gender]: New gender identifier (optional).
   ///   [onboardingComplete]: Marks onboarding as done (optional).
   ///   [heightCm]: Height in centimetres (optional).
+  ///   [weightKg]: Weight in kilograms (optional).
   ///
   /// Returns:
   ///   The updated [UserProfile] as returned by the server.
@@ -297,6 +298,7 @@ class AuthRepository {
     String? gender,
     bool? onboardingComplete,
     double? heightCm,
+    double? weightKg,
   }) async {
     final body = <String, dynamic>{};
     if (displayName != null) body['display_name'] = displayName;
@@ -309,6 +311,7 @@ class AuthRepository {
       body['onboarding_complete'] = onboardingComplete;
     }
     if (heightCm != null) body['height_cm'] = heightCm;
+    if (weightKg != null) body['weight_kg'] = weightKg;
     final response = await _apiClient.patch(
       '/api/v1/users/me/profile',
       body: body,

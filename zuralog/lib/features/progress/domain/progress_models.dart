@@ -40,6 +40,12 @@ enum GoalType {
   sleepDuration,
   stepCount,
   waterIntake,
+  dailyProteinMin,
+  dailyCarbsMax,
+  dailyFatMax,
+  dailyFiberMin,
+  dailySodiumMax,
+  dailySugarMax,
   custom;
 
   /// Human-readable display name.
@@ -57,6 +63,18 @@ enum GoalType {
         return 'Step Count';
       case GoalType.waterIntake:
         return 'Daily Water Intake';
+      case GoalType.dailyProteinMin:
+        return 'Daily Protein Minimum';
+      case GoalType.dailyCarbsMax:
+        return 'Daily Carbs Maximum';
+      case GoalType.dailyFatMax:
+        return 'Daily Fat Maximum';
+      case GoalType.dailyFiberMin:
+        return 'Daily Fiber Minimum';
+      case GoalType.dailySodiumMax:
+        return 'Daily Sodium Maximum';
+      case GoalType.dailySugarMax:
+        return 'Daily Sugar Maximum';
       case GoalType.custom:
         return 'Custom';
     }
@@ -77,6 +95,18 @@ enum GoalType {
         return GoalType.stepCount;
       case 'water_intake':
         return GoalType.waterIntake;
+      case 'daily_protein_min':
+        return GoalType.dailyProteinMin;
+      case 'daily_carbs_max':
+        return GoalType.dailyCarbsMax;
+      case 'daily_fat_max':
+        return GoalType.dailyFatMax;
+      case 'daily_fiber_min':
+        return GoalType.dailyFiberMin;
+      case 'daily_sodium_max':
+        return GoalType.dailySodiumMax;
+      case 'daily_sugar_max':
+        return GoalType.dailySugarMax;
       case 'custom':
         return GoalType.custom;
       default:
@@ -100,6 +130,18 @@ enum GoalType {
         return 'step_count';
       case GoalType.waterIntake:
         return 'water_intake';
+      case GoalType.dailyProteinMin:
+        return 'daily_protein_min';
+      case GoalType.dailyCarbsMax:
+        return 'daily_carbs_max';
+      case GoalType.dailyFatMax:
+        return 'daily_fat_max';
+      case GoalType.dailyFiberMin:
+        return 'daily_fiber_min';
+      case GoalType.dailySodiumMax:
+        return 'daily_sodium_max';
+      case GoalType.dailySugarMax:
+        return 'daily_sugar_max';
       case GoalType.custom:
         return 'custom';
     }
@@ -1062,6 +1104,13 @@ extension GoalTypeCategory on GoalType {
         return AppColors.categorySleep;
       case GoalType.waterIntake:
         return AppColors.categoryVitals;
+      case GoalType.dailyProteinMin:
+      case GoalType.dailyCarbsMax:
+      case GoalType.dailyFatMax:
+      case GoalType.dailyFiberMin:
+      case GoalType.dailySodiumMax:
+      case GoalType.dailySugarMax:
+        return AppColors.categoryNutrition;
       case GoalType.custom:
         return AppColors.primary;
     }

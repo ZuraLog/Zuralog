@@ -94,6 +94,11 @@ class User(Base):
         nullable=True,
         comment="User's height in centimetres (30–300 cm)",
     )
+    weight_kg: Mapped[float | None] = mapped_column(
+        Numeric(5, 1, asdecimal=False),
+        nullable=True,
+        comment="User's weight in kilograms (2–500 kg)",
+    )
     avatar_url: Mapped[str | None] = mapped_column(
         String(2048),
         nullable=True,

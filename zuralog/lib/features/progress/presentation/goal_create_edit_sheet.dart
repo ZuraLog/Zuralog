@@ -201,6 +201,13 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
         return Icons.directions_walk_rounded;
       case GoalType.waterIntake:
         return Icons.water_drop_rounded;
+      case GoalType.dailyProteinMin:
+      case GoalType.dailyCarbsMax:
+      case GoalType.dailyFatMax:
+      case GoalType.dailyFiberMin:
+      case GoalType.dailySodiumMax:
+      case GoalType.dailySugarMax:
+        return Icons.restaurant_rounded;
       case GoalType.custom:
         return Icons.tune_rounded;
     }
@@ -743,6 +750,15 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
         return 'steps';
       case GoalType.waterIntake:
         return 'glasses';
+      case GoalType.dailyProteinMin:
+      case GoalType.dailyCarbsMax:
+      case GoalType.dailyFatMax:
+      case GoalType.dailyFiberMin:
+        return 'g';
+      case GoalType.dailySodiumMax:
+        return 'mg';
+      case GoalType.dailySugarMax:
+        return 'g';
       case GoalType.custom:
         return '';
     }

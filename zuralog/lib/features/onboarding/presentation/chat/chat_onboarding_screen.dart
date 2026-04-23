@@ -33,7 +33,8 @@ import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_
 import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_integrations_input.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_pill_input.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_text_input.dart';
-import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_wheel_input.dart';
+import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_date_picker_input.dart';
+import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_unit_wheel_input.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/widgets/onboarding_coach_bubble.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/widgets/onboarding_progress_dots.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/widgets/onboarding_typing_indicator.dart';
@@ -128,10 +129,15 @@ class _ChatOnboardingScreenState extends ConsumerState<ChatOnboardingScreen> {
     try {
       await ref.read(userProfileProvider.notifier).update(
             onboardingComplete: true,
-            nickname: (profile.name ?? '').isNotEmpty ? profile.name : null,
+            nickname:
+                (profile.name ?? '').isNotEmpty ? profile.name : null,
+            heightCm: profile.heightCm,
+            weightKg: profile.weightKg,
+            birthday: profile.birthday,
+            gender: profile.sex,
           );
     } catch (_) {
-      // Non-fatal for the UX — router will route by auth state anyway.
+      // Non-fatal — router navigates by auth state regardless.
     }
     if (!mounted) return;
     // Clear the replay flag so the router guard resumes normal behaviour.
@@ -288,12 +294,19 @@ class _CardMessage extends StatelessWidget {
   /// Mifflin-St Jeor — widely used clinical BMR estimator. Falls back to a
   /// reasonable default if we don't have the full picture yet.
   static int _estimateBmr(OnboardingProfile p) {
-    if (p.heightCm == null || p.weightKg == null || p.age == null) {
+    if (p.heightCm == null || p.weightKg == null || p.birthday == null) {
       return 1700;
     }
     final kg = p.weightKg!;
     final cm = p.heightCm!;
-    final age = p.age!.toDouble();
+    final now = DateTime.now();
+    int ageInt = now.year - p.birthday!.year;
+    if (now.month < p.birthday!.month ||
+        (now.month == p.birthday!.month &&
+            now.day < p.birthday!.day)) {
+      ageInt--;
+    }
+    final age = ageInt.toDouble();
     // Male: 10w + 6.25h − 5a + 5 | Female: − 161.  For "other" we average.
     final offset = p.sex == 'male'
         ? 5
@@ -341,28 +354,17 @@ class _InputArea extends ConsumerWidget {
           ],
           onSelect: controller.submitSex,
         );
-      case ChatStep.age:
-        input = OnboardingWheelInput(
-          minValue: 14,
-          maxValue: 90,
-          initialValue: 30,
-          unit: 'years',
-          onSubmit: controller.submitAge,
+      case ChatStep.birthday:
+        input = OnboardingDatePickerInput(
+          initialDate: state.profile.birthday,
+          onSubmit: controller.submitBirthday,
         );
       case ChatStep.height:
-        input = OnboardingWheelInput(
-          minValue: 120,
-          maxValue: 220,
-          initialValue: 170,
-          unit: 'cm',
+        input = OnboardingHeightInput(
           onSubmit: controller.submitHeight,
         );
       case ChatStep.weight:
-        input = OnboardingWheelInput(
-          minValue: 30,
-          maxValue: 200,
-          initialValue: 70,
-          unit: 'kg',
+        input = OnboardingWeightInput(
           onSubmit: controller.submitWeight,
         );
       case ChatStep.focus:
