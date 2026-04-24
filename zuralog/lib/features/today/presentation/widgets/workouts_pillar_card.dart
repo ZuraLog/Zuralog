@@ -32,7 +32,7 @@ class WorkoutsPillarCard extends ConsumerWidget {
       return ZPillarCard(
         icon: Icons.fitness_center_rounded,
         categoryColor: AppColors.categoryActivity,
-        label: 'Workouts',
+        label: 'Fitness',
         headline: 'No workouts yet',
         contextStat: 'No data yet',
         onTap: onTap,
@@ -42,7 +42,7 @@ class WorkoutsPillarCard extends ConsumerWidget {
     return ZPillarCard(
       icon: Icons.fitness_center_rounded,
       categoryColor: AppColors.categoryActivity,
-      label: 'Workouts',
+      label: 'Fitness',
       headline: '${summary.workoutsThisWeek}',
       contextStat: 'This week',
       secondaryStats: [

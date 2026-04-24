@@ -38,7 +38,7 @@ class WorkoutOverviewScreen extends ConsumerWidget {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            title: const Text('Workout'),
+            title: const Text('Fitness'),
             pinned: true,
             backgroundColor: colors.surface,
             surfaceTintColor: Colors.transparent,
@@ -361,7 +361,7 @@ class _WeeklySnapshot extends StatelessWidget {
               children: [
                 Expanded(
                   child: _StatCell(
-                    label: 'Workouts',
+                    label: 'Fitness',
                     value: '$count',
                     valueColor: AppColors.categoryActivity,
                   ),

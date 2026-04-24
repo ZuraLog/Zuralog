@@ -60,7 +60,7 @@ const List<_TileDef> _tiles = [
   _TileDef(key: 'meal',       icon: Icons.restaurant_rounded,       label: 'Meal',         behaviour: _TileBehaviour.fullScreen),
   _TileDef(key: 'supplement', icon: Icons.medication_rounded,       label: 'Supplements',  behaviour: _TileBehaviour.fullScreen),
   _TileDef(key: 'symptom',    icon: Icons.healing_rounded,          label: 'Symptom',      behaviour: _TileBehaviour.fullScreen),
-  _TileDef(key: 'workout',    icon: Icons.fitness_center_rounded,   label: 'Workout',      behaviour: _TileBehaviour.fullScreen),
+  _TileDef(key: 'workout',    icon: Icons.fitness_center_rounded,   label: 'Fitness',      behaviour: _TileBehaviour.fullScreen),
 ];
 
 /// Maps each tile key to the canonical backend metric-type slug reported
