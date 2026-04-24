@@ -20,6 +20,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/coach/presentation/widgets/coach_blob.dart';
+import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/cards/onboarding_autonomous_action_card.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/cards/onboarding_bmr_card.dart';
@@ -162,11 +163,16 @@ class _ChatOnboardingScreenState extends ConsumerState<ChatOnboardingScreen> {
     if (!mounted) return;
     // Clear the replay flag so the router guard resumes normal behaviour.
     ref.read(isReplayingOnboardingProvider.notifier).state = false;
-    ctxGo(context);
-  }
-
-  void ctxGo(BuildContext context) {
-    context.go(RouteNames.todayPath);
+    // Skip the paywall for users who are already on Pro (e.g. replayed
+    // onboarding after an earlier purchase). Everyone else sees the paywall
+    // before landing on Today.
+    final isPremium = ref.read(isPremiumProvider);
+    if (!mounted) return;
+    if (isPremium) {
+      context.go(RouteNames.todayPath);
+    } else {
+      context.go(RouteNames.onboardingPaywallPath);
+    }
   }
 }
 
