@@ -64,6 +64,7 @@ class BodyNowHeadline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!state.hasAnySignal) return const SizedBox.shrink();
     final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),

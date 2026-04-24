@@ -60,6 +60,13 @@ class MuscleLogRepository {
     }
   }
 
+  /// Marks the log for [group] on [date] as synced to the backend.
+  Future<void> markSynced(String date, MuscleGroup group) async {
+    final existing = getLogForMuscle(date, group);
+    if (existing == null) return;
+    await saveLog(existing.copyWith(synced: true));
+  }
+
   /// Deletes all logs for [date].
   Future<void> clearLogsForDate(String date) async {
     await _prefs.remove(_logsKey(date));

@@ -8,6 +8,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/body/data/muscle_log_repository.dart';
+import 'package:zuralog/features/body/data/muscle_log_sync_service.dart';
 import 'package:zuralog/features/body/domain/body_state.dart';
 import 'package:zuralog/features/body/domain/muscle_log.dart';
 import 'package:zuralog/features/body/domain/muscle_state.dart';
@@ -22,11 +23,24 @@ String _todayIso() {
   return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
 }
 
-class BodyDetailSheet extends ConsumerWidget {
+class BodyDetailSheet extends ConsumerStatefulWidget {
   const BodyDetailSheet({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BodyDetailSheet> createState() => _BodyDetailSheetState();
+}
+
+class _BodyDetailSheetState extends ConsumerState<BodyDetailSheet> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(muscleLogSyncServiceProvider).syncPending();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final async = ref.watch(bodyStateProvider);
     final overrides = ref.watch(muscleStateOverridesProvider);
@@ -242,6 +256,14 @@ class _LogRow extends StatelessWidget {
             log.loggedAtTime,
             style:
                 AppTextStyles.bodySmall.copyWith(color: colors.textSecondary),
+          ),
+          const SizedBox(width: AppDimens.spaceXs),
+          Icon(
+            log.synced ? Icons.cloud_done : Icons.cloud_upload,
+            size: 12,
+            color: log.synced
+                ? AppColors.categoryActivity.withValues(alpha: 0.55)
+                : colors.textSecondary.withValues(alpha: 0.35),
           ),
           const SizedBox(width: AppDimens.spaceXs),
           Icon(Icons.chevron_right_rounded,

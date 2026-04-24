@@ -5,7 +5,7 @@ import uuid
 from datetime import date, datetime, time, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,7 +23,7 @@ _VALID_STATES = {"fresh", "worked", "sore"}
 
 
 class MuscleLogIn(BaseModel):
-    muscle_group: str
+    muscle_group: str = Field(..., max_length=50)
     state: str
     log_date: str
     logged_at_time: str

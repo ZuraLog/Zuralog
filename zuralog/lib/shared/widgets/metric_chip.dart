@@ -37,11 +37,13 @@ class MetricChip extends StatelessWidget {
     final colors = AppColorsOf(context);
 
     final content = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           label.toUpperCase(),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: AppTextStyles.labelSmall.copyWith(
             color: colors.textSecondary,
             letterSpacing: 1.2,
@@ -50,6 +52,7 @@ class MetricChip extends StatelessWidget {
         ),
         const SizedBox(height: AppDimens.spaceXxs),
         Row(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
@@ -78,6 +81,8 @@ class MetricChip extends StatelessWidget {
           const SizedBox(height: AppDimens.spaceXxs),
           Text(
             delta!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: AppTextStyles.labelSmall.copyWith(
               color: deltaColor ?? colors.textSecondary,
               fontWeight: FontWeight.w700,

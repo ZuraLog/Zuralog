@@ -148,14 +148,19 @@ class _LoadedBody extends StatelessWidget {
       data: (m) => m,
       orElse: () => PillarMetrics.empty,
     );
-    return Column(children: [
-      BodyNowFigureStack(state: state),
-      const SizedBox(height: AppDimens.spaceSm),
-      BodyNowHeadline(state: state),
-      const SizedBox(height: AppDimens.spaceMd),
-      BodyNowMetricsRail(metrics: metrics, onChipTapped: onChipTapped),
-      const SizedBox(height: AppDimens.spaceMd),
-    ]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        BodyNowFigureStack(state: state),
+        const SizedBox(height: AppDimens.spaceSm),
+        if (state.hasAnySignal) ...[
+          BodyNowHeadline(state: state),
+          const SizedBox(height: AppDimens.spaceMd),
+        ],
+        BodyNowMetricsRail(metrics: metrics, onChipTapped: onChipTapped),
+        const SizedBox(height: AppDimens.spaceMd),
+      ],
+    );
   }
 }
 

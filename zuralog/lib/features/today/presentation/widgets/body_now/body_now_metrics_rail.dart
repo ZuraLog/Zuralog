@@ -35,7 +35,7 @@ class BodyNowMetricsRail extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           _expanded(context, chip: _nutritionChip(metrics), divider: true),
           _expanded(context, chip: _fitnessChip(metrics), divider: true),

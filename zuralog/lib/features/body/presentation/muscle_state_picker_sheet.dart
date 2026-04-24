@@ -3,6 +3,8 @@
 /// [MuscleLogRepository].
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +12,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/body/data/muscle_log_repository.dart';
+import 'package:zuralog/features/body/data/muscle_log_sync_service.dart';
 import 'package:zuralog/features/body/domain/body_state.dart';
 import 'package:zuralog/features/body/domain/muscle_log.dart';
 import 'package:zuralog/features/body/domain/muscle_state.dart';
@@ -215,6 +218,7 @@ class _MuscleStatePickerSheetState
       loggedAtTime: _timeOfDayToString(_selectedTime),
     );
     await ref.read(muscleLogRepositoryProvider).saveLog(log);
+    unawaited(ref.read(muscleLogSyncServiceProvider).syncLog(log));
     if (context.mounted) Navigator.of(context).pop();
   }
 
