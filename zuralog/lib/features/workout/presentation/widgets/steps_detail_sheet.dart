@@ -1,7 +1,5 @@
 library;
 
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,8 +7,11 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/data/domain/data_models.dart' show MetricDataPoint;
+import 'package:zuralog/features/data/domain/tile_visualization_config.dart'
+    show BarChartConfig, BarPoint;
 import 'package:zuralog/features/workout/domain/steps_summary.dart';
 import 'package:zuralog/features/workout/providers/steps_providers.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 Future<void> showStepsDetailSheet(BuildContext context) async {
   await showModalBottomSheet<void>(
@@ -79,14 +80,12 @@ class _StepsDetailSheet extends ConsumerWidget {
             ),
             const SizedBox(height: AppDimens.spaceLg),
             summaryAsync.when(
-              loading: () => const SizedBox(
+              loading: () => const ZLoadingSkeleton(
+                width: double.infinity,
                 height: 200,
-                child: Center(child: CircularProgressIndicator()),
               ),
-              error: (_, _) => Text(
-                'Could not load step history.',
-                style: AppTextStyles.bodyMedium
-                    .copyWith(color: colors.textSecondary),
+              error: (_, _) => const ZErrorState(
+                message: 'Could not load step history.',
               ),
               data: (summary) => _SheetBody(
                 summary: summary,
@@ -129,7 +128,15 @@ class _SheetBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _StepsBarChart(dataPoints: summary.dataPoints),
+        SizedBox(
+          height: 160,
+          child: ZChart(
+            config: _toBarConfig(summary.dataPoints),
+            mode: ChartMode.full,
+            color: AppColors.categoryActivity,
+            unit: 'steps',
+          ),
+        ),
         const SizedBox(height: AppDimens.spaceLg),
         _StatsRow(summary: summary),
         const SizedBox(height: AppDimens.spaceLg),
@@ -180,54 +187,18 @@ class _SheetBody extends StatelessWidget {
     }
     return '$n';
   }
-}
 
-// ── 7-day bar chart ───────────────────────────────────────────────────────────
-
-class _StepsBarChart extends StatelessWidget {
-  const _StepsBarChart({required this.dataPoints});
-
-  final List<MetricDataPoint> dataPoints;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    if (dataPoints.isEmpty) {
-      return SizedBox(
-        height: 120,
-        child: Center(
-          child: Text(
-            'No step data yet.',
-            style:
-                AppTextStyles.bodySmall.copyWith(color: colors.textSecondary),
+  static BarChartConfig _toBarConfig(List<MetricDataPoint> points) {
+    return BarChartConfig(
+      bars: [
+        for (var i = 0; i < points.length; i++)
+          BarPoint(
+            label: _dayLabel(points[i].timestamp),
+            value: points[i].value,
+            isToday: i == points.length - 1,
           ),
-        ),
-      );
-    }
-
-    final maxVal = dataPoints
-        .map((p) => p.value)
-        .reduce(math.max)
-        .clamp(1.0, double.infinity);
-
-    return SizedBox(
-      height: 120,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          for (var i = 0; i < dataPoints.length; i++) ...[
-            Expanded(
-              child: _Bar(
-                value: dataPoints[i].value,
-                maxValue: maxVal,
-                isToday: i == dataPoints.length - 1,
-                dayLabel: _dayLabel(dataPoints[i].timestamp),
-              ),
-            ),
-            if (i < dataPoints.length - 1) const SizedBox(width: 4),
-          ],
-        ],
-      ),
+      ],
+      showAvgLine: true,
     );
   }
 
@@ -239,69 +210,6 @@ class _StepsBarChart extends StatelessWidget {
     } catch (_) {
       return '';
     }
-  }
-}
-
-class _Bar extends StatelessWidget {
-  const _Bar({
-    required this.value,
-    required this.maxValue,
-    required this.isToday,
-    required this.dayLabel,
-  });
-
-  final double value;
-  final double maxValue;
-  final bool isToday;
-  final String dayLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    final ratio = (value / maxValue).clamp(0.0, 1.0);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        Expanded(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Flexible(
-                child: FractionallySizedBox(
-                  heightFactor: ratio < 0.04 ? 0.04 : ratio,
-                  alignment: Alignment.bottomCenter,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isToday
-                          ? AppColors.categoryActivity
-                          : AppColors.categoryActivity
-                              .withValues(alpha: 0.35),
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(3),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          dayLabel,
-          textAlign: TextAlign.center,
-          style: AppTextStyles.labelSmall.copyWith(
-            fontSize: 9,
-            color: isToday
-                ? AppColors.categoryActivity
-                : colors.textSecondary,
-            fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
-          ),
-        ),
-      ],
-    );
   }
 }
 
@@ -419,44 +327,40 @@ class _ToggleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: AppDimens.spaceSm,
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 18, color: AppColors.categoryActivity),
-            const SizedBox(width: AppDimens.spaceSm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: AppTextStyles.titleMedium.copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
+    return ZuralogCard(
+      variant: ZCardVariant.data,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimens.spaceMd,
+        vertical: AppDimens.spaceSm,
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: AppColors.categoryActivity),
+          const SizedBox(width: AppDimens.spaceSm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: AppTextStyles.titleMedium.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w600,
                   ),
-                  Text(
-                    description,
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: colors.textSecondary),
-                  ),
-                ],
-              ),
+                ),
+                Text(
+                  description,
+                  style: AppTextStyles.bodySmall
+                      .copyWith(color: colors.textSecondary),
+                ),
+              ],
             ),
-            Switch(
-              value: value,
-              onChanged: (_) => onToggle(),
-              activeThumbColor: AppColors.categoryActivity,
-            ),
-          ],
-        ),
+          ),
+          ZToggle(
+            value: value,
+            onChanged: (_) => onToggle(),
+          ),
+        ],
       ),
     );
   }

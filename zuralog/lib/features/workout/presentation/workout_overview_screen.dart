@@ -20,9 +20,12 @@ import 'package:zuralog/features/body/presentation/tappable_body_side.dart';
 import 'package:zuralog/features/body/providers/body_state_provider.dart';
 import 'package:zuralog/features/body/providers/muscle_state_overrides_provider.dart';
 import 'package:zuralog/features/data/domain/data_models.dart' show MetricDataPoint;
+import 'package:zuralog/features/data/domain/tile_visualization_config.dart'
+    show BarChartConfig, BarPoint;
 import 'package:zuralog/features/workout/domain/steps_summary.dart';
 import 'package:zuralog/features/workout/presentation/widgets/steps_detail_sheet.dart';
 import 'package:zuralog/features/workout/providers/steps_providers.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/workout/domain/completed_workout.dart';
@@ -31,7 +34,6 @@ import 'package:zuralog/features/workout/domain/workout_session.dart';
 import 'package:zuralog/features/workout/presentation/widgets/workout_stats_row.dart'
     show formatWorkoutDuration;
 import 'package:zuralog/features/workout/providers/workout_session_providers.dart';
-import 'package:zuralog/shared/widgets/widgets.dart';
 
 String _todayIso() {
   final now = DateTime.now();
@@ -609,7 +611,10 @@ class _StepsCard extends ConsumerWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         child: summaryAsync.when(
-          loading: () => const SizedBox(height: 100),
+          loading: () => const ZLoadingSkeleton(
+            width: double.infinity,
+            height: 100,
+          ),
           error: (_, _) => const SizedBox(height: 100),
           data: (summary) => _StepsCardLoaded(
             summary: summary,
@@ -696,7 +701,14 @@ class _StepsCardLoaded extends StatelessWidget {
         ],
         if (summary.dataPoints.isNotEmpty) ...[
           const SizedBox(height: AppDimens.spaceMd),
-          _MiniBarChart(dataPoints: summary.dataPoints),
+          SizedBox(
+            height: 36,
+            child: ZChart(
+              config: _toBarConfig(summary.dataPoints),
+              mode: ChartMode.sparkline,
+              color: AppColors.categoryActivity,
+            ),
+          ),
         ],
       ],
     );
@@ -709,66 +721,27 @@ class _StepsCardLoaded extends StatelessWidget {
     }
     return n.toString();
   }
-}
 
-class _MiniBarChart extends StatelessWidget {
-  const _MiniBarChart({required this.dataPoints});
-
-  final List<MetricDataPoint> dataPoints;
-
-  @override
-  Widget build(BuildContext context) {
-    final maxVal = dataPoints
-        .map((p) => p.value)
-        .fold(0.0, (a, b) => a > b ? a : b)
-        .clamp(1.0, double.infinity);
-
-    return SizedBox(
-      height: 36,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          for (var i = 0; i < dataPoints.length; i++) ...[
-            Expanded(
-              child: _MiniBar(
-                value: dataPoints[i].value,
-                maxValue: maxVal,
-                isToday: i == dataPoints.length - 1,
-              ),
-            ),
-            if (i < dataPoints.length - 1) const SizedBox(width: 3),
-          ],
-        ],
-      ),
+  static BarChartConfig _toBarConfig(List<MetricDataPoint> points) {
+    return BarChartConfig(
+      bars: [
+        for (var i = 0; i < points.length; i++)
+          BarPoint(
+            label: _dayLabel(points[i].timestamp),
+            value: points[i].value,
+            isToday: i == points.length - 1,
+          ),
+      ],
     );
   }
-}
 
-class _MiniBar extends StatelessWidget {
-  const _MiniBar({
-    required this.value,
-    required this.maxValue,
-    required this.isToday,
-  });
-
-  final double value;
-  final double maxValue;
-  final bool isToday;
-
-  @override
-  Widget build(BuildContext context) {
-    final ratio = (value / maxValue).clamp(0.0, 1.0);
-    return FractionallySizedBox(
-      heightFactor: ratio < 0.06 ? 0.06 : ratio,
-      alignment: Alignment.bottomCenter,
-      child: Container(
-        decoration: BoxDecoration(
-          color: isToday
-              ? AppColors.categoryActivity
-              : AppColors.categoryActivity.withValues(alpha: 0.35),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
-        ),
-      ),
-    );
+  static String _dayLabel(String iso) {
+    try {
+      final d = DateTime.parse(iso);
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      return days[d.weekday % 7];
+    } catch (_) {
+      return '';
+    }
   }
 }
