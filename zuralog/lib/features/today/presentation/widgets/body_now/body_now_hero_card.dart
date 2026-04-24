@@ -58,8 +58,8 @@ class BodyNowHeroCard extends ConsumerWidget {
                 data: (state) {
                   if (!state.hasAnySignal) {
                     return BodyNowZeroState(
-                      onConnect: () =>
-                          context.go(RouteNames.settingsIntegrationsPath),
+                      onConnect: () => context
+                          .push(RouteNames.settingsIntegrationsPath),
                     );
                   }
                   return _LoadedBody(
@@ -92,6 +92,9 @@ class BodyNowHeroCard extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      // Root-navigator so the sheet covers the floating bottom-nav pill
+      // instead of being clipped by it.
+      useRootNavigator: true,
       builder: (_) => const BodyDetailSheet(),
     );
   }
@@ -101,13 +104,17 @@ class BodyNowHeroCard extends ConsumerWidget {
           event: AnalyticsEvents.todayBodyNowChipTapped,
           properties: {'chip': chip.name},
         );
+    // Sub-screens are pushed (matches how the rest of the app routes
+    // to score-breakdown / detail views). `context.go` to a nested
+    // path from inside the Today tab silently no-ops in this router's
+    // shell config — that was the "tap does nothing" bug.
     switch (chip) {
       case BodyNowChip.readiness:
-        context.go(RouteNames.dataScoreBreakdownPath);
+        context.push(RouteNames.dataScoreBreakdownPath);
       case BodyNowChip.hrv:
       case BodyNowChip.rhr:
       case BodyNowChip.sleep:
-        context.go(RouteNames.dataPath);
+        context.push(RouteNames.dataPath);
     }
   }
 
@@ -115,7 +122,7 @@ class BodyNowHeroCard extends ConsumerWidget {
     ref.read(analyticsServiceProvider).capture(
           event: AnalyticsEvents.todayBodyNowCtaTapped,
         );
-    context.go(route);
+    context.push(route);
   }
 }
 

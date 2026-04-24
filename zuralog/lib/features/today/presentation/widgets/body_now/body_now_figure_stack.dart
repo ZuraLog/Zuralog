@@ -14,8 +14,15 @@ import 'package:zuralog/features/body/domain/muscle_state.dart';
 import 'package:zuralog/features/workout/domain/exercise.dart' show MuscleGroup;
 import 'package:zuralog/shared/widgets/muscle_highlight_diagram.dart';
 
-const double _figureHeight = 280;
+const double _figureHeight = 220;
 const Duration _breatheDuration = Duration(milliseconds: 4200);
+
+/// Base silhouette colour. The widget's default (`surfaceRaised`) is only
+/// ~9 RGB steps above the hero card surface, so the figure was almost
+/// invisible. Blending text-secondary onto the card gives a clearly
+/// visible mid-grey body without competing with the state-colour zones.
+Color _bodyBase(AppColorsOf colors) =>
+    colors.textSecondary.withValues(alpha: 0.45);
 
 class BodyNowFigureStack extends StatefulWidget {
   const BodyNowFigureStack({super.key, required this.state});
@@ -68,6 +75,8 @@ class _BodyNowFigureStackState extends State<BodyNowFigureStack>
   @override
   Widget build(BuildContext context) {
     final zones = _zoneMap();
+    final colors = AppColorsOf(context);
+    final base = _bodyBase(colors);
     final reducedMotion = MediaQuery.disableAnimationsOf(context);
 
     Widget fig(MuscleHighlightDiagram diagram, AnimationController ctrl) {
@@ -89,38 +98,47 @@ class _BodyNowFigureStackState extends State<BodyNowFigureStack>
       );
     }
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: Column(children: [
-            fig(
-              MuscleHighlightDiagram.zones(
-                zones: zones,
-                onlyFront: true,
-                strokeless: true,
+    // Inset the row so the two figures sit closer to the card's centre
+    // instead of flush against the outer edges. The Expanded children
+    // still split the remaining width evenly, so both figures stay the
+    // same size and aligned to each other.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: Column(children: [
+              fig(
+                MuscleHighlightDiagram.zones(
+                  zones: zones,
+                  baseColor: base,
+                  onlyFront: true,
+                  strokeless: true,
+                ),
+                _frontCtrl,
               ),
-              _frontCtrl,
-            ),
-            const SizedBox(height: 2),
-            const _FigureLabel(text: 'Front'),
-          ]),
-        ),
-        Expanded(
-          child: Column(children: [
-            fig(
-              MuscleHighlightDiagram.zones(
-                zones: zones,
-                onlyBack: true,
-                strokeless: true,
+              const SizedBox(height: 2),
+              const _FigureLabel(text: 'Front'),
+            ]),
+          ),
+          Expanded(
+            child: Column(children: [
+              fig(
+                MuscleHighlightDiagram.zones(
+                  zones: zones,
+                  baseColor: base,
+                  onlyBack: true,
+                  strokeless: true,
+                ),
+                _backCtrl,
               ),
-              _backCtrl,
-            ),
-            const SizedBox(height: 2),
-            const _FigureLabel(text: 'Back'),
-          ]),
-        ),
-      ],
+              const SizedBox(height: 2),
+              const _FigureLabel(text: 'Back'),
+            ]),
+          ),
+        ],
+      ),
     );
   }
 }

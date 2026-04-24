@@ -86,15 +86,71 @@ Future<String> _loadRawSvg() async {
   return _rawSvg!;
 }
 
+/// Physically removes `<g ...id="groupId"...>...</g>` from the SVG string,
+/// correctly handling nested `<g>` elements (e.g. the `facefeatures` subgroup
+/// inside `group_front`) via depth-tracking.
+///
+/// Used to show front-only or back-only views without relying on ClipRect
+/// geometry math — the rendered SVG just contains one figure.
+String _dropGroup(String svg, String groupId) {
+  final openMatch = RegExp(
+    r'<g[^>]*\bid="' + RegExp.escape(groupId) + r'"[^>]*>',
+  ).firstMatch(svg);
+  if (openMatch == null) return svg;
+
+  final start = openMatch.start;
+  var i = openMatch.end;
+  var depth = 1;
+  while (i < svg.length && depth > 0) {
+    final nextOpen = svg.indexOf('<g', i);
+    final nextClose = svg.indexOf('</g>', i);
+    if (nextClose == -1) break;
+    if (nextOpen != -1 && nextOpen < nextClose) {
+      depth += 1;
+      i = nextOpen + 2;
+    } else {
+      depth -= 1;
+      i = nextClose + '</g>'.length;
+    }
+  }
+  return svg.substring(0, start) + svg.substring(i);
+}
+
+/// Rewrites the root `<svg ...>` tag to use [newViewBox] (a "minX minY w h"
+/// string) and corresponding width/height attributes. Needed when we drop
+/// one half of the figure — otherwise `fit: contain` scales the full
+/// 748×711 canvas into the container and the surviving figure ends up
+/// hugging one edge at half-size.
+String _rewriteViewBox(String svg, String newViewBox, String width, String height) {
+  var out = svg.replaceFirst(
+    RegExp(r'viewBox="[^"]*"'),
+    'viewBox="$newViewBox"',
+  );
+  out = out.replaceFirst(RegExp(r'width="[^"]*"'), 'width="$width"');
+  out = out.replaceFirst(RegExp(r'height="[^"]*"'), 'height="$height"');
+  return out;
+}
+
+// Source canvas is 748.8 × 711.6, with the front figure on the left half
+// (x=0-374) and the back figure on the right half (x=374-748). These are
+// the two cropped viewBoxes we re-use for front-only / back-only renders.
+const String _frontViewBox = '0 0 374.4 711.6';
+const String _backViewBox = '374.4 0 374.4 711.6';
+const String _halfWidth = '374.4';
+const String _fullHeight = '711.6';
+
 /// Returns an SVG string with [group] highlighted in [highlight]. All other
 /// paths are recoloured to [base] so the diagram reads as a single figure.
 Future<String> _buildSvg(
   MuscleGroup group,
   Color highlight,
   Color base,
-  Color stroke,
-) async {
-  final key = '${group.slug}_${highlight.value}_${base.value}_${stroke.value}';
+  Color stroke, {
+  bool onlyFront = false,
+  bool onlyBack = false,
+}) async {
+  final key = '${group.slug}_${highlight.value}_${base.value}_${stroke.value}'
+      '_${onlyFront ? 1 : 0}_${onlyBack ? 1 : 0}';
   final cached = _svgCache[key];
   if (cached != null) return cached;
 
@@ -131,6 +187,21 @@ Future<String> _buildSvg(
     }
   }
 
+  // Physically drop the unused half AND shrink the viewBox to the
+  // surviving half's bounds. Dropping alone isn't enough — `fit: contain`
+  // still scales the original 748-wide canvas into the container, which
+  // made the remaining figure render at half-size tucked against one
+  // edge. Cropping the viewBox makes the surviving figure actually fill
+  // the column.
+  if (onlyFront) {
+    out = _dropGroup(out, 'group_back');
+    out = _rewriteViewBox(out, _frontViewBox, _halfWidth, _fullHeight);
+  }
+  if (onlyBack) {
+    out = _dropGroup(out, 'group_front');
+    out = _rewriteViewBox(out, _backViewBox, _halfWidth, _fullHeight);
+  }
+
   _svgCache[key] = out;
   return out;
 }
@@ -145,8 +216,10 @@ Future<String> _buildSvgZones(
   Map<MuscleGroup, Color> zones,
   Color base,
   Color stroke,
-  bool strokeless,
-) async {
+  bool strokeless, {
+  bool onlyFront = false,
+  bool onlyBack = false,
+}) async {
   // Order-independent hash of the zones map so two equivalent inputs
   // (same muscle→colour pairs in any order) share a single cache entry,
   // and arbitrary slugs can't collide via delimiter tricks.
@@ -154,7 +227,8 @@ Future<String> _buildSvgZones(
     zones.entries.map((e) => Object.hash(e.key, e.value.value)),
   );
   final key = 'zones_${zonesHash}_'
-      '${base.value}_${stroke.value}_${strokeless ? 1 : 0}';
+      '${base.value}_${stroke.value}_${strokeless ? 1 : 0}'
+      '_${onlyFront ? 1 : 0}_${onlyBack ? 1 : 0}';
   final cached = _svgCache[key];
   if (cached != null) return cached;
 
@@ -185,6 +259,17 @@ Future<String> _buildSvgZones(
       });
     }
   });
+
+  // Physically drop the unused half AND shrink the viewBox to the
+  // surviving half's bounds (see notes in `_buildSvg`).
+  if (onlyFront) {
+    out = _dropGroup(out, 'group_back');
+    out = _rewriteViewBox(out, _frontViewBox, _halfWidth, _fullHeight);
+  }
+  if (onlyBack) {
+    out = _dropGroup(out, 'group_front');
+    out = _rewriteViewBox(out, _backViewBox, _halfWidth, _fullHeight);
+  }
 
   _svgCache[key] = out;
   return out;
@@ -239,12 +324,21 @@ class MuscleHighlightDiagram extends StatelessWidget {
     final stroke = strokeColor ?? colors.textSecondary.withValues(alpha: 0.35);
 
     final Future<String> svgFuture = zones != null
-        ? _buildSvgZones(zones!, base, stroke, strokeless)
+        ? _buildSvgZones(
+            zones!,
+            base,
+            stroke,
+            strokeless,
+            onlyFront: onlyFront,
+            onlyBack: onlyBack,
+          )
         : _buildSvg(
             muscleGroup!,
             highlightColor ?? colors.primary,
             base,
             stroke,
+            onlyFront: onlyFront,
+            onlyBack: onlyBack,
           );
 
     return FutureBuilder<String>(
@@ -256,16 +350,9 @@ class MuscleHighlightDiagram extends StatelessWidget {
           // in an unconstrained parent; shrink is the safe placeholder.
           return const SizedBox.shrink();
         }
-        final svg = SvgPicture.string(snap.data!, fit: fit);
-        if (!onlyFront && !onlyBack) return svg;
-        return ClipRect(
-          child: Align(
-            alignment:
-                onlyFront ? Alignment.centerRight : Alignment.centerLeft,
-            widthFactor: 0.5,
-            child: svg,
-          ),
-        );
+        // The SVG string already has the unused half dropped when
+        // onlyFront / onlyBack is set, so no clip math is needed here.
+        return SvgPicture.string(snap.data!, fit: fit);
       },
     );
   }
