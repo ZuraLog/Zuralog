@@ -53,6 +53,7 @@ from app.api.v1.integrations import router as integrations_router
 from app.api.v1.journal_routes import router as journal_router
 from app.api.v1.memory_routes import router as memory_router
 from app.api.v1.metrics_routes import router as metrics_router
+from app.api.v1.muscle_log_routes import router as muscle_log_router
 from app.api.v1.notification_routes import router as notification_router
 from app.api.v1.nutrition_routes import router as nutrition_router
 from app.api.v1.sleep_routes import router as sleep_router
@@ -437,6 +438,7 @@ app.include_router(ingest_router, prefix="/api/v1")  # Unified health data inges
 app.include_router(events_router, prefix="/api/v1")  # Soft-delete events
 app.include_router(today_router, prefix="/api/v1")  # Today tab
 app.include_router(metrics_router, prefix="/api/v1")  # Metrics aggregations
+app.include_router(muscle_log_router, prefix="/api/v1")  # Muscle logs (offline-first sync)
 app.include_router(coach_router, prefix="/api/v1")  # Coach context endpoints
 app.include_router(supplements_router, prefix="/api/v1")  # Supplements list management
 app.include_router(nutrition_router, prefix="/api/v1")  # Phase 2B — nutrition meal CRUD

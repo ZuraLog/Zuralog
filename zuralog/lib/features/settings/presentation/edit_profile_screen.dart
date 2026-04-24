@@ -324,28 +324,24 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   void _showHeightPicker() {
-    final units = ref.read(unitsSystemProvider);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _HeightPickerSheet(
         initialHeightCm: _heightCm,
-        units: units,
         onSave: (cm) => setState(() => _heightCm = cm),
       ),
     );
   }
 
   void _showWeightPicker() {
-    final units = ref.read(unitsSystemProvider);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _WeightPickerSheet(
         initialWeightKg: _weightKg,
-        units: units,
         onSave: (kg) => setState(() => _weightKg = kg),
       ),
     );
@@ -380,7 +376,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final totalInches = _heightCm! / 2.54;
     final ft = (totalInches / 12).floor();
     final inches = (totalInches % 12).round();
-    return "${ft}' ${inches}\"";
+    return "$ft' $inches\"";
   }
 
   // ── Build ───────────────────────────────────────────────────────────────────
@@ -683,169 +679,43 @@ class _FieldEditSheetState extends State<_FieldEditSheet> {
 
 // ── _HeightPickerSheet ─────────────────────────────────────────────────────────
 
-/// Bottom sheet for entering height — adapts to metric (cm) or imperial (ft/in).
-class _HeightPickerSheet extends StatefulWidget {
+class _HeightPickerSheet extends StatelessWidget {
   const _HeightPickerSheet({
     required this.initialHeightCm,
-    required this.units,
     required this.onSave,
   });
 
   final double? initialHeightCm;
-  final UnitsSystem units;
   final ValueChanged<double?> onSave;
-
-  @override
-  State<_HeightPickerSheet> createState() => _HeightPickerSheetState();
-}
-
-class _HeightPickerSheetState extends State<_HeightPickerSheet> {
-  late TextEditingController _cmController;
-  late TextEditingController _ftController;
-  late TextEditingController _inController;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    final h = widget.initialHeightCm;
-
-    if (widget.units == UnitsSystem.metric) {
-      _cmController = TextEditingController(
-        text: h != null ? h.toStringAsFixed(0) : '',
-      );
-      _ftController = TextEditingController();
-      _inController = TextEditingController();
-    } else {
-      _cmController = TextEditingController();
-      if (h != null) {
-        final totalInches = h / 2.54;
-        final ft = (totalInches / 12).floor();
-        final inches = (totalInches % 12).round();
-        _ftController = TextEditingController(text: ft.toString());
-        _inController = TextEditingController(text: inches.toString());
-      } else {
-        _ftController = TextEditingController();
-        _inController = TextEditingController();
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _cmController.dispose();
-    _ftController.dispose();
-    _inController.dispose();
-    super.dispose();
-  }
-
-  void _save() {
-    double? cm;
-
-    if (widget.units == UnitsSystem.metric) {
-      final raw = double.tryParse(_cmController.text.trim());
-      if (raw == null || raw < 30 || raw > 300) {
-        setState(
-          () => _error = 'Please enter a height between 30 and 300 cm.',
-        );
-        return;
-      }
-      cm = raw;
-    } else {
-      final ft = double.tryParse(_ftController.text.trim());
-      final inches = double.tryParse(_inController.text.trim()) ?? 0;
-      if (ft == null) {
-        setState(() => _error = 'Please enter your height in feet and inches.');
-        return;
-      }
-      cm = ft * 30.48 + inches * 2.54;
-      if (cm < 30 || cm > 300) {
-        setState(
-          () => _error = 'Please enter a valid height.',
-        );
-        return;
-      }
-    }
-
-    widget.onSave(cm);
-    Navigator.pop(context);
-  }
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final isMetric = widget.units == UnitsSystem.metric;
-
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
+    return Container(
+      margin: const EdgeInsets.all(AppDimens.spaceMd),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppDimens.shapeLg),
       ),
-      child: Container(
-        margin: const EdgeInsets.all(AppDimens.spaceMd),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(AppDimens.shapeLg),
-        ),
-        padding: const EdgeInsets.all(AppDimens.spaceLg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Height',
-              style: AppTextStyles.displaySmall
-                  .copyWith(color: colors.textPrimary),
-            ),
-            const SizedBox(height: AppDimens.spaceMd),
-            if (isMetric)
-              AppTextField(
-                hintText: 'Height (cm)',
-                controller: _cmController,
-                keyboardType: TextInputType.number,
-                autofocus: true,
-                textInputAction: TextInputAction.done,
-                onSubmitted: _save,
-              )
-            else
-              Row(
-                children: [
-                  Expanded(
-                    child: AppTextField(
-                      hintText: 'ft',
-                      controller: _ftController,
-                      keyboardType: TextInputType.number,
-                      autofocus: true,
-                      textInputAction: TextInputAction.next,
-                    ),
-                  ),
-                  const SizedBox(width: AppDimens.spaceMd),
-                  Expanded(
-                    child: AppTextField(
-                      hintText: 'in',
-                      controller: _inController,
-                      keyboardType: TextInputType.number,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: _save,
-                    ),
-                  ),
-                ],
-              ),
-            if (_error != null) ...[
-              const SizedBox(height: AppDimens.spaceSm),
-              Text(
-                _error!,
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.statusError,
-                ),
-              ),
-            ],
-            const SizedBox(height: AppDimens.spaceMd),
-            ZButton(
-              label: 'Save',
-              onPressed: _save,
-            ),
-          ],
-        ),
+      padding: const EdgeInsets.all(AppDimens.spaceLg),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Height',
+            style: AppTextStyles.displaySmall.copyWith(color: colors.textPrimary),
+          ),
+          const SizedBox(height: AppDimens.spaceMd),
+          ZHeightPicker(
+            initialCm: initialHeightCm,
+            actionLabel: 'Save',
+            onSubmit: (cm) {
+              onSave(cm);
+              Navigator.pop(context);
+            },
+          ),
+        ],
       ),
     );
   }
@@ -853,110 +723,43 @@ class _HeightPickerSheetState extends State<_HeightPickerSheet> {
 
 // ── _WeightPickerSheet ─────────────────────────────────────────────────────────
 
-/// Bottom sheet for entering weight — adapts to metric (kg) or imperial (lbs).
-class _WeightPickerSheet extends StatefulWidget {
+class _WeightPickerSheet extends StatelessWidget {
   const _WeightPickerSheet({
     required this.initialWeightKg,
-    required this.units,
     required this.onSave,
   });
 
   final double? initialWeightKg;
-  final UnitsSystem units;
   final ValueChanged<double?> onSave;
-
-  @override
-  State<_WeightPickerSheet> createState() => _WeightPickerSheetState();
-}
-
-class _WeightPickerSheetState extends State<_WeightPickerSheet> {
-  late TextEditingController _controller;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    final w = widget.initialWeightKg;
-    if (widget.units == UnitsSystem.metric) {
-      _controller = TextEditingController(
-        text: w != null ? w.toStringAsFixed(1) : '',
-      );
-    } else {
-      _controller = TextEditingController(
-        text: w != null ? (w / 0.453592).round().toString() : '',
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _save() {
-    double? kg;
-    if (widget.units == UnitsSystem.metric) {
-      final raw = double.tryParse(_controller.text.trim());
-      if (raw == null || raw < 1 || raw > 500) {
-        setState(() => _error = 'Please enter a weight between 1 and 500 kg.');
-        return;
-      }
-      kg = raw;
-    } else {
-      final lbs = double.tryParse(_controller.text.trim());
-      if (lbs == null || lbs < 2 || lbs > 1100) {
-        setState(() => _error = 'Please enter a weight between 2 and 1,100 lbs.');
-        return;
-      }
-      kg = lbs * 0.453592;
-    }
-    widget.onSave(kg);
-    Navigator.pop(context);
-  }
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final isMetric = widget.units == UnitsSystem.metric;
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
-        margin: const EdgeInsets.all(AppDimens.spaceMd),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(AppDimens.shapeLg),
-        ),
-        padding: const EdgeInsets.all(AppDimens.spaceLg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Weight',
-              style: AppTextStyles.displaySmall.copyWith(color: colors.textPrimary),
-            ),
-            const SizedBox(height: AppDimens.spaceMd),
-            AppTextField(
-              hintText: isMetric ? 'Weight (kg)' : 'Weight (lbs)',
-              controller: _controller,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              autofocus: true,
-              textInputAction: TextInputAction.done,
-              onSubmitted: _save,
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: AppDimens.spaceSm),
-              Text(
-                _error!,
-                style: AppTextStyles.bodySmall.copyWith(color: AppColors.statusError),
-              ),
-            ],
-            const SizedBox(height: AppDimens.spaceMd),
-            ZButton(label: 'Save', onPressed: _save),
-          ],
-        ),
+    return Container(
+      margin: const EdgeInsets.all(AppDimens.spaceMd),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppDimens.shapeLg),
+      ),
+      padding: const EdgeInsets.all(AppDimens.spaceLg),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Weight',
+            style: AppTextStyles.displaySmall.copyWith(color: colors.textPrimary),
+          ),
+          const SizedBox(height: AppDimens.spaceMd),
+          ZWeightPicker(
+            initialKg: initialWeightKg,
+            actionLabel: 'Save',
+            onSubmit: (kg) {
+              onSave(kg);
+              Navigator.pop(context);
+            },
+          ),
+        ],
       ),
     );
   }

@@ -1,4 +1,4 @@
-/// Top-level Your-Body-Now hero card used on the Today tab.
+/// Top-level Your-Body-Today hero card used on the Today tab.
 library;
 
 import 'package:flutter/material.dart';
@@ -7,21 +7,27 @@ import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
-import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/body/domain/body_state.dart';
+import 'package:zuralog/features/body/domain/coach_message.dart';
 import 'package:zuralog/features/body/presentation/body_detail_sheet.dart';
+import 'package:zuralog/features/body/presentation/muscle_state_picker_sheet.dart';
 import 'package:zuralog/features/body/providers/body_now_coach_message_provider.dart';
-import 'package:zuralog/features/body/providers/body_now_metrics_provider.dart';
 import 'package:zuralog/features/body/providers/body_state_provider.dart';
+import 'package:zuralog/features/body/providers/check_in_provider.dart';
+import 'package:zuralog/features/body/providers/pillar_metrics_providers.dart';
 import 'package:zuralog/features/today/presentation/widgets/body_now/body_now_coach_strip.dart';
 import 'package:zuralog/features/today/presentation/widgets/body_now/body_now_figure_stack.dart';
 import 'package:zuralog/features/today/presentation/widgets/body_now/body_now_headline.dart';
 import 'package:zuralog/features/today/presentation/widgets/body_now/body_now_metrics_rail.dart';
-import 'package:zuralog/features/today/presentation/widgets/body_now/body_now_zero_state.dart';
 import 'package:zuralog/shared/widgets/cards/zuralog_card.dart';
+
+String _todayIso() {
+  final now = DateTime.now();
+  return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+}
 
 class BodyNowHeroCard extends ConsumerWidget {
   const BodyNowHeroCard({super.key});
@@ -29,7 +35,7 @@ class BodyNowHeroCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bodyAsync = ref.watch(bodyStateProvider);
-    final metricsAsync = ref.watch(bodyNowMetricsProvider);
+    final metricsAsync = ref.watch(pillarMetricsProvider);
     final coachAsync = ref.watch(bodyNowCoachMessageProvider);
 
     return ZuralogCard(
@@ -55,26 +61,20 @@ class BodyNowHeroCard extends ConsumerWidget {
               bodyAsync.when(
                 loading: () => const _HeroSkeleton(),
                 error: (_, __) => const _HeroSkeleton(),
-                data: (state) {
-                  if (!state.hasAnySignal) {
-                    return BodyNowZeroState(
-                      onConnect: () => context
-                          .push(RouteNames.settingsIntegrationsPath),
-                    );
-                  }
-                  return _LoadedBody(
-                    state: state,
-                    metricsAsync: metricsAsync,
-                    onChipTapped: (chip) => _onChip(context, ref, chip),
-                  );
-                },
+                data: (state) => _LoadedBody(
+                  state: state,
+                  metricsAsync: metricsAsync,
+                  onChipTapped: (chip) => _onChip(context, chip),
+                ),
               ),
               coachAsync.maybeWhen(
-                data: (msg) => BodyNowCoachStrip(
-                  message: msg,
-                  onCtaTap: () => _onCta(context, ref, msg.ctaRoute),
-                  onAvatarTap: () => context.go(RouteNames.coachPath),
-                ),
+                data: (msg) {
+                  if (msg == null) return const SizedBox.shrink();
+                  return BodyNowCoachStrip(
+                    message: msg,
+                    onCtaTap: () => _onCta(context, ref, msg),
+                  );
+                },
                 orElse: () => const SizedBox.shrink(),
               ),
             ],
@@ -92,37 +92,42 @@ class BodyNowHeroCard extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      // Root-navigator so the sheet covers the floating bottom-nav pill
-      // instead of being clipped by it.
       useRootNavigator: true,
       builder: (_) => const BodyDetailSheet(),
     );
   }
 
-  void _onChip(BuildContext context, WidgetRef ref, BodyNowChip chip) {
-    ref.read(analyticsServiceProvider).capture(
-          event: AnalyticsEvents.todayBodyNowChipTapped,
-          properties: {'chip': chip.name},
-        );
-    // Sub-screens are pushed (matches how the rest of the app routes
-    // to score-breakdown / detail views). `context.go` to a nested
-    // path from inside the Today tab silently no-ops in this router's
-    // shell config — that was the "tap does nothing" bug.
-    switch (chip) {
-      case BodyNowChip.readiness:
-        context.push(RouteNames.dataScoreBreakdownPath);
-      case BodyNowChip.hrv:
-      case BodyNowChip.rhr:
-      case BodyNowChip.sleep:
-        context.push(RouteNames.dataPath);
-    }
+  void _onChip(BuildContext context, BodyNowChip chip) {
+    context.push(
+      switch (chip) {
+        BodyNowChip.nutrition => '/nutrition',
+        BodyNowChip.fitness => '/data',
+        BodyNowChip.sleep => '/sleep',
+        BodyNowChip.heart => '/heart',
+      },
+    );
   }
 
-  void _onCta(BuildContext context, WidgetRef ref, String route) {
+  void _onCta(BuildContext context, WidgetRef ref, CoachMessage msg) {
     ref.read(analyticsServiceProvider).capture(
           event: AnalyticsEvents.todayBodyNowCtaTapped,
         );
-    context.push(route);
+    if (msg.isCheckIn) {
+      ref.read(checkInProvider.notifier).markSeen(_todayIso());
+      if (msg.checkInMuscleGroup != null) {
+        showMuscleStatePicker(context, msg.checkInMuscleGroup!);
+      } else {
+        showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          useRootNavigator: true,
+          builder: (_) => const BodyDetailSheet(),
+        );
+      }
+    } else {
+      context.push(msg.ctaRoute);
+    }
   }
 }
 
@@ -134,14 +139,14 @@ class _LoadedBody extends StatelessWidget {
   });
 
   final BodyState state;
-  final AsyncValue<BodyNowMetrics> metricsAsync;
+  final AsyncValue<PillarMetrics> metricsAsync;
   final void Function(BodyNowChip) onChipTapped;
 
   @override
   Widget build(BuildContext context) {
     final metrics = metricsAsync.maybeWhen(
       data: (m) => m,
-      orElse: () => BodyNowMetrics.empty,
+      orElse: () => PillarMetrics.empty,
     );
     return Column(children: [
       BodyNowFigureStack(state: state),
@@ -177,7 +182,7 @@ class _Eyebrow extends StatelessWidget {
       ),
       const SizedBox(width: 9),
       Text(
-        'YOUR BODY NOW',
+        'YOUR BODY TODAY',
         style: AppTextStyles.labelSmall.copyWith(
           color: colors.textSecondary,
           letterSpacing: 1.8,

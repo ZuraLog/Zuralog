@@ -46,6 +46,7 @@ from app.models.user_preferences import (  # noqa: F401
     UserPreferences,
 )
 from app.models.user_streak import UserStreak  # noqa: F401
+from app.models.muscle_log import MuscleLog  # noqa: F401
 
 __all__ = [
     "INSIGHT_TYPES",
@@ -73,6 +74,7 @@ __all__ = [
     "Meal",
     "MealFood",
     "Message",
+    "MuscleLog",
     "MetricDefinition",
     "NotificationLog",
     "NutritionDailySummary",

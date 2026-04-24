@@ -1,5 +1,4 @@
 // zuralog/lib/features/today/presentation/widgets/body_now/body_now_coach_strip.dart
-/// The coach strip at the bottom of the hero — Zura avatar + message + CTA.
 library;
 
 import 'package:flutter/material.dart';
@@ -8,19 +7,17 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/body/domain/coach_message.dart';
-import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
+import 'package:zuralog/features/coach/presentation/widgets/coach_blob.dart';
 
 class BodyNowCoachStrip extends StatelessWidget {
   const BodyNowCoachStrip({
     super.key,
     required this.message,
     required this.onCtaTap,
-    required this.onAvatarTap,
   });
 
   final CoachMessage message;
   final VoidCallback onCtaTap;
-  final VoidCallback onAvatarTap;
 
   @override
   Widget build(BuildContext context) {
@@ -34,34 +31,7 @@ class BodyNowCoachStrip extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GestureDetector(
-            onTap: onAvatarTap,
-            child: ClipOval(
-              child: SizedBox(
-                width: 40,
-                height: 40,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Container(color: AppColors.primary),
-                    // Avatar pattern drifts per brand-bible animation rule.
-                    const ZPatternOverlay(
-                      variant: ZPatternVariant.sage,
-                      opacity: 0.18,
-                      animate: true,
-                    ),
-                    Text(
-                      'Z',
-                      style: AppTextStyles.titleMedium.copyWith(
-                        color: AppColors.textOnSage,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          const CoachBlob(state: BlobState.idle, size: 40),
           const SizedBox(width: AppDimens.spaceSm),
           Expanded(
             child: Column(
@@ -101,25 +71,60 @@ class BodyNowCoachStrip extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                InkWell(
-                  onTap: onCtaTap,
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Text(
-                      message.ctaLabel,
-                      style: AppTextStyles.labelLarge.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
+                if (message.isCheckIn)
+                  _CheckInButton(label: message.ctaLabel, onTap: onCtaTap)
+                else
+                  InkWell(
+                    onTap: onCtaTap,
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Text(
+                        message.ctaLabel,
+                        style: AppTextStyles.labelLarge.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                    const Icon(Icons.arrow_forward_rounded,
-                        size: 14, color: AppColors.primary),
-                  ]),
-                ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.arrow_forward_rounded,
+                          size: 14, color: AppColors.primary),
+                    ]),
+                  ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CheckInButton extends StatelessWidget {
+  const _CheckInButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: onTap,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          side: BorderSide(
+            color: AppColors.primary.withValues(alpha: 0.35),
+          ),
+          shape: const StadiumBorder(),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+        ),
+        child: Text(
+          label,
+          style: AppTextStyles.labelLarge.copyWith(
+            color: AppColors.primary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

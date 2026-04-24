@@ -1,8 +1,6 @@
 /// Bottom sheet that asks the user how a muscle feels — Fresh / Worked /
-/// Sore — and writes the choice into [muscleStateOverridesProvider].
-///
-/// Surfaced when the user taps a muscle region on the body in
-/// [BodyDetailSheet].
+/// Sore — and writes the choice into [muscleStateOverridesProvider] and
+/// [MuscleLogRepository].
 library;
 
 import 'package:flutter/material.dart';
@@ -11,7 +9,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/body/data/muscle_log_repository.dart';
 import 'package:zuralog/features/body/domain/body_state.dart';
+import 'package:zuralog/features/body/domain/muscle_log.dart';
 import 'package:zuralog/features/body/domain/muscle_state.dart';
 import 'package:zuralog/features/body/providers/body_state_provider.dart';
 import 'package:zuralog/features/body/providers/muscle_state_overrides_provider.dart';
@@ -25,27 +25,56 @@ Future<void> showMuscleStatePicker(
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
-    // Route through the root navigator so the sheet renders ABOVE the
-    // floating bottom-nav pill. Without this, the sheet sits inside the
-    // Today tab's navigator and the nav pill clips its lower edge.
     useRootNavigator: true,
     builder: (_) => _MuscleStatePickerSheet(group: group),
   );
 }
 
-class _MuscleStatePickerSheet extends ConsumerWidget {
+String _todayIso() {
+  final now = DateTime.now();
+  return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+}
+
+String _timeOfDayToString(TimeOfDay t) =>
+    '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+class _MuscleStatePickerSheet extends ConsumerStatefulWidget {
   const _MuscleStatePickerSheet({required this.group});
 
   final MuscleGroup group;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MuscleStatePickerSheet> createState() =>
+      _MuscleStatePickerSheetState();
+}
+
+class _MuscleStatePickerSheetState
+    extends ConsumerState<_MuscleStatePickerSheet> {
+  late TimeOfDay _selectedTime;
+
+  @override
+  void initState() {
+    super.initState();
+    final today = _todayIso();
+    final repo = ref.read(muscleLogRepositoryProvider);
+    final existing = repo.getLogForMuscle(today, widget.group);
+    if (existing != null) {
+      final parts = existing.loggedAtTime.split(':');
+      _selectedTime = TimeOfDay(
+        hour: int.parse(parts[0]),
+        minute: int.parse(parts[1]),
+      );
+    } else {
+      _selectedTime = TimeOfDay.now();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    // Resolve the muscle's current state from the merged bodyStateProvider
-    // so the user sees "currently sore" etc. instead of just blank.
     final stateAsync = ref.watch(bodyStateProvider);
     final current = stateAsync.maybeWhen<MuscleState>(
-      data: (BodyState s) => s.stateOf(group),
+      data: (BodyState s) => s.stateOf(widget.group),
       orElse: () => MuscleState.neutral,
     );
 
@@ -78,7 +107,7 @@ class _MuscleStatePickerSheet extends ConsumerWidget {
           ),
           const SizedBox(height: AppDimens.spaceMd),
           Text(
-            group.label,
+            widget.group.label,
             style: AppTextStyles.displaySmall.copyWith(
               color: colors.textPrimary,
             ),
@@ -90,6 +119,8 @@ class _MuscleStatePickerSheet extends ConsumerWidget {
               color: colors.textSecondary,
             ),
           ),
+          const SizedBox(height: AppDimens.spaceMd),
+          _timeRow(context, colors),
           const SizedBox(height: AppDimens.spaceLg),
           _StateRow(
             label: 'Feeling fresh',
@@ -116,14 +147,9 @@ class _MuscleStatePickerSheet extends ConsumerWidget {
           ),
           const SizedBox(height: AppDimens.spaceMd),
           TextButton(
-            onPressed: () {
-              ref
-                  .read(muscleStateOverridesProvider.notifier)
-                  .clearMuscle(group);
-              Navigator.of(context).pop();
-            },
+            onPressed: () => _clear(context, ref),
             child: Text(
-              'Clear override',
+              'Clear',
               style: AppTextStyles.labelLarge.copyWith(
                 color: colors.textSecondary,
               ),
@@ -134,9 +160,72 @@ class _MuscleStatePickerSheet extends ConsumerWidget {
     );
   }
 
-  void _pick(BuildContext context, WidgetRef ref, MuscleState value) {
-    ref.read(muscleStateOverridesProvider.notifier).setMuscle(group, value);
-    Navigator.of(context).pop();
+  Widget _timeRow(BuildContext context, AppColorsOf colors) {
+    return GestureDetector(
+      onTap: () async {
+        final picked = await showTimePicker(
+          context: context,
+          initialTime: _selectedTime,
+        );
+        if (picked != null) setState(() => _selectedTime = picked);
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.surfaceRaised,
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimens.spaceMd,
+          vertical: AppDimens.spaceSm,
+        ),
+        child: Row(children: [
+          Icon(Icons.access_time_rounded, size: 18, color: colors.textSecondary),
+          const SizedBox(width: AppDimens.spaceSm),
+          Expanded(
+            child: Text(
+              'When did this happen?',
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: colors.textSecondary),
+            ),
+          ),
+          Text(
+            _selectedTime.format(context),
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Icon(Icons.chevron_right_rounded,
+              size: 18, color: colors.textSecondary),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _pick(
+      BuildContext context, WidgetRef ref, MuscleState value) async {
+    ref
+        .read(muscleStateOverridesProvider.notifier)
+        .setMuscle(widget.group, value);
+    final log = MuscleLog(
+      muscleGroup: widget.group,
+      state: value,
+      logDate: _todayIso(),
+      loggedAtTime: _timeOfDayToString(_selectedTime),
+    );
+    await ref.read(muscleLogRepositoryProvider).saveLog(log);
+    if (context.mounted) Navigator.of(context).pop();
+  }
+
+  Future<void> _clear(BuildContext context, WidgetRef ref) async {
+    ref
+        .read(muscleStateOverridesProvider.notifier)
+        .clearMuscle(widget.group);
+    await ref
+        .read(muscleLogRepositoryProvider)
+        .removeLog(_todayIso(), widget.group);
+    if (context.mounted) Navigator.of(context).pop();
   }
 }
 

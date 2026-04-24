@@ -298,6 +298,34 @@ class NutritionHomeScreen extends ConsumerWidget {
                               ),
                             ),
                           ),
+
+                        // ── Weekly Summary Card (empty state preview) ─────
+                        const ZFadeSlideIn(
+                          delay: Duration(milliseconds: 120),
+                          child: Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              AppDimens.spaceMd,
+                              AppDimens.spaceMd,
+                              AppDimens.spaceMd,
+                              0,
+                            ),
+                            child: NutritionWeeklySummaryCard(),
+                          ),
+                        ),
+
+                        // ── Trend section (empty state preview) ───────────
+                        ZFadeSlideIn(
+                          delay: const Duration(milliseconds: 150),
+                          child: const Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              AppDimens.spaceMd,
+                              AppDimens.spaceMd,
+                              AppDimens.spaceMd,
+                              0,
+                            ),
+                            child: NutritionTrendSection(),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -391,6 +419,20 @@ class NutritionHomeScreen extends ConsumerWidget {
                   ),
                 ),
 
+                // ── Weekly Summary Card (above hero) ───────────────────
+                const ZFadeSlideIn(
+                  delay: Duration(milliseconds: 40),
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppDimens.spaceMd,
+                      AppDimens.spaceMd,
+                      AppDimens.spaceMd,
+                      0,
+                    ),
+                    child: NutritionWeeklySummaryCard(),
+                  ),
+                ),
+
                 // ── Budget hero card ───────────────────────────────────
                 const ZFadeSlideIn(
                   delay: Duration(milliseconds: 60),
@@ -473,22 +515,23 @@ class NutritionHomeScreen extends ConsumerWidget {
                     ),
                   ),
 
-                // ── AI Summary card ─────────────────────────────────────
-                ZFadeSlideIn(
-                  delay: const Duration(milliseconds: 120),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppDimens.spaceMd,
-                      AppDimens.spaceMd,
-                      AppDimens.spaceMd,
-                      0,
-                    ),
-                    child: NutritionAiSummaryCard(
-                      aiSummary: summary.aiSummary,
-                      generatedAt: summary.aiGeneratedAt,
+                // ── AI Summary card (only when the AI has generated one) ────
+                if (summary.aiSummary != null)
+                  ZFadeSlideIn(
+                    delay: const Duration(milliseconds: 120),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppDimens.spaceMd,
+                        AppDimens.spaceMd,
+                        AppDimens.spaceMd,
+                        0,
+                      ),
+                      child: NutritionAiSummaryCard(
+                        aiSummary: summary.aiSummary,
+                        generatedAt: summary.aiGeneratedAt,
+                      ),
                     ),
                   ),
-                ),
 
                 // ── Nutrition Trend ──────────────────────────────────────
                 ZFadeSlideIn(
@@ -501,20 +544,6 @@ class NutritionHomeScreen extends ConsumerWidget {
                       0,
                     ),
                     child: NutritionTrendSection(),
-                  ),
-                ),
-
-                // ── Weekly Summary Card ──────────────────────────────────
-                const ZFadeSlideIn(
-                  delay: Duration(milliseconds: 210),
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      AppDimens.spaceMd,
-                      AppDimens.spaceMd,
-                      AppDimens.spaceMd,
-                      0,
-                    ),
-                    child: NutritionWeeklySummaryCard(),
                   ),
                 ),
 

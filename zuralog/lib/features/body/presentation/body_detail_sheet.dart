@@ -1,17 +1,4 @@
-/// Full-height detail view behind the Your-Body-Now hero.
-///
-/// v1 scope:
-/// - Dual body, taller than the hero version, with clear FRONT / BACK
-///   captions so the user can tell them apart at a glance.
-/// - Legend explaining Fresh / Worked / Sore.
-/// - Tap any muscle region on the body → a picker sheet asks how it
-///   feels ("Feeling fresh / Worked out / It's sore"). The override
-///   lands in [muscleStateOverridesProvider] and the body re-renders
-///   immediately.
-/// - "Clear all" chip once any manual override is active.
-///
-/// Per-muscle history and persisted storage are follow-ups — see
-/// `docs/superpowers/specs/2026-04-23-your-body-now-hero-design.md`.
+/// Full-height detail view behind the Your-Body-Today hero.
 library;
 
 import 'package:flutter/material.dart';
@@ -20,13 +7,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/body/data/muscle_log_repository.dart';
 import 'package:zuralog/features/body/domain/body_state.dart';
+import 'package:zuralog/features/body/domain/muscle_log.dart';
 import 'package:zuralog/features/body/domain/muscle_state.dart';
 import 'package:zuralog/features/body/presentation/muscle_state_picker_sheet.dart';
 import 'package:zuralog/features/body/presentation/tappable_body_side.dart';
 import 'package:zuralog/features/body/providers/body_state_provider.dart';
 import 'package:zuralog/features/body/providers/muscle_state_overrides_provider.dart';
 import 'package:zuralog/features/workout/domain/exercise.dart' show MuscleGroup;
+
+String _todayIso() {
+  final now = DateTime.now();
+  return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+}
 
 class BodyDetailSheet extends ConsumerWidget {
   const BodyDetailSheet({super.key});
@@ -36,6 +30,8 @@ class BodyDetailSheet extends ConsumerWidget {
     final colors = AppColorsOf(context);
     final async = ref.watch(bodyStateProvider);
     final overrides = ref.watch(muscleStateOverridesProvider);
+    final repo = ref.watch(muscleLogRepositoryProvider);
+    final todayLogs = repo.getLogsForDate(_todayIso());
 
     return DraggableScrollableSheet(
       expand: false,
@@ -65,7 +61,7 @@ class BodyDetailSheet extends ConsumerWidget {
             children: [
               _dragHandle(colors),
               const SizedBox(height: AppDimens.spaceMd),
-              _title(context, overrides, ref),
+              _title(context, overrides, ref, repo),
               const SizedBox(height: AppDimens.spaceXs),
               Text(
                 'Tap a muscle to log how it feels.',
@@ -75,8 +71,10 @@ class BodyDetailSheet extends ConsumerWidget {
               ),
               const SizedBox(height: AppDimens.spaceMd),
               _dualTappableBodies(context, state),
-              const SizedBox(height: AppDimens.spaceMd),
-              _legend(colors),
+              if (todayLogs.isNotEmpty) ...[
+                const SizedBox(height: AppDimens.spaceMd),
+                _loggedTodayStrip(context, todayLogs),
+              ],
               const SizedBox(height: AppDimens.spaceLg),
             ],
           ),
@@ -100,6 +98,7 @@ class BodyDetailSheet extends ConsumerWidget {
     BuildContext context,
     Map<MuscleGroup, MuscleState> overrides,
     WidgetRef ref,
+    MuscleLogRepository repo,
   ) {
     final colors = AppColorsOf(context);
     return Row(
@@ -114,9 +113,10 @@ class BodyDetailSheet extends ConsumerWidget {
         ),
         if (overrides.isNotEmpty)
           TextButton(
-            onPressed: () => ref
-                .read(muscleStateOverridesProvider.notifier)
-                .clearAll(),
+            onPressed: () async {
+              ref.read(muscleStateOverridesProvider.notifier).clearAll();
+              await repo.clearLogsForDate(_todayIso());
+            },
             child: Text(
               'Clear all',
               style: AppTextStyles.labelLarge.copyWith(
@@ -157,31 +157,25 @@ class BodyDetailSheet extends ConsumerWidget {
     );
   }
 
-  Widget _legend(AppColorsOf colors) {
-    Widget dot(Color c) => Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: c, shape: BoxShape.circle),
-        );
-    Widget item(Color c, String text) => Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            dot(c),
-            const SizedBox(width: 6),
-            Text(
-              text,
-              style: AppTextStyles.labelMedium.copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
-          ],
-        );
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+  Widget _loggedTodayStrip(BuildContext context, List<MuscleLog> logs) {
+    final colors = AppColorsOf(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        item(AppColors.categoryActivity, 'Fresh'),
-        item(AppColors.categoryNutrition, 'Worked'),
-        item(AppColors.categoryHeart, 'Sore'),
+        Text(
+          'LOGGED TODAY',
+          style: AppTextStyles.labelSmall.copyWith(
+            color: colors.textSecondary,
+            letterSpacing: 1.4,
+          ),
+        ),
+        const SizedBox(height: AppDimens.spaceSm),
+        ...logs.map(
+          (log) => _LogRow(
+            log: log,
+            onTap: () => showMuscleStatePicker(context, log.muscleGroup),
+          ),
+        ),
       ],
     );
   }
@@ -198,5 +192,62 @@ class BodyDetailSheet extends ConsumerWidget {
       if (c != null) map[g] = c;
     });
     return map;
+  }
+}
+
+class _LogRow extends StatelessWidget {
+  const _LogRow({required this.log, required this.onTap});
+
+  final MuscleLog log;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final dotColor = switch (log.state) {
+      MuscleState.fresh => AppColors.categoryActivity,
+      MuscleState.worked => AppColors.categoryNutrition,
+      MuscleState.sore => AppColors.categoryHeart,
+      MuscleState.neutral => colors.textSecondary,
+    };
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          vertical: AppDimens.spaceXs,
+          horizontal: AppDimens.spaceXs,
+        ),
+        child: Row(children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration:
+                BoxDecoration(color: dotColor, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: AppDimens.spaceSm),
+          Expanded(
+            child: Text(
+              log.muscleGroup.label,
+              style:
+                  AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
+            ),
+          ),
+          Text(
+            log.state.label,
+            style: AppTextStyles.bodySmall.copyWith(color: dotColor),
+          ),
+          const SizedBox(width: AppDimens.spaceSm),
+          Text(
+            log.loggedAtTime,
+            style:
+                AppTextStyles.bodySmall.copyWith(color: colors.textSecondary),
+          ),
+          const SizedBox(width: AppDimens.spaceXs),
+          Icon(Icons.chevron_right_rounded,
+              size: 16, color: colors.textSecondary),
+        ]),
+      ),
+    );
   }
 }

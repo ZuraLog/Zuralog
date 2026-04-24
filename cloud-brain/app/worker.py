@@ -71,6 +71,7 @@ celery_app = Celery(
     include=[
         "app.tasks.aggregation_tasks",
         "app.tasks.anomaly_tasks",
+        "app.tasks.nutrition_streak_task",
         "app.tasks.background_alerts",
         "app.tasks.fitbit_sync",
         "app.tasks.health_score_tasks",
@@ -185,6 +186,10 @@ celery_app.conf.beat_schedule = {
     "recompute-stale-summaries": {
         "task": "app.tasks.aggregation_tasks.recompute_stale_summaries",
         "schedule": 300.0,  # every 5 minutes
+    },
+    "evaluate-nutrition-streaks-daily": {
+        "task": "app.tasks.nutrition_streak_task.evaluate_nutrition_streaks_daily",
+        "schedule": crontab(hour=0, minute=15),  # 00:15 UTC — after nightly summary aggregation
     },
 }
 

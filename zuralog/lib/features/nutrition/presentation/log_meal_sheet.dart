@@ -70,6 +70,9 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
   /// 0 = Quick, 1 = Guided.
   int _modeIndex = 0;
 
+  /// The date the meal will be logged for. Defaults to today.
+  DateTime _selectedDate = DateTime.now();
+
   /// Whether the save-as-template inline form is visible.
   bool _showSaveTemplate = false;
 
@@ -140,6 +143,28 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   bool get _canSave => _mealFoods.isNotEmpty;
+
+  bool get _isToday {
+    final now = DateTime.now();
+    return _selectedDate.year == now.year &&
+        _selectedDate.month == now.month &&
+        _selectedDate.day == now.day;
+  }
+
+  String get _sheetTitle {
+    if (_isToday) return 'Log a meal';
+    final now = DateTime.now();
+    final yesterday = DateTime(now.year, now.month, now.day - 1);
+    final isYesterday = _selectedDate.year == yesterday.year &&
+        _selectedDate.month == yesterday.month &&
+        _selectedDate.day == yesterday.day;
+    if (isYesterday) return 'Log a meal · Yesterday';
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return 'Log a meal · ${months[_selectedDate.month - 1]} ${_selectedDate.day}';
+  }
 
   /// Returns a meal type based on the current hour of the day.
   MealType _autoSuggestMealType() {
@@ -312,6 +337,20 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
     setState(() => _mealFoods.removeAt(index));
   }
 
+  /// Opens the system date picker and updates [_selectedDate].
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: now.subtract(const Duration(days: 365)),
+      lastDate: now,
+    );
+    if (picked != null && mounted) {
+      setState(() => _selectedDate = DateTime(picked.year, picked.month, picked.day));
+    }
+  }
+
   /// Saves the meal and closes the sheet.
   Future<void> _handleSave() async {
     if (!_canSave) return;
@@ -324,19 +363,23 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
       await repo.createMeal(
         mealType: (_selectedMealType ?? _autoSuggestMealType()).name,
         name: _generateMealName(),
-        loggedAt: DateTime.now(),
+        loggedAt: _selectedDate,
         foods: _mealFoods,
       );
 
       if (!mounted) return;
 
+      // Capture before pop — _isToday reads _selectedDate which becomes
+      // inaccessible after the widget is disposed.
+      final wasToday = _isToday;
       Navigator.of(context).pop();
 
-      // Invalidate providers after the sheet is dismissed so the home screen
-      // refreshes with the new meal.
+      // Only refresh today's live providers when the meal was logged for today.
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.invalidate(todayMealsProvider);
-        ref.invalidate(nutritionDaySummaryProvider);
+        if (wasToday) {
+          ref.invalidate(todayMealsProvider);
+          ref.invalidate(nutritionDaySummaryProvider);
+        }
         ref.invalidate(recentFoodsProvider);
       });
     } catch (e) {
@@ -433,12 +476,21 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Log a meal',
+                _sheetTitle,
                 style: AppTextStyles.titleMedium.copyWith(
                   color: colors.textPrimary,
                 ),
               ),
             ),
+          ),
+
+          const SizedBox(height: AppDimens.spaceSm),
+
+          // ── Date selector ────────────────────────────────────────────────
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+            child: _buildDateChipRow(),
           ),
 
           const SizedBox(height: AppDimens.spaceMd),
@@ -713,6 +765,49 @@ class _LogMealSheetState extends ConsumerState<LogMealSheet> {
   }
 
   // ── Sub-builders ───────────────────────────────────────────────────────────
+
+  /// Quick date chip row: Today, Yesterday, and a calendar picker button.
+  Widget _buildDateChipRow() {
+    final colors = AppColorsOf(context);
+    final now = DateTime.now();
+    final yesterday = DateTime(now.year, now.month, now.day - 1);
+    final isYesterday = _selectedDate.year == yesterday.year &&
+        _selectedDate.month == yesterday.month &&
+        _selectedDate.day == yesterday.day;
+
+    return Row(
+      children: [
+        ZChip(
+          label: 'Today',
+          isActive: _isToday,
+          onTap: () => setState(() => _selectedDate = DateTime.now()),
+        ),
+        const SizedBox(width: AppDimens.spaceSm),
+        ZChip(
+          label: 'Yesterday',
+          isActive: isYesterday,
+          onTap: () => setState(() => _selectedDate = yesterday),
+        ),
+        const SizedBox(width: AppDimens.spaceSm),
+        GestureDetector(
+          onTap: _pickDate,
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(AppDimens.shapePill),
+            ),
+            child: Icon(
+              Icons.calendar_today_outlined,
+              size: 16,
+              color: colors.textSecondary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   /// "or" divider between describe and search.
   Widget _buildOrDivider() {

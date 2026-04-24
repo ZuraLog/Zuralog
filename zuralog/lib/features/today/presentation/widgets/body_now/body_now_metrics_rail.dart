@@ -1,13 +1,14 @@
 // zuralog/lib/features/today/presentation/widgets/body_now/body_now_metrics_rail.dart
-/// Horizontal rail of four MetricChips for the hero.
 library;
 
 import 'package:flutter/material.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
-import 'package:zuralog/features/body/providers/body_now_metrics_provider.dart';
+import 'package:zuralog/features/body/providers/pillar_metrics_providers.dart';
 import 'package:zuralog/shared/widgets/metric_chip.dart';
+
+enum BodyNowChip { nutrition, fitness, sleep, heart }
 
 class BodyNowMetricsRail extends StatelessWidget {
   const BodyNowMetricsRail({
@@ -16,7 +17,7 @@ class BodyNowMetricsRail extends StatelessWidget {
     required this.onChipTapped,
   });
 
-  final BodyNowMetrics metrics;
+  final PillarMetrics metrics;
   final void Function(BodyNowChip chip) onChipTapped;
 
   @override
@@ -30,17 +31,16 @@ class BodyNowMetricsRail extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: deep,
-        // 16pt radius per brand bible for inner rails inside hero cards.
         borderRadius: BorderRadius.circular(AppDimens.radiusChip),
       ),
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _expanded(context, chip: _readinessChip(metrics), divider: true),
-          _expanded(context, chip: _hrvChip(metrics), divider: true),
-          _expanded(context, chip: _rhrChip(metrics), divider: true),
-          _expanded(context, chip: _sleepChip(metrics), divider: false),
+          _expanded(context, chip: _nutritionChip(metrics), divider: true),
+          _expanded(context, chip: _fitnessChip(metrics), divider: true),
+          _expanded(context, chip: _sleepChip(metrics), divider: true),
+          _expanded(context, chip: _heartChip(metrics), divider: false),
         ],
       ),
     );
@@ -54,72 +54,99 @@ class BodyNowMetricsRail extends StatelessWidget {
         children: [
           Expanded(child: chip),
           if (divider)
-            Container(
-              width: 1,
-              height: 48,
-              color: colors.divider,
-            ),
+            Container(width: 1, height: 48, color: colors.divider),
         ],
       ),
     );
   }
 
-  MetricChip _readinessChip(BodyNowMetrics m) => MetricChip(
-        label: 'Ready',
-        value: m.readiness.value?.toString(),
-        delta: m.readiness.delta == null
-            ? null
-            : '${m.readiness.delta! >= 0 ? '+' : ''}${m.readiness.delta} vs 7d',
-        deltaColor: (m.readiness.delta ?? 0) >= 0
-            ? AppColors.categoryActivity
-            : AppColors.categoryHeart,
-        accent: AppColors.primary,
-        onTap: () => onChipTapped(BodyNowChip.readiness),
-      );
+  MetricChip _nutritionChip(PillarMetrics m) {
+    final val = m.caloriesKcal;
+    final prev = m.caloriesPrevKcal;
+    final delta = (val != null && prev != null) ? val - prev : null;
+    return MetricChip(
+      label: 'Nutrition',
+      value: val?.toString(),
+      unit: 'kcal',
+      delta: delta == null
+          ? null
+          : '${delta >= 0 ? '+' : ''}$delta',
+      deltaColor: delta == null
+          ? null
+          : (delta >= 0 ? AppColors.categoryActivity : AppColors.categoryHeart),
+      accent: AppColors.categoryNutrition,
+      onTap: () => onChipTapped(BodyNowChip.nutrition),
+    );
+  }
 
-  MetricChip _hrvChip(BodyNowMetrics m) => MetricChip(
-        label: 'HRV',
-        value: m.hrvMs?.toString(),
-        unit: 'ms',
-        delta: m.hrvDeltaPct == null
-            ? null
-            : '${m.hrvDeltaPct! >= 0 ? '↑' : '↓'} ${m.hrvDeltaPct!.abs()}%',
-        deltaColor: (m.hrvDeltaPct ?? 0) >= 0
-            ? AppColors.categoryActivity
-            : AppColors.categoryHeart,
-        accent: AppColors.categoryActivity,
-        onTap: () => onChipTapped(BodyNowChip.hrv),
-      );
+  MetricChip _fitnessChip(PillarMetrics m) {
+    final val = m.stepsToday;
+    final prev = m.stepsPrev;
+    final delta = (val != null && prev != null) ? val - prev : null;
+    return MetricChip(
+      label: 'Fitness',
+      value: val == null ? null : _formatSteps(val),
+      unit: 'steps',
+      delta: delta == null
+          ? null
+          : '${delta >= 0 ? '+' : ''}${_formatSteps(delta.abs())}',
+      deltaColor: delta == null
+          ? null
+          : (delta >= 0 ? AppColors.categoryActivity : AppColors.categoryHeart),
+      accent: AppColors.categoryActivity,
+      onTap: () => onChipTapped(BodyNowChip.fitness),
+    );
+  }
 
-  MetricChip _rhrChip(BodyNowMetrics m) => MetricChip(
-        label: 'Rest HR',
-        value: m.rhrBpm?.toString(),
-        unit: 'bpm',
-        delta: m.rhrDeltaBpm == null
-            ? null
-            : '${m.rhrDeltaBpm! <= 0 ? '↓' : '↑'} ${m.rhrDeltaBpm!.abs()} bpm',
-        // For RHR, lower-is-better — green when delta ≤ 0.
-        deltaColor: (m.rhrDeltaBpm ?? 0) <= 0
-            ? AppColors.categoryActivity
-            : AppColors.categoryHeart,
-        accent: AppColors.categoryHeart,
-        onTap: () => onChipTapped(BodyNowChip.rhr),
-      );
+  MetricChip _sleepChip(PillarMetrics m) {
+    final val = m.sleepHours;
+    final prev = m.sleepHoursPrev;
+    final delta = (val != null && prev != null) ? val - prev : null;
+    return MetricChip(
+      label: 'Sleep',
+      value: val == null ? null : _formatSleep(val),
+      delta: delta == null
+          ? null
+          : '${delta >= 0 ? '+' : ''}${delta.abs().toStringAsFixed(1)}h',
+      deltaColor: delta == null
+          ? null
+          : (delta >= 0 ? AppColors.categoryActivity : AppColors.categoryHeart),
+      accent: AppColors.categorySleep,
+      onTap: () => onChipTapped(BodyNowChip.sleep),
+    );
+  }
 
-  MetricChip _sleepChip(BodyNowMetrics m) => MetricChip(
-        label: 'Sleep',
-        value: _formatSleep(m.sleepMinutes),
-        delta: m.sleepQuality == null ? null : 'Quality ${m.sleepQuality}',
-        accent: AppColors.categorySleep,
-        onTap: () => onChipTapped(BodyNowChip.sleep),
-      );
+  MetricChip _heartChip(PillarMetrics m) {
+    final val = m.avgHrBpm;
+    final prev = m.avgHrBpmPrev;
+    final delta = (val != null && prev != null) ? val - prev : null;
+    return MetricChip(
+      label: 'Heart',
+      value: val?.toString(),
+      unit: 'bpm',
+      delta: delta == null
+          ? null
+          : '${delta >= 0 ? '+' : ''}$delta bpm',
+      // Higher avg HR is worse for resting baseline, green when delta <= 0.
+      deltaColor: delta == null
+          ? null
+          : (delta <= 0 ? AppColors.categoryActivity : AppColors.categoryHeart),
+      accent: AppColors.categoryHeart,
+      onTap: () => onChipTapped(BodyNowChip.heart),
+    );
+  }
 
-  static String? _formatSleep(int? minutes) {
-    if (minutes == null) return null;
-    final h = minutes ~/ 60;
-    final m = minutes % 60;
+  static String _formatSteps(int steps) {
+    if (steps >= 1000) {
+      final k = steps / 1000;
+      return '${k.toStringAsFixed(k.truncateToDouble() == k ? 0 : 1)}k';
+    }
+    return steps.toString();
+  }
+
+  static String _formatSleep(double hours) {
+    final h = hours.truncate();
+    final m = ((hours - h) * 60).round();
     return '$h:${m.toString().padLeft(2, '0')}';
   }
 }
-
-enum BodyNowChip { readiness, hrv, rhr, sleep }

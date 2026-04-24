@@ -14,7 +14,7 @@ import 'package:zuralog/features/auth/domain/user_profile.dart';
 import 'package:zuralog/features/body/domain/body_state.dart';
 import 'package:zuralog/features/body/domain/coach_message.dart';
 import 'package:zuralog/features/body/providers/body_now_coach_message_provider.dart';
-import 'package:zuralog/features/body/providers/body_now_metrics_provider.dart';
+import 'package:zuralog/features/body/providers/pillar_metrics_providers.dart';
 import 'package:zuralog/features/body/providers/body_state_provider.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
@@ -201,8 +201,8 @@ ProviderContainer _container({
           (ref) async => dailyGoals,
         ),
         bodyStateProvider.overrideWith((ref) async => BodyState.empty),
-        bodyNowMetricsProvider
-            .overrideWith((ref) async => BodyNowMetrics.empty),
+        pillarMetricsProvider
+            .overrideWith((ref) async => PillarMetrics.empty),
         bodyNowCoachMessageProvider
             .overrideWith((ref) async => _kStubCoachMessage),
       ],
@@ -353,8 +353,8 @@ void main() {
             return const <DailyGoal>[];
           }),
           bodyStateProvider.overrideWith((ref) async => BodyState.empty),
-          bodyNowMetricsProvider
-              .overrideWith((ref) async => BodyNowMetrics.empty),
+          pillarMetricsProvider
+              .overrideWith((ref) async => PillarMetrics.empty),
           bodyNowCoachMessageProvider
               .overrideWith((ref) async => _kStubCoachMessage),
         ],
@@ -422,8 +422,8 @@ void main() {
           ),
           dailyGoalsProvider.overrideWith((ref) async => const <DailyGoal>[]),
           bodyStateProvider.overrideWith((ref) async => BodyState.empty),
-          bodyNowMetricsProvider
-              .overrideWith((ref) async => BodyNowMetrics.empty),
+          pillarMetricsProvider
+              .overrideWith((ref) async => PillarMetrics.empty),
           bodyNowCoachMessageProvider
               .overrideWith((ref) async => _kStubCoachMessage),
         ],

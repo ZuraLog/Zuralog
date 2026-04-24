@@ -1,15 +1,15 @@
 /// Provider + pure compute function for the hero body map state.
 library;
 
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:zuralog/features/body/domain/body_state.dart';
 import 'package:zuralog/features/body/domain/muscle_state.dart';
 import 'package:zuralog/features/body/providers/muscle_state_overrides_provider.dart';
 import 'package:zuralog/features/workout/domain/exercise.dart' show MuscleGroup;
 import 'package:zuralog/features/workout/providers/workout_history_provider.dart'
     show recentMuscleLoadProvider, muscleLoadBaselineProvider;
+
+const _useMock = bool.fromEnvironment('USE_MOCK_DATA', defaultValue: false);
 
 /// Pure compute function — exposed for tests and for the provider.
 BodyState computeBodyState({
@@ -65,7 +65,7 @@ final bodyStateProvider = FutureProvider<BodyState>((ref) async {
     now: DateTime.now(),
   );
   var base = real;
-  if (kDebugMode && !real.hasAnySignal) base = _demoBodyState();
+  if (_useMock && !real.hasAnySignal) base = _demoBodyState();
 
   // Merge user overrides on top of the computed/demo state. Overrides win
   // so the manual "I'm sore today" flow is always honoured.
