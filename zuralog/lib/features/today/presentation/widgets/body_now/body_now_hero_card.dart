@@ -20,7 +20,6 @@ import 'package:zuralog/features/body/providers/check_in_provider.dart';
 import 'package:zuralog/features/body/providers/pillar_metrics_providers.dart';
 import 'package:zuralog/features/today/presentation/widgets/body_now/body_now_coach_strip.dart';
 import 'package:zuralog/features/today/presentation/widgets/body_now/body_now_figure_stack.dart';
-import 'package:zuralog/features/today/presentation/widgets/body_now/body_now_headline.dart';
 import 'package:zuralog/features/today/presentation/widgets/body_now/body_now_metrics_rail.dart';
 import 'package:zuralog/shared/widgets/cards/zuralog_card.dart';
 
@@ -153,10 +152,6 @@ class _LoadedBody extends StatelessWidget {
       children: [
         BodyNowFigureStack(state: state),
         const SizedBox(height: AppDimens.spaceSm),
-        if (state.hasAnySignal) ...[
-          BodyNowHeadline(state: state),
-          const SizedBox(height: AppDimens.spaceMd),
-        ],
         BodyNowMetricsRail(metrics: metrics, onChipTapped: onChipTapped),
         const SizedBox(height: AppDimens.spaceMd),
       ],

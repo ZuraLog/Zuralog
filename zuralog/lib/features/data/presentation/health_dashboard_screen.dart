@@ -1,8 +1,8 @@
-/// Data tab — editorial health briefing.
+﻿/// Data tab â€” editorial health briefing.
 ///
 /// One hero Health Score card on top, followed by six
-/// [ZCategorySummaryCard]s in fixed order (Sleep → Activity → Heart →
-/// Nutrition → Body → Wellness). Shows a Connect-a-source CTA only when
+/// [ZCategorySummaryCard]s in fixed order (Sleep â†’ Activity â†’ Heart â†’
+/// Nutrition â†’ Body â†’ Wellness). Shows a Connect-a-source CTA only when
 /// fewer than three of the visible categories have data.
 ///
 /// Keeps two behaviors from the earlier implementation:
@@ -31,23 +31,8 @@ import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
-import 'dart:math' as math;
-import 'package:zuralog/features/body/data/muscle_log_repository.dart';
-import 'package:zuralog/features/body/domain/muscle_state.dart';
-import 'package:zuralog/features/body/presentation/muscle_log_today_strip.dart';
-import 'package:zuralog/features/body/presentation/muscle_state_picker_sheet.dart';
-import 'package:zuralog/features/body/presentation/tappable_body_side.dart';
-import 'package:zuralog/features/body/providers/body_state_provider.dart';
-import 'package:zuralog/features/body/providers/muscle_state_overrides_provider.dart';
-import 'package:zuralog/features/body/providers/pillar_metrics_providers.dart';
-import 'package:zuralog/features/workout/domain/exercise.dart' show MuscleGroup;
 
-String _todayIso() {
-  final now = DateTime.now();
-  return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-}
-
-// ── Visible categories ───────────────────────────────────────────────────────
+// â”€â”€ Visible categories â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /// Fixed editorial order for the Data tab's six category cards.
 const List<HealthCategory> _kVisibleCategories = [
@@ -59,12 +44,12 @@ const List<HealthCategory> _kVisibleCategories = [
   HealthCategory.wellness,
 ];
 
-// ── File-scope lookup helpers ────────────────────────────────────────────────
+// â”€â”€ File-scope lookup helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //
 // These helpers let both [_CategoryCard] and [_ConnectACTAIfNeeded] share
 // exactly one definition of "find this category's summary" and "does this
 // summary have enough data to show". They also make the Riverpod
-// `.select(...)` closures trivial — each card subscribes only to the
+// `.select(...)` closures trivial â€” each card subscribes only to the
 // primitive value it actually renders, so a single-category update no
 // longer rebuilds every card on the screen.
 
@@ -97,7 +82,7 @@ List<String> _lastSevenDayLabels(int count) {
 bool _summaryHasData(CategorySummary? s) {
   if (s == null) return false;
   final hasTrend = s.trend != null && s.trend!.length >= 3;
-  final hasValue = s.primaryValue.trim().isNotEmpty && s.primaryValue != '—';
+  final hasValue = s.primaryValue.trim().isNotEmpty && s.primaryValue != 'â€”';
   return hasTrend && hasValue;
 }
 
@@ -113,9 +98,9 @@ int _countCategoriesWithData(DashboardData? dash) {
   return count;
 }
 
-// ── HealthDashboardScreen ─────────────────────────────────────────────────────
+// â”€â”€ HealthDashboardScreen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-/// Data tab root — editorial category briefing.
+/// Data tab root â€” editorial category briefing.
 class HealthDashboardScreen extends ConsumerStatefulWidget {
   /// Creates the [HealthDashboardScreen].
   const HealthDashboardScreen({super.key});
@@ -138,7 +123,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) => _triggerSyncIfDue());
   }
 
-  // ── Health sync constants ──────────────────────────────────────────────────
+  // â”€â”€ Health sync constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /// SharedPreferences key for the last successful sync timestamp (ms since epoch).
   static const _kLastSyncKey = 'health_last_sync_at';
@@ -152,13 +137,13 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
   /// Minimum gap between automatic app-launch syncs (prevents hammering the server).
   static const _kSyncThrottleHours = 1;
 
-  // ── App-launch sync ────────────────────────────────────────────────────────
+  // â”€â”€ App-launch sync â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /// Fires a background health sync if the user has a health integration
   /// connected AND hasn't synced in the last [_kSyncThrottleHours] hour(s).
   ///
   /// Called once per screen lifecycle from [initState] via addPostFrameCallback.
-  /// Fire-and-forget — does not block rendering.
+  /// Fire-and-forget â€” does not block rendering.
   Future<void> _triggerSyncIfDue() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -194,7 +179,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     );
   }
 
-  // ── Pull-to-refresh ────────────────────────────────────────────────────────
+  // â”€â”€ Pull-to-refresh â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Future<void> _onRefresh() async {
     // Sync latest health data to the server before refreshing screen data.
@@ -230,7 +215,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     ref.invalidate(todayFeedProvider);
   }
 
-  // ── Build ────────────────────────────────────────────────────────────────────
+  // â”€â”€ Build â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @override
   Widget build(BuildContext context) {
@@ -253,10 +238,6 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
           ),
           children: [
             const _HealthScoreHero(),
-            const SizedBox(height: AppDimens.spaceMd),
-            const _FitnessBodySection(),
-            const SizedBox(height: AppDimens.spaceSm + 4),
-            const _StepsCard(),
             const SizedBox(height: AppDimens.spaceSm + 4),
             for (var i = 0; i < _kVisibleCategories.length; i++) ...[
               _CategoryCard(category: _kVisibleCategories[i]),
@@ -277,7 +258,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
   }
 }
 
-// ── _ViewAllDataPill ──────────────────────────────────────────────────────────
+// â”€â”€ _ViewAllDataPill â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /// Pattern pill that pushes the All Data long-form report. Sits between
 /// the six category cards and the Connect CTA so the user can step from
@@ -295,9 +276,9 @@ class _ViewAllDataPill extends StatelessWidget {
   }
 }
 
-// ── _HealthScoreHero ──────────────────────────────────────────────────────────
+// â”€â”€ _HealthScoreHero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-/// Editorial Health Score hero card — the single largest number on the Data tab.
+/// Editorial Health Score hero card â€” the single largest number on the Data tab.
 ///
 /// Tapping anywhere opens the score breakdown screen. Shows a shimmer skeleton
 /// while the score is loading; shows the same skeleton on error so the user
@@ -331,7 +312,7 @@ class _HealthScoreHero extends ConsumerWidget {
   }
 }
 
-// ── _HeroContent ──────────────────────────────────────────────────────────────
+// â”€â”€ _HeroContent â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _HeroContent extends StatelessWidget {
   const _HeroContent({required this.data});
@@ -343,14 +324,14 @@ class _HeroContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final scoreText = _hasScore ? '${data.score}' : '—';
+    final scoreText = _hasScore ? '${data.score}' : 'â€”';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Eyebrow
         Text(
-          'Your health · Today',
+          'Your health Â· Today',
           style: AppTextStyles.labelSmall.copyWith(
             color: colors.textTertiary,
             letterSpacing: 1.2,
@@ -408,7 +389,7 @@ class _HeroContent extends StatelessWidget {
   }
 }
 
-// ── _HeroDeltaPill ────────────────────────────────────────────────────────────
+// â”€â”€ _HeroDeltaPill â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /// Pill showing this week's score change vs. last week. Same red / green /
 /// neutral rules used on the category cards.
@@ -426,15 +407,15 @@ class _HeroDeltaPill extends StatelessWidget {
     if (weekChange > 0) {
       background = colors.success.withValues(alpha: 0.14);
       foreground = colors.success;
-      arrow = '↑';
+      arrow = 'â†‘';
     } else if (weekChange < 0) {
       background = colors.warning.withValues(alpha: 0.14);
       foreground = colors.warning;
-      arrow = '↓';
+      arrow = 'â†“';
     } else {
       background = colors.surfaceRaised;
       foreground = colors.textSecondary;
-      arrow = '·';
+      arrow = 'Â·';
     }
     final label = weekChange == 0
         ? 'Flat vs last week'
@@ -457,7 +438,7 @@ class _HeroDeltaPill extends StatelessWidget {
   }
 }
 
-// ── _HeroSkeleton ─────────────────────────────────────────────────────────────
+// â”€â”€ _HeroSkeleton â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /// Shimmer placeholder with the same overall footprint as the loaded hero.
 class _HeroSkeleton extends StatelessWidget {
@@ -486,9 +467,9 @@ class _HeroSkeleton extends StatelessWidget {
   }
 }
 
-// ── _CategoryCard ─────────────────────────────────────────────────────────────
+// â”€â”€ _CategoryCard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-/// Single category card — wraps [ZCategorySummaryCard] with the right
+/// Single category card â€” wraps [ZCategorySummaryCard] with the right
 /// category-level data pulled from [dashboardProvider].
 ///
 /// Uses `.select(...)` so each card only rebuilds when its own
@@ -523,7 +504,7 @@ class _CategoryCard extends ConsumerWidget {
       categoryName: name,
       icon: icon,
       color: color,
-      heroValue: hasData ? summary!.primaryValue : '—',
+      heroValue: hasData ? summary!.primaryValue : 'â€”',
       chart: chart,
       deltaLabel: hasData ? deltaLabel : null,
       deltaDirection: deltaDirection,
@@ -537,7 +518,7 @@ class _CategoryCard extends ConsumerWidget {
     );
   }
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
+  // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /// Builds the per-category 7-day chart widget shown in the card's chart
   /// slot. Returns `null` when there isn't enough data to render (fewer
@@ -625,14 +606,14 @@ class _CategoryCard extends ConsumerWidget {
     return isBetter ? ZCategoryDelta.better : ZCategoryDelta.worse;
   }
 
-  /// Builds the "↑ 4% vs last week" pill label. Returns `null` if the upstream
+  /// Builds the "â†‘ 4% vs last week" pill label. Returns `null` if the upstream
   /// delta is missing or non-finite (NaN / Infinity) so a bad upstream number
   /// can never crash the pill.
   static String? _deltaLabel(double? deltaPercent) {
     if (deltaPercent == null || !deltaPercent.isFinite) return null;
     final arrow = deltaPercent > 0
-        ? '↑'
-        : (deltaPercent < 0 ? '↓' : '·');
+        ? 'â†‘'
+        : (deltaPercent < 0 ? 'â†“' : 'Â·');
     final pct = deltaPercent.abs().round();
     if (pct == 0) return 'Flat vs last week';
     return '$arrow $pct% vs last week';
@@ -652,7 +633,7 @@ class _CategoryCard extends ConsumerWidget {
         return Icons.accessibility_new_rounded;
       case HealthCategory.wellness:
         return Icons.self_improvement_rounded;
-      // Defensive fallback — the six visible categories never hit these
+      // Defensive fallback â€” the six visible categories never hit these
       // branches, but the switch must be exhaustive.
       case HealthCategory.vitals:
         return Icons.monitor_heart_rounded;
@@ -666,14 +647,14 @@ class _CategoryCard extends ConsumerWidget {
   }
 }
 
-// ── _ConnectACTAIfNeeded ──────────────────────────────────────────────────────
+// â”€â”€ _ConnectACTAIfNeeded â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /// Renders a "Connect a source" feature card only when fewer than three of
 /// the six visible categories have usable data. Hidden once the user has
 /// enough data flowing to fill out the page.
 ///
 /// Uses `.select(...)` to watch only the integer count of populated
-/// categories, so the CTA only rebuilds when that count actually changes —
+/// categories, so the CTA only rebuilds when that count actually changes â€”
 /// not on every per-category mutation.
 class _ConnectACTAIfNeeded extends ConsumerWidget {
   const _ConnectACTAIfNeeded();
@@ -720,304 +701,3 @@ class _ConnectACTAIfNeeded extends ConsumerWidget {
   }
 }
 
-// ── _FitnessBodySection ───────────────────────────────────────────────────────
-
-class _FitnessBodySection extends ConsumerWidget {
-  const _FitnessBodySection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColorsOf(context);
-    final bodyAsync = ref.watch(bodyStateProvider);
-    final overrides = ref.watch(muscleStateOverridesProvider);
-    final repo = ref.watch(muscleLogRepositoryProvider);
-    final todayLogs = repo.getLogsForDate(_todayIso());
-
-    return ZuralogCard(
-      variant: ZCardVariant.plain,
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'YOUR BODY',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: colors.textSecondary,
-                      letterSpacing: 1.6,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Tap a muscle to log how it feels.',
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: colors.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-            if (overrides.isNotEmpty)
-              TextButton(
-                onPressed: () async {
-                  ref.read(muscleStateOverridesProvider.notifier).clearAll();
-                  await repo.clearLogsForDate(_todayIso());
-                },
-                child: Text(
-                  'Clear all',
-                  style: AppTextStyles.labelLarge
-                      .copyWith(color: AppColors.primary),
-                ),
-              ),
-          ]),
-          const SizedBox(height: AppDimens.spaceMd),
-          bodyAsync.when(
-            loading: () => const SizedBox(
-              height: 180,
-              child: Center(child: CircularProgressIndicator()),
-            ),
-            error: (_, __) => const SizedBox.shrink(),
-            data: (state) {
-              final zones = _bodyZones(state.muscles);
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: TappableBodySide(
-                        isBack: false,
-                        zones: zones,
-                        label: 'Front',
-                        onMuscleTap: (g) => showMuscleStatePicker(context, g),
-                      ),
-                    ),
-                    const SizedBox(width: AppDimens.spaceSm),
-                    Expanded(
-                      child: TappableBodySide(
-                        isBack: true,
-                        zones: zones,
-                        label: 'Back',
-                        onMuscleTap: (g) => showMuscleStatePicker(context, g),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-          if (todayLogs.isNotEmpty) ...[
-            const SizedBox(height: AppDimens.spaceMd),
-            MuscleLogTodayStrip(
-              logs: todayLogs,
-              onLogTap: (log) => showMuscleStatePicker(context, log.muscleGroup),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  static Map<MuscleGroup, Color> _bodyZones(
-      Map<MuscleGroup, MuscleState> muscles) {
-    final map = <MuscleGroup, Color>{};
-    muscles.forEach((g, s) {
-      final c = switch (s) {
-        MuscleState.fresh => AppColors.categoryActivity,
-        MuscleState.worked => AppColors.categoryNutrition,
-        MuscleState.sore => AppColors.categoryHeart,
-        MuscleState.neutral => null,
-      };
-      if (c != null) map[g] = c;
-    });
-    return map;
-  }
-}
-
-// ── _StepsCard ────────────────────────────────────────────────────────────────
-
-class _StepsCard extends ConsumerWidget {
-  const _StepsCard();
-
-  static const _kGoal = 10000;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColorsOf(context);
-    final metricsAsync = ref.watch(pillarMetricsProvider);
-
-    return metricsAsync.when(
-      loading: () => ZuralogCard(
-        variant: ZCardVariant.plain,
-        padding: const EdgeInsets.all(AppDimens.spaceMd),
-        child: const SizedBox(height: 120),
-      ),
-      error: (_, __) => const SizedBox.shrink(),
-      data: (metrics) {
-        final steps = metrics.stepsToday ?? 0;
-        final prev = metrics.stepsPrev;
-        final delta = prev != null ? steps - prev : null;
-        final progress = (steps / _kGoal).clamp(0.0, 1.0);
-        final remaining = (_kGoal - steps).clamp(0, _kGoal);
-
-        return ZuralogCard(
-          variant: ZCardVariant.plain,
-          padding: const EdgeInsets.all(AppDimens.spaceMd),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                Text(
-                  'STEPS TODAY',
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: colors.textSecondary,
-                    letterSpacing: 1.6,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  'Goal ${_fmtSteps(_kGoal)}',
-                  style: AppTextStyles.labelSmall
-                      .copyWith(color: colors.textSecondary),
-                ),
-              ]),
-              const SizedBox(height: AppDimens.spaceMd),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          metrics.stepsToday != null
-                              ? _fmtSteps(steps)
-                              : '—',
-                          style: AppTextStyles.displaySmall.copyWith(
-                            color: AppColors.categoryActivity,
-                            fontWeight: FontWeight.w800,
-                            height: 1,
-                          ),
-                        ),
-                        if (delta != null) ...[
-                          const SizedBox(height: 6),
-                          Row(children: [
-                            Icon(
-                              delta >= 0
-                                  ? Icons.arrow_upward_rounded
-                                  : Icons.arrow_downward_rounded,
-                              size: 13,
-                              color: delta >= 0
-                                  ? AppColors.categoryActivity
-                                  : AppColors.categoryHeart,
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              '${delta >= 0 ? '+' : ''}${_fmtSteps(delta.abs())} vs yesterday',
-                              style: AppTextStyles.bodySmall
-                                  .copyWith(color: colors.textSecondary),
-                            ),
-                          ]),
-                        ],
-                      ],
-                    ),
-                  ),
-                  SizedBox(
-                    width: 68,
-                    height: 68,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        CustomPaint(
-                          size: const Size(68, 68),
-                          painter: _RingPainter(
-                            progress: progress,
-                            color: AppColors.categoryActivity,
-                          ),
-                        ),
-                        Text(
-                          '${(progress * 100).round()}%',
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: AppColors.categoryActivity,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppDimens.spaceMd),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  backgroundColor:
-                      AppColors.categoryActivity.withValues(alpha: 0.15),
-                  color: AppColors.categoryActivity,
-                  minHeight: 5,
-                ),
-              ),
-              const SizedBox(height: AppDimens.spaceXs),
-              Text(
-                steps >= _kGoal
-                    ? 'Daily goal reached!'
-                    : '${_fmtSteps(remaining)} more to reach your daily goal',
-                style: AppTextStyles.bodySmall
-                    .copyWith(color: colors.textSecondary),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  static String _fmtSteps(int n) {
-    if (n >= 1000) {
-      final k = n / 1000;
-      return '${k.toStringAsFixed(k.truncateToDouble() == k ? 0 : 1)}k';
-    }
-    return n.toString();
-  }
-}
-
-class _RingPainter extends CustomPainter {
-  const _RingPainter({required this.progress, required this.color});
-
-  final double progress;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.shortestSide - 10) / 2;
-    final paint = Paint()
-      ..strokeWidth = 5
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    paint.color = color.withValues(alpha: 0.15);
-    canvas.drawCircle(center, radius, paint);
-
-    if (progress > 0) {
-      paint.color = color;
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        -math.pi / 2,
-        2 * math.pi * progress,
-        false,
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_RingPainter old) =>
-      old.progress != progress || old.color != color;
-}

@@ -46,7 +46,8 @@ class MetricChip extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: AppTextStyles.labelSmall.copyWith(
             color: colors.textSecondary,
-            letterSpacing: 1.2,
+            fontSize: 9,
+            letterSpacing: 0.6,
             fontWeight: FontWeight.w700,
           ),
         ),
