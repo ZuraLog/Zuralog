@@ -5,8 +5,6 @@
 /// placeholder, and links to start a new session or browse full history.
 library;
 
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,7 +19,13 @@ import 'package:zuralog/features/body/presentation/muscle_state_picker_sheet.dar
 import 'package:zuralog/features/body/presentation/tappable_body_side.dart';
 import 'package:zuralog/features/body/providers/body_state_provider.dart';
 import 'package:zuralog/features/body/providers/muscle_state_overrides_provider.dart';
-import 'package:zuralog/features/body/providers/pillar_metrics_providers.dart';
+import 'package:zuralog/features/data/domain/data_models.dart' show MetricDataPoint;
+import 'package:zuralog/features/data/domain/tile_visualization_config.dart'
+    show BarChartConfig, BarPoint;
+import 'package:zuralog/features/workout/domain/steps_summary.dart';
+import 'package:zuralog/features/workout/presentation/widgets/steps_detail_sheet.dart';
+import 'package:zuralog/features/workout/providers/steps_providers.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/workout/domain/completed_workout.dart';
@@ -30,7 +34,6 @@ import 'package:zuralog/features/workout/domain/workout_session.dart';
 import 'package:zuralog/features/workout/presentation/widgets/workout_stats_row.dart'
     show formatWorkoutDuration;
 import 'package:zuralog/features/workout/providers/workout_session_providers.dart';
-import 'package:zuralog/shared/widgets/widgets.dart';
 
 String _todayIso() {
   final now = DateTime.now();
@@ -533,7 +536,7 @@ class _FitnessBodySection extends ConsumerWidget {
                 height: 180,
                 child: Center(child: CircularProgressIndicator()),
               ),
-              error: (_, __) => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
               data: (state) {
                 final zones = _bodyZones(state.muscles);
                 return Padding(
@@ -598,178 +601,147 @@ class _FitnessBodySection extends ConsumerWidget {
 class _StepsCard extends ConsumerWidget {
   const _StepsCard();
 
-  static const _kGoal = 10000;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final summaryAsync = ref.watch(stepsHistoryProvider);
+    final smartTargetEnabled = ref.watch(smartTargetEnabledProvider);
+
+    return ZuralogCard(
+      onTap: () => showStepsDetailSheet(context),
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.spaceMd),
+        child: summaryAsync.when(
+          loading: () => const ZLoadingSkeleton(
+            width: double.infinity,
+            height: 100,
+          ),
+          error: (_, _) => const SizedBox(height: 100),
+          data: (summary) => _StepsCardLoaded(
+            summary: summary,
+            smartTargetEnabled: smartTargetEnabled,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StepsCardLoaded extends StatelessWidget {
+  const _StepsCardLoaded({
+    required this.summary,
+    required this.smartTargetEnabled,
+  });
+
+  final StepsSummary summary;
+  final bool smartTargetEnabled;
+
+  @override
+  Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final metricsAsync = ref.watch(pillarMetricsProvider);
+    final steps = summary.todayCount;
+    final avg = summary.weekAverage;
+    final delta = avg > 0 ? steps - avg.round() : null;
 
-    return metricsAsync.when(
-      loading: () => const ZuralogCard(child: SizedBox(height: 120)),
-      error: (_, __) => const SizedBox.shrink(),
-      data: (metrics) {
-        final steps = metrics.stepsToday ?? 0;
-        final prev = metrics.stepsPrev;
-        final delta = prev != null ? steps - prev : null;
-        final progress = (steps / _kGoal).clamp(0.0, 1.0);
-        final remaining = (_kGoal - steps).clamp(0, _kGoal);
-
-        return ZuralogCard(
-          child: Padding(
-            padding: const EdgeInsets.all(AppDimens.spaceMd),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(children: [
-                  Text(
-                    'STEPS TODAY',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: colors.textSecondary,
-                      letterSpacing: 1.6,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    'Goal ${_fmtSteps(_kGoal)}',
-                    style: AppTextStyles.labelSmall
-                        .copyWith(color: colors.textSecondary),
-                  ),
-                ]),
-                const SizedBox(height: AppDimens.spaceMd),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            metrics.stepsToday != null
-                                ? _fmtSteps(steps)
-                                : '—',
-                            style: AppTextStyles.displaySmall.copyWith(
-                              color: AppColors.categoryActivity,
-                              fontWeight: FontWeight.w800,
-                              height: 1,
-                            ),
-                          ),
-                          if (delta != null) ...[
-                            const SizedBox(height: 6),
-                            Row(children: [
-                              Icon(
-                                delta >= 0
-                                    ? Icons.arrow_upward_rounded
-                                    : Icons.arrow_downward_rounded,
-                                size: 13,
-                                color: delta >= 0
-                                    ? AppColors.categoryActivity
-                                    : AppColors.categoryHeart,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                '${delta >= 0 ? '+' : ''}${_fmtSteps(delta.abs())} vs yesterday',
-                                style: AppTextStyles.bodySmall
-                                    .copyWith(color: colors.textSecondary),
-                              ),
-                            ]),
-                          ],
-                        ],
-                      ),
-                    ),
-                    SizedBox(
-                      width: 68,
-                      height: 68,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          CustomPaint(
-                            size: const Size(68, 68),
-                            painter: _RingPainter(
-                              progress: progress,
-                              color: AppColors.categoryActivity,
-                            ),
-                          ),
-                          Text(
-                            '${(progress * 100).round()}%',
-                            style: AppTextStyles.labelSmall.copyWith(
-                              color: AppColors.categoryActivity,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppDimens.spaceMd),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(3),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    backgroundColor:
-                        AppColors.categoryActivity.withValues(alpha: 0.15),
-                    color: AppColors.categoryActivity,
-                    minHeight: 5,
-                  ),
-                ),
-                const SizedBox(height: AppDimens.spaceXs),
-                Text(
-                  steps >= _kGoal
-                      ? 'Daily goal reached!'
-                      : '${_fmtSteps(remaining)} more to reach your daily goal',
-                  style: AppTextStyles.bodySmall
-                      .copyWith(color: colors.textSecondary),
-                ),
-              ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          Text(
+            'STEPS',
+            style: AppTextStyles.labelSmall.copyWith(
+              color: colors.textSecondary,
+              letterSpacing: 1.6,
+              fontWeight: FontWeight.w700,
             ),
           ),
-        );
-      },
+          const Spacer(),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: AppDimens.iconSm,
+            color: colors.textSecondary,
+          ),
+        ]),
+        const SizedBox(height: AppDimens.spaceSm),
+        Text(
+          _fmt(steps),
+          style: AppTextStyles.displaySmall.copyWith(
+            color: AppColors.categoryActivity,
+            fontWeight: FontWeight.w800,
+            height: 1,
+          ),
+        ),
+        if (delta != null) ...[
+          const SizedBox(height: 4),
+          Row(children: [
+            Icon(
+              delta >= 0
+                  ? Icons.arrow_upward_rounded
+                  : Icons.arrow_downward_rounded,
+              size: 13,
+              color: delta >= 0
+                  ? AppColors.categoryActivity
+                  : AppColors.categoryHeart,
+            ),
+            const SizedBox(width: 3),
+            Text(
+              '${delta >= 0 ? '+' : ''}${_fmt(delta.abs())} vs 7-day avg',
+              style:
+                  AppTextStyles.bodySmall.copyWith(color: colors.textSecondary),
+            ),
+          ]),
+        ],
+        if (smartTargetEnabled && summary.smartTarget > 0) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Sweet spot: ${_fmt(summary.smartTarget)} steps',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.categoryActivity.withValues(alpha: 0.8),
+            ),
+          ),
+        ],
+        if (summary.dataPoints.isNotEmpty) ...[
+          const SizedBox(height: AppDimens.spaceMd),
+          SizedBox(
+            height: 36,
+            child: ZChart(
+              config: _toBarConfig(summary.dataPoints),
+              mode: ChartMode.sparkline,
+              color: AppColors.categoryActivity,
+            ),
+          ),
+        ],
+      ],
     );
   }
 
-  static String _fmtSteps(int n) {
+  static String _fmt(int n) {
     if (n >= 1000) {
       final k = n / 1000;
       return '${k.toStringAsFixed(k.truncateToDouble() == k ? 0 : 1)}k';
     }
     return n.toString();
   }
-}
 
-class _RingPainter extends CustomPainter {
-  const _RingPainter({required this.progress, required this.color});
-
-  final double progress;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.shortestSide - 10) / 2;
-    final paint = Paint()
-      ..strokeWidth = 5
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    paint.color = color.withValues(alpha: 0.15);
-    canvas.drawCircle(center, radius, paint);
-
-    if (progress > 0) {
-      paint.color = color;
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        -math.pi / 2,
-        2 * math.pi * progress,
-        false,
-        paint,
-      );
-    }
+  static BarChartConfig _toBarConfig(List<MetricDataPoint> points) {
+    return BarChartConfig(
+      bars: [
+        for (var i = 0; i < points.length; i++)
+          BarPoint(
+            label: _dayLabel(points[i].timestamp),
+            value: points[i].value,
+            isToday: i == points.length - 1,
+          ),
+      ],
+    );
   }
 
-  @override
-  bool shouldRepaint(_RingPainter old) =>
-      old.progress != progress || old.color != color;
+  static String _dayLabel(String iso) {
+    try {
+      final d = DateTime.parse(iso);
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      return days[d.weekday % 7];
+    } catch (_) {
+      return '';
+    }
+  }
 }
