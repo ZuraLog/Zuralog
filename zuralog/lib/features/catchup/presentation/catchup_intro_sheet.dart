@@ -18,6 +18,10 @@ import 'package:zuralog/shared/widgets/widgets.dart';
 Future<void> showCatchupIntroSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
+    // Route up to the root navigator — go_router wraps routes with
+    // shell navigators that showModalBottomSheet can't always resolve
+    // against from within the Today tab.
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (_) => const _CatchupIntroSheet(),

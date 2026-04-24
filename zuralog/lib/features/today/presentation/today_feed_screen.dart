@@ -1,8 +1,8 @@
 /// Today Feed — Tab 0 root screen.
 ///
-/// Curated daily briefing: Health Score hero paired with the Streak Hero Card,
-/// four health pillar cards (Sleep, Nutrition, Workouts, Heart), daily goals,
-/// journal prompt, and AI insight cards.
+/// Curated daily briefing: Your-Body-Now hero, four health pillar cards
+/// (Sleep, Nutrition, Workouts, Heart), daily goals, journal prompt, and
+/// AI insight cards.
 library;
 
 import 'package:flutter/material.dart';
@@ -26,22 +26,21 @@ import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/features/heart/domain/heart_models.dart';
 import 'package:zuralog/features/heart/providers/heart_providers.dart';
+import 'package:zuralog/features/today/presentation/widgets/body_now/body_now_hero_card.dart';
 import 'package:zuralog/features/today/presentation/widgets/heart_pillar_card.dart';
 import 'package:zuralog/features/today/presentation/widgets/journal_prompt_card.dart';
 import 'package:zuralog/features/today/presentation/widgets/nutrition_pillar_card.dart';
 import 'package:zuralog/features/today/presentation/widgets/sleep_pillar_card.dart';
 import 'package:zuralog/features/today/presentation/widgets/workouts_pillar_card.dart';
-import 'package:zuralog/shared/widgets/health_score_widget.dart';
-import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── TodayFeedScreen ───────────────────────────────────────────────────────────
 
 /// Today Feed screen — the curated daily briefing.
 ///
-/// Displays the Health Score hero paired with the Streak Hero Card, four health
-/// pillar cards (Sleep, Nutrition, Workouts, Heart), daily goals, journal
-/// prompt, and AI insight cards.
+/// Displays the Your-Body-Now hero, four health pillar cards (Sleep,
+/// Nutrition, Workouts, Heart), daily goals, journal prompt, and AI
+/// insight cards.
 class TodayFeedScreen extends ConsumerStatefulWidget {
   /// Creates the [TodayFeedScreen].
   const TodayFeedScreen({super.key});
@@ -149,7 +148,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            // ── Health Score + Streak Hero Card (side by side) ──────────────
+            // ── Your Body Now hero ────────────────────────────────────────
             ZFadeSlideIn(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -158,40 +157,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                   AppDimens.spaceMd,
                   AppDimens.spaceMd,
                 ),
-                child: IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Health Score hero — left half.
-                      Expanded(
-                        child: OnboardingTooltip(
-                          screenKey: 'today_feed',
-                          tooltipKey: 'health_score',
-                          message: 'This is your daily health score — a composite of '
-                              'all your health data from the last 24 hours.',
-                          child: _HealthScoreHero(scoreAsync: scoreAsync),
-                        ),
-                      ),
-                      const SizedBox(width: AppDimens.spaceSm),
-                      // Streak Hero Card — right half.
-                      Expanded(
-                        child: feedAsync.when(
-                          loading: () => const StreakHeroCard(streakDays: 0),
-                          error: (e, _) => const StreakHeroCard(streakDays: 0),
-                          data: (feed) => StreakHeroCard(
-                            streakDays: feed.streak?.currentStreak ?? 0,
-                            isPersonalBest: feed.streak != null &&
-                                feed.streak!.currentStreak > 0 &&
-                                feed.streak!.currentStreak >=
-                                    (feed.streak!.longestStreak ?? 0),
-                            isFrozen: feed.streak?.isFrozen ?? false,
-                            onTap: () => context.go(RouteNames.progressPath),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                child: const BodyNowHeroCard(),
               ),
             ),
 
@@ -385,100 +351,6 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
   }
 }
 
-// ── _HealthScoreHero ───────────────────────────────────────────────────────────
-
-class _HealthScoreHero extends ConsumerWidget {
-  const _HealthScoreHero({required this.scoreAsync});
-
-  final AsyncValue<HealthScoreData> scoreAsync;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColorsOf(context);
-    return ZuralogCard(
-      variant: ZCardVariant.hero,
-      padding: const EdgeInsets.symmetric(
-        vertical: AppDimens.spaceLg,
-        horizontal: AppDimens.spaceMd,
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Ambient sage-green radial glow — top-right corner (decorative,
-          // Positioned.fill so it doesn't affect the Stack's intrinsic height).
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(0.85, -0.85),
-                    radius: 0.9,
-                    colors: [
-                      colors.primary.withValues(alpha: 0.07),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // Center fills the Stack and vertically centers the content.
-          // Non-positioned so IntrinsicHeight can measure it correctly.
-          Center(
-            child: scoreAsync.when(
-            // Provider never errors — this branch is a safety net only.
-            error: (err, stack) => const HealthScoreZeroState(),
-            loading: () => const ZLoadingSkeleton(
-              width: double.infinity,
-              height: 120,
-              borderRadius: AppDimens.shapeLg,
-            ),
-            data: (data) {
-              // Three states based on data maturity:
-              // 1. No data at all → sad-face zero state.
-              if (data.dataDays == 0) {
-                return const HealthScoreZeroState();
-              }
-              // 2. Building up (Days 1–6) → partial sage-green ring
-              //    showing progress towards the 7-day threshold.
-              if (data.dataDays < kMinDataDaysForMaturity) {
-                return HealthScoreBuildingState(
-                  dataDays: data.dataDays,
-                  targetDays: kMinDataDaysForMaturity,
-                );
-              }
-              // 3. Full (Day 7+) → real score ring with sparkline.
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  HealthScoreWidget.hero(
-                    score: data.score,
-                    trend: data.trend.isNotEmpty ? data.trend : null,
-                    commentary: data.commentary,
-                    onTap: () {
-                      ref.read(hapticServiceProvider).light();
-                      ref.read(analyticsServiceProvider).capture(
-                        event: AnalyticsEvents.healthScoreTapped,
-                      );
-                      context.go(RouteNames.dataPath);
-                    },
-                  ),
-                  // AI delta chip — week-over-week score change.
-                  if (data.weekChange != null &&
-                      data.weekChange != 0 &&
-                      data.dataDays > kMinDataDaysForMaturity)
-                    _HealthScoreDeltaChip(weekChange: data.weekChange!),
-                ],
-              );
-            },
-          ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ── _DailyGoalsSection ────────────────────────────────────────────────────────
 
 /// Watches [dailyGoalsProvider] and renders [ZDailyGoalsCard] with real data.
@@ -584,43 +456,4 @@ class _BuildingInsightsNote extends StatelessWidget {
   }
 }
 
-// ── _HealthScoreDeltaChip ─────────────────────────────────────────────────────
-
-/// Small pill chip showing week-over-week health score change.
-///
-/// Positive: green arrow up + "↑ X pts this week".
-/// Negative: red arrow down + "↓ X pts this week".
-class _HealthScoreDeltaChip extends StatelessWidget {
-  const _HealthScoreDeltaChip({required this.weekChange});
-
-  final int weekChange;
-
-  @override
-  Widget build(BuildContext context) {
-    final isPositive = weekChange > 0;
-    final chipColor = isPositive
-        ? AppColors.categoryActivity // green
-        : AppColors.healthScoreRed;  // error red per spec
-    final arrow = isPositive ? '↑' : '↓';
-    final absChange = weekChange.abs();
-
-    return Padding(
-      padding: const EdgeInsets.only(top: AppDimens.spaceSm),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: chipColor.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(AppDimens.radiusChip),
-        ),
-        child: Text(
-          '$arrow $absChange pts this week',
-          style: AppTextStyles.labelSmall.copyWith(
-            color: chipColor,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-}
 

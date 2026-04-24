@@ -54,6 +54,10 @@ class ZAlertDialog extends StatelessWidget {
   }) {
     return showDialog<bool>(
       context: context,
+      // Go through the root navigator so callers launched from
+      // post-frame callbacks (e.g. WorkoutResumeGate) or from inside
+      // go_router shell contexts still have a valid Navigator.
+      useRootNavigator: true,
       barrierColor: Colors.black.withValues(alpha: 0.50),
       builder: (_) => ZAlertDialog(
         title: title,
