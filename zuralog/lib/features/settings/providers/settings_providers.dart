@@ -258,6 +258,40 @@ final sessionUnitsProvider = StateProvider<UnitsSystem>(
   (ref) => UnitsSystem.metric,
 );
 
+// ── Onboarding profile ─────────────────────────────────────────────────────────
+
+final toneProvider = Provider<Tone?>(
+  (ref) => ref.watch(userPreferencesProvider).valueOrNull?.tone,
+);
+
+final focusAreaProvider = Provider<FocusArea?>(
+  (ref) => ref.watch(userPreferencesProvider).valueOrNull?.focusArea,
+);
+
+final primaryGoalProvider = Provider<String?>(
+  (ref) => ref.watch(userPreferencesProvider).valueOrNull?.primaryGoal,
+);
+
+final dietaryRestrictionsProvider = Provider<List<String>?>(
+  (ref) => ref.watch(userPreferencesProvider).valueOrNull?.dietaryRestrictions,
+);
+
+final injuriesProvider = Provider<List<String>?>(
+  (ref) => ref.watch(userPreferencesProvider).valueOrNull?.injuries,
+);
+
+final sleepPatternProvider = Provider<SleepPattern?>(
+  (ref) => ref.watch(userPreferencesProvider).valueOrNull?.sleepPattern,
+);
+
+final healthFrustrationProvider = Provider<String?>(
+  (ref) => ref.watch(userPreferencesProvider).valueOrNull?.healthFrustration,
+);
+
+final discoverySourceProvider = Provider<String?>(
+  (ref) => ref.watch(userPreferencesProvider).valueOrNull?.discoverySource,
+);
+
 // ── AI Memory ──────────────────────────────────────────────────────────────────
 
 /// Provides the [MemoryRepository] backed by the Cloud Brain API.

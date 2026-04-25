@@ -98,6 +98,47 @@ enum FitnessLevel {
           orElse: () => FitnessLevel.active);
 }
 
+enum Tone {
+  direct('direct'),
+  warm('warm'),
+  minimal('minimal'),
+  thorough('thorough');
+
+  const Tone(this.value);
+  final String value;
+
+  static Tone fromValue(String v) =>
+      Tone.values.firstWhere((e) => e.value == v, orElse: () => Tone.warm);
+}
+
+enum FocusArea {
+  sleep('sleep'),
+  activity('activity'),
+  nutrition('nutrition'),
+  overall('overall');
+
+  const FocusArea(this.value);
+  final String value;
+
+  static FocusArea fromValue(String v) =>
+      FocusArea.values.firstWhere((e) => e.value == v,
+          orElse: () => FocusArea.overall);
+}
+
+enum SleepPattern {
+  great('great'),
+  hardToFallAsleep('hard_to_fall_asleep'),
+  wakeUpALot('wake_up_a_lot'),
+  shortHours('short_hours');
+
+  const SleepPattern(this.value);
+  final String value;
+
+  static SleepPattern fromValue(String v) =>
+      SleepPattern.values.firstWhere((e) => e.value == v,
+          orElse: () => SleepPattern.great);
+}
+
 // ── Notification Settings sub-model ───────────────────────────────────────────
 
 /// Maps the `notification_settings` JSON column.
@@ -254,6 +295,15 @@ class UserPreferencesModel {
     this.goals,
     this.unitsSystem = UnitsSystem.metric,
     this.fitnessLevel,
+    // Onboarding profile
+    this.tone,
+    this.focusArea,
+    this.primaryGoal,
+    this.dietaryRestrictions,
+    this.injuries,
+    this.sleepPattern,
+    this.healthFrustration,
+    this.discoverySource,
     // Timestamps (read-only from API)
     this.createdAt,
     this.updatedAt,
@@ -303,6 +353,16 @@ class UserPreferencesModel {
   final UnitsSystem unitsSystem;
   final FitnessLevel? fitnessLevel;
 
+  // Onboarding profile
+  final Tone? tone;
+  final FocusArea? focusArea;
+  final String? primaryGoal;
+  final List<String>? dietaryRestrictions;
+  final List<String>? injuries;
+  final SleepPattern? sleepPattern;
+  final String? healthFrustration;
+  final String? discoverySource;
+
   // Timestamps (read-only)
   final String? createdAt;
   final String? updatedAt;
@@ -321,6 +381,20 @@ class UserPreferencesModel {
         : null;
 
     final rawFitnessLevel = json['fitness_level'] as String?;
+
+    final rawDietary = json['dietary_restrictions'];
+    final dietaryList = rawDietary is List
+        ? rawDietary.map((e) => e.toString()).toList()
+        : null;
+
+    final rawInjuries = json['injuries'];
+    final injuriesList = rawInjuries is List
+        ? rawInjuries.map((e) => e.toString()).toList()
+        : null;
+
+    final rawTone = json['tone'] as String?;
+    final rawFocusArea = json['focus_area'] as String?;
+    final rawSleepPattern = json['sleep_pattern'] as String?;
 
     return UserPreferencesModel(
       id: json['id'] as String? ?? '',
@@ -371,6 +445,17 @@ class UserPreferencesModel {
       fitnessLevel: rawFitnessLevel != null
           ? FitnessLevel.fromValue(rawFitnessLevel)
           : null,
+      // Onboarding profile
+      tone: rawTone != null ? Tone.fromValue(rawTone) : null,
+      focusArea: rawFocusArea != null ? FocusArea.fromValue(rawFocusArea) : null,
+      primaryGoal: json['primary_goal'] as String?,
+      dietaryRestrictions: dietaryList,
+      injuries: injuriesList,
+      sleepPattern: rawSleepPattern != null
+          ? SleepPattern.fromValue(rawSleepPattern)
+          : null,
+      healthFrustration: json['health_frustration'] as String?,
+      discoverySource: json['discovery_source'] as String?,
       // Timestamps
       createdAt: json['created_at'] as String?,
       updatedAt: json['updated_at'] as String?,
@@ -407,6 +492,14 @@ class UserPreferencesModel {
         'goals': goals,
         'units_system': unitsSystem.value,
         'fitness_level': fitnessLevel?.value,
+        'tone': tone?.value,
+        'focus_area': focusArea?.value,
+        'primary_goal': primaryGoal,
+        'dietary_restrictions': dietaryRestrictions,
+        'injuries': injuries,
+        'sleep_pattern': sleepPattern?.value,
+        'health_frustration': healthFrustration,
+        'discovery_source': discoverySource,
         'created_at': createdAt,
         'updated_at': updatedAt,
       };
@@ -436,6 +529,14 @@ class UserPreferencesModel {
         'goals': goals,
         'units_system': unitsSystem.value,
         'fitness_level': fitnessLevel?.value,
+        'tone': tone?.value,
+        'focus_area': focusArea?.value,
+        'primary_goal': primaryGoal,
+        'dietary_restrictions': dietaryRestrictions,
+        'injuries': injuries,
+        'sleep_pattern': sleepPattern?.value,
+        'health_frustration': healthFrustration,
+        'discovery_source': discoverySource,
       };
 
   // ── copyWith ─────────────────────────────────────────────────────────────────
@@ -467,6 +568,14 @@ class UserPreferencesModel {
     List<String>? goals,
     UnitsSystem? unitsSystem,
     FitnessLevel? fitnessLevel,
+    Tone? tone,
+    FocusArea? focusArea,
+    String? primaryGoal,
+    List<String>? dietaryRestrictions,
+    List<String>? injuries,
+    SleepPattern? sleepPattern,
+    String? healthFrustration,
+    String? discoverySource,
     String? createdAt,
     String? updatedAt,
   }) =>
@@ -501,6 +610,14 @@ class UserPreferencesModel {
         goals: goals ?? this.goals,
         unitsSystem: unitsSystem ?? this.unitsSystem,
         fitnessLevel: fitnessLevel ?? this.fitnessLevel,
+        tone: tone ?? this.tone,
+        focusArea: focusArea ?? this.focusArea,
+        primaryGoal: primaryGoal ?? this.primaryGoal,
+        dietaryRestrictions: dietaryRestrictions ?? this.dietaryRestrictions,
+        injuries: injuries ?? this.injuries,
+        sleepPattern: sleepPattern ?? this.sleepPattern,
+        healthFrustration: healthFrustration ?? this.healthFrustration,
+        discoverySource: discoverySource ?? this.discoverySource,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
