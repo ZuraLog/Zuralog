@@ -13,6 +13,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_chip_input.dart';
+import 'package:zuralog/features/onboarding/presentation/chat/inputs/onboarding_focus_input.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -41,7 +44,7 @@ Future<void> showCatchupFlowSheet(BuildContext context) {
 
 // ── Step enum ─────────────────────────────────────────────────────────────────
 
-enum _Step { intro, tone, diet, limitations, training, sleep, frustration }
+enum _Step { intro, focus, goal, tone, diet, limitations, training, sleep, frustration }
 
 // ── _CatchupSheet ─────────────────────────────────────────────────────────────
 
@@ -56,6 +59,8 @@ class _CatchupSheet extends ConsumerStatefulWidget {
 
 class _CatchupSheetState extends ConsumerState<_CatchupSheet> {
   static const _questionSteps = [
+    _Step.focus,
+    _Step.goal,
     _Step.tone,
     _Step.diet,
     _Step.limitations,
@@ -67,6 +72,8 @@ class _CatchupSheetState extends ConsumerState<_CatchupSheet> {
   late _Step _step;
 
   // Collected answers
+  String? _focus;
+  List<String> _goalList = const [];
   String? _tone;
   List<String> _diet = const [];
   bool _dietAnswered = false;
@@ -85,7 +92,37 @@ class _CatchupSheetState extends ConsumerState<_CatchupSheet> {
   @override
   void initState() {
     super.initState();
-    _step = widget.skipIntro ? _Step.tone : _Step.intro;
+    _step = widget.skipIntro ? _Step.focus : _Step.intro;
+
+    final prefs = ref.read(userPreferencesProvider).valueOrNull;
+    if (prefs != null) {
+      _tone = prefs.tone?.value;
+      _focus = prefs.focusArea?.value;
+      _training = prefs.fitnessLevel?.value;
+      _sleep = prefs.sleepPattern?.value;
+
+      if (prefs.primaryGoal != null && prefs.primaryGoal!.isNotEmpty) {
+        _goalList = prefs.primaryGoal!
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+      }
+
+      if (prefs.dietaryRestrictions != null) {
+        _diet = prefs.dietaryRestrictions!;
+        _dietAnswered = true;
+      }
+
+      if (prefs.injuries != null) {
+        _injuries = prefs.injuries!;
+        _injuriesAnswered = true;
+      }
+
+      if (prefs.healthFrustration != null) {
+        _frustrationCtrl.text = prefs.healthFrustration!;
+      }
+    }
   }
 
   @override
@@ -104,7 +141,7 @@ class _CatchupSheetState extends ConsumerState<_CatchupSheet> {
 
   void _advance() {
     if (_step == _Step.intro) {
-      setState(() => _step = _Step.tone);
+      setState(() => _step = _Step.focus);
       return;
     }
     if (_isLastQuestion) {
@@ -139,6 +176,8 @@ class _CatchupSheetState extends ConsumerState<_CatchupSheet> {
     try {
       await ref.read(userProfileProvider.notifier).update(
             tone: _tone,
+            focusArea: _focus,
+            primaryGoal: _goalList.isNotEmpty ? _goalList.join(', ') : null,
             dietaryRestrictions:
                 _dietAnswered ? _resolveList(_diet, _dietOtherCtrl) : null,
             injuries: _injuriesAnswered
@@ -151,7 +190,10 @@ class _CatchupSheetState extends ConsumerState<_CatchupSheet> {
                 : null,
             profileCatchupStatus: 'completed',
           );
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        ref.invalidate(userPreferencesProvider);
+        Navigator.of(context).pop();
+      }
     } catch (_) {
       if (mounted) setState(() => _saving = false);
     }
@@ -219,10 +261,120 @@ class _CatchupSheetState extends ConsumerState<_CatchupSheet> {
     );
   }
 
+  List<String> _goalOptionsForFocus(String? focus) {
+    switch (focus) {
+      case 'sleep':
+        return const [
+          'Sleep 8 hours',
+          'Fall asleep faster',
+          'Fewer wake-ups',
+          'Morning energy',
+          'Consistent schedule',
+        ];
+      case 'activity':
+        return const [
+          'Train 4x a week',
+          'Build strength',
+          'Run a 5K',
+          'Walk 10k steps',
+          'Stay consistent',
+        ];
+      case 'nutrition':
+        return const [
+          'Eat more protein',
+          'Cut processed food',
+          'Lose weight',
+          'Gain muscle',
+          'Drink more water',
+        ];
+      case 'overall':
+      default:
+        return const [
+          'More energy',
+          'Less stress',
+          'Better mood',
+          'Build habits',
+          'Feel balanced',
+        ];
+    }
+  }
+
   Widget _buildStep(AppColorsOf colors) {
     switch (_step) {
       case _Step.intro:
         return _IntroContent(onStart: _advance, onDismiss: _dismiss);
+
+      case _Step.focus:
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'What matters most to you right now?',
+              style: AppTextStyles.titleLarge.copyWith(color: colors.textPrimary),
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            OnboardingFocusInput(
+              options: [
+                OnboardingFocusOption(
+                  id: 'sleep',
+                  icon: Icons.nightlight_round,
+                  accent: AppColors.categorySleep,
+                  title: 'Sleep',
+                  subtitle: 'Deeper nights',
+                ),
+                OnboardingFocusOption(
+                  id: 'activity',
+                  icon: Icons.directions_run_rounded,
+                  accent: AppColors.categoryActivity,
+                  title: 'Activity',
+                  subtitle: 'Move more',
+                ),
+                OnboardingFocusOption(
+                  id: 'nutrition',
+                  icon: Icons.eco_rounded,
+                  accent: AppColors.categoryNutrition,
+                  title: 'Nutrition',
+                  subtitle: 'Eat smarter',
+                ),
+                OnboardingFocusOption(
+                  id: 'overall',
+                  icon: Icons.spa_rounded,
+                  accent: AppColors.primary,
+                  title: 'Overall',
+                  subtitle: 'Feel better',
+                ),
+              ],
+              onSelect: (id) {
+                setState(() => _focus = id);
+                _advance();
+              },
+            ),
+          ],
+        );
+
+      case _Step.goal:
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              "What's one thing you'd like to change?",
+              style: AppTextStyles.titleLarge.copyWith(color: colors.textPrimary),
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            OnboardingChipInput(
+              key: ValueKey('goal-${_focus ?? 'overall'}'),
+              options: _goalOptionsForFocus(_focus),
+              onSubmit: (picks) {
+                setState(() => _goalList = picks);
+                _advance();
+              },
+            ),
+            const SizedBox(height: AppDimens.spaceSm),
+            SecondaryButton(label: 'Skip', onPressed: _advance),
+          ],
+        );
 
       case _Step.tone:
         return _QuestionStep(
