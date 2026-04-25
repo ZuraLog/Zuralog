@@ -44,6 +44,7 @@ class OnboardingFocusInput extends StatefulWidget {
 
 class _OnboardingFocusInputState extends State<OnboardingFocusInput> {
   String? _picked;
+  bool _submitted = false;
 
   static const double _tileRadius = 18;
   static const double _iconSize = 28;
@@ -52,6 +53,8 @@ class _OnboardingFocusInputState extends State<OnboardingFocusInput> {
   static const Duration _tapDelay = Duration(milliseconds: 200);
 
   void _pick(String id) {
+    if (_submitted) return;
+    _submitted = true;
     HapticFeedback.mediumImpact();
     setState(() => _picked = id);
     Future.delayed(_tapDelay, () {

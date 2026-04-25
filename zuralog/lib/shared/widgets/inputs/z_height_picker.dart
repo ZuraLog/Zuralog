@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:flutter/scheduler.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
@@ -25,6 +26,7 @@ class ZHeightPicker extends ConsumerStatefulWidget {
     this.initialCm,
     required this.onSubmit,
     this.actionLabel = 'Continue',
+    this.useSessionUnits = false,
   });
 
   /// Starting height in centimetres. Defaults to 170 cm when null.
@@ -36,6 +38,11 @@ class ZHeightPicker extends ConsumerStatefulWidget {
   /// Label for the confirm button (e.g. 'Continue' in the wizard, 'Confirm'
   /// in onboarding).
   final String actionLabel;
+
+  /// When true, reads/writes [sessionUnitsProvider] instead of
+  /// [userPreferencesProvider]. Use this during onboarding before the
+  /// persisted preferences have loaded from the server.
+  final bool useSessionUnits;
 
   @override
   ConsumerState<ZHeightPicker> createState() => _ZHeightPickerState();
@@ -61,7 +68,9 @@ class _ZHeightPickerState extends ConsumerState<ZHeightPicker> {
   @override
   void initState() {
     super.initState();
-    _units = ref.read(unitsSystemProvider);
+    _units = widget.useSessionUnits
+        ? ref.read(sessionUnitsProvider)
+        : ref.read(unitsSystemProvider);
     _currentCm = (widget.initialCm?.round() ?? _defaultCm).clamp(_minCm, _maxCm);
     _deriveImperialFromCm();
     _cmScroll = FixedExtentScrollController(initialItem: _currentCm - _minCm);
@@ -90,25 +99,34 @@ class _ZHeightPickerState extends ConsumerState<ZHeightPicker> {
 
   void _onToggle(UnitsSystem newUnits) {
     if (newUnits == _units) return;
-    setState(() {
-      if (newUnits == UnitsSystem.imperial) {
-        _deriveImperialFromCm();
-      } else {
-        _deriveCmFromImperial();
-      }
-      _units = newUnits;
-      // Dispose and recreate controllers so the wheels snap to the
-      // converted position immediately.
-      _cmScroll.dispose();
-      _ftScroll.dispose();
-      _inScroll.dispose();
-      _cmScroll = FixedExtentScrollController(initialItem: _currentCm - _minCm);
-      _ftScroll = FixedExtentScrollController(initialItem: _currentFt - _minFt);
-      _inScroll = FixedExtentScrollController(initialItem: _currentIn);
+    if (newUnits == UnitsSystem.imperial) {
+      _deriveImperialFromCm();
+    } else {
+      _deriveCmFromImperial();
+    }
+    _units = newUnits;
+    // Capture stale controllers, swap in new ones, then dispose stale after
+    // the frame renders so the CupertinoPicker is never left holding a
+    // disposed controller.
+    final staleCm = _cmScroll;
+    final staleFt = _ftScroll;
+    final staleIn = _inScroll;
+    _cmScroll = FixedExtentScrollController(initialItem: _currentCm - _minCm);
+    _ftScroll = FixedExtentScrollController(initialItem: _currentFt - _minFt);
+    _inScroll = FixedExtentScrollController(initialItem: _currentIn);
+    setState(() {});
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      staleCm.dispose();
+      staleFt.dispose();
+      staleIn.dispose();
     });
-    ref
-        .read(userPreferencesProvider.notifier)
-        .mutate((p) => p.copyWith(unitsSystem: newUnits));
+    if (widget.useSessionUnits) {
+      ref.read(sessionUnitsProvider.notifier).state = newUnits;
+    } else {
+      ref
+          .read(userPreferencesProvider.notifier)
+          .mutate((p) => p.copyWith(unitsSystem: newUnits));
+    }
   }
 
   void _submit() {

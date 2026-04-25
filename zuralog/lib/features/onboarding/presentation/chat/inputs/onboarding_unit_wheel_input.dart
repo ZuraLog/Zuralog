@@ -23,6 +23,7 @@ class OnboardingHeightInput extends StatelessWidget {
     return ZHeightPicker(
       onSubmit: (cm) => onSubmit(cm.round()),
       actionLabel: 'Confirm',
+      useSessionUnits: true,
     );
   }
 }
@@ -41,6 +42,7 @@ class OnboardingWeightInput extends StatelessWidget {
     return ZWeightPicker(
       onSubmit: (kg) => onSubmit(kg.round()),
       actionLabel: 'Confirm',
+      useSessionUnits: true,
     );
   }
 }

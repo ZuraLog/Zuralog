@@ -16,6 +16,7 @@ import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/buttons/z_button.dart';
+import 'package:flutter/scheduler.dart';
 
 /// Scroll-wheel weight picker with a live Metric / Imperial toggle.
 class ZWeightPicker extends ConsumerStatefulWidget {
@@ -24,6 +25,7 @@ class ZWeightPicker extends ConsumerStatefulWidget {
     this.initialKg,
     required this.onSubmit,
     this.actionLabel = 'Continue',
+    this.useSessionUnits = false,
   });
 
   /// Starting weight in kilograms. Defaults to 70 kg when null.
@@ -34,6 +36,11 @@ class ZWeightPicker extends ConsumerStatefulWidget {
 
   /// Label for the confirm button.
   final String actionLabel;
+
+  /// When true, reads/writes [sessionUnitsProvider] instead of
+  /// [userPreferencesProvider]. Use this during onboarding before the
+  /// persisted preferences have loaded from the server.
+  final bool useSessionUnits;
 
   @override
   ConsumerState<ZWeightPicker> createState() => _ZWeightPickerState();
@@ -56,7 +63,9 @@ class _ZWeightPickerState extends ConsumerState<ZWeightPicker> {
   @override
   void initState() {
     super.initState();
-    _units = ref.read(unitsSystemProvider);
+    _units = widget.useSessionUnits
+        ? ref.read(sessionUnitsProvider)
+        : ref.read(unitsSystemProvider);
     _currentKg = (widget.initialKg?.round() ?? _defaultKg).clamp(_minKg, _maxKg);
     _currentLbs = (_currentKg * 2.20462).round().clamp(_minLbs, _maxLbs);
     _scroll = _makeController();
@@ -79,19 +88,25 @@ class _ZWeightPickerState extends ConsumerState<ZWeightPicker> {
 
   void _onToggle(UnitsSystem newUnits) {
     if (newUnits == _units) return;
-    setState(() {
-      if (newUnits == UnitsSystem.imperial) {
-        _currentLbs = (_currentKg * 2.20462).round().clamp(_minLbs, _maxLbs);
-      } else {
-        _currentKg = (_currentLbs / 2.20462).round().clamp(_minKg, _maxKg);
-      }
-      _units = newUnits;
-      _scroll.dispose();
-      _scroll = _makeController();
-    });
-    ref
-        .read(userPreferencesProvider.notifier)
-        .mutate((p) => p.copyWith(unitsSystem: newUnits));
+    if (newUnits == UnitsSystem.imperial) {
+      _currentLbs = (_currentKg * 2.20462).round().clamp(_minLbs, _maxLbs);
+    } else {
+      _currentKg = (_currentLbs / 2.20462).round().clamp(_minKg, _maxKg);
+    }
+    _units = newUnits;
+    final stale = _scroll;
+    _scroll = _makeController();
+    setState(() {});
+    // Dispose the old controller after the frame has rendered with the new one
+    // so the CupertinoPicker is never left holding a disposed controller.
+    SchedulerBinding.instance.addPostFrameCallback((_) => stale.dispose());
+    if (widget.useSessionUnits) {
+      ref.read(sessionUnitsProvider.notifier).state = newUnits;
+    } else {
+      ref
+          .read(userPreferencesProvider.notifier)
+          .mutate((p) => p.copyWith(unitsSystem: newUnits));
+    }
   }
 
   void _submit() {

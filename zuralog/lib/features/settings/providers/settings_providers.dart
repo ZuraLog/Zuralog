@@ -250,6 +250,14 @@ final unitsSystemProvider = Provider<UnitsSystem>((ref) {
       ?.unitsSystem ?? UnitsSystem.metric;
 });
 
+/// In-memory unit choice used during onboarding before [userPreferencesProvider]
+/// has finished loading from the server. Both [ZHeightPicker] and [ZWeightPicker]
+/// read and write this when their `useSessionUnits` flag is true. Finalised into
+/// [userPreferencesProvider] at the end of the onboarding flow.
+final sessionUnitsProvider = StateProvider<UnitsSystem>(
+  (ref) => UnitsSystem.metric,
+);
+
 // ── AI Memory ──────────────────────────────────────────────────────────────────
 
 /// Provides the [MemoryRepository] backed by the Cloud Brain API.
