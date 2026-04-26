@@ -221,9 +221,6 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
       setState(() => _todayLogs = localRepo.getLogsForDate(log.logDate));
     }));
 
-    ZLogSuccessOverlay.show(context);
-    // ignore: discarded_futures
-    widget.onSave(amountMl, vesselKey: vessel.key);
     _triggerFeedback(amountMl);
     setState(() {
       _lastAmountMl = amountMl;
@@ -235,6 +232,12 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
       p.setDouble(_kLastAmountPrefKey, amountMl);
       p.setInt(_kLastSavedAtPrefKey, now.millisecondsSinceEpoch);
     });
+    // Let the ring count-up animation (400ms) finish before showing the overlay.
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+    ZLogSuccessOverlay.show(context);
+    // ignore: discarded_futures
+    widget.onSave(amountMl, vesselKey: vessel.key);
   }
 
   @override
@@ -345,9 +348,6 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
       setState(() => _todayLogs = localRepo.getLogsForDate(log.logDate));
     }));
 
-    ZLogSuccessOverlay.show(context);
-    await widget.onSave(savedAmount, vesselKey: null);
-    if (!mounted) return;
     _triggerFeedback(savedAmount);
     setState(() {
       _lastAmountMl = savedAmount;
@@ -358,6 +358,11 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
       p.setDouble(_kLastAmountPrefKey, savedAmount);
       p.setInt(_kLastSavedAtPrefKey, now.millisecondsSinceEpoch);
     });
+    // Let the ring count-up animation (400ms) finish before showing the overlay.
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+    ZLogSuccessOverlay.show(context);
+    await widget.onSave(savedAmount, vesselKey: null);
   }
 
   @override
