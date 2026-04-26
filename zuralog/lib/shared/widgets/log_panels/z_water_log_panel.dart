@@ -15,7 +15,6 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/buttons/z_button.dart';
 import 'package:zuralog/shared/widgets/charts/z_mini_ring.dart';
-import 'package:zuralog/shared/widgets/inputs/app_text_field.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
@@ -59,7 +58,9 @@ const _kVesselIcons = <String, IconData>{
   'custom': Icons.edit,
 };
 
-const double _kRingSize = 56.0;
+const double _kLargeRingSize = 110.0;
+const double _kLargeRingStroke = 8.0;
+const double _kVesselCardHeight = 84.0;
 const String _kLastVesselPrefKey = 'water_log_last_vessel';
 
 // ── ZWaterLogPanel ─────────────────────────────────────────────────────────────
@@ -102,6 +103,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
 
   String? _defaultVesselKey;
   bool _initialized = false;
+  final FocusNode _customFocusNode = FocusNode();
 
   bool get _isCustomSelected => _selectedVesselKey == 'custom';
 
@@ -141,6 +143,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
   @override
   void dispose() {
     _customController.dispose();
+    _customFocusNode.dispose();
     super.dispose();
   }
 
@@ -168,13 +171,46 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
 
   void _selectVessel(_VesselPreset vessel) {
     if (vessel.ml != null) {
-      // Preset — instant-save, no state change needed.
       _handlePresetTap(vessel);
       return;
     }
-    // Custom — toggle the input field on; clear any prior value.
     setState(() {
       _selectedVesselKey = vessel.key;
+      _amountMl = 0;
+      _customController.clear();
+    });
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _customFocusNode.requestFocus(),
+    );
+  }
+
+  void _increment() {
+    final isImperial = ref.read(unitsSystemProvider) == UnitsSystem.imperial;
+    setState(() {
+      _amountMl += 50;
+      _customController.text = isImperial
+          ? (_amountMl / _kOzToMl).toStringAsFixed(1)
+          : _amountMl.toStringAsFixed(0);
+    });
+  }
+
+  void _decrement() {
+    if (_amountMl <= 0) return;
+    final isImperial = ref.read(unitsSystemProvider) == UnitsSystem.imperial;
+    setState(() {
+      _amountMl = (_amountMl - 50).clamp(0, double.infinity);
+      _customController.text = _amountMl > 0
+          ? (isImperial
+              ? (_amountMl / _kOzToMl).toStringAsFixed(1)
+              : _amountMl.toStringAsFixed(0))
+          : '';
+    });
+  }
+
+  void _backToGrid() {
+    _customFocusNode.unfocus();
+    setState(() {
+      _selectedVesselKey = null;
       _amountMl = 0;
       _customController.clear();
     });
@@ -214,13 +250,18 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
         ? lastWaterRaw['date'] as String?
         : null;
 
+    // The 4 preset vessels shown in the 2×2 grid.
+    final presets = _kVessels.where((v) => v.ml != null).toList();
+    // The custom entry (full-width bar).
+    final customVessel = _kVessels.firstWhere((v) => v.ml == null);
+
     return Padding(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── Goal-progress ring header ───────────────────────────────────────
+          // ── Centred ring header (always visible) ──────────────────────────
           _WaterRingHeader(
             todayMl: todayMl,
             goalMl: waterGoalMl,
@@ -230,47 +271,195 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
 
           const SizedBox(height: AppDimens.spaceLg),
 
-          // ── Vessel preset pills (Wrap so they flow on narrow widths) ───────
-          Wrap(
-            spacing: AppDimens.spaceSm,
-            runSpacing: AppDimens.spaceSm,
-            children: _kVessels.map((vessel) {
-              final amountLabel = _vesselAmount(vessel, isImperial);
-              return _VesselPill(
-                vessel: vessel,
-                isSelected: _selectedVesselKey == vessel.key,
-                amountLabel: amountLabel,
-                isDefault: vessel.key == _defaultVesselKey,
-                onTap: () => _selectVessel(vessel),
-              );
-            }).toList(),
-          ),
-
-          // ── Custom amount input + save button (custom-only) ───────────────
-          if (_isCustomSelected) ...[
-            const SizedBox(height: AppDimens.spaceMd),
-            AppTextField(
-              controller: _customController,
-              hintText: isImperial ? 'Enter amount (oz)' : 'Enter amount (ml)',
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+          if (!_isCustomSelected) ...[
+            // ── 2×2 symmetric vessel grid ─────────────────────────────────
+            Row(
+              children: [
+                Expanded(
+                  child: _VesselCard(
+                    vessel: presets[0],
+                    isSelected: _selectedVesselKey == presets[0].key,
+                    amountLabel: _vesselAmount(presets[0], isImperial),
+                    isDefault: presets[0].key == _defaultVesselKey,
+                    onTap: () => _selectVessel(presets[0]),
+                  ),
+                ),
+                const SizedBox(width: AppDimens.spaceSm),
+                Expanded(
+                  child: _VesselCard(
+                    vessel: presets[1],
+                    isSelected: _selectedVesselKey == presets[1].key,
+                    amountLabel: _vesselAmount(presets[1], isImperial),
+                    isDefault: presets[1].key == _defaultVesselKey,
+                    onTap: () => _selectVessel(presets[1]),
+                  ),
+                ),
               ],
-              suffixIcon: Align(
-                widthFactor: 1.0,
-                heightFactor: 1.0,
-                child: Padding(
-                  padding: const EdgeInsets.only(right: AppDimens.spaceMd),
-                  child: Text(
-                    isImperial ? 'oz' : 'ml',
-                    style: AppTextStyles.labelMedium.copyWith(
+            ),
+            const SizedBox(height: AppDimens.spaceSm),
+            Row(
+              children: [
+                Expanded(
+                  child: _VesselCard(
+                    vessel: presets[2],
+                    isSelected: _selectedVesselKey == presets[2].key,
+                    amountLabel: _vesselAmount(presets[2], isImperial),
+                    isDefault: presets[2].key == _defaultVesselKey,
+                    onTap: () => _selectVessel(presets[2]),
+                  ),
+                ),
+                const SizedBox(width: AppDimens.spaceSm),
+                Expanded(
+                  child: _VesselCard(
+                    vessel: presets[3],
+                    isSelected: _selectedVesselKey == presets[3].key,
+                    amountLabel: _vesselAmount(presets[3], isImperial),
+                    isDefault: presets[3].key == _defaultVesselKey,
+                    onTap: () => _selectVessel(presets[3]),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppDimens.spaceSm),
+            // ── Full-width Custom amount bar ──────────────────────────────
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _selectVessel(customVessel),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                curve: Curves.easeInOut,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+                  border: Border.all(color: colors.border, width: 1.5),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.edit,
+                      size: AppDimens.iconSm,
                       color: colors.textSecondary,
+                    ),
+                    const SizedBox(width: AppDimens.spaceXs),
+                    Text(
+                      'Custom amount',
+                      style: AppTextStyles.labelMedium.copyWith(
+                        color: colors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ] else ...[
+            // ── Custom-active: ±50 mL stepper + tappable number ──────────
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: _decrement,
+                  child: Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: colors.surface,
+                      borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+                      border: Border.all(color: colors.border, width: 1.5),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '−',
+                        style: AppTextStyles.displaySmall.copyWith(
+                          color: colors.textSecondary,
+                          fontWeight: FontWeight.w300,
+                          height: 1.0,
+                        ),
+                      ),
                     ),
                   ),
                 ),
+                const SizedBox(width: AppDimens.spaceSm),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: _customController,
+                        focusNode: _customFocusNode,
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.displayLarge.copyWith(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 48,
+                        ),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*'),
+                          ),
+                        ],
+                        onChanged: _onCustomChanged,
+                      ),
+                      Text(
+                        isImperial ? 'ounces' : 'millilitres',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppDimens.spaceSm),
+                GestureDetector(
+                  onTap: _increment,
+                  child: Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: colors.surface,
+                      borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+                      border: Border.all(color: colors.border, width: 1.5),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '+',
+                        style: AppTextStyles.displaySmall.copyWith(
+                          color: colors.textSecondary,
+                          fontWeight: FontWeight.w300,
+                          height: 1.0,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppDimens.spaceXs),
+            Text(
+              '+/− adjusts by 50 mL',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.labelSmall.copyWith(
+                color: colors.textTertiary,
               ),
-              onChanged: _onCustomChanged,
+            ),
+            const SizedBox(height: AppDimens.spaceXs),
+            GestureDetector(
+              onTap: _backToGrid,
+              child: Text(
+                '← back to vessels',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
             ),
             const SizedBox(height: AppDimens.spaceLg),
             ZButton(
@@ -337,24 +526,22 @@ class _WaterRingHeaderState extends State<_WaterRingHeader> {
     }
   }
 
-  String _formatToday() {
-    final t = widget.todayMl;
-    if (t == null) return '0 ${widget.isImperial ? 'oz' : 'ml'}';
-    if (widget.isImperial) {
-      final oz = t / _kOzToMl;
-      return '${oz.toStringAsFixed(1)} oz';
-    }
-    return '${t.toStringAsFixed(0)} ml';
+  String _formatTodayNumber() {
+    final t = widget.todayMl ?? 0;
+    if (widget.isImperial) return (t / _kOzToMl).toStringAsFixed(1);
+    return t.toStringAsFixed(0);
   }
 
-  String _formatGoalLine() {
+  String _formatTodayUnit() => widget.isImperial ? 'oz today' : 'mL today';
+
+  String? _formatGoalInline() {
     final g = widget.goalMl;
-    if (g == null) return 'Set a water goal in Settings';
+    if (g == null) return null;
     if (widget.isImperial) {
       final oz = g / _kOzToMl;
-      return 'of ${oz.toStringAsFixed(0)} oz daily goal';
+      return '${oz.toStringAsFixed(0)} oz goal';
     }
-    return 'of ${g.toStringAsFixed(0)} ml daily goal';
+    return '${g.toStringAsFixed(0)} mL goal';
   }
 
   String? _formatLastDrink(String? dateStr) {
@@ -380,70 +567,104 @@ class _WaterRingHeaderState extends State<_WaterRingHeader> {
     final progress = _computeProgress(widget.todayMl, widget.goalMl);
     final ringColor =
         progress >= 1.0 ? AppColors.success : AppColors.categoryBody;
+    final lastDrink = _formatLastDrink(widget.lastDrinkDate);
+    final goalInline = _formatGoalInline();
 
-    return Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        AnimatedScale(
-          scale: _goalJustCompleted ? 1.15 : 1.0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.elasticOut,
-          child: ZMiniRing(
-            size: _kRingSize,
-            strokeWidth: 5,
-            value: progress,
-            color: ringColor,
-          ),
-        ),
-        const SizedBox(width: AppDimens.spaceMd),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+        // ── Large ring with today's number in the centre ──────────────────
+        SizedBox(
+          width: _kLargeRingSize,
+          height: _kLargeRingSize,
+          child: Stack(
+            alignment: Alignment.center,
             children: [
-              Text(
-                _formatToday(),
-                style: AppTextStyles.titleMedium.copyWith(
-                  color: colors.textPrimary,
+              AnimatedScale(
+                scale: _goalJustCompleted ? 1.1 : 1.0,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.elasticOut,
+                child: ZMiniRing(
+                  size: _kLargeRingSize,
+                  strokeWidth: _kLargeRingStroke,
+                  value: progress,
+                  color: ringColor,
                 ),
               ),
-              const SizedBox(height: AppDimens.spaceXs),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _formatTodayNumber(),
+                    style: AppTextStyles.displayMedium.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                      height: 1.0,
+                    ),
+                  ),
+                  Text(
+                    _formatTodayUnit(),
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppDimens.spaceSm),
+        // ── Meta row: last drink · goal ───────────────────────────────────
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (lastDrink != null)
               Text(
-                _formatGoalLine(),
-                style: AppTextStyles.bodySmall.copyWith(
+                lastDrink,
+                style: AppTextStyles.labelSmall.copyWith(
                   color: colors.textTertiary,
                 ),
               ),
-              if (_formatLastDrink(widget.lastDrinkDate) != null) ...[
-                const SizedBox(height: AppDimens.spaceXs),
-                Text(
-                  _formatLastDrink(widget.lastDrinkDate)!,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: colors.textTertiary,
-                  ),
+            if (lastDrink != null && goalInline != null) ...[
+              const SizedBox(width: AppDimens.spaceXs),
+              Container(
+                width: 3,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: colors.textTertiary,
+                  shape: BoxShape.circle,
                 ),
-              ],
+              ),
+              const SizedBox(width: AppDimens.spaceXs),
             ],
-          ),
+            if (goalInline != null)
+              Text(
+                goalInline,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: colors.textTertiary,
+                ),
+              ),
+          ],
         ),
       ],
     );
   }
 }
 
-// ── _VesselPill ───────────────────────────────────────────────────────────────
+// ── _VesselCard ───────────────────────────────────────────────────────────────
 
-/// A compact pill button representing one vessel preset (or the custom option).
+/// Square card used in the 2×2 vessel preset grid.
 ///
-/// Tap target is at least [AppDimens.touchTargetMin] tall. Selected state uses
-/// the brand sage [primary] surface with `textOnSage` foreground; unselected
-/// uses the neutral surface with a 1.5px border. Animates background and
-/// border with a 150ms ease-in-out tween.
+/// All four cards are forced to [_kVesselCardHeight] so the grid stays
+/// perfectly symmetric regardless of label length. Selected state uses
+/// [AppColors.categoryBody] tint; unselected uses the neutral surface.
 ///
-/// When [isDefault] is true and the pill is not selected, a small dot is shown
-/// beneath the amount label as a visual hint that this was the last-used vessel.
-class _VesselPill extends StatelessWidget {
-  const _VesselPill({
+/// When [isDefault] is true and the card is not selected, a small dot is shown
+/// in the top-right corner as a hint that this was the last-used vessel.
+class _VesselCard extends StatelessWidget {
+  const _VesselCard({
     required this.vessel,
     required this.isSelected,
     required this.amountLabel,
@@ -453,28 +674,22 @@ class _VesselPill extends StatelessWidget {
 
   final _VesselPreset vessel;
   final bool isSelected;
-
-  /// Pre-computed amount string (e.g. "250 ml" or "8 oz"). Empty for 'custom'.
   final String amountLabel;
-
   final VoidCallback onTap;
-
-  /// When true, shows a small dot beneath the amount label to hint this was the
-  /// last-used vessel. Only visible when the pill is not currently selected.
   final bool isDefault;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final icon = _kVesselIcons[vessel.key] ?? Icons.water_drop;
-    final isCustom = vessel.key == 'custom';
 
-    final backgroundColor = isSelected ? colors.primary : colors.surface;
-    final foregroundColor =
-        isSelected ? colors.textOnSage : colors.textSecondary;
-    final borderColor = isSelected ? colors.primary : colors.border;
-
-    final radius = BorderRadius.circular(AppDimens.radiusChip);
+    final borderColor =
+        isSelected ? AppColors.categoryBody : colors.border;
+    final bgColor = isSelected
+        ? AppColors.categoryBody.withValues(alpha: 0.1)
+        : colors.surface;
+    final nameColor =
+        isSelected ? AppColors.categoryBody : colors.textPrimary;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -482,54 +697,52 @@ class _VesselPill extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeInOut,
-        constraints: const BoxConstraints(
-          minHeight: AppDimens.touchTargetMin,
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: AppDimens.spaceSm,
-        ),
+        height: _kVesselCardHeight,
         decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: radius,
+          color: bgColor,
+          borderRadius: BorderRadius.circular(AppDimens.shapeMd),
           border: Border.all(color: borderColor, width: 1.5),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
+        child: Stack(
           children: [
-            Icon(icon, size: 18, color: foregroundColor),
-            const SizedBox(width: AppDimens.spaceXs),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  vessel.label,
-                  style: AppTextStyles.labelMedium.copyWith(
-                    color: foregroundColor,
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 24, color: nameColor),
+                  const SizedBox(height: 4),
+                  Text(
+                    vessel.label,
+                    style: AppTextStyles.labelMedium.copyWith(
+                      color: nameColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (amountLabel.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      amountLabel,
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (isDefault && !isSelected)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  width: 5,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: AppColors.categoryBody,
+                    shape: BoxShape.circle,
                   ),
                 ),
-                if (!isCustom && amountLabel.isNotEmpty)
-                  Text(
-                    amountLabel,
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: foregroundColor,
-                    ),
-                  ),
-                if (isDefault && !isSelected) ...[
-                  const SizedBox(height: 2),
-                  Container(
-                    width: 4,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: colors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+              ),
           ],
         ),
       ),

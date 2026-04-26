@@ -114,6 +114,26 @@ void main() {
       expect(savedVesselKey, 'bottle');
     });
 
+    testWidgets('Tapping Large bottle pill instant-saves 750 ml with vesselKey "large"',
+        (tester) async {
+      double? savedAmount;
+      String? savedVesselKey;
+      await tester.pumpWidget(_wrap(ZWaterLogPanel(
+        onSave: (ml, {String? vesselKey}) async {
+          savedAmount = ml;
+          savedVesselKey = vesselKey;
+        },
+        onBack: () {},
+      )));
+      await _settle(tester);
+
+      await tester.tap(find.text('Large bottle'));
+      await tester.pump();
+
+      expect(savedAmount, closeTo(750.0, 0.01));
+      expect(savedVesselKey, 'large');
+    });
+
     testWidgets('Custom flow saves entered amount with vesselKey null',
         (tester) async {
       double? savedAmount;
@@ -127,7 +147,7 @@ void main() {
       )));
       await _settle(tester);
 
-      await tester.tap(find.text('Custom'));
+      await tester.tap(find.text('Custom amount'));
       await tester.pump();
       expect(find.byType(TextField), findsOneWidget);
 
