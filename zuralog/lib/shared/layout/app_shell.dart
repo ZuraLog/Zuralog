@@ -90,11 +90,16 @@ class _AppShellState extends ConsumerState<AppShell> {
     _lastSheetTap = now;
 
     setState(() => _isLogSheetOpen = true);
+    // Capture the messenger from the shell's context before the modal pushes
+    // a new route. Any snackbar shown from within the sheet will use this
+    // messenger and appear above the bottom sheet overlay.
+    final messenger = ScaffoldMessenger.of(context);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => ZLogGridSheet(
+        parentMessenger: messenger,
         onFullScreenRoute: (routeName) {
           Navigator.of(context).pop();
           context.pushNamed(routeName);

@@ -154,7 +154,7 @@ void main() {
       await tester.enterText(find.byType(TextField), '300');
       await tester.pump();
 
-      await tester.tap(find.byType(ZButton));
+      await tester.tap(find.widgetWithText(ZButton, 'Add Water'));
       await tester.pump();
 
       expect(savedAmount, closeTo(300.0, 0.01));

@@ -169,15 +169,23 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
     return isImperial ? customDisplayValue * _kOzToMl : customDisplayValue;
   }
 
-  void _selectVessel(_VesselPreset vessel) {
+  void _selectVessel(_VesselPreset vessel, {double? defaultMl}) {
     if (vessel.ml != null) {
       _handlePresetTap(vessel);
       return;
     }
+    final isImperial = ref.read(unitsSystemProvider) == UnitsSystem.imperial;
+    final initMl = defaultMl ?? 0;
     setState(() {
       _selectedVesselKey = vessel.key;
-      _amountMl = 0;
-      _customController.clear();
+      _amountMl = initMl;
+      if (initMl > 0) {
+        _customController.text = isImperial
+            ? (initMl / _kOzToMl).toStringAsFixed(1)
+            : initMl.toStringAsFixed(0);
+      } else {
+        _customController.clear();
+      }
     });
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _customFocusNode.requestFocus(),
@@ -324,7 +332,12 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
             // ── Full-width Custom amount bar ──────────────────────────────
             GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: () => _selectVessel(customVessel),
+              onTap: () {
+                final lastMl = lastWaterRaw is Map<String, dynamic>
+                    ? (lastWaterRaw['value'] as double?)
+                    : null;
+                _selectVessel(customVessel, defaultMl: lastMl);
+              },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 curve: Curves.easeInOut,
@@ -450,18 +463,14 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
                 color: colors.textTertiary,
               ),
             ),
-            const SizedBox(height: AppDimens.spaceXs),
-            GestureDetector(
-              onTap: _backToGrid,
-              child: Text(
-                '← back to vessels',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.labelSmall.copyWith(
-                  color: colors.textSecondary,
-                ),
-              ),
+            const SizedBox(height: AppDimens.spaceSm),
+            ZButton(
+              label: 'Back to vessels',
+              variant: ZButtonVariant.secondary,
+              size: ZButtonSize.medium,
+              onPressed: _backToGrid,
             ),
-            const SizedBox(height: AppDimens.spaceLg),
+            const SizedBox(height: AppDimens.spaceMd),
             ZButton(
               label: 'Add Water',
               onPressed: _amountMl > 0 ? _handleSave : null,
