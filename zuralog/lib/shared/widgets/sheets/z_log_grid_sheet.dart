@@ -143,6 +143,10 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
   /// When non-null, the sheet shows the inline panel for this tile.
   _TileDef? _selectedTile;
 
+  /// Trailing widget injected by the active inline panel (e.g. the memory icon
+  /// from the wellness panel). Cleared when the sheet returns to the grid.
+  final ValueNotifier<Widget?> _panelTrailingNotifier = ValueNotifier(null);
+
   @override
   void initState() {
     super.initState();
@@ -163,7 +167,16 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
     }
   }
 
-  void _backToGrid() => setState(() => _selectedTile = null);
+  @override
+  void dispose() {
+    _panelTrailingNotifier.dispose();
+    super.dispose();
+  }
+
+  void _backToGrid() {
+    _panelTrailingNotifier.value = null;
+    setState(() => _selectedTile = null);
+  }
 
   void _handleTileTap(_TileDef tile) {
     switch (tile.behaviour) {
@@ -253,6 +266,12 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
                     color: colors.textPrimary,
                   ),
                 ),
+                const Spacer(),
+                ValueListenableBuilder<Widget?>(
+                  valueListenable: _panelTrailingNotifier,
+                  builder: (context, trailing, _) =>
+                      trailing ?? const SizedBox.shrink(),
+                ),
               ],
             ),
           ),
@@ -275,6 +294,7 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
                     repo: ref.read(todayRepositoryProvider),
                     onBack: _backToGrid,
                     parentMessenger: widget.parentMessenger,
+                    panelTrailingNotifier: _panelTrailingNotifier,
                     onSaved: () {
                       if (!mounted) return;
                       Navigator.of(context).pop();
@@ -350,6 +370,7 @@ class _PanelView extends StatelessWidget {
     required this.onBack,
     required this.onSaved,
     this.parentMessenger,
+    this.panelTrailingNotifier,
   });
 
   final _TileDef tile;
@@ -365,6 +386,9 @@ class _PanelView extends StatelessWidget {
   /// sheet rather than being swallowed by the modal's detached scaffold.
   final ScaffoldMessengerState? parentMessenger;
 
+  /// Passed through to panels that can inject a trailing widget into the sheet header.
+  final ValueNotifier<Widget?>? panelTrailingNotifier;
+
   @override
   Widget build(BuildContext context) {
     return switch (tile.key) {
@@ -377,6 +401,7 @@ class _PanelView extends StatelessWidget {
           onBack: onBack,
         ),
       'mood' => ZWellnessLogPanel(
+          trailingNotifier: panelTrailingNotifier,
           onSave: (data) async {
             try {
               await repo.logWellness(
@@ -384,7 +409,6 @@ class _PanelView extends StatelessWidget {
                 energy: data.energy,
                 stress: data.stress,
                 notes: data.notes,
-                tags: data.tags,
                 aiSummary: data.aiSummary,
                 transcript: data.transcript,
               );

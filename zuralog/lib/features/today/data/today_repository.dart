@@ -177,7 +177,6 @@ abstract interface class TodayRepositoryInterface {
     double? energy,
     double? stress,
     String? notes,
-    List<String> tags = const [],
     String? aiSummary,
     String? transcript,
   });
@@ -734,47 +733,24 @@ class TodayRepository implements TodayRepositoryInterface {
     double? energy,
     double? stress,
     String? notes,
-    List<String> tags = const [],
     String? aiSummary,
     String? transcript,
   }) async {
     final now = DateTime.now();
     final sharedMeta = <String, dynamic>{
-      if (tags.isNotEmpty) 'tags': tags,
       if (aiSummary != null) 'ai_summary': aiSummary,
       if (notes != null) 'notes': notes,
       if (transcript != null) 'transcript': transcript,
     };
-    if (mood != null) {
-      await submitIngest(
-        metricType: 'mood',
-        value: mood,
-        unit: '/10',
-        source: 'manual',
-        recordedAt: now,
-        metadata: sharedMeta.isEmpty ? null : Map<String, dynamic>.unmodifiable(sharedMeta),
-      );
-    }
-    if (energy != null) {
-      await submitIngest(
-        metricType: 'energy',
-        value: energy,
-        unit: '/10',
-        source: 'manual',
-        recordedAt: now,
-        metadata: sharedMeta.isEmpty ? null : Map<String, dynamic>.unmodifiable(sharedMeta),
-      );
-    }
-    if (stress != null) {
-      await submitIngest(
-        metricType: 'stress',
-        value: stress,
-        unit: '/10',
-        source: 'manual',
-        recordedAt: now,
-        metadata: sharedMeta.isEmpty ? null : Map<String, dynamic>.unmodifiable(sharedMeta),
-      );
-    }
+    final meta = sharedMeta.isEmpty ? null : Map<String, dynamic>.unmodifiable(sharedMeta);
+    await Future.wait([
+      if (mood != null)
+        submitIngest(metricType: 'mood', value: mood, unit: '/10', source: 'manual', recordedAt: now, metadata: meta),
+      if (energy != null)
+        submitIngest(metricType: 'energy', value: energy, unit: '/10', source: 'manual', recordedAt: now, metadata: meta),
+      if (stress != null)
+        submitIngest(metricType: 'stress', value: stress, unit: '/10', source: 'manual', recordedAt: now, metadata: meta),
+    ]);
   }
 
   @override

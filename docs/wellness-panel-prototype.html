@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZuraLog — Wellness Panel Prototype</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<style>
+  /* ── Design System Tokens ─────────────────────────────── */
+  :root {
+    --canvas:          #161618;
+    --surface:         #1E1E20;
+    --surface-raised:  #272729;
+    --surface-overlay: #313133;
+    --border:          #4A4A4C;
+
+    --text-primary:    #F0EEE9;
+    --text-secondary:  #9B9894;
+    --text-tertiary:   #ABABAB;
+
+    --sage:            #CFE1B9;
+    --deep-forest:     #344E41;
+    --wellness:        #BF5AF2;
+    --wellness-dim:    rgba(191,90,242,0.15);
+    --wellness-border: rgba(191,90,242,0.25);
+    --heart:           #FF375F;
+    --activity:        #30D158;
+    --nutrition:       #FF9F0A;
+    --success:         #34C759;
+
+    --radius-sheet:    28px;
+    --radius-card:     20px;
+    --radius-btn:      100px;
+    --radius-chip:     16px;
+    --radius-input:    12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--canvas);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 32px 16px;
+  }
+
+  /* ── Phone shell ──────────────────────────────────────── */
+  .phone {
+    width: 393px;
+    background: var(--canvas);
+    border-radius: 52px;
+    border: 2px solid var(--border);
+    box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .phone-notch {
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 12px;
+  }
+  .notch-bar {
+    width: 120px;
+    height: 34px;
+    background: #000;
+    border-radius: 20px;
+  }
+
+  /* ── App scaffold behind the sheet ───────────────────── */
+  .app-bg {
+    background: var(--canvas);
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.4;
+    font-size: 13px;
+    color: var(--text-tertiary);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* ── Bottom sheet ─────────────────────────────────────── */
+  .sheet {
+    background: var(--surface-overlay);
+    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+    min-height: 400px;
+    padding: 0 0 32px 0;
+  }
+
+  .sheet-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 10px auto 0;
+  }
+
+  /* Sheet header */
+  .sheet-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .header-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--wellness-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--wellness);
+    font-size: 18px;
+  }
+  .header-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    flex: 1;
+  }
+  .header-close {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--surface-raised);
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  /* ── Panel content ────────────────────────────────────── */
+  .panel {
+    padding: 20px 20px;
+  }
+
+  /* State views — only one visible at a time */
+  .state { display: none; }
+  .state.active { display: block; }
+
+  /* ── Typography ───────────────────────────────────────── */
+  .label-sm {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    line-height: 1.4;
+  }
+  .label-md {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .body-sm {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  /* ── Buttons ──────────────────────────────────────────── */
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 52px;
+    border-radius: var(--radius-btn);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    width: 100%;
+    transition: opacity 0.1s, transform 0.1s;
+  }
+  .btn:active { opacity: 0.8; transform: scale(0.98); }
+
+  .btn-primary {
+    background: var(--sage);
+    color: var(--deep-forest);
+  }
+  .btn-secondary {
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    border: 1.5px solid var(--border);
+  }
+  .btn-disabled {
+    background: var(--surface-raised);
+    color: var(--text-tertiary);
+    border: 1.5px solid var(--border);
+    cursor: default;
+    opacity: 0.5;
+  }
+  .btn .material-icons-round { font-size: 18px; }
+
+  .btn-text {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: var(--radius-btn);
+  }
+
+  /* Row of two buttons */
+  .btn-row {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-row .btn { flex: 1; height: 48px; font-size: 14px; }
+
+  /* ── Spacing ──────────────────────────────────────────── */
+  .gap-xs  { height: 4px; }
+  .gap-sm  { height: 8px; }
+  .gap-md  { height: 16px; }
+  .gap-lg  { height: 24px; }
+  .gap-xl  { height: 32px; }
+
+  /* ── AI Summary card ──────────────────────────────────── */
+  .ai-summary-card {
+    background: var(--wellness-dim);
+    border: 1px solid var(--wellness-border);
+    border-radius: var(--radius-card);
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    font-style: italic;
+  }
+  .ai-summary-card::before {
+    content: '✦ ';
+    color: var(--wellness);
+    font-style: normal;
+    font-size: 11px;
+  }
+
+  /* ── Sentiment selector row ───────────────────────────── */
+  .sentiment-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sentiment-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    width: 52px;
+    flex-shrink: 0;
+  }
+  .sentiment-icons {
+    display: flex;
+    justify-content: space-between;
+    flex: 1;
+  }
+  .face-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: var(--surface-raised);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 22px;
+    color: var(--text-tertiary);
+  }
+  .face-btn:hover {
+    border-color: rgba(255,255,255,0.2);
+    background: var(--surface-overlay);
+  }
+  .face-btn.selected-1 { background: rgba(255,55,95,0.15);  border-color: #FF375F; border-width: 2px; color: #FF375F; }
+  .face-btn.selected-2 { background: rgba(255,159,10,0.15); border-color: #FF9F0A; border-width: 2px; color: #FF9F0A; }
+  .face-btn.selected-3 { background: rgba(191,90,242,0.15); border-color: #BF5AF2; border-width: 2px; color: #BF5AF2; }
+  .face-btn.selected-4 { background: rgba(48,209,88,0.15);  border-color: #30D158; border-width: 2px; color: #30D158; }
+  .face-btn.selected-5 { background: rgba(52,199,89,0.15);  border-color: #34C759; border-width: 2px; color: #34C759; }
+
+  /* ── Tag chips ────────────────────────────────────────── */
+  .chips-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip {
+    height: 32px;
+    padding: 0 12px;
+    border-radius: var(--radius-chip);
+    border: 1.5px solid var(--border);
+    background: var(--surface-raised);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+  }
+  .chip.active {
+    background: var(--wellness-dim);
+    border-color: var(--wellness);
+    color: var(--wellness);
+  }
+
+  /* ── Toggle row ───────────────────────────────────────── */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface-raised);
+    border-radius: var(--radius-card);
+    padding: 12px 14px;
+  }
+  .toggle-text { flex: 1; }
+  .toggle-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .toggle-sub   { font-size: 11px; color: var(--text-tertiary); line-height: 1.4; margin-top: 2px; }
+
+  .toggle-switch {
+    width: 44px;
+    height: 26px;
+    border-radius: 13px;
+    background: var(--surface-overlay);
+    border: 1.5px solid var(--border);
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  .toggle-switch.on { background: var(--wellness); border-color: var(--wellness); }
+  .toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--text-tertiary);
+    transition: transform 0.2s, background 0.2s;
+  }
+  .toggle-switch.on::after {
+    transform: translateX(18px);
+    background: white;
+  }
+
+  /* ── Audio visualizer ─────────────────────────────────── */
+  .audio-viz {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 48px;
+  }
+  .viz-bar {
+    width: 4px;
+    background: var(--wellness);
+    border-radius: 2px;
+    animation: vizPulse 0.8s ease-in-out infinite;
+  }
+  .viz-bar:nth-child(1) { animation-delay: 0.0s; height: 14px; }
+  .viz-bar:nth-child(2) { animation-delay: 0.4s; height: 26px; }
+  .viz-bar:nth-child(3) { animation-delay: 0.8s; height: 32px; }
+  .viz-bar:nth-child(4) { animation-delay: 0.2s; height: 20px; }
+  .viz-bar:nth-child(5) { animation-delay: 0.6s; height: 12px; }
+  @keyframes vizPulse {
+    0%, 100% { transform: scaleY(1); }
+    50%       { transform: scaleY(0.3); }
+  }
+
+  /* ── Loading spinner ──────────────────────────────────── */
+  .parsing-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 32px 0;
+  }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 2.5px solid var(--border);
+    border-top-color: var(--wellness);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Text input ───────────────────────────────────────── */
+  .text-input {
+    width: 100%;
+    min-height: 100px;
+    background: var(--surface-raised);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-input);
+    color: var(--text-primary);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 14px;
+    padding: 12px 14px;
+    resize: none;
+    outline: none;
+    line-height: 1.5;
+  }
+  .text-input:focus { border-color: var(--wellness); }
+  .text-input::placeholder { color: var(--text-tertiary); }
+
+  /* ── Notes input (single line style) ─────────────────── */
+  .notes-input {
+    width: 100%;
+    height: 48px;
+    background: var(--surface-raised);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-input);
+    color: var(--text-primary);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 14px;
+    padding: 0 14px;
+    outline: none;
+  }
+  .notes-input:focus { border-color: var(--wellness); }
+  .notes-input::placeholder { color: var(--text-tertiary); }
+
+  /* ── Start over link ──────────────────────────────────── */
+  .start-over {
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  /* ── State nav (outside phone) ────────────────────────── */
+  .nav-outer {
+    margin-top: 32px;
+    text-align: center;
+  }
+  .nav-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .state-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+  .nav-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .nav-btn:hover { border-color: var(--wellness); color: var(--wellness); }
+  .nav-btn.active-nav { border-color: var(--wellness); background: var(--wellness-dim); color: var(--wellness); }
+
+  .wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+  <div class="phone">
+    <div class="phone-notch"><div class="notch-bar"></div></div>
+
+    <!-- Dimmed app content behind sheet -->
+    <div class="app-bg">Today</div>
+
+    <!-- Bottom sheet -->
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+
+      <!-- Header -->
+      <div class="sheet-header">
+        <div class="header-icon">
+          <span class="material-icons-round" style="font-size:18px;">self_improvement</span>
+        </div>
+        <span class="header-title">Wellness Check-in</span>
+        <button class="header-close">
+          <span class="material-icons-round" style="font-size:16px;">close</span>
+        </button>
+      </div>
+
+      <!-- Panel -->
+      <div class="panel">
+
+        <!-- ═══ STATE: idle (online) ════════════════════ -->
+        <div class="state active" id="state-idle">
+          <p class="body-sm" style="color:var(--text-tertiary)">How are you feeling right now?</p>
+          <div class="gap-lg"></div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="goState('recording')">
+              <span class="material-icons-round">mic</span> Speak
+            </button>
+            <button class="btn btn-secondary" onclick="goState('writing')">
+              <span class="material-icons-round">edit</span> Write
+            </button>
+          </div>
+          <div class="gap-md"></div>
+          <div style="text-align:center">
+            <button class="btn-text" onclick="goState('quick')">Quick check-in</button>
+          </div>
+        </div>
+
+        <!-- ═══ STATE: idle (offline) ══════════════════ -->
+        <div class="state" id="state-offline">
+          <p class="body-sm" style="color:var(--text-tertiary);text-align:center">
+            AI features need a connection.
+          </p>
+          <div class="gap-lg"></div>
+          <button class="btn btn-primary" onclick="goState('quick')">Quick check-in</button>
+        </div>
+
+        <!-- ═══ STATE: recording ════════════════════════ -->
+        <div class="state" id="state-recording">
+          <div class="gap-xl"></div>
+          <div class="audio-viz">
+            <div class="viz-bar"></div>
+            <div class="viz-bar"></div>
+            <div class="viz-bar"></div>
+            <div class="viz-bar"></div>
+            <div class="viz-bar"></div>
+          </div>
+          <div class="gap-md"></div>
+          <p class="body-sm" style="color:var(--text-tertiary);text-align:center">
+            Listening... tap Done when finished.
+          </p>
+          <div class="gap-lg"></div>
+          <button class="btn btn-primary" onclick="goState('parsing')">Done</button>
+        </div>
+
+        <!-- ═══ STATE: writing ══════════════════════════ -->
+        <div class="state" id="state-writing">
+          <textarea class="text-input" placeholder="Just write how you're feeling..."></textarea>
+          <div class="gap-md"></div>
+          <button class="btn btn-primary" onclick="goState('parsing')">Done</button>
+        </div>
+
+        <!-- ═══ STATE: parsing ══════════════════════════ -->
+        <div class="state" id="state-parsing">
+          <div class="parsing-wrap">
+            <div class="spinner"></div>
+            <p class="body-sm" style="color:var(--text-tertiary)">Zura is figuring this out...</p>
+          </div>
+          <!-- Auto-advance after 2s for demo -->
+          <script>
+            document.addEventListener('DOMContentLoaded', () => {
+              document.getElementById('state-nav-parsing')?.addEventListener('click', () => {
+                setTimeout(() => goState('confirming'), 2000);
+              });
+            });
+          </script>
+        </div>
+
+        <!-- ═══ STATE: confirming ═══════════════════════ -->
+        <div class="state" id="state-confirming">
+          <!-- AI summary -->
+          <div class="ai-summary-card">
+            Sounds like a heavy day — some work pressure and running a bit low on energy.
+          </div>
+          <div class="gap-lg"></div>
+
+          <!-- Mood row -->
+          <div class="sentiment-row">
+            <span class="sentiment-label">Mood</span>
+            <div class="sentiment-icons">
+              <button class="face-btn" onclick="selectFace(this,'mood',1)"><span class="material-icons-round">sentiment_very_dissatisfied</span></button>
+              <button class="face-btn" onclick="selectFace(this,'mood',2)"><span class="material-icons-round">sentiment_dissatisfied</span></button>
+              <button class="face-btn selected-3" onclick="selectFace(this,'mood',3)"><span class="material-icons-round">sentiment_neutral</span></button>
+              <button class="face-btn" onclick="selectFace(this,'mood',4)"><span class="material-icons-round">sentiment_satisfied</span></button>
+              <button class="face-btn" onclick="selectFace(this,'mood',5)"><span class="material-icons-round">sentiment_very_satisfied</span></button>
+            </div>
+          </div>
+          <div class="gap-md"></div>
+
+          <!-- Energy row -->
+          <div class="sentiment-row">
+            <span class="sentiment-label">Energy</span>
+            <div class="sentiment-icons">
+              <button class="face-btn" onclick="selectFace(this,'energy',1)"><span class="material-icons-round">sentiment_very_dissatisfied</span></button>
+              <button class="face-btn selected-2" onclick="selectFace(this,'energy',2)"><span class="material-icons-round">sentiment_dissatisfied</span></button>
+              <button class="face-btn" onclick="selectFace(this,'energy',3)"><span class="material-icons-round">sentiment_neutral</span></button>
+              <button class="face-btn" onclick="selectFace(this,'energy',4)"><span class="material-icons-round">sentiment_satisfied</span></button>
+              <button class="face-btn" onclick="selectFace(this,'energy',5)"><span class="material-icons-round">sentiment_very_satisfied</span></button>
+            </div>
+          </div>
+          <div class="gap-md"></div>
+
+          <!-- Stress row (reversed colors) -->
+          <div class="sentiment-row">
+            <span class="sentiment-label">Stress</span>
+            <div class="sentiment-icons">
+              <button class="face-btn selected-5" onclick="selectFace(this,'stress',1)"><span class="material-icons-round">sentiment_very_satisfied</span></button>
+              <button class="face-btn" onclick="selectFace(this,'stress',2)"><span class="material-icons-round">sentiment_satisfied</span></button>
+              <button class="face-btn" onclick="selectFace(this,'stress',3)"><span class="material-icons-round">sentiment_neutral</span></button>
+              <button class="face-btn" onclick="selectFace(this,'stress',4)"><span class="material-icons-round">sentiment_dissatisfied</span></button>
+              <button class="face-btn" onclick="selectFace(this,'stress',5)"><span class="material-icons-round">sentiment_very_dissatisfied</span></button>
+            </div>
+          </div>
+          <div class="gap-lg"></div>
+
+          <!-- Tags -->
+          <p class="label-sm" style="margin-bottom:10px">What influenced this?</p>
+          <div class="chips-wrap">
+            <span class="chip active" onclick="toggleChip(this)">Work stress</span>
+            <span class="chip" onclick="toggleChip(this)">Poor sleep</span>
+            <span class="chip" onclick="toggleChip(this)">Exercise</span>
+            <span class="chip active" onclick="toggleChip(this)">Tired</span>
+            <span class="chip" onclick="toggleChip(this)">Anxious</span>
+            <span class="chip" onclick="toggleChip(this)">Calm</span>
+            <span class="chip" onclick="toggleChip(this)">Good food</span>
+            <span class="chip" onclick="toggleChip(this)">Social</span>
+            <span class="chip" onclick="toggleChip(this)">Motivated</span>
+          </div>
+          <div class="gap-md"></div>
+
+          <!-- Transcript toggle -->
+          <div class="toggle-row">
+            <div class="toggle-text">
+              <div class="toggle-title">Remember my words</div>
+              <div class="toggle-sub">Zura gives better support when it remembers what you said.</div>
+            </div>
+            <div class="toggle-switch" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="gap-lg"></div>
+
+          <button class="btn btn-primary" onclick="alert('Saved!')">Save check-in</button>
+          <div class="gap-sm"></div>
+          <button class="btn btn-secondary" onclick="alert('Saved & going to Zura!')">Talk to Zura about this →</button>
+          <div class="gap-md"></div>
+          <div class="start-over">
+            <button class="btn-text" onclick="goState('idle')">Start over</button>
+          </div>
+        </div>
+
+        <!-- ═══ STATE: quick check-in ═══════════════════ -->
+        <div class="state" id="state-quick">
+          <!-- Mood row -->
+          <div class="sentiment-row">
+            <span class="sentiment-label">Mood</span>
+            <div class="sentiment-icons">
+              <button class="face-btn" onclick="selectFace(this,'qmood',1)"><span class="material-icons-round">sentiment_very_dissatisfied</span></button>
+              <button class="face-btn" onclick="selectFace(this,'qmood',2)"><span class="material-icons-round">sentiment_dissatisfied</span></button>
+              <button class="face-btn" onclick="selectFace(this,'qmood',3)"><span class="material-icons-round">sentiment_neutral</span></button>
+              <button class="face-btn selected-4" onclick="selectFace(this,'qmood',4)"><span class="material-icons-round">sentiment_satisfied</span></button>
+              <button class="face-btn" onclick="selectFace(this,'qmood',5)"><span class="material-icons-round">sentiment_very_satisfied</span></button>
+            </div>
+          </div>
+          <div class="gap-md"></div>
+
+          <!-- Energy row -->
+          <div class="sentiment-row">
+            <span class="sentiment-label">Energy</span>
+            <div class="sentiment-icons">
+              <button class="face-btn" onclick="selectFace(this,'qenergy',1)"><span class="material-icons-round">sentiment_very_dissatisfied</span></button>
+              <button class="face-btn" onclick="selectFace(this,'qenergy',2)"><span class="material-icons-round">sentiment_dissatisfied</span></button>
+              <button class="face-btn selected-3" onclick="selectFace(this,'qenergy',3)"><span class="material-icons-round">sentiment_neutral</span></button>
+              <button class="face-btn" onclick="selectFace(this,'qenergy',4)"><span class="material-icons-round">sentiment_satisfied</span></button>
+              <button class="face-btn" onclick="selectFace(this,'qenergy',5)"><span class="material-icons-round">sentiment_very_satisfied</span></button>
+            </div>
+          </div>
+          <div class="gap-md"></div>
+
+          <!-- Stress row (reversed) -->
+          <div class="sentiment-row">
+            <span class="sentiment-label">Stress</span>
+            <div class="sentiment-icons">
+              <button class="face-btn" onclick="selectFace(this,'qstress',1)"><span class="material-icons-round">sentiment_very_satisfied</span></button>
+              <button class="face-btn selected-4" onclick="selectFace(this,'qstress',2)"><span class="material-icons-round">sentiment_satisfied</span></button>
+              <button class="face-btn" onclick="selectFace(this,'qstress',3)"><span class="material-icons-round">sentiment_neutral</span></button>
+              <button class="face-btn" onclick="selectFace(this,'qstress',4)"><span class="material-icons-round">sentiment_dissatisfied</span></button>
+              <button class="face-btn" onclick="selectFace(this,'qstress',5)"><span class="material-icons-round">sentiment_very_dissatisfied</span></button>
+            </div>
+          </div>
+          <div class="gap-lg"></div>
+
+          <!-- Tags (expanded) -->
+          <p class="label-sm" style="margin-bottom:10px">What influenced this?</p>
+          <div class="chips-wrap">
+            <span class="chip" onclick="toggleChip(this)">Work stress</span>
+            <span class="chip" onclick="toggleChip(this)">Poor sleep</span>
+            <span class="chip" onclick="toggleChip(this)">Exercise</span>
+            <span class="chip" onclick="toggleChip(this)">Tired</span>
+            <span class="chip" onclick="toggleChip(this)">Anxious</span>
+            <span class="chip" onclick="toggleChip(this)">Calm</span>
+            <span class="chip" onclick="toggleChip(this)">Good food</span>
+            <span class="chip" onclick="toggleChip(this)">Social</span>
+          </div>
+          <div class="gap-md"></div>
+
+          <input class="notes-input" type="text" placeholder="Anything else on your mind?">
+          <div class="gap-lg"></div>
+
+          <button class="btn btn-primary" onclick="alert('Saved!')">Save check-in</button>
+          <div class="gap-sm"></div>
+          <button class="btn btn-secondary" onclick="alert('Saved & going to Zura!')">Talk to Zura about this →</button>
+        </div>
+
+      </div><!-- /panel -->
+    </div><!-- /sheet -->
+  </div><!-- /phone -->
+
+  <!-- State navigator -->
+  <div class="nav-outer">
+    <div class="nav-title">Jump to state</div>
+    <div class="state-nav">
+      <button class="nav-btn active-nav" id="state-nav-idle"      onclick="goState('idle')">1 · Idle (online)</button>
+      <button class="nav-btn"            id="state-nav-offline"   onclick="goState('offline')">2 · Idle (offline)</button>
+      <button class="nav-btn"            id="state-nav-recording" onclick="goState('recording')">3 · Recording</button>
+      <button class="nav-btn"            id="state-nav-writing"   onclick="goState('writing')">4 · Writing</button>
+      <button class="nav-btn"            id="state-nav-parsing"   onclick="goState('parsing'); setTimeout(()=>goState('confirming'),2000)">5 · Parsing → Confirm</button>
+      <button class="nav-btn"            id="state-nav-confirming" onclick="goState('confirming')">6 · Confirming</button>
+      <button class="nav-btn"            id="state-nav-quick"     onclick="goState('quick')">7 · Quick check-in</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const stateMap = {
+    idle: 'state-idle',
+    offline: 'state-offline',
+    recording: 'state-recording',
+    writing: 'state-writing',
+    parsing: 'state-parsing',
+    confirming: 'state-confirming',
+    quick: 'state-quick',
+  };
+
+  function goState(name) {
+    document.querySelectorAll('.state').forEach(el => el.classList.remove('active'));
+    document.getElementById(stateMap[name])?.classList.add('active');
+    document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active-nav'));
+    document.getElementById('state-nav-' + name)?.classList.add('active-nav');
+  }
+
+  function toggleChip(el) {
+    el.classList.toggle('active');
+  }
+
+  function selectFace(btn, group, level) {
+    const row = btn.closest('.sentiment-icons');
+    row.querySelectorAll('.face-btn').forEach(b => {
+      b.className = 'face-btn';
+    });
+    btn.classList.add('selected-' + level);
+  }
+</script>
+</body>
+</html>

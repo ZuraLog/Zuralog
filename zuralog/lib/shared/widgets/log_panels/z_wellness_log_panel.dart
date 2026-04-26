@@ -24,8 +24,6 @@ import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/buttons/z_button.dart';
 import 'package:zuralog/shared/widgets/feedback/z_audio_visualizer.dart';
 import 'package:zuralog/shared/widgets/inputs/app_text_field.dart';
-import 'package:zuralog/shared/widgets/inputs/z_chip_multi_select.dart';
-import 'package:zuralog/shared/widgets/inputs/z_chip_single_select.dart';
 import 'package:zuralog/shared/widgets/inputs/z_sentiment_selector.dart';
 import 'package:zuralog/shared/widgets/overlays/z_log_success_overlay.dart';
 
@@ -40,7 +38,6 @@ class WellnessLogData {
     this.energy,
     this.stress,
     this.notes,
-    this.tags = const [],
     this.aiSummary,
     this.transcript,
   });
@@ -48,8 +45,9 @@ class WellnessLogData {
   final double? mood;
   final double? energy;
   final double? stress;
+
+  /// Free-form text the user typed in "What influenced this?" — stored in metadata.
   final String? notes;
-  final List<String> tags;
   final String? aiSummary;
 
   /// Raw transcript of what the user said or wrote, only set when the user
@@ -60,21 +58,6 @@ class WellnessLogData {
 // ── State enum ─────────────────────────────────────────────────────────────────
 
 enum _WellnessState { idle, recording, writing, parsing, confirming, quickCheckin }
-
-// ── Tag options ────────────────────────────────────────────────────────────────
-
-const _kTagOptions = [
-  ZChipOption(value: 'work_stress', label: 'Work stress'),
-  ZChipOption(value: 'poor_sleep', label: 'Poor sleep'),
-  ZChipOption(value: 'exercise', label: 'Exercise'),
-  ZChipOption(value: 'good_food', label: 'Good food'),
-  ZChipOption(value: 'social', label: 'Social'),
-  ZChipOption(value: 'tired', label: 'Tired'),
-  ZChipOption(value: 'anxious', label: 'Anxious'),
-  ZChipOption(value: 'calm', label: 'Calm'),
-  ZChipOption(value: 'motivated', label: 'Motivated'),
-  ZChipOption(value: 'under_the_weather', label: 'Under the weather'),
-];
 
 // ── ZWellnessLogPanel ──────────────────────────────────────────────────────────
 
@@ -87,6 +70,7 @@ class ZWellnessLogPanel extends ConsumerStatefulWidget {
     super.key,
     required this.onSave,
     required this.onBack,
+    this.trailingNotifier,
   });
 
   /// Called when the user confirms a check-in. Receives the check-in data.
@@ -94,6 +78,10 @@ class ZWellnessLogPanel extends ConsumerStatefulWidget {
 
   /// Called by the parent when the user taps the back button in the sheet header.
   final VoidCallback onBack;
+
+  /// When provided, the panel injects a memory icon button into this notifier
+  /// while in the confirming state so the sheet can display it in its header.
+  final ValueNotifier<Widget?>? trailingNotifier;
 
   @override
   ConsumerState<ZWellnessLogPanel> createState() => _ZWellnessLogPanelState();
@@ -128,9 +116,11 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
   int? _moodLevel;
   int? _energyLevel;
   int? _stressLevel;
-  List<String> _selectedTags = [];
   String _aiSummary = '';
-  bool _saveTranscript = false;
+
+  /// Whether to save the raw transcript. Notifier so the header icon can
+  /// reflect the current value without rebuilding the whole panel.
+  final ValueNotifier<bool> _saveTranscriptNotifier = ValueNotifier(false);
   String _savedTranscript = '';
 
   // ── Quick check-in state ──────────────────────────────────────────────────
@@ -138,8 +128,6 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
   int? _quickMood;
   int? _quickEnergy;
   int? _quickStress;
-  bool _tagsExpanded = false;
-  List<String> _quickTags = [];
   final TextEditingController _notesController = TextEditingController();
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -154,6 +142,7 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
   @override
   void dispose() {
     if (_speech.isListening) _speech.stop();
+    _saveTranscriptNotifier.dispose();
     _writeController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -163,6 +152,53 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
 
   /// Converts a 1–5 face level to a backend value (2.0, 4.0, 6.0, 8.0, 10.0).
   double _levelToValue(int level) => level * 2.0;
+
+  // ── Transcript memory icon ────────────────────────────────────────────────
+
+  void _showTranscriptInHeader() {
+    widget.trailingNotifier?.value = ValueListenableBuilder<bool>(
+      valueListenable: _saveTranscriptNotifier,
+      builder: (ctx, isOn, _) => IconButton(
+        icon: Icon(
+          Icons.psychology_rounded,
+          color: isOn ? AppColors.categoryWellness : AppColorsOf(ctx).textTertiary,
+        ),
+        tooltip: isOn ? 'Zura will remember your words' : 'Let Zura remember your words',
+        onPressed: _showTranscriptDialog,
+      ),
+    );
+  }
+
+  void _clearTranscriptFromHeader() {
+    widget.trailingNotifier?.value = null;
+  }
+
+  Future<void> _showTranscriptDialog() async {
+    final isOn = _saveTranscriptNotifier.value;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(isOn ? 'Zura is remembering your words' : 'Let Zura remember your words'),
+        content: const Text(
+          'When this is on, Zura saves exactly what you said — in your own words. '
+          'This lets Zura give you more personal support and understand you better over time.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(isOn ? 'Turn off' : 'Not now'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(isOn ? 'Keep on' : 'Turn on'),
+          ),
+        ],
+      ),
+    );
+    if (result != null && mounted) {
+      _saveTranscriptNotifier.value = result;
+    }
+  }
 
   // ── Connectivity ──────────────────────────────────────────────────────────
 
@@ -224,10 +260,10 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
         _moodLevel = (result.mood / 2).round().clamp(1, 5);
         _energyLevel = (result.energy / 2).round().clamp(1, 5);
         _stressLevel = (result.stress / 2).round().clamp(1, 5);
-        _selectedTags = result.tags;
         _aiSummary = result.summary;
         _state = _WellnessState.confirming;
       });
+      _showTranscriptInHeader();
     } catch (e) {
       if (!mounted) return;
       setState(() => _state = _WellnessState.idle);
@@ -249,12 +285,13 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
         mood: _moodLevel != null ? _levelToValue(_moodLevel!) : null,
         energy: _energyLevel != null ? _levelToValue(_energyLevel!) : null,
         stress: _stressLevel != null ? _levelToValue(_stressLevel!) : null,
-        tags: _selectedTags,
+        notes: _notesController.text.isNotEmpty ? _notesController.text : null,
         aiSummary: _aiSummary.isNotEmpty ? _aiSummary : null,
-        transcript: _saveTranscript && _savedTranscript.isNotEmpty
+        transcript: _saveTranscriptNotifier.value && _savedTranscript.isNotEmpty
             ? _savedTranscript
             : null,
       );
+      _clearTranscriptFromHeader();
       HapticFeedback.mediumImpact();
       await widget.onSave(data);
       if (!mounted) return;
@@ -277,7 +314,6 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
         energy: _quickEnergy != null ? _levelToValue(_quickEnergy!) : null,
         stress: _quickStress != null ? _levelToValue(_quickStress!) : null,
         notes: _notesController.text.isNotEmpty ? _notesController.text : null,
-        tags: _quickTags,
       );
       HapticFeedback.mediumImpact();
       await widget.onSave(data);
@@ -512,77 +548,42 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
 
         const SizedBox(height: AppDimens.spaceLg),
 
-        // Tags
-        Text(
-          'What influenced this?',
-          style: AppTextStyles.labelMedium.copyWith(
-            color: colors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: AppDimens.spaceSm),
-        ZChipMultiSelect<String>(
-          options: _kTagOptions,
-          values: _selectedTags,
-          onChanged: (tags) => setState(() => _selectedTags = tags),
-        ),
-
-        const SizedBox(height: AppDimens.spaceMd),
-
-        // Save transcript toggle
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Remember my words',
-                    style: AppTextStyles.labelMedium.copyWith(
-                      color: colors.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    'Zura gives better support when it remembers what you said.',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: colors.textTertiary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Switch(
-              value: _saveTranscript,
-              onChanged: (v) => setState(() => _saveTranscript = v),
-              activeThumbColor: AppColors.categoryWellness,
-            ),
-          ],
+        AppTextField(
+          controller: _notesController,
+          hintText: 'What influenced this? (optional)',
+          maxLength: 300,
         ),
 
         const SizedBox(height: AppDimens.spaceLg),
 
         ZButton(
           label: 'Save check-in',
+          isLoading: _saving,
           onPressed: !_saving ? _saveConfirmed : null,
         ),
         const SizedBox(height: AppDimens.spaceSm),
         ZButton(
           label: 'Talk to Zura about this',
           variant: ZButtonVariant.secondary,
+          isLoading: _saving,
           onPressed: !_saving ? () => _saveConfirmed(continueWithZura: true) : null,
         ),
         const SizedBox(height: AppDimens.spaceSm),
         Center(
           child: TextButton(
-            onPressed: () => setState(() {
-              _state = _WellnessState.idle;
-              _moodLevel = null;
-              _energyLevel = null;
-              _stressLevel = null;
-              _selectedTags = [];
-              _aiSummary = '';
-              _savedTranscript = '';
-              _saveTranscript = false;
-            }),
+            onPressed: () {
+              _notesController.clear();
+              _clearTranscriptFromHeader();
+              _saveTranscriptNotifier.value = false;
+              setState(() {
+                _state = _WellnessState.idle;
+                _moodLevel = null;
+                _energyLevel = null;
+                _stressLevel = null;
+                _aiSummary = '';
+                _savedTranscript = '';
+              });
+            },
             child: Text(
               'Start over',
               style: AppTextStyles.labelMedium.copyWith(
@@ -596,7 +597,6 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
   }
 
   Widget _buildQuickCheckin() {
-    final colors = AppColorsOf(context);
     final canSave =
         _quickMood != null || _quickEnergy != null || _quickStress != null;
 
@@ -628,44 +628,24 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
 
         const SizedBox(height: AppDimens.spaceLg),
 
-        if (!_tagsExpanded)
-          TextButton.icon(
-            icon: const Icon(Icons.add),
-            label: const Text('What influenced this?'),
-            onPressed: () => setState(() => _tagsExpanded = true),
-          )
-        else ...[
-          Text(
-            'What influenced this?',
-            style: AppTextStyles.labelMedium.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: AppDimens.spaceSm),
-          ZChipMultiSelect<String>(
-            options: _kTagOptions,
-            values: _quickTags,
-            onChanged: (tags) => setState(() => _quickTags = tags),
-          ),
-          const SizedBox(height: AppDimens.spaceMd),
-        ],
-
         AppTextField(
           controller: _notesController,
-          hintText: 'Anything else on your mind?',
-          maxLength: 500,
+          hintText: 'What influenced this? (optional)',
+          maxLength: 300,
         ),
 
         const SizedBox(height: AppDimens.spaceLg),
 
         ZButton(
           label: 'Save check-in',
+          isLoading: _saving,
           onPressed: (canSave && !_saving) ? _saveQuickCheckin : null,
         ),
         const SizedBox(height: AppDimens.spaceSm),
         ZButton(
           label: 'Talk to Zura about this',
           variant: ZButtonVariant.secondary,
+          isLoading: _saving,
           onPressed: (canSave && !_saving)
               ? () => _saveQuickCheckin(continueWithZura: true)
               : null,

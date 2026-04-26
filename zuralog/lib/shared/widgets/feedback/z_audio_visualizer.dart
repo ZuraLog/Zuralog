@@ -82,31 +82,34 @@ class _ZAudioVisualizerState extends State<ZAudioVisualizer>
   @override
   Widget build(BuildContext context) {
     return ExcludeSemantics(
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: List.generate(_barCount, (i) {
-              final height = _barHeight(i);
-              return Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: _barSpacing / 2,
-                ),
-                child: Container(
-                  width: _barWidth,
-                  height: height,
-                  decoration: BoxDecoration(
-                    color: AppColors.categoryWellness,
-                    borderRadius: BorderRadius.circular(_borderRadius),
+      child: SizedBox(
+        height: _maxBarHeight,
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, _) {
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: List.generate(_barCount, (i) {
+                final height = _barHeight(i);
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: _barSpacing / 2,
                   ),
-                ),
-              );
-            }),
-          );
-        },
+                  child: Container(
+                    width: _barWidth,
+                    height: height,
+                    decoration: BoxDecoration(
+                      color: AppColors.categoryWellness,
+                      borderRadius: BorderRadius.circular(_borderRadius),
+                    ),
+                  ),
+                );
+              }),
+            );
+          },
+        ),
       ),
     );
   }

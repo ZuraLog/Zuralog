@@ -355,7 +355,6 @@ final class MockTodayRepository implements TodayRepositoryInterface {
     double? energy,
     double? stress,
     String? notes,
-    List<String> tags = const [],
     String? aiSummary,
     String? transcript,
   }) async {
