@@ -357,6 +357,7 @@ final class MockTodayRepository implements TodayRepositoryInterface {
     String? notes,
     List<String> tags = const [],
     String? aiSummary,
+    String? transcript,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 600));
     // No-op in mock.

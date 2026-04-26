@@ -179,6 +179,7 @@ abstract interface class TodayRepositoryInterface {
     String? notes,
     List<String> tags = const [],
     String? aiSummary,
+    String? transcript,
   });
 
   /// Sends a free-text [transcript] to the AI parser and returns structured
@@ -735,12 +736,14 @@ class TodayRepository implements TodayRepositoryInterface {
     String? notes,
     List<String> tags = const [],
     String? aiSummary,
+    String? transcript,
   }) async {
     final now = DateTime.now();
     final sharedMeta = <String, dynamic>{
       if (tags.isNotEmpty) 'tags': tags,
       if (aiSummary != null) 'ai_summary': aiSummary,
       if (notes != null) 'notes': notes,
+      if (transcript != null) 'transcript': transcript,
     };
     if (mood != null) {
       await submitIngest(
