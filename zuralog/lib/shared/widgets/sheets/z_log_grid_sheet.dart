@@ -384,6 +384,8 @@ class _PanelView extends StatelessWidget {
                 energy: data.energy,
                 stress: data.stress,
                 notes: data.notes,
+                tags: data.tags,
+                aiSummary: data.aiSummary,
               );
               onSaved();
             } catch (e) {
