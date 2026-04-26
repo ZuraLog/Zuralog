@@ -35,49 +35,90 @@ Future<void> _settle(WidgetTester tester) async {
 
 void main() {
   group('ZWaterLogPanel', () {
-    testWidgets('Save button disabled before vessel selection', (tester) async {
-      double? savedAmount;
+    testWidgets('Add Water button is absent before any selection', (tester) async {
       await tester.pumpWidget(_wrap(ZWaterLogPanel(
-        onSave: (ml) async => savedAmount = ml,
+        onSave: (ml, {String? vesselKey}) async {},
         onBack: () {},
       )));
       await _settle(tester);
-
-      final button = tester.widget<ZButton>(find.byType(ZButton));
-      expect(button.onPressed, isNull);
-      expect(savedAmount, isNull);
+      expect(find.byType(ZButton), findsNothing);
     });
 
-    testWidgets('Selecting Glass chip sets 250 ml and enables Save', (tester) async {
+    testWidgets('Tapping Glass pill instant-saves 250 ml with vesselKey "glass"',
+        (tester) async {
       double? savedAmount;
+      String? savedVesselKey;
       await tester.pumpWidget(_wrap(ZWaterLogPanel(
-        onSave: (ml) async => savedAmount = ml,
+        onSave: (ml, {String? vesselKey}) async {
+          savedAmount = ml;
+          savedVesselKey = vesselKey;
+        },
         onBack: () {},
       )));
       await _settle(tester);
 
-      await tester.tap(find.textContaining('Glass'));
+      await tester.tap(find.text('Glass'));
       await tester.pump();
 
-      final button = tester.widget<ZButton>(find.byType(ZButton));
-      expect(button.onPressed, isNotNull);
-
-      await tester.tap(find.byType(ZButton));
-      await tester.pump();
       expect(savedAmount, closeTo(250.0, 0.01));
+      expect(savedVesselKey, 'glass');
     });
 
-    testWidgets('Custom chip shows text field; numeric input accepted', (tester) async {
+    testWidgets('Tapping Small cup pill instant-saves 150 ml with vesselKey "small_cup"',
+        (tester) async {
       double? savedAmount;
+      String? savedVesselKey;
       await tester.pumpWidget(_wrap(ZWaterLogPanel(
-        onSave: (ml) async => savedAmount = ml,
+        onSave: (ml, {String? vesselKey}) async {
+          savedAmount = ml;
+          savedVesselKey = vesselKey;
+        },
+        onBack: () {},
+      )));
+      await _settle(tester);
+
+      await tester.tap(find.text('Small cup'));
+      await tester.pump();
+
+      expect(savedAmount, closeTo(150.0, 0.01));
+      expect(savedVesselKey, 'small_cup');
+    });
+
+    testWidgets('Tapping Bottle pill instant-saves 500 ml with vesselKey "bottle"',
+        (tester) async {
+      double? savedAmount;
+      String? savedVesselKey;
+      await tester.pumpWidget(_wrap(ZWaterLogPanel(
+        onSave: (ml, {String? vesselKey}) async {
+          savedAmount = ml;
+          savedVesselKey = vesselKey;
+        },
+        onBack: () {},
+      )));
+      await _settle(tester);
+
+      await tester.tap(find.text('Bottle'));
+      await tester.pump();
+
+      expect(savedAmount, closeTo(500.0, 0.01));
+      expect(savedVesselKey, 'bottle');
+    });
+
+    testWidgets('Custom flow saves entered amount with vesselKey null',
+        (tester) async {
+      double? savedAmount;
+      String? savedVesselKey = 'sentinel';
+      await tester.pumpWidget(_wrap(ZWaterLogPanel(
+        onSave: (ml, {String? vesselKey}) async {
+          savedAmount = ml;
+          savedVesselKey = vesselKey;
+        },
         onBack: () {},
       )));
       await _settle(tester);
 
       await tester.tap(find.text('Custom'));
       await tester.pump();
-
       expect(find.byType(TextField), findsOneWidget);
 
       await tester.enterText(find.byType(TextField), '300');
@@ -85,12 +126,17 @@ void main() {
 
       await tester.tap(find.byType(ZButton));
       await tester.pump();
+
       expect(savedAmount, closeTo(300.0, 0.01));
+      expect(savedVesselKey, isNull);
     });
 
     testWidgets('In imperial mode vessel chips show oz labels', (tester) async {
       await tester.pumpWidget(_wrap(
-        ZWaterLogPanel(onSave: (_) async {}, onBack: () {}),
+        ZWaterLogPanel(
+          onSave: (ml, {String? vesselKey}) async {},
+          onBack: () {},
+        ),
         units: UnitsSystem.imperial,
       ));
       await _settle(tester);
@@ -98,53 +144,37 @@ void main() {
       expect(find.textContaining('oz'), findsWidgets);
     });
 
-    testWidgets('In imperial mode Glass save converts oz to ml', (tester) async {
+    testWidgets('Imperial Glass pill instant-saves 236.6 ml', (tester) async {
       double? savedAmount;
+      String? savedVesselKey;
       await tester.pumpWidget(_wrap(
-        ZWaterLogPanel(onSave: (ml) async => savedAmount = ml, onBack: () {}),
+        ZWaterLogPanel(
+          onSave: (ml, {String? vesselKey}) async {
+            savedAmount = ml;
+            savedVesselKey = vesselKey;
+          },
+          onBack: () {},
+        ),
         units: UnitsSystem.imperial,
       ));
       await _settle(tester);
 
       await tester.tap(find.text('Glass'));
       await tester.pump();
-      await tester.tap(find.byType(ZButton));
-      await tester.pump();
 
       // 8 oz * 29.5735 = 236.588 ml
       expect(savedAmount, closeTo(236.6, 1.0));
+      expect(savedVesselKey, 'glass');
     });
 
-    testWidgets('Selecting Small cup chip sets 150 ml', (tester) async {
-      double? savedAmount;
+    testWidgets('No Add Water button is rendered for preset-only flow',
+        (tester) async {
       await tester.pumpWidget(_wrap(ZWaterLogPanel(
-        onSave: (ml) async => savedAmount = ml,
+        onSave: (ml, {String? vesselKey}) async {},
         onBack: () {},
       )));
       await _settle(tester);
-
-      await tester.tap(find.textContaining('Small cup'));
-      await tester.pump();
-
-      await tester.tap(find.byType(ZButton));
-      await tester.pump();
-      expect(savedAmount, closeTo(150.0, 0.01));
-    });
-
-    testWidgets('Selecting Bottle chip sets 500 ml', (tester) async {
-      double? savedAmount;
-      await tester.pumpWidget(_wrap(ZWaterLogPanel(
-        onSave: (ml) async => savedAmount = ml,
-        onBack: () {},
-      )));
-      await _settle(tester);
-
-      await tester.tap(find.textContaining('Bottle'));
-      await tester.pump();
-
-      await tester.tap(find.byType(ZButton));
-      await tester.pump();
-      expect(savedAmount, closeTo(500.0, 0.01));
+      expect(find.widgetWithText(ZButton, 'Add Water'), findsNothing);
     });
   });
 }

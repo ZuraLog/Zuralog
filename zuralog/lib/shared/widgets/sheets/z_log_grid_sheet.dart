@@ -369,9 +369,9 @@ class _PanelView extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (tile.key) {
       'water' => ZWaterLogPanel(
-          onSave: (ml) async {
+          onSave: (ml, {String? vesselKey}) async {
             try {
-              await repo.logWater(amountMl: ml);
+              await repo.logWater(amountMl: ml, vesselKey: vesselKey);
               onSaved();
             } catch (e) {
               debugPrint('logWater failed: $e');

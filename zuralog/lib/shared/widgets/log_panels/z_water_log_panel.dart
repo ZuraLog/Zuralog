@@ -79,8 +79,12 @@ class ZWaterLogPanel extends ConsumerStatefulWidget {
     required this.onBack,
   });
 
-  /// Called when the user taps "Add Water". Receives the amount in ml.
-  final Future<void> Function(double amountMl) onSave;
+  /// Called whenever the user logs water — either by tapping a preset pill
+  /// (instant-save) or by entering a custom amount and tapping "Add Water".
+  ///
+  /// [amountMl] is always millilitres. [vesselKey] is the chosen preset key
+  /// ('small_cup', 'glass', 'bottle', 'large') or `null` for custom.
+  final Future<void> Function(double amountMl, {String? vesselKey}) onSave;
 
   /// Called by the parent when the user taps the back button in the sheet header.
   final VoidCallback onBack;
@@ -95,10 +99,16 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
   final TextEditingController _customController = TextEditingController();
 
   bool get _isCustomSelected => _selectedVesselKey == 'custom';
-  bool get _canSave {
-    if (_selectedVesselKey == null) return false;
-    if (_isCustomSelected) return _amountMl > 0;
-    return true;
+
+  void _handlePresetTap(_VesselPreset vessel) {
+    final isImperial =
+        ref.read(unitsSystemProvider) == UnitsSystem.imperial;
+    final amountMl = _toMl(vessel, isImperial: isImperial);
+    if (amountMl <= 0) return;
+    HapticFeedback.mediumImpact();
+    // ignore: discarded_futures — instant-save is fire-and-forget; the parent
+    // sheet handles error snackbars and pops itself when the future resolves.
+    widget.onSave(amountMl, vesselKey: vessel.key);
   }
 
   @override
@@ -130,15 +140,16 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
   }
 
   void _selectVessel(_VesselPreset vessel) {
-    final isImperial = ref.read(unitsSystemProvider) == UnitsSystem.imperial;
+    if (vessel.ml != null) {
+      // Preset — instant-save, no state change needed.
+      _handlePresetTap(vessel);
+      return;
+    }
+    // Custom — toggle the input field on; clear any prior value.
     setState(() {
       _selectedVesselKey = vessel.key;
-      if (vessel.ml != null) {
-        _amountMl = _toMl(vessel, isImperial: isImperial);
-        _customController.clear();
-      } else {
-        _amountMl = 0;
-      }
+      _amountMl = 0;
+      _customController.clear();
     });
   }
 
@@ -149,8 +160,9 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
   }
 
   Future<void> _handleSave() async {
-    if (!_canSave) return;
-    await widget.onSave(_amountMl);
+    if (!_isCustomSelected || _amountMl <= 0) return;
+    HapticFeedback.mediumImpact();
+    await widget.onSave(_amountMl, vesselKey: null);
   }
 
   @override
@@ -197,7 +209,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
             }).toList(),
           ),
 
-          // ── Custom amount input — only when custom is selected ─────────────
+          // ── Custom amount input + save button (custom-only) ───────────────
           if (_isCustomSelected) ...[
             const SizedBox(height: AppDimens.spaceMd),
             AppTextField(
@@ -223,15 +235,12 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
               ),
               onChanged: _onCustomChanged,
             ),
+            const SizedBox(height: AppDimens.spaceLg),
+            ZButton(
+              label: 'Add Water',
+              onPressed: _amountMl > 0 ? _handleSave : null,
+            ),
           ],
-
-          const SizedBox(height: AppDimens.spaceLg),
-
-          // ── Save button (unchanged in Plan 1) ──────────────────────────────
-          ZButton(
-            label: 'Add Water',
-            onPressed: _canSave ? _handleSave : null,
-          ),
         ],
       ),
     );
