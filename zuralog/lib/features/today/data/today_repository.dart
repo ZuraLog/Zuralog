@@ -23,35 +23,6 @@ import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
-// ── WellnessParseResult ───────────────────────────────────────────────────────
-
-/// Parsed values extracted from a free-text wellness transcript by the AI.
-class WellnessParseResult {
-  const WellnessParseResult({
-    required this.mood,
-    required this.energy,
-    required this.stress,
-    required this.tags,
-    required this.summary,
-  });
-
-  final double mood;
-  final double energy;
-  final double stress;
-  final List<String> tags;
-  final String summary;
-
-  factory WellnessParseResult.fromJson(Map<String, dynamic> json) {
-    return WellnessParseResult(
-      mood: (json['mood'] as num).toDouble(),
-      energy: (json['energy'] as num).toDouble(),
-      stress: (json['stress'] as num).toDouble(),
-      tags: (json['tags'] as List<dynamic>).cast<String>(),
-      summary: json['summary'] as String,
-    );
-  }
-}
-
 // ── TodayRepositoryInterface ──────────────────────────────────────────────────
 
 /// Abstract contract for all Today-tab data operations.
@@ -778,7 +749,7 @@ class TodayRepository implements TodayRepositoryInterface {
         unit: '/10',
         source: 'manual',
         recordedAt: now,
-        metadata: sharedMeta.isEmpty ? null : sharedMeta,
+        metadata: sharedMeta.isEmpty ? null : Map<String, dynamic>.unmodifiable(sharedMeta),
       );
     }
     if (energy != null) {
@@ -788,7 +759,7 @@ class TodayRepository implements TodayRepositoryInterface {
         unit: '/10',
         source: 'manual',
         recordedAt: now,
-        metadata: sharedMeta.isEmpty ? null : sharedMeta,
+        metadata: sharedMeta.isEmpty ? null : Map<String, dynamic>.unmodifiable(sharedMeta),
       );
     }
     if (stress != null) {
@@ -798,7 +769,7 @@ class TodayRepository implements TodayRepositoryInterface {
         unit: '/10',
         source: 'manual',
         recordedAt: now,
-        metadata: sharedMeta.isEmpty ? null : sharedMeta,
+        metadata: sharedMeta.isEmpty ? null : Map<String, dynamic>.unmodifiable(sharedMeta),
       );
     }
   }
