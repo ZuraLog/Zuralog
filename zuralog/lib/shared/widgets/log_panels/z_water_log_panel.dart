@@ -103,11 +103,16 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
   double _amountMl = 0;
   final TextEditingController _customController = TextEditingController();
 
+  final _ringKey = GlobalKey<_WaterRingHeaderState>();
   String? _defaultVesselKey;
   double? _lastAmountMl;
   DateTime? _lastSavedAt;
   bool _initialized = false;
   final FocusNode _customFocusNode = FocusNode();
+
+  String? _badgeText;
+  bool _showBadge = false;
+  int _badgeKey = 0;
 
   bool get _isCustomSelected => _selectedVesselKey == 'custom';
 
@@ -135,6 +140,27 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
     });
   }
 
+  void _triggerFeedback(double amountMl) {
+    final isImperial = ref.read(unitsSystemProvider) == UnitsSystem.imperial;
+    final currentMl = _ringKey.currentState?._displayedMl ??
+        (ref.read(todayLogSummaryProvider).valueOrNull?.latestValues['water']
+                as double? ??
+            0);
+    _ringKey.currentState?.animateTo(currentMl + amountMl);
+
+    final label = isImperial
+        ? '+${(amountMl / _kOzToMl).toStringAsFixed(1)} oz'
+        : '+${amountMl.toStringAsFixed(0)} mL';
+    setState(() {
+      _badgeText = label;
+      _showBadge = true;
+      _badgeKey++;
+    });
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) setState(() => _showBadge = false);
+    });
+  }
+
   void _handlePresetTap(_VesselPreset vessel) {
     final isImperial =
         ref.read(unitsSystemProvider) == UnitsSystem.imperial;
@@ -143,6 +169,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
     HapticFeedback.mediumImpact();
     // ignore: discarded_futures
     widget.onSave(amountMl, vesselKey: vessel.key);
+    _triggerFeedback(amountMl);
     final now = DateTime.now();
     setState(() {
       _lastAmountMl = amountMl;
@@ -252,6 +279,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
     final savedAmount = _amountMl;
     await widget.onSave(savedAmount, vesselKey: null);
     if (!mounted) return;
+    _triggerFeedback(savedAmount);
     final now = DateTime.now();
     setState(() {
       _lastAmountMl = savedAmount;
@@ -291,14 +319,17 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
     // The custom entry (full-width bar).
     final customVessel = _kVessels.firstWhere((v) => v.ml == null);
 
-    return Padding(
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(AppDimens.spaceMd),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
           // ── Centred ring header (always visible) ──────────────────────────
           _WaterRingHeader(
+            key: _ringKey,
             todayMl: todayMl,
             goalMl: waterGoalMl,
             isImperial: isImperial,
@@ -501,7 +532,31 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
             ),
           ],
         ],
-      ),
+          ),
+        ),
+        // ── Float-up badge overlay (appears on every successful log) ─────────
+        if (_showBadge && _badgeText != null)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Align(
+                alignment: const Alignment(0, 0.1),
+                child: TweenAnimationBuilder<double>(
+                  key: ValueKey(_badgeKey),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 700),
+                  builder: (_, t, child) => Opacity(
+                    opacity: (1.0 - t * 1.5).clamp(0.0, 1.0),
+                    child: Transform.translate(
+                      offset: Offset(0, -50 * t),
+                      child: child,
+                    ),
+                  ),
+                  child: _FloatBadge(text: _badgeText!),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -515,6 +570,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
 /// ring with a brief scale-up when the goal is first reached.
 class _WaterRingHeader extends StatefulWidget {
   const _WaterRingHeader({
+    super.key,
     required this.todayMl,
     required this.goalMl,
     required this.isImperial,
@@ -541,8 +597,41 @@ class _WaterRingHeader extends StatefulWidget {
   State<_WaterRingHeader> createState() => _WaterRingHeaderState();
 }
 
-class _WaterRingHeaderState extends State<_WaterRingHeader> {
+class _WaterRingHeaderState extends State<_WaterRingHeader>
+    with SingleTickerProviderStateMixin {
   bool _goalJustCompleted = false;
+
+  late AnimationController _countUpController;
+  double _animFromMl = 0;
+  double _animToMl = 0;
+
+  double get _displayedMl {
+    final t = Curves.easeOut.transform(_countUpController.value);
+    return _animFromMl + (_animToMl - _animFromMl) * t;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _countUpController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _animFromMl = widget.todayMl ?? 0;
+    _animToMl = widget.todayMl ?? 0;
+  }
+
+  @override
+  void dispose() {
+    _countUpController.dispose();
+    super.dispose();
+  }
+
+  void animateTo(double targetMl) {
+    _animFromMl = _displayedMl;
+    _animToMl = targetMl;
+    _countUpController.forward(from: 0);
+  }
 
   static double _computeProgress(double? todayMl, double? goalMl) {
     if (todayMl == null || goalMl == null || goalMl <= 0) return 0.0;
@@ -552,8 +641,8 @@ class _WaterRingHeaderState extends State<_WaterRingHeader> {
   @override
   void didUpdateWidget(_WaterRingHeader oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final oldProgress =
-        _computeProgress(oldWidget.todayMl, oldWidget.goalMl);
+    // Goal completion detection uses real provider data, not optimistic value.
+    final oldProgress = _computeProgress(oldWidget.todayMl, oldWidget.goalMl);
     final newProgress = _computeProgress(widget.todayMl, widget.goalMl);
     if (oldProgress < 1.0 && newProgress >= 1.0) {
       setState(() => _goalJustCompleted = true);
@@ -561,12 +650,17 @@ class _WaterRingHeaderState extends State<_WaterRingHeader> {
         if (mounted) setState(() => _goalJustCompleted = false);
       });
     }
+    // Sync animation target to real data when idle.
+    if (widget.todayMl != oldWidget.todayMl && !_countUpController.isAnimating) {
+      final real = widget.todayMl ?? 0;
+      _animFromMl = real;
+      _animToMl = real;
+    }
   }
 
-  String _formatTodayNumber() {
-    final t = widget.todayMl ?? 0;
-    if (widget.isImperial) return (t / _kOzToMl).toStringAsFixed(1);
-    return t.toStringAsFixed(0);
+  String _formatNumber(double ml) {
+    if (widget.isImperial) return (ml / _kOzToMl).toStringAsFixed(1);
+    return ml.toStringAsFixed(0);
   }
 
   String _formatTodayUnit() => widget.isImperial ? 'oz today' : 'mL today';
@@ -609,99 +703,109 @@ class _WaterRingHeaderState extends State<_WaterRingHeader> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final progress = _computeProgress(widget.todayMl, widget.goalMl);
-    final ringColor =
-        progress >= 1.0 ? AppColors.success : AppColors.categoryBody;
     final lastDrink = _formatLastDrink(widget.lastDrinkDate, widget.lastDrinkTime);
     final goalInline = _formatGoalInline();
 
-    final numberWidget = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          _formatTodayNumber(),
-          style: AppTextStyles.displayMedium.copyWith(
-            color: colors.textPrimary,
-            fontWeight: FontWeight.w800,
-            height: 1.0,
-          ),
-        ),
-        Text(
-          _formatTodayUnit(),
-          style: AppTextStyles.labelSmall.copyWith(
-            color: colors.textSecondary,
-          ),
-        ),
-      ],
-    );
+    return AnimatedBuilder(
+      animation: _countUpController,
+      builder: (context, _) {
+        final ml = _displayedMl;
+        final progress = widget.goalMl != null && widget.goalMl! > 0
+            ? (ml / widget.goalMl!).clamp(0.0, 1.0)
+            : 0.0;
+        final ringColor =
+            progress >= 1.0 ? AppColors.success : AppColors.categoryBody;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        if (widget.goalMl != null) ...[
-          // ── Large ring with today's number in the centre ────────────────
-          SizedBox(
-            width: _kLargeRingSize,
-            height: _kLargeRingSize,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                AnimatedScale(
-                  scale: _goalJustCompleted ? 1.1 : 1.0,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.elasticOut,
-                  child: ZMiniRing(
-                    size: _kLargeRingSize,
-                    strokeWidth: _kLargeRingStroke,
-                    value: progress,
-                    color: ringColor,
-                  ),
-                ),
-                numberWidget,
-              ],
-            ),
-          ),
-        ] else
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
-            child: numberWidget,
-          ),
-        const SizedBox(height: AppDimens.spaceSm),
-        // ── Meta row: last drink · goal ───────────────────────────────────
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        final numberWidget = Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (lastDrink != null)
-              Text(
-                lastDrink,
-                style: AppTextStyles.labelSmall.copyWith(
-                  color: colors.textTertiary,
-                ),
+            Text(
+              _formatNumber(ml),
+              style: AppTextStyles.displayMedium.copyWith(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w800,
+                height: 1.0,
               ),
-            if (lastDrink != null && goalInline != null) ...[
-              const SizedBox(width: AppDimens.spaceXs),
-              Container(
-                width: 3,
-                height: 3,
-                decoration: BoxDecoration(
-                  color: colors.textTertiary,
-                  shape: BoxShape.circle,
-                ),
+            ),
+            Text(
+              _formatTodayUnit(),
+              style: AppTextStyles.labelSmall.copyWith(
+                color: colors.textSecondary,
               ),
-              const SizedBox(width: AppDimens.spaceXs),
-            ],
-            if (goalInline != null)
-              Text(
-                goalInline,
-                style: AppTextStyles.labelSmall.copyWith(
-                  color: colors.textTertiary,
-                ),
-              ),
+            ),
           ],
-        ),
-      ],
+        );
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            if (widget.goalMl != null) ...[
+              // ── Large ring with today's number in the centre ────────────────
+              SizedBox(
+                width: _kLargeRingSize,
+                height: _kLargeRingSize,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    AnimatedScale(
+                      scale: _goalJustCompleted ? 1.1 : 1.0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.elasticOut,
+                      child: ZMiniRing(
+                        size: _kLargeRingSize,
+                        strokeWidth: _kLargeRingStroke,
+                        value: progress,
+                        color: ringColor,
+                      ),
+                    ),
+                    numberWidget,
+                  ],
+                ),
+              ),
+            ] else
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
+                child: numberWidget,
+              ),
+            const SizedBox(height: AppDimens.spaceSm),
+            // ── Meta row: last drink · goal ───────────────────────────────────
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (lastDrink != null)
+                  Text(
+                    lastDrink,
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: colors.textTertiary,
+                    ),
+                  ),
+                if (lastDrink != null && goalInline != null) ...[
+                  const SizedBox(width: AppDimens.spaceXs),
+                  Container(
+                    width: 3,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: colors.textTertiary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: AppDimens.spaceXs),
+                ],
+                if (goalInline != null)
+                  Text(
+                    goalInline,
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: colors.textTertiary,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -797,6 +901,44 @@ class _VesselCard extends StatelessWidget {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── _FloatBadge ───────────────────────────────────────────────────────────────
+
+/// Pill badge shown briefly after a successful water log.
+///
+/// Displays the amount added (e.g. "+250 mL") in [AppColors.categoryBody]
+/// text on a semi-transparent sky-blue background. Animated by the parent
+/// via [TweenAnimationBuilder] — this widget is purely visual.
+class _FloatBadge extends StatelessWidget {
+  const _FloatBadge({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimens.spaceMd,
+        vertical: AppDimens.spaceXs,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.categoryBody.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(
+          color: AppColors.categoryBody.withValues(alpha: 0.35),
+          width: 1,
+        ),
+      ),
+      child: Text(
+        text,
+        style: AppTextStyles.labelMedium.copyWith(
+          color: AppColors.categoryBody,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
