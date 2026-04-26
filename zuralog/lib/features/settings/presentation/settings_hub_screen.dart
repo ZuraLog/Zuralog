@@ -209,6 +209,14 @@ class SettingsHubScreen extends ConsumerWidget {
                   subtitle: 'View every design system component',
                   onTap: () => context.push(RouteNames.componentShowcasePath),
                 ),
+                ZSettingsTile(
+                  icon: Icons.workspace_premium_rounded,
+                  iconColor: AppColors.categoryNutrition,
+                  title: 'Paywall',
+                  subtitle: 'Preview the post-onboarding paywall',
+                  onTap: () =>
+                      context.push(RouteNames.onboardingPaywallPath),
+                ),
               ],
             ),
           ],
