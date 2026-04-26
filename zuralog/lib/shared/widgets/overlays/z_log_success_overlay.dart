@@ -1,14 +1,10 @@
 /// Zuralog Design System — Log Success Overlay.
 ///
 /// A full-screen celebration overlay shown after any successful log action.
-/// Renders the branded checkmark Lottie animation over the brand topographic
-/// pattern on a dark backdrop.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-
-import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 
 /// Full-screen log-success celebration overlay.
 ///
@@ -22,10 +18,8 @@ import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 class ZLogSuccessOverlay extends StatefulWidget {
   const ZLogSuccessOverlay({super.key, this.onComplete});
 
-  /// Called after the animation fully fades out.
   final VoidCallback? onComplete;
 
-  /// Shows the overlay above everything and auto-dismisses after the animation.
   static void show(BuildContext context, {VoidCallback? onComplete}) {
     final overlay = Navigator.of(context, rootNavigator: true).overlay;
     if (overlay == null) return;
@@ -85,21 +79,12 @@ class _ZLogSuccessOverlayState extends State<ZLogSuccessOverlay>
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Dark backdrop
             Container(color: const Color(0xD9000000)),
-            // Brand topographic pattern drifting gently over the backdrop
-            const ZPatternOverlay(
-              variant: ZPatternVariant.sage,
-              opacity: 0.12,
-              animate: true,
-            ),
-            // Checkmark animation
-            Center(
+            Positioned.fill(
               child: Lottie.asset(
                 'assets/animations/checkmark.json',
                 controller: _lottieController,
-                width: 220,
-                height: 220,
+                fit: BoxFit.contain,
                 onLoaded: _onLoaded,
               ),
             ),
