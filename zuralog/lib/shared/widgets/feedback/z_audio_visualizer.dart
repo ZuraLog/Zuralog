@@ -95,8 +95,7 @@ class _ZAudioVisualizerState extends State<ZAudioVisualizer>
                 padding: const EdgeInsets.symmetric(
                   horizontal: _barSpacing / 2,
                 ),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 80),
+                child: Container(
                   width: _barWidth,
                   height: height,
                   decoration: BoxDecoration(
