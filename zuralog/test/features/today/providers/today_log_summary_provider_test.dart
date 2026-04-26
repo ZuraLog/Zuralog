@@ -99,7 +99,7 @@ void main() {
 
     test('returns map from repository for requested types', () async {
       final mockRepo = _MockRepoWithLatestValues({
-        'weight': {'value_kg': 78.4, 'logged_at': '2026-03-15T08:22:00Z', 'source': 'apple_health'},
+        'weight': {'value': 78.4, 'date': '2026-03-15T08:22:00Z'},
       });
       final container = ProviderContainer(overrides: [
         todayRepositoryProvider.overrideWithValue(mockRepo),
@@ -110,8 +110,7 @@ void main() {
         latestLogValuesProvider(latestLogValuesKey(const {'weight'})).future,
       );
       final weightEntry = result['weight'] as Map<String, dynamic>?;
-      expect(weightEntry?['value_kg'], closeTo(78.4, 0.01));
-      expect(weightEntry?['source'], 'apple_health');
+      expect(weightEntry?['value'], closeTo(78.4, 0.01));
     });
   });
 
