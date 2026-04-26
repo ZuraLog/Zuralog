@@ -4,19 +4,33 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
+import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
+import 'package:zuralog/shared/widgets/buttons/z_button.dart';
 import 'package:zuralog/shared/widgets/log_panels/z_water_log_panel.dart';
 
-Widget _wrap(Widget child, {UnitsSystem units = UnitsSystem.metric}) {
+Widget _wrap(Widget child, {
+  UnitsSystem units = UnitsSystem.metric,
+  List<DailyGoal> goals = const <DailyGoal>[],
+}) {
   return ProviderScope(
     overrides: [
       todayLogSummaryProvider.overrideWith(
         (ref) async => TodayLogSummary.empty,
       ),
+      dailyGoalsProvider.overrideWith((ref) async => goals),
       unitsSystemProvider.overrideWithValue(units),
     ],
     child: MaterialApp(home: Scaffold(body: child)),
   );
+}
+
+/// Pumps long enough for async FutureProvider overrides to resolve without
+/// calling pumpAndSettle, which would hang on the continuous pattern overlay
+/// animation inside ZButton.
+Future<void> _settle(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 100));
 }
 
 void main() {
@@ -27,9 +41,9 @@ void main() {
         onSave: (ml) async => savedAmount = ml,
         onBack: () {},
       )));
-      await tester.pump();
+      await _settle(tester);
 
-      final button = tester.widget<FilledButton>(find.byType(FilledButton));
+      final button = tester.widget<ZButton>(find.byType(ZButton));
       expect(button.onPressed, isNull);
       expect(savedAmount, isNull);
     });
@@ -40,15 +54,15 @@ void main() {
         onSave: (ml) async => savedAmount = ml,
         onBack: () {},
       )));
-      await tester.pump();
+      await _settle(tester);
 
       await tester.tap(find.textContaining('Glass'));
       await tester.pump();
 
-      final button = tester.widget<FilledButton>(find.byType(FilledButton));
+      final button = tester.widget<ZButton>(find.byType(ZButton));
       expect(button.onPressed, isNotNull);
 
-      await tester.tap(find.byType(FilledButton));
+      await tester.tap(find.byType(ZButton));
       await tester.pump();
       expect(savedAmount, closeTo(250.0, 0.01));
     });
@@ -59,7 +73,7 @@ void main() {
         onSave: (ml) async => savedAmount = ml,
         onBack: () {},
       )));
-      await tester.pump();
+      await _settle(tester);
 
       await tester.tap(find.text('Custom'));
       await tester.pump();
@@ -69,7 +83,7 @@ void main() {
       await tester.enterText(find.byType(TextField), '300');
       await tester.pump();
 
-      await tester.tap(find.byType(FilledButton));
+      await tester.tap(find.byType(ZButton));
       await tester.pump();
       expect(savedAmount, closeTo(300.0, 0.01));
     });
@@ -79,7 +93,7 @@ void main() {
         ZWaterLogPanel(onSave: (_) async {}, onBack: () {}),
         units: UnitsSystem.imperial,
       ));
-      await tester.pump();
+      await _settle(tester);
 
       expect(find.textContaining('oz'), findsWidgets);
     });
@@ -90,11 +104,11 @@ void main() {
         ZWaterLogPanel(onSave: (ml) async => savedAmount = ml, onBack: () {}),
         units: UnitsSystem.imperial,
       ));
-      await tester.pump();
+      await _settle(tester);
 
-      await tester.tap(find.textContaining('8 oz'));
+      await tester.tap(find.text('Glass'));
       await tester.pump();
-      await tester.tap(find.byType(FilledButton));
+      await tester.tap(find.byType(ZButton));
       await tester.pump();
 
       // 8 oz * 29.5735 = 236.588 ml
@@ -107,12 +121,12 @@ void main() {
         onSave: (ml) async => savedAmount = ml,
         onBack: () {},
       )));
-      await tester.pump();
+      await _settle(tester);
 
       await tester.tap(find.textContaining('Small cup'));
       await tester.pump();
 
-      await tester.tap(find.byType(FilledButton));
+      await tester.tap(find.byType(ZButton));
       await tester.pump();
       expect(savedAmount, closeTo(150.0, 0.01));
     });
@@ -123,12 +137,12 @@ void main() {
         onSave: (ml) async => savedAmount = ml,
         onBack: () {},
       )));
-      await tester.pump();
+      await _settle(tester);
 
       await tester.tap(find.textContaining('Bottle'));
       await tester.pump();
 
-      await tester.tap(find.byType(FilledButton));
+      await tester.tap(find.byType(ZButton));
       await tester.pump();
       expect(savedAmount, closeTo(500.0, 0.01));
     });
