@@ -16,6 +16,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/buttons/z_button.dart';
 import 'package:zuralog/shared/widgets/charts/z_mini_sparkline.dart';
+import 'package:zuralog/shared/widgets/overlays/z_log_success_overlay.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
@@ -220,6 +221,10 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
   Future<void> _handleSave() async {
     debugPrint('[WeightLog] 📤 Save tapped — value=$_value kg '
         'timeOfDay=$_timeOfDay bodyFatPct=$_bodyFatPct');
+    HapticFeedback.mediumImpact();
+    await Future.delayed(const Duration(milliseconds: 200));
+    if (!mounted) return;
+    ZLogSuccessOverlay.show(context);
     await widget.onSave(WeightLogData(
       valueKg: _value,
       timeOfDay: _timeOfDay,
@@ -338,27 +343,13 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
                       : GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: _beginEdit,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(
-                                displayStr,
-                                style: AppTextStyles.displayMedium.copyWith(
-                                  color: colors.textPrimary,
-                                  fontSize: 58,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(width: AppDimens.spaceXs),
-                              Text(
-                                _isKg ? 'kg' : 'lbs',
-                                style: AppTextStyles.bodyLarge.copyWith(
-                                  color: colors.textSecondary,
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            displayStr,
+                            style: AppTextStyles.displayMedium.copyWith(
+                              color: colors.textPrimary,
+                              fontSize: 58,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                 ),
@@ -430,16 +421,6 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
                     isKg: _isKg,
                   ),
               ],
-            ),
-          ),
-
-          const SizedBox(height: AppDimens.spaceSm),
-          Text(
-            'tap the number to type · hold ‹ or › to scroll fast',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: colors.textTertiary,
-              fontStyle: FontStyle.italic,
             ),
           ),
 
