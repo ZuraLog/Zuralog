@@ -1,3 +1,21 @@
+## Wellness Log
+
+### Complete — Wellness Log Overhaul (2026-04-27)
+
+**Status:** Shipped on `feat/wellness-log-overhaul`
+
+What shipped:
+- Old slider-based panel replaced with an AI-first voice/text check-in system
+- Six-state panel: recording → parsing → confirm/edit → saved; plus quick offline face-tap path
+- `ZSentimentSelector` shared widget — five-level face icon row, reusable
+- `ZAudioVisualizer` shared widget — animated waveform bars during recording
+- `logWellness` extended with `tags` and `aiSummary`; stress unit bug fixed (`/100` → `/10`)
+- `parseWellnessTranscript` added to `TodayRepository`, returns `WellnessParseResult` domain model
+- Backend: `POST /api/v1/wellness/parse` — accepts transcript (max 5,000 chars), LLM extraction, returns `{mood, energy, stress, tags, summary}`, rate-limited 20/min per user, auth required
+- 11 backend tests covering happy path, validation, auth, LLM failures, and boundary conditions
+
+---
+
 ## Weight Log
 
 ### Complete — Weight Log Overhaul (2026-04-26)

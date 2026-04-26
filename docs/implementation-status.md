@@ -1,3 +1,49 @@
+## 2026-04-27 — Wellness Log Overhaul: AI Voice/Text Check-In, 6-State Panel, Sentiment Selector
+
+**Branch:** `feat/wellness-log-overhaul`
+
+Complete replacement of the old slider-based wellness panel with an AI-first voice and text check-in system.
+
+**What was built:**
+
+- **`ZWellnessLogPanel` rewritten** (`zuralog/lib/features/today/presentation/widgets/wellness_log_panel.dart`): Six-state machine replacing the previous slider row. Two entry paths: an AI path (voice or typed transcript → AI parse → confirm/edit → save) and a quick check-in path (face-tap sentiment selectors, works fully offline). Optional "Talk to Zura" handoff to the Coach after saving.
+
+- **AI path — recording state** (`wellness_log_panel.dart`): Microphone button starts recording. While recording, `ZAudioVisualizer` displays animated waveform bars. User can also type a free-form transcript directly.
+
+- **AI path — parse + confirm state** (`wellness_log_panel.dart`): On transcript submission, the panel calls `parseWellnessTranscript` on `TodayRepository`, which hits the new backend endpoint. The returned `{mood, energy, stress, tags, summary}` values are pre-filled into an editable confirm screen before saving.
+
+- **Quick check-in path** (`wellness_log_panel.dart`): Five `ZSentimentSelector` rows (one per metric level) for mood, energy, and stress. Fully offline — no AI or network required. Selection saves immediately.
+
+- **Optional transcript storage** (`wellness_log_panel.dart`): A user-controlled toggle (default off) controls whether the raw transcript is stored. Off by default to protect privacy.
+
+- **`ZSentimentSelector` — new shared widget** (`zuralog/lib/shared/widgets/inputs/z_sentiment_selector.dart`): Reusable five-level face icon row with selection state. Added to the `widgets.dart` barrel export.
+
+- **`ZAudioVisualizer` — new shared widget** (`zuralog/lib/shared/widgets/feedback/z_audio_visualizer.dart`): Animated waveform bar widget that reflects live recording state. Added to the `widgets.dart` barrel export.
+
+- **`logWellness` extended** (`zuralog/lib/features/today/data/today_repository.dart`): Now accepts `tags` (list of strings) and `aiSummary` (optional string) parameters. Also fixed a unit bug — `stress` was being sent as `/100` when the scale is `/10`.
+
+- **`parseWellnessTranscript` added** (`zuralog/lib/features/today/data/today_repository.dart`): Calls `POST /api/v1/wellness/parse`, returns a `WellnessParseResult` domain model.
+
+- **`WellnessParseResult` domain model** (`zuralog/lib/features/today/domain/wellness_parse_result.dart`): Immutable value object with `mood`, `energy`, `stress`, `tags`, and `summary` fields.
+
+- **Backend: `POST /api/v1/wellness/parse`** (`cloud-brain/app/api/v1/wellness.py`): Accepts a free-form transcript (max 5,000 characters), calls an LLM to extract structured wellness data, returns `{mood, energy, stress, tags, summary}`. Rate-limited to 20 requests per minute per user. Requires authentication.
+
+- **11 backend tests** (`cloud-brain/tests/api/v1/test_wellness.py`): Cover the happy path, input validation (empty transcript, over-limit length), auth enforcement, LLM failure handling, and boundary conditions on all numeric fields.
+
+**Files created:**
+- `zuralog/lib/shared/widgets/inputs/z_sentiment_selector.dart`
+- `zuralog/lib/shared/widgets/feedback/z_audio_visualizer.dart`
+- `zuralog/lib/features/today/domain/wellness_parse_result.dart`
+- `cloud-brain/app/api/v1/wellness.py`
+- `cloud-brain/tests/api/v1/test_wellness.py`
+
+**Files modified:**
+- `zuralog/lib/features/today/presentation/widgets/wellness_log_panel.dart`
+- `zuralog/lib/features/today/data/today_repository.dart`
+- `zuralog/lib/shared/widgets/widgets.dart`
+
+---
+
 ## 2026-04-26 — Weight Log Overhaul: Large Number Input, Time-of-Day Chips, 7-Day Sparkline
 
 **Branch:** `feat/weight-log-overhaul`
