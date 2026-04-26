@@ -73,6 +73,7 @@ from app.api.v1.today_routes import router as today_router
 from app.api.v1.trends_routes import router as trends_router
 from app.api.v1.users import router as users_router
 from app.api.v1.webhooks import router as webhooks_router
+from app.api.v1.wellness_routes import router as wellness_router
 from app.api.v1.withings_routes import router as withings_router
 from app.api.v1.withings_webhooks import webhook_router as withings_webhook_router
 from app.config import settings
@@ -445,6 +446,7 @@ app.include_router(nutrition_router, prefix="/api/v1")  # Phase 2B — nutrition
 app.include_router(export_router, prefix="/api/v1")  # User data export
 app.include_router(sleep_router, prefix="/api/v1")  # Sleep detail
 app.include_router(heart_router, prefix="/api/v1")  # Heart detail
+app.include_router(wellness_router, prefix="/api/v1")  # Wellness transcript parsing
 
 
 @app.get("/health")
