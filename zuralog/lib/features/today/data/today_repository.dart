@@ -761,6 +761,10 @@ class TodayRepository implements TodayRepositoryInterface {
     required String timeOfDay,
     double? bodyFatPct,
   }) async {
+    assert(
+      ['morning', 'afternoon', 'evening'].contains(timeOfDay),
+      'timeOfDay must be morning, afternoon, or evening — got: $timeOfDay',
+    );
     debugPrint('[TodayRepo] logWeight → valueKg=$valueKg '
         'timeOfDay=$timeOfDay bodyFatPct=$bodyFatPct');
     await submitIngest(

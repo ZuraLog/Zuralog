@@ -476,7 +476,7 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
               final asyncHistory = ref.watch(weightHistoryProvider);
               return asyncHistory.when(
                 loading: () => const SizedBox(height: 40),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (err, _) => const SizedBox.shrink(),
                 data: (series) {
                   final doubles = series.map((v) => v ?? 0.0).toList();
                   final dataPointCount = series.where((v) => v != null).length;
@@ -652,7 +652,9 @@ class _BodyFatRow extends StatelessWidget {
             icon: const Icon(Icons.chevron_left_rounded),
             iconSize: 28,
             color: colors.textSecondary,
-            onPressed: () => onChange((v - 0.1).clamp(1.0, 80.0)),
+            onPressed: () => onChange(
+              double.parse(((v - 0.1).clamp(1.0, 80.0)).toStringAsFixed(1))
+            ),
             tooltip: 'Decrease body fat',
           ),
           SizedBox(
@@ -670,7 +672,9 @@ class _BodyFatRow extends StatelessWidget {
             icon: const Icon(Icons.chevron_right_rounded),
             iconSize: 28,
             color: colors.textSecondary,
-            onPressed: () => onChange((v + 0.1).clamp(1.0, 80.0)),
+            onPressed: () => onChange(
+              double.parse(((v + 0.1).clamp(1.0, 80.0)).toStringAsFixed(1))
+            ),
             tooltip: 'Increase body fat',
           ),
           const SizedBox(width: AppDimens.spaceXs),
