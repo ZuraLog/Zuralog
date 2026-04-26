@@ -76,8 +76,6 @@ class StreakTracker:
         Returns:
             The updated (or newly created) :class:`UserStreak` instance.
         """
-        date_str = activity_date.isoformat()
-
         result = await db.execute(
             select(UserStreak).where(
                 UserStreak.user_id == user_id,
@@ -93,7 +91,7 @@ class StreakTracker:
                 streak_type=streak_type,
                 current_count=1,
                 longest_count=1,
-                last_activity_date=date_str,
+                last_activity_date=activity_date,
                 freeze_count=0,
                 freeze_used_this_week=False,
             )
@@ -116,7 +114,7 @@ class StreakTracker:
                 "record_activity: created streak '%s' for user '%s' on %s",
                 streak_type,
                 user_id,
-                date_str,
+                activity_date,
             )
             return streak
 
@@ -124,14 +122,13 @@ class StreakTracker:
         if streak.last_activity_date is None:
             delta_days = None
         else:
-            last_date = date.fromisoformat(streak.last_activity_date)
-            delta_days = (activity_date - last_date).days
+            delta_days = (activity_date - streak.last_activity_date).days
 
         if delta_days == 0:
             # Duplicate call for same day — idempotent.
             logger.debug(
                 "record_activity: duplicate activity on %s for user '%s' streak '%s' — no change",
-                date_str,
+                activity_date,
                 user_id,
                 streak_type,
             )
@@ -150,7 +147,7 @@ class StreakTracker:
             )
             streak.current_count = 1
 
-        streak.last_activity_date = date_str
+        streak.last_activity_date = activity_date
         streak.is_frozen = False
 
         if streak.current_count > streak.longest_count:
@@ -234,8 +231,7 @@ class StreakTracker:
         # Extend last_activity_date by 1 day to bridge the gap so that the
         # next record_activity call sees only a 1-day delta.
         if streak.last_activity_date:
-            last = date.fromisoformat(streak.last_activity_date)
-            streak.last_activity_date = (last + timedelta(days=1)).isoformat()
+            streak.last_activity_date = streak.last_activity_date + timedelta(days=1)
 
         await db.commit()
         await db.refresh(streak)
