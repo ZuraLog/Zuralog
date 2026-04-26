@@ -202,6 +202,12 @@ abstract interface class TodayRepositoryInterface {
   /// // latest['weight'] → { 'value_kg': 78.4, 'logged_at': '...', 'source': 'apple_health' }
   /// ```
   Future<Map<String, dynamic>> getLatestLogValues(Set<String> types);
+
+  /// Fetch up to [days] of daily-averaged weight readings, oldest first.
+  ///
+  /// Returns a list of exactly [days] entries: index 0 = oldest, index [days-1] = today.
+  /// Null means no weigh-in was recorded that day.
+  Future<List<double?>> getWeightHistory({int days = 7});
 }
 
 // ── TodayRepository ──────────────────────────────────────────────────────────
@@ -794,6 +800,43 @@ class TodayRepository implements TodayRepositoryInterface {
     'supplement': 'supplement_taken',
     'water': 'water_ml',
   };
+
+  @override
+  Future<List<double?>> getWeightHistory({int days = 7}) async {
+    debugPrint('[TodayRepo] getWeightHistory days=$days');
+    try {
+      final response = await _api.get(
+        '/api/v1/metrics/weight/history',
+        queryParameters: {'days': days},
+      );
+      final data = response.data as Map<String, dynamic>;
+      final rawList = (data['history'] as List<dynamic>? ?? const [])
+          .cast<Map<String, dynamic>>();
+
+      final byDate = <String, double>{
+        for (final m in rawList)
+          (m['date'] as String): (m['value_kg'] as num).toDouble(),
+      };
+
+      final today = DateTime.now();
+      final result = <double?>[];
+      for (var i = days - 1; i >= 0; i--) {
+        final d = DateTime(today.year, today.month, today.day)
+            .subtract(Duration(days: i));
+        final iso =
+            '${d.year.toString().padLeft(4, '0')}-'
+            '${d.month.toString().padLeft(2, '0')}-'
+            '${d.day.toString().padLeft(2, '0')}';
+        result.add(byDate[iso]);
+      }
+
+      debugPrint('[TodayRepo] getWeightHistory ← ${result.length} entries');
+      return result;
+    } catch (e, st) {
+      debugPrint('[TodayRepo] getWeightHistory failed: $e\n$st');
+      return List<double?>.filled(days, null);
+    }
+  }
 
   @override
   Future<Map<String, dynamic>> getLatestLogValues(Set<String> types) async {

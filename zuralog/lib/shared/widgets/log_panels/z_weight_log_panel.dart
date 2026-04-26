@@ -15,6 +15,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/buttons/z_button.dart';
+import 'package:zuralog/shared/widgets/charts/z_mini_sparkline.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
@@ -465,6 +466,35 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
               _bodyFatExpanded = false;
               _bodyFatPct = null;
             }),
+          ),
+
+          const SizedBox(height: AppDimens.spaceMd),
+
+          // ── 7-day sparkline ───────────────────────────────────────────────
+          Builder(
+            builder: (context) {
+              final asyncHistory = ref.watch(weightHistoryProvider);
+              return asyncHistory.when(
+                loading: () => const SizedBox(height: 40),
+                error: (_, __) => const SizedBox.shrink(),
+                data: (series) {
+                  final doubles = series.map((v) => v ?? 0.0).toList();
+                  final dataPointCount = series.where((v) => v != null).length;
+                  if (dataPointCount < 2) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.spaceSm),
+                    child: ZMiniSparkline(
+                      values: doubles,
+                      todayIndex: series.length - 1,
+                      color: AppColors.categoryBody,
+                      trendLabel: '7-day weight',
+                      height: 40,
+                    ),
+                  );
+                },
+              );
+            },
           ),
 
           const SizedBox(height: AppDimens.spaceMd),

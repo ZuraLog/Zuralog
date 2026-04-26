@@ -375,6 +375,11 @@ final class MockTodayRepository implements TodayRepositoryInterface {
     return const {};
   }
 
+  @override
+  Future<List<double?>> getWeightHistory({int days = 7}) async {
+    return List<double?>.filled(days, null);
+  }
+
   // ── Fixture Builders ──────────────────────────────────────────────────────
 
   List<InsightCard> _mockInsights() {

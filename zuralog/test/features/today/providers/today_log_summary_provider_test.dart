@@ -32,6 +32,7 @@ class _StubRepo implements TodayRepositoryInterface {
   @override Future<void> logWellness({double? mood, double? energy, double? stress, String? notes}) async {}
   @override Future<void> logWeight({required double valueKg, required String timeOfDay, double? bodyFatPct}) async {}
   @override Future<Map<String, dynamic>> getLatestLogValues(Set<String> types) async => const {};
+  @override Future<List<double?>> getWeightHistory({int days = 7}) async => List<double?>.filled(days, null);
   @override Future<IngestResult> submitIngest({required String metricType, required double value, required String unit, required String source, required DateTime recordedAt, String? idempotencyKey, Map<String, dynamic>? metadata}) async => IngestResult(eventId: '', dailyTotal: 0, unit: unit, date: '');
   @override Future<TodayTimeline> getTodayTimeline({int limit = 50, String? before}) async => const TodayTimeline(events: []);
   @override Future<void> deleteEvent(String eventId) async {}
@@ -160,4 +161,5 @@ class _MockRepoWithLatestValues implements TodayRepositoryInterface {
   @override Future<void> deleteEvent(String eventId) => _delegate.deleteEvent(eventId);
   @override Future<SessionIngestResult> submitSession({required String sessionType, required String source, required DateTime recordedAt, DateTime? endedAt, required List<SessionMetricPayload> metrics, String? notes, Map<String, dynamic>? metadata}) => _delegate.submitSession(sessionType: sessionType, source: source, recordedAt: recordedAt, endedAt: endedAt, metrics: metrics, notes: notes, metadata: metadata);
   @override Future<BulkIngestResult> bulkIngest({required String source, required List<BulkEventPayload> events}) => _delegate.bulkIngest(source: source, events: events);
+  @override Future<List<double?>> getWeightHistory({int days = 7}) => _delegate.getWeightHistory(days: days);
 }
