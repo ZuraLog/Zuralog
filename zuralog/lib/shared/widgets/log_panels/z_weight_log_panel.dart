@@ -4,7 +4,10 @@
 /// Allows logging body weight in kg or lbs using +/− step buttons.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -96,6 +99,18 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
   /// Formatted date string of the last log entry (e.g. "15 Mar 2026").
   String? _lastLoggedAt;
 
+  /// Active long-press timer for fast-scroll. Cancelled on release.
+  Timer? _holdTimer;
+
+  /// Whether the inline edit TextField is currently shown.
+  bool _isEditing = false;
+
+  /// Controller for the inline edit TextField.
+  final TextEditingController _editController = TextEditingController();
+
+  /// FocusNode for the inline edit TextField.
+  final FocusNode _editFocusNode = FocusNode();
+
   static const _kWeightUnitKey = 'weight_log_unit';
 
   /// Step size in kg units.
@@ -105,6 +120,14 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
 
   /// Displayed value — converts to lbs when the lbs toggle is active.
   double get _displayValue => _isKg ? _value : _value * 2.20462;
+
+  @override
+  void dispose() {
+    _holdTimer?.cancel();
+    _editController.dispose();
+    _editFocusNode.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -143,6 +166,40 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
     setState(() {
       _value = (_value - _step).clamp(20.0, 500.0);
     });
+  }
+
+  void _startHold(VoidCallback step) {
+    step();
+    _holdTimer?.cancel();
+    _holdTimer = Timer.periodic(const Duration(milliseconds: 80), (_) => step());
+  }
+
+  void _stopHold() {
+    _holdTimer?.cancel();
+    _holdTimer = null;
+  }
+
+  void _beginEdit() {
+    _editController.text = _displayValue.toStringAsFixed(1);
+    setState(() => _isEditing = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _editFocusNode.requestFocus();
+      _editController.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _editController.text.length,
+      );
+    });
+  }
+
+  void _commitEdit() {
+    final raw = _editController.text.trim();
+    final parsed = double.tryParse(raw);
+    if (parsed != null && parsed.isFinite) {
+      final kg = _isKg ? parsed : parsed / 2.20462;
+      setState(() => _value = kg.clamp(20.0, 500.0));
+    }
+    setState(() => _isEditing = false);
+    _editFocusNode.unfocus();
   }
 
   Future<void> _handleSave() async {
@@ -229,65 +286,144 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
 
           const SizedBox(height: AppDimens.spaceLg),
 
-          // ── Value display with +/− controls ───────────────────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.remove_rounded),
-                iconSize: AppDimens.iconMd,
-                onPressed: _decrement,
-                tooltip: 'Decrease weight',
-                color: colors.textPrimary,
-                splashRadius: AppDimens.touchTargetMin / 2,
-              ),
-              const SizedBox(width: AppDimens.spaceMd),
-              Text(
-                displayStr,
-                style: AppTextStyles.displayMedium.copyWith(
-                  color: colors.textPrimary,
+          // ── Value display with chevron tap zones ──────────────────────────
+          SizedBox(
+            height: 96,
+            child: Stack(
+              children: [
+                Center(
+                  child: _isEditing
+                      ? IntrinsicWidth(
+                          child: TextField(
+                            controller: _editController,
+                            focusNode: _editFocusNode,
+                            autofocus: true,
+                            textAlign: TextAlign.center,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                            ],
+                            style: AppTextStyles.displayMedium.copyWith(
+                              color: colors.textPrimary,
+                              fontSize: 58,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            decoration: const InputDecoration(
+                              isCollapsed: true,
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            onSubmitted: (_) => _commitEdit(),
+                            onTapOutside: (_) => _commitEdit(),
+                          ),
+                        )
+                      : GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _beginEdit,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                displayStr,
+                                style: AppTextStyles.displayMedium.copyWith(
+                                  color: colors.textPrimary,
+                                  fontSize: 58,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(width: AppDimens.spaceXs),
+                              Text(
+                                _isKg ? 'kg' : 'lbs',
+                                style: AppTextStyles.bodyLarge.copyWith(
+                                  color: colors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                 ),
-              ),
-              const SizedBox(width: AppDimens.spaceXs),
-              Text(
-                _isKg ? 'kg' : 'lbs',
-                style: AppTextStyles.bodyLarge.copyWith(
-                  color: colors.textSecondary,
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 64,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _decrement,
+                    onLongPressStart: (_) => _startHold(_decrement),
+                    onLongPressEnd: (_) => _stopHold(),
+                    onLongPressCancel: _stopHold,
+                    child: Center(
+                      child: Icon(
+                        Icons.chevron_left_rounded,
+                        size: 36,
+                        color: colors.textSecondary,
+                        semanticLabel: 'Decrease weight',
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppDimens.spaceMd),
-              IconButton(
-                icon: const Icon(Icons.add_rounded),
-                iconSize: AppDimens.iconMd,
-                onPressed: _increment,
-                tooltip: 'Increase weight',
-                color: colors.textPrimary,
-                splashRadius: AppDimens.touchTargetMin / 2,
-              ),
-            ],
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 64,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _increment,
+                    onLongPressStart: (_) => _startHold(_increment),
+                    onLongPressEnd: (_) => _stopHold(),
+                    onLongPressCancel: _stopHold,
+                    child: Center(
+                      child: Icon(
+                        Icons.chevron_right_rounded,
+                        size: 36,
+                        color: colors.textSecondary,
+                        semanticLabel: 'Increase weight',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
 
-          const SizedBox(height: AppDimens.spaceSm),
-
-          // ── Last logged + delta ───────────────────────────────────────────
+          // ── Last logged strip ────────────────────────────────────────────────
+          const SizedBox(height: AppDimens.spaceXs),
           Center(
-            child: Column(
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: AppDimens.spaceSm,
+              runSpacing: AppDimens.spaceXxs,
               children: [
                 Text(
                   _lastLoggedKg == null
                       ? 'Last logged: —'
-                      : 'Last logged: $_lastLoggedAt',
+                      : 'Last logged: ${_isKg ? _lastLoggedKg!.toStringAsFixed(1) : (_lastLoggedKg! * 2.20462).toStringAsFixed(1)} ${_isKg ? "kg" : "lbs"} · $_lastLoggedAt',
                   style: AppTextStyles.bodySmall.copyWith(color: colors.textTertiary),
                 ),
-                if (_lastLoggedKg != null) ...[
-                  const SizedBox(height: AppDimens.spaceXs),
+                if (_lastLoggedKg != null)
                   _DeltaIndicator(
                     currentKg: _value,
                     previousKg: _lastLoggedKg!,
                     isKg: _isKg,
                   ),
-                ],
               ],
+            ),
+          ),
+
+          const SizedBox(height: AppDimens.spaceSm),
+          Text(
+            'tap the number to type · hold ‹ or › to scroll fast',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: colors.textTertiary,
+              fontStyle: FontStyle.italic,
             ),
           ),
 
@@ -348,11 +484,6 @@ class _UnitChip extends StatelessWidget {
 
 // ── _DeltaIndicator ────────────────────────────────────────────────────────────
 
-/// Shows the difference between the current value and the last logged value.
-///
-/// - Green ([AppColors.categoryActivity]) when the user has lost weight.
-/// - Red ([AppColors.categoryHeart]) when the user has gained weight.
-/// - Grey ([AppColors.textTertiary]) when there is no meaningful change (< 0.05 kg).
 class _DeltaIndicator extends StatelessWidget {
   const _DeltaIndicator({
     required this.currentKg,
@@ -366,24 +497,33 @@ class _DeltaIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
     final deltaKg = currentKg - previousKg;
     if (deltaKg.abs() < 0.05) {
-      return Text(
-        'No change from last entry',
-        style: AppTextStyles.bodySmall.copyWith(color: colors.textTertiary),
-      );
+      return const SizedBox.shrink();
     }
-    final display = isKg
+    final magnitude = isKg
         ? deltaKg.abs().toStringAsFixed(1)
         : (deltaKg.abs() * 2.20462).toStringAsFixed(1);
     final unit = isKg ? 'kg' : 'lbs';
-    final sign = deltaKg > 0 ? '+' : '−';
-    // Red for weight gain, green for weight loss.
-    final color = deltaKg > 0 ? AppColors.categoryHeart : AppColors.categoryActivity;
-    return Text(
-      '$sign$display $unit from last entry',
-      style: AppTextStyles.bodySmall.copyWith(color: color),
+    final isGain = deltaKg > 0;
+    final arrow = isGain ? '↑' : '↓';
+    final color = isGain ? AppColors.categoryHeart : AppColors.categoryActivity;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimens.spaceSm,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppDimens.shapePill),
+      ),
+      child: Text(
+        '$arrow $magnitude $unit',
+        style: AppTextStyles.labelSmall.copyWith(
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }
