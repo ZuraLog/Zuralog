@@ -20,6 +20,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from openai import APIError
 
 USER_ID = "user-wellness-001"
 AUTH_HEADERS = {"Authorization": "Bearer test-token"}
@@ -226,6 +227,53 @@ def test_wellness_parse_llm_failure_returns_502(integration_client):
 
     assert response.status_code == 502
     assert "AI parsing failed" in response.json()["detail"]
+
+
+def test_wellness_parse_api_error_returns_502(integration_client):
+    """When parse_transcript raises openai.APIError, endpoint returns 502."""
+    client, mock_auth, mock_db = integration_client
+    _setup_auth(mock_auth)
+
+    with patch(
+        "app.api.v1.wellness_routes.parse_transcript",
+        new_callable=AsyncMock,
+        side_effect=APIError("LLM network failure", request=MagicMock(), body=None),
+    ):
+        response = client.post(
+            "/api/v1/wellness/parse",
+            json={"transcript": "feeling okay"},
+            headers=AUTH_HEADERS,
+        )
+
+    assert response.status_code == 502
+    assert "AI parsing failed" in response.json()["detail"]
+
+
+def test_wellness_parse_accepts_exactly_5000_chars(integration_client):
+    """POST with a transcript of exactly 5000 chars should return 200 (boundary check)."""
+    client, mock_auth, mock_db = integration_client
+    _setup_auth(mock_auth)
+
+    fake_result = {
+        "mood": 5.0,
+        "energy": 5.0,
+        "stress": 5.0,
+        "tags": [],
+        "summary": "Boundary test.",
+    }
+
+    with patch(
+        "app.api.v1.wellness_routes.parse_transcript",
+        new_callable=AsyncMock,
+        return_value=fake_result,
+    ):
+        response = client.post(
+            "/api/v1/wellness/parse",
+            json={"transcript": "a" * 5000},
+            headers=AUTH_HEADERS,
+        )
+
+    assert response.status_code == 200
 
 
 def test_wellness_parse_no_llm_client_returns_503(integration_client):

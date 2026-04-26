@@ -3,6 +3,7 @@ import json
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from openai import APIError
 from pydantic import BaseModel, Field
 
 from app.api.deps import get_authenticated_user_id
@@ -23,7 +24,7 @@ _PARSE_SYSTEM = """You are a wellness data extractor. Given a person's free-form
 - stress: float 1.0–10.0 (1=very calm, 10=extremely stressed)
 - tags: list of matching tags from this exact set (use only tags that clearly apply, may be empty):
   work_stress, poor_sleep, exercise, good_food, social, tired, anxious, calm, motivated, under_the_weather
-- summary: one warm, human sentence (max 120 chars) reflecting what you heard
+- summary: one warm, human sentence (max 240 chars) reflecting what you heard
 
 Respond ONLY with valid JSON matching this schema exactly:
 {"mood": <float>, "energy": <float>, "stress": <float>, "tags": [<str>], "summary": "<str>"}"""
@@ -47,7 +48,13 @@ async def parse_transcript(transcript: str, llm_client: LLMClient) -> dict:
         {"role": "system", "content": _PARSE_SYSTEM},
         {"role": "user", "content": transcript},
     ]
-    response = await llm_client.chat(messages=messages, response_format={"type": "json_object"})
+    response = await llm_client.chat(
+        messages=messages,
+        temperature=0.3,
+        response_format={"type": "json_object"},
+        reasoning={"effort": "none"},
+        plugins=[{"id": "response-healing"}],
+    )
     raw = response.choices[0].message.content
     data = json.loads(raw)
     return {
@@ -70,8 +77,12 @@ async def wellness_parse(
     llm_client: LLMClient | None = request.app.state.llm_client
     if llm_client is None:
         raise HTTPException(status_code=503, detail="AI service is not configured.")
+    request.state.user_id = user_id
     try:
         result = await parse_transcript(body.transcript, llm_client)
+    except APIError as exc:
+        logger.error("wellness_parse: LLM API error — %s", exc)
+        raise HTTPException(status_code=502, detail="AI parsing failed, please try again.")
     except (json.JSONDecodeError, KeyError, ValueError) as exc:
         logger.warning("wellness_parse: LLM returned unparseable JSON — %s", exc)
         raise HTTPException(status_code=502, detail="AI parsing failed, please try again.")
