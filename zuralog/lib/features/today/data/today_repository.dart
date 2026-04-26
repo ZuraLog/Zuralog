@@ -23,6 +23,35 @@ import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
+// ── WellnessParseResult ───────────────────────────────────────────────────────
+
+/// Parsed values extracted from a free-text wellness transcript by the AI.
+class WellnessParseResult {
+  const WellnessParseResult({
+    required this.mood,
+    required this.energy,
+    required this.stress,
+    required this.tags,
+    required this.summary,
+  });
+
+  final double mood;
+  final double energy;
+  final double stress;
+  final List<String> tags;
+  final String summary;
+
+  factory WellnessParseResult.fromJson(Map<String, dynamic> json) {
+    return WellnessParseResult(
+      mood: (json['mood'] as num).toDouble(),
+      energy: (json['energy'] as num).toDouble(),
+      stress: (json['stress'] as num).toDouble(),
+      tags: (json['tags'] as List<dynamic>).cast<String>(),
+      summary: json['summary'] as String,
+    );
+  }
+}
+
 // ── TodayRepositoryInterface ──────────────────────────────────────────────────
 
 /// Abstract contract for all Today-tab data operations.
@@ -177,7 +206,13 @@ abstract interface class TodayRepositoryInterface {
     double? energy,
     double? stress,
     String? notes,
+    List<String> tags = const [],
+    String? aiSummary,
   });
+
+  /// Sends a free-text [transcript] to the AI parser and returns structured
+  /// wellness values extracted from the text.
+  Future<WellnessParseResult> parseWellnessTranscript(String transcript);
 
   /// Submit a body weight log entry.
   ///
@@ -727,32 +762,55 @@ class TodayRepository implements TodayRepositoryInterface {
     double? energy,
     double? stress,
     String? notes,
+    List<String> tags = const [],
+    String? aiSummary,
   }) async {
     final now = DateTime.now();
+    final sharedMeta = <String, dynamic>{
+      if (tags.isNotEmpty) 'tags': tags,
+      if (aiSummary != null) 'ai_summary': aiSummary,
+      if (notes != null) 'notes': notes,
+    };
     if (mood != null) {
       await submitIngest(
-          metricType: 'mood',
-          value: mood,
-          unit: '/10',
-          source: 'manual',
-          recordedAt: now);
+        metricType: 'mood',
+        value: mood,
+        unit: '/10',
+        source: 'manual',
+        recordedAt: now,
+        metadata: sharedMeta.isEmpty ? null : sharedMeta,
+      );
     }
     if (energy != null) {
       await submitIngest(
-          metricType: 'energy',
-          value: energy,
-          unit: '/10',
-          source: 'manual',
-          recordedAt: now);
+        metricType: 'energy',
+        value: energy,
+        unit: '/10',
+        source: 'manual',
+        recordedAt: now,
+        metadata: sharedMeta.isEmpty ? null : sharedMeta,
+      );
     }
     if (stress != null) {
       await submitIngest(
-          metricType: 'stress',
-          value: stress,
-          unit: '/100',
-          source: 'manual',
-          recordedAt: now);
+        metricType: 'stress',
+        value: stress,
+        unit: '/10',
+        source: 'manual',
+        recordedAt: now,
+        metadata: sharedMeta.isEmpty ? null : sharedMeta,
+      );
     }
+  }
+
+  @override
+  Future<WellnessParseResult> parseWellnessTranscript(
+      String transcript) async {
+    final resp = await _api.post(
+      '/api/v1/wellness/parse',
+      data: {'transcript': transcript},
+    );
+    return WellnessParseResult.fromJson(resp.data as Map<String, dynamic>);
   }
 
   @override

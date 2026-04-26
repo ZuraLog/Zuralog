@@ -355,9 +355,24 @@ final class MockTodayRepository implements TodayRepositoryInterface {
     double? energy,
     double? stress,
     String? notes,
+    List<String> tags = const [],
+    String? aiSummary,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 600));
     // No-op in mock.
+  }
+
+  @override
+  Future<WellnessParseResult> parseWellnessTranscript(
+      String transcript) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    return const WellnessParseResult(
+      mood: 6.0,
+      energy: 5.0,
+      stress: 4.0,
+      tags: ['calm'],
+      summary: 'Seems like a decent day.',
+    );
   }
 
   @override
