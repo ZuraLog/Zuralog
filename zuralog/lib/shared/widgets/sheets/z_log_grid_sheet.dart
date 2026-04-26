@@ -370,19 +370,9 @@ class _PanelView extends StatelessWidget {
     return switch (tile.key) {
       'water' => ZWaterLogPanel(
           onSave: (ml, {String? vesselKey}) async {
-            try {
-              await repo.logWater(amountMl: ml, vesselKey: vesselKey);
-              onSaved();
-            } catch (e) {
-              debugPrint('logWater failed: $e');
-              final messenger = parentMessenger ??
-                  (context.mounted ? ScaffoldMessenger.of(context) : null);
-              messenger?.showSnackBar(
-                const SnackBar(
-                  content: Text('Could not save water. Please try again.'),
-                ),
-              );
-            }
+            // Local save + cloud sync are handled inside ZWaterLogPanel.
+            // This callback's only job is to close the sheet and refresh providers.
+            onSaved();
           },
           onBack: onBack,
         ),

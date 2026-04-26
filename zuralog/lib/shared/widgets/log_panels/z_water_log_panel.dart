@@ -5,10 +5,13 @@
 /// a custom numeric input.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -17,7 +20,10 @@ import 'package:zuralog/shared/widgets/buttons/z_button.dart';
 import 'package:zuralog/shared/widgets/charts/z_mini_ring.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/features/today/data/water_log_local_repository.dart';
+import 'package:zuralog/features/today/data/water_log_sync_service.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
+import 'package:zuralog/features/today/domain/water_log.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 
 // ── Vessel presets ─────────────────────────────────────────────────────────────
@@ -64,6 +70,8 @@ const double _kVesselCardHeight = 84.0;
 const String _kLastVesselPrefKey = 'water_log_last_vessel';
 const String _kLastAmountPrefKey = 'water_log_last_amount_ml';
 const String _kLastSavedAtPrefKey = 'water_log_last_saved_at_ms';
+
+enum _WaterSyncStatus { none, pending, synced }
 
 // ── ZWaterLogPanel ─────────────────────────────────────────────────────────────
 
@@ -114,7 +122,34 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
   bool _showBadge = false;
   int _badgeKey = 0;
 
+  List<WaterLog> _todayLogs = [];
+
   bool get _isCustomSelected => _selectedVesselKey == 'custom';
+
+  _WaterSyncStatus get _syncStatus {
+    if (_todayLogs.isEmpty) return _WaterSyncStatus.none;
+    if (_todayLogs.every((l) => l.synced)) return _WaterSyncStatus.synced;
+    return _WaterSyncStatus.pending;
+  }
+
+  static String _isoDateStr(DateTime dt) =>
+      '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+
+  WaterLog _buildWaterLog({
+    required double amountMl,
+    required String? vesselKey,
+    required DateTime now,
+  }) {
+    return WaterLog(
+      id: const Uuid().v4(),
+      amountMl: amountMl,
+      vesselKey: vesselKey,
+      logDate: _isoDateStr(now),
+      loggedAtTime:
+          '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
+      recordedAt: now,
+    );
+  }
 
   @override
   void didChangeDependencies() {
@@ -130,6 +165,10 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
     final savedVessel = prefs.getString(_kLastVesselPrefKey);
     final savedAmount = prefs.getDouble(_kLastAmountPrefKey);
     final savedAtMs = prefs.getInt(_kLastSavedAtPrefKey);
+
+    final localRepo = ref.read(waterLogLocalRepositoryProvider);
+    final todayLogs = localRepo.getLogsForDate(_isoDateStr(DateTime.now()));
+
     if (!mounted) return;
     setState(() {
       if (savedVessel != null) _defaultVesselKey = savedVessel;
@@ -137,6 +176,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
       if (savedAtMs != null) {
         _lastSavedAt = DateTime.fromMillisecondsSinceEpoch(savedAtMs);
       }
+      _todayLogs = todayLogs;
     });
   }
 
@@ -161,16 +201,28 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
     });
   }
 
-  void _handlePresetTap(_VesselPreset vessel) {
-    final isImperial =
-        ref.read(unitsSystemProvider) == UnitsSystem.imperial;
+  Future<void> _handlePresetTap(_VesselPreset vessel) async {
+    final isImperial = ref.read(unitsSystemProvider) == UnitsSystem.imperial;
     final amountMl = _toMl(vessel, isImperial: isImperial);
     if (amountMl <= 0) return;
     HapticFeedback.mediumImpact();
+
+    final now = DateTime.now();
+    final log = _buildWaterLog(amountMl: amountMl, vesselKey: vessel.key, now: now);
+    final localRepo = ref.read(waterLogLocalRepositoryProvider);
+    final syncService = ref.read(waterLogSyncServiceProvider);
+
+    await localRepo.saveLog(log);
+    if (!mounted) return;
+    setState(() => _todayLogs = localRepo.getLogsForDate(log.logDate));
+    unawaited(syncService.syncLog(log).then((_) {
+      if (!mounted) return;
+      setState(() => _todayLogs = localRepo.getLogsForDate(log.logDate));
+    }));
+
     // ignore: discarded_futures
     widget.onSave(amountMl, vesselKey: vessel.key);
     _triggerFeedback(amountMl);
-    final now = DateTime.now();
     setState(() {
       _lastAmountMl = amountMl;
       _lastSavedAt = now;
@@ -214,7 +266,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
 
   void _selectVessel(_VesselPreset vessel) {
     if (vessel.ml != null) {
-      _handlePresetTap(vessel);
+      unawaited(_handlePresetTap(vessel));
       return;
     }
     final isImperial = ref.read(unitsSystemProvider) == UnitsSystem.imperial;
@@ -277,10 +329,23 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
     if (!_isCustomSelected || _amountMl <= 0) return;
     HapticFeedback.mediumImpact();
     final savedAmount = _amountMl;
+    final now = DateTime.now();
+
+    final log = _buildWaterLog(amountMl: savedAmount, vesselKey: null, now: now);
+    final localRepo = ref.read(waterLogLocalRepositoryProvider);
+    final syncService = ref.read(waterLogSyncServiceProvider);
+
+    await localRepo.saveLog(log);
+    if (!mounted) return;
+    setState(() => _todayLogs = localRepo.getLogsForDate(log.logDate));
+    unawaited(syncService.syncLog(log).then((_) {
+      if (!mounted) return;
+      setState(() => _todayLogs = localRepo.getLogsForDate(log.logDate));
+    }));
+
     await widget.onSave(savedAmount, vesselKey: null);
     if (!mounted) return;
     _triggerFeedback(savedAmount);
-    final now = DateTime.now();
     setState(() {
       _lastAmountMl = savedAmount;
       _lastSavedAt = now;
@@ -335,6 +400,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
             isImperial: isImperial,
             lastDrinkDate: lastDrinkDate,
             lastDrinkTime: _lastSavedAt,
+            syncStatus: _syncStatus,
           ),
 
           const SizedBox(height: AppDimens.spaceLg),
@@ -577,6 +643,7 @@ class _WaterRingHeader extends StatefulWidget {
     required this.isImperial,
     this.lastDrinkDate,
     this.lastDrinkTime,
+    this.syncStatus = _WaterSyncStatus.none,
   });
 
   /// Cumulative water logged today in millilitres. `null` when nothing logged.
@@ -593,6 +660,9 @@ class _WaterRingHeader extends StatefulWidget {
 
   /// Precise timestamp of the last logged drink, for relative-time display.
   final DateTime? lastDrinkTime;
+
+  /// Cloud sync status for today's logs — drives the cloud icon in the meta row.
+  final _WaterSyncStatus syncStatus;
 
   @override
   State<_WaterRingHeader> createState() => _WaterRingHeaderState();
@@ -771,7 +841,7 @@ class _WaterRingHeaderState extends State<_WaterRingHeader>
                 child: numberWidget,
               ),
             const SizedBox(height: AppDimens.spaceSm),
-            // ── Meta row: last drink · goal ───────────────────────────────────
+            // ── Meta row: last drink · goal · cloud icon ─────────────────────
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
@@ -802,6 +872,18 @@ class _WaterRingHeaderState extends State<_WaterRingHeader>
                       color: colors.textTertiary,
                     ),
                   ),
+                if (widget.syncStatus != _WaterSyncStatus.none) ...[
+                  const SizedBox(width: AppDimens.spaceXs),
+                  Icon(
+                    widget.syncStatus == _WaterSyncStatus.synced
+                        ? Icons.cloud_done
+                        : Icons.cloud_upload,
+                    size: 12,
+                    color: widget.syncStatus == _WaterSyncStatus.synced
+                        ? AppColors.categoryBody.withValues(alpha: 0.55)
+                        : colors.textSecondary.withValues(alpha: 0.35),
+                  ),
+                ],
               ],
             ),
           ],

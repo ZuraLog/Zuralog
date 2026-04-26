@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:zuralog/core/storage/prefs_service.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
@@ -12,15 +13,17 @@ import 'package:zuralog/shared/widgets/buttons/z_button.dart';
 import 'package:zuralog/shared/widgets/charts/z_mini_ring.dart';
 import 'package:zuralog/shared/widgets/log_panels/z_water_log_panel.dart';
 
-Widget _wrap(
+Future<Widget> _wrap(
   Widget child, {
   UnitsSystem units = UnitsSystem.metric,
   List<DailyGoal> goals = const <DailyGoal>[],
   Map<String, dynamic> lastWater = const <String, dynamic>{},
   TodayLogSummary summary = TodayLogSummary.empty,
-}) {
+}) async {
+  final prefs = await SharedPreferences.getInstance();
   return ProviderScope(
     overrides: [
+      prefsProvider.overrideWithValue(prefs),
       todayLogSummaryProvider.overrideWith((ref) async => summary),
       dailyGoalsProvider.overrideWith((ref) async => goals),
       latestLogValuesProvider(latestLogValuesKey(const {'water'}))
@@ -46,7 +49,7 @@ void main() {
     });
 
     testWidgets('Add Water button is absent before any selection', (tester) async {
-      await tester.pumpWidget(_wrap(ZWaterLogPanel(
+      await tester.pumpWidget(await _wrap(ZWaterLogPanel(
         onSave: (ml, {String? vesselKey}) async {},
         onBack: () {},
       )));
@@ -58,7 +61,7 @@ void main() {
         (tester) async {
       double? savedAmount;
       String? savedVesselKey;
-      await tester.pumpWidget(_wrap(ZWaterLogPanel(
+      await tester.pumpWidget(await _wrap(ZWaterLogPanel(
         onSave: (ml, {String? vesselKey}) async {
           savedAmount = ml;
           savedVesselKey = vesselKey;
@@ -72,7 +75,7 @@ void main() {
 
       expect(savedAmount, closeTo(250.0, 0.01));
       expect(savedVesselKey, 'glass');
-      // Drain animation controller (400ms) + badge dismiss timer (1500ms).
+      // Drain animation controller (400ms) + badge dismiss timer (800ms).
       await tester.pump(const Duration(milliseconds: 1500));
     });
 
@@ -80,7 +83,7 @@ void main() {
         (tester) async {
       double? savedAmount;
       String? savedVesselKey;
-      await tester.pumpWidget(_wrap(ZWaterLogPanel(
+      await tester.pumpWidget(await _wrap(ZWaterLogPanel(
         onSave: (ml, {String? vesselKey}) async {
           savedAmount = ml;
           savedVesselKey = vesselKey;
@@ -101,7 +104,7 @@ void main() {
         (tester) async {
       double? savedAmount;
       String? savedVesselKey;
-      await tester.pumpWidget(_wrap(ZWaterLogPanel(
+      await tester.pumpWidget(await _wrap(ZWaterLogPanel(
         onSave: (ml, {String? vesselKey}) async {
           savedAmount = ml;
           savedVesselKey = vesselKey;
@@ -122,7 +125,7 @@ void main() {
         (tester) async {
       double? savedAmount;
       String? savedVesselKey;
-      await tester.pumpWidget(_wrap(ZWaterLogPanel(
+      await tester.pumpWidget(await _wrap(ZWaterLogPanel(
         onSave: (ml, {String? vesselKey}) async {
           savedAmount = ml;
           savedVesselKey = vesselKey;
@@ -143,7 +146,7 @@ void main() {
         (tester) async {
       double? savedAmount;
       String? savedVesselKey = 'sentinel';
-      await tester.pumpWidget(_wrap(ZWaterLogPanel(
+      await tester.pumpWidget(await _wrap(ZWaterLogPanel(
         onSave: (ml, {String? vesselKey}) async {
           savedAmount = ml;
           savedVesselKey = vesselKey;
@@ -168,7 +171,7 @@ void main() {
     });
 
     testWidgets('In imperial mode vessel chips show oz labels', (tester) async {
-      await tester.pumpWidget(_wrap(
+      await tester.pumpWidget(await _wrap(
         ZWaterLogPanel(
           onSave: (ml, {String? vesselKey}) async {},
           onBack: () {},
@@ -183,7 +186,7 @@ void main() {
     testWidgets('Imperial Glass pill instant-saves 236.6 ml', (tester) async {
       double? savedAmount;
       String? savedVesselKey;
-      await tester.pumpWidget(_wrap(
+      await tester.pumpWidget(await _wrap(
         ZWaterLogPanel(
           onSave: (ml, {String? vesselKey}) async {
             savedAmount = ml;
@@ -206,7 +209,7 @@ void main() {
 
     testWidgets('No Add Water button is rendered for preset-only flow',
         (tester) async {
-      await tester.pumpWidget(_wrap(ZWaterLogPanel(
+      await tester.pumpWidget(await _wrap(ZWaterLogPanel(
         onSave: (ml, {String? vesselKey}) async {},
         onBack: () {},
       )));
@@ -217,7 +220,7 @@ void main() {
     testWidgets('Smart default: persisted vessel renders the indicator dot',
         (tester) async {
       SharedPreferences.setMockInitialValues({'water_log_last_vessel': 'glass'});
-      await tester.pumpWidget(_wrap(ZWaterLogPanel(
+      await tester.pumpWidget(await _wrap(ZWaterLogPanel(
         onSave: (ml, {String? vesselKey}) async {},
         onBack: () {},
       )));
@@ -247,7 +250,7 @@ void main() {
       final iso = '${today.year.toString().padLeft(4, '0')}-'
           '${today.month.toString().padLeft(2, '0')}-'
           '${today.day.toString().padLeft(2, '0')}';
-      await tester.pumpWidget(_wrap(
+      await tester.pumpWidget(await _wrap(
         ZWaterLogPanel(
           onSave: (ml, {String? vesselKey}) async {},
           onBack: () {},
@@ -265,7 +268,7 @@ void main() {
       final iso = '${y.year.toString().padLeft(4, '0')}-'
           '${y.month.toString().padLeft(2, '0')}-'
           '${y.day.toString().padLeft(2, '0')}';
-      await tester.pumpWidget(_wrap(
+      await tester.pumpWidget(await _wrap(
         ZWaterLogPanel(
           onSave: (ml, {String? vesselKey}) async {},
           onBack: () {},
@@ -280,7 +283,7 @@ void main() {
 
     testWidgets('Last drink hint shows empty state when no log exists',
         (tester) async {
-      await tester.pumpWidget(_wrap(ZWaterLogPanel(
+      await tester.pumpWidget(await _wrap(ZWaterLogPanel(
         onSave: (ml, {String? vesselKey}) async {},
         onBack: () {},
       )));
@@ -290,7 +293,7 @@ void main() {
 
     testWidgets('Ring colour switches to success when goal is reached',
         (tester) async {
-      await tester.pumpWidget(_wrap(
+      await tester.pumpWidget(await _wrap(
         ZWaterLogPanel(
           onSave: (ml, {String? vesselKey}) async {},
           onBack: () {},
@@ -319,7 +322,7 @@ void main() {
     });
 
     testWidgets('Ring colour is categoryBody mid-progress', (tester) async {
-      await tester.pumpWidget(_wrap(
+      await tester.pumpWidget(await _wrap(
         ZWaterLogPanel(
           onSave: (ml, {String? vesselKey}) async {},
           onBack: () {},
