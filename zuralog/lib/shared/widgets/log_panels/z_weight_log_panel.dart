@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -19,6 +20,9 @@ import 'package:zuralog/shared/widgets/charts/z_mini_sparkline.dart';
 import 'package:zuralog/shared/widgets/overlays/z_log_success_overlay.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/features/today/data/weight_log_local_repository.dart';
+import 'package:zuralog/features/today/data/weight_log_sync_service.dart';
+import 'package:zuralog/features/today/domain/weight_log.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 
 // ── Top-level helpers ──────────────────────────────────────────────────────────
@@ -53,6 +57,13 @@ class WeightLogData {
   final String timeOfDay;
   final double? bodyFatPct;
 }
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+enum _WeightSyncStatus { none, pending, synced }
+
+String _isoDateStr(DateTime dt) =>
+    '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
 
 // ── ZWeightLogPanel ────────────────────────────────────────────────────────────
 
@@ -112,6 +123,14 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
   bool _bodyFatExpanded = false;
   static const double _kDefaultBodyFatPct = 20.0;
 
+  List<WeightLog> _todayLogs = [];
+
+  _WeightSyncStatus get _syncStatus {
+    if (_todayLogs.isEmpty) return _WeightSyncStatus.none;
+    if (_todayLogs.every((l) => l.synced)) return _WeightSyncStatus.synced;
+    return _WeightSyncStatus.pending;
+  }
+
   /// Controller for the inline edit TextField.
   final TextEditingController _editController = TextEditingController();
 
@@ -161,8 +180,13 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
         : hour < 18
             ? 'afternoon'
             : 'evening';
+    final localRepo = ref.read(weightLogLocalRepositoryProvider);
+    final todayLogs = localRepo.getLogsForDate(_isoDateStr(DateTime.now()));
     if (mounted) {
-      setState(() => _timeOfDay = auto);
+      setState(() {
+        _timeOfDay = auto;
+        _todayLogs = todayLogs;
+      });
     }
   }
 
@@ -221,16 +245,47 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
   Future<void> _handleSave() async {
     debugPrint('[WeightLog] 📤 Save tapped — value=$_value kg '
         'timeOfDay=$_timeOfDay bodyFatPct=$_bodyFatPct');
+
+    final now = DateTime.now();
+    final log = WeightLog(
+      id: const Uuid().v4(),
+      valueKg: _value,
+      timeOfDay: _timeOfDay,
+      bodyFatPct: _bodyFatPct,
+      logDate: _isoDateStr(now),
+      loggedAtTime:
+          '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
+      recordedAt: now,
+    );
+
+    // Save locally first — works offline.
+    final localRepo = ref.read(weightLogLocalRepositoryProvider);
+    await localRepo.saveLog(log);
+    if (!mounted) return;
+    setState(() {
+      _todayLogs = localRepo.getLogsForDate(log.logDate);
+      _lastLoggedKg = _value;
+      _lastLoggedAt = _formatDate(log.logDate);
+    });
+
+    // Fire sync in background — UI updates when the synced flag flips.
+    final syncService = ref.read(weightLogSyncServiceProvider);
+    unawaited(syncService.syncLog(log).then((_) {
+      if (!mounted) return;
+      setState(() => _todayLogs = localRepo.getLogsForDate(log.logDate));
+    }));
+
     HapticFeedback.mediumImpact();
     await Future.delayed(const Duration(milliseconds: 200));
     if (!mounted) return;
     ZLogSuccessOverlay.show(context);
+
     await widget.onSave(WeightLogData(
       valueKg: _value,
       timeOfDay: _timeOfDay,
       bodyFatPct: _bodyFatPct,
     ));
-    debugPrint('[WeightLog] ✅ onSave callback returned');
+    debugPrint('[WeightLog] ✅ save complete');
   }
 
   String _formatDate(String? iso) {
@@ -419,6 +474,16 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
                     currentKg: _value,
                     previousKg: _lastLoggedKg!,
                     isKg: _isKg,
+                  ),
+                if (_syncStatus != _WeightSyncStatus.none)
+                  Icon(
+                    _syncStatus == _WeightSyncStatus.synced
+                        ? Icons.cloud_done
+                        : Icons.cloud_upload,
+                    size: 12,
+                    color: _syncStatus == _WeightSyncStatus.synced
+                        ? AppColors.categoryBody.withValues(alpha: 0.55)
+                        : colors.textSecondary.withValues(alpha: 0.35),
                   ),
               ],
             ),
