@@ -1,4 +1,4 @@
-﻿/// Data tab â€” editorial health briefing.
+/// Data tab — editorial health briefing.
 ///
 /// One hero Health Score card on top, followed by six
 /// [ZCategorySummaryCard]s in fixed order (Sleep â†’ Activity â†’ Heart â†’
@@ -49,7 +49,7 @@ const List<HealthCategory> _kVisibleCategories = [
 // These helpers let both [_CategoryCard] and [_ConnectACTAIfNeeded] share
 // exactly one definition of "find this category's summary" and "does this
 // summary have enough data to show". They also make the Riverpod
-// `.select(...)` closures trivial â€” each card subscribes only to the
+// `.select(...)` closures trivial — each card subscribes only to the
 // primitive value it actually renders, so a single-category update no
 // longer rebuilds every card on the screen.
 
@@ -82,7 +82,7 @@ List<String> _lastSevenDayLabels(int count) {
 bool _summaryHasData(CategorySummary? s) {
   if (s == null) return false;
   final hasTrend = s.trend != null && s.trend!.length >= 3;
-  final hasValue = s.primaryValue.trim().isNotEmpty && s.primaryValue != 'â€”';
+  final hasValue = s.primaryValue.trim().isNotEmpty && s.primaryValue != '—';
   return hasTrend && hasValue;
 }
 
@@ -100,7 +100,7 @@ int _countCategoriesWithData(DashboardData? dash) {
 
 // â”€â”€ HealthDashboardScreen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-/// Data tab root â€” editorial category briefing.
+/// Data tab root — editorial category briefing.
 class HealthDashboardScreen extends ConsumerStatefulWidget {
   /// Creates the [HealthDashboardScreen].
   const HealthDashboardScreen({super.key});
@@ -143,7 +143,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
   /// connected AND hasn't synced in the last [_kSyncThrottleHours] hour(s).
   ///
   /// Called once per screen lifecycle from [initState] via addPostFrameCallback.
-  /// Fire-and-forget â€” does not block rendering.
+  /// Fire-and-forget — does not block rendering.
   Future<void> _triggerSyncIfDue() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -278,7 +278,7 @@ class _ViewAllDataPill extends StatelessWidget {
 
 // â”€â”€ _HealthScoreHero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-/// Editorial Health Score hero card â€” the single largest number on the Data tab.
+/// Editorial Health Score hero card — the single largest number on the Data tab.
 ///
 /// Tapping anywhere opens the score breakdown screen. Shows a shimmer skeleton
 /// while the score is loading; shows the same skeleton on error so the user
@@ -324,7 +324,7 @@ class _HeroContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final scoreText = _hasScore ? '${data.score}' : 'â€”';
+    final scoreText = _hasScore ? '${data.score}' : '—';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -469,7 +469,7 @@ class _HeroSkeleton extends StatelessWidget {
 
 // â”€â”€ _CategoryCard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-/// Single category card â€” wraps [ZCategorySummaryCard] with the right
+/// Single category card — wraps [ZCategorySummaryCard] with the right
 /// category-level data pulled from [dashboardProvider].
 ///
 /// Uses `.select(...)` so each card only rebuilds when its own
@@ -504,7 +504,7 @@ class _CategoryCard extends ConsumerWidget {
       categoryName: name,
       icon: icon,
       color: color,
-      heroValue: hasData ? summary!.primaryValue : 'â€”',
+      heroValue: hasData ? summary!.primaryValue : '—',
       chart: chart,
       deltaLabel: hasData ? deltaLabel : null,
       deltaDirection: deltaDirection,
@@ -633,7 +633,7 @@ class _CategoryCard extends ConsumerWidget {
         return Icons.accessibility_new_rounded;
       case HealthCategory.wellness:
         return Icons.self_improvement_rounded;
-      // Defensive fallback â€” the six visible categories never hit these
+      // Defensive fallback — the six visible categories never hit these
       // branches, but the switch must be exhaustive.
       case HealthCategory.vitals:
         return Icons.monitor_heart_rounded;
@@ -654,7 +654,7 @@ class _CategoryCard extends ConsumerWidget {
 /// enough data flowing to fill out the page.
 ///
 /// Uses `.select(...)` to watch only the integer count of populated
-/// categories, so the CTA only rebuilds when that count actually changes â€”
+/// categories, so the CTA only rebuilds when that count actually changes —
 /// not on every per-category mutation.
 class _ConnectACTAIfNeeded extends ConsumerWidget {
   const _ConnectACTAIfNeeded();

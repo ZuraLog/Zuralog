@@ -9,6 +9,8 @@
 ///   quickCheckin — face tap path (offline-capable)
 library;
 
+import 'dart:async';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -106,6 +108,11 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
   bool _speechAvailable = false;
   String _transcript = '';
   double _soundLevel = 0.0;
+  // Tracks the previously-heard transcript so we can pulse the visualizer on
+  // every new word without depending on the (often-broken on simulator)
+  // onSoundLevelChange callback.
+  String _lastHeardWords = '';
+  Timer? _activityDecayTimer;
 
   // ── Write path ────────────────────────────────────────────────────────────
 
@@ -142,6 +149,7 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
   @override
   void dispose() {
     if (_speech.isListening) _speech.stop();
+    _activityDecayTimer?.cancel();
     _saveTranscriptNotifier.dispose();
     _writeController.dispose();
     _notesController.dispose();
@@ -220,14 +228,42 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
     setState(() {
       _state = _WellnessState.recording;
       _transcript = '';
+      _lastHeardWords = '';
+      _soundLevel = 0.0;
     });
     await _speech.listen(
       onResult: (result) {
-        if (mounted) setState(() => _transcript = result.recognizedWords);
+        if (!mounted) return;
+        final words = result.recognizedWords;
+        // Detect new speech activity by comparing to the last heard transcript.
+        // This is the primary trigger for the visualizer because the iOS
+        // simulator rarely reports useful values via onSoundLevelChange.
+        if (words != _lastHeardWords) {
+          _lastHeardWords = words;
+          _activityDecayTimer?.cancel();
+          _activityDecayTimer = Timer(
+            const Duration(milliseconds: 700),
+            () {
+              if (mounted) setState(() => _soundLevel = 0.0);
+            },
+          );
+          setState(() {
+            _transcript = words;
+            _soundLevel = 0.85;
+          });
+        } else {
+          setState(() => _transcript = words);
+        }
       },
       onSoundLevelChange: (level) {
-        if (mounted) {
-          setState(() => _soundLevel = ((level + 2) / 12).clamp(0.0, 1.0));
+        if (!mounted) return;
+        // Real-device path: speech_to_text reports level in dB, typically
+        // -2 (silent) .. +6 (loud). Mapping is more aggressive than before
+        // and acts as a peak-hold against the transcript-driven signal so
+        // both inputs cooperate instead of overwriting each other.
+        final mapped = ((level + 2) / 8).clamp(0.0, 1.0);
+        if (mapped > _soundLevel) {
+          setState(() => _soundLevel = mapped);
         }
       },
       listenFor: const Duration(minutes: 2),
@@ -237,6 +273,7 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
 
   Future<void> _stopRecording() async {
     await _speech.stop();
+    _activityDecayTimer?.cancel();
     if (!mounted) return;
     setState(() => _soundLevel = 0.0);
     if (_transcript.trim().isNotEmpty) {

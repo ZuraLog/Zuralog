@@ -61,6 +61,7 @@ import 'package:zuralog/features/auth/presentation/auth/check_inbox_screen.dart'
 import 'package:zuralog/features/auth/presentation/auth/reset_password_screen.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/chat_onboarding_screen.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/welcome_screen.dart';
+import 'package:zuralog/features/subscription/presentation/onboarding_paywall_screen.dart';
 import 'package:zuralog/features/dev/component_showcase_screen.dart';
 import 'package:zuralog/core/router/auth_guard.dart';
 import 'package:zuralog/core/router/route_names.dart';
@@ -279,6 +280,17 @@ List<RouteBase> _buildRoutes() {
       builder: (context, state) => const SentryErrorBoundary(
         module: 'auth.profile_questionnaire',
         child: ChatOnboardingScreen(),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.onboardingPaywallPath,
+      name: RouteNames.onboardingPaywall,
+      pageBuilder: (context, state) => const MaterialPage(
+        fullscreenDialog: true,
+        child: SentryErrorBoundary(
+          module: 'subscription.onboarding_paywall',
+          child: OnboardingPaywallScreen(),
+        ),
       ),
     ),
 

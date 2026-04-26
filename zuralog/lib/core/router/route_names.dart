@@ -90,6 +90,12 @@ abstract final class RouteNames {
   /// Path for the profile questionnaire screen.
   static const String profileQuestionnairePath = '/auth/profile-questionnaire';
 
+  /// Name for the post-onboarding paywall screen.
+  static const String onboardingPaywall = 'onboardingPaywall';
+
+  /// Path for the post-onboarding paywall screen.
+  static const String onboardingPaywallPath = '/onboarding/paywall';
+
   /// Name for the forgot-password screen.
   static const String forgotPassword = 'forgotPassword';
 
