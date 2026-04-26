@@ -30,8 +30,9 @@ class _StubRepo implements TodayRepositoryInterface {
   @override Future<void> logSteps({required int steps, String mode = 'add', String source = 'manual'}) async {}
   @override Future<void> logWater({required double amountMl, String? vesselKey}) async {}
   @override Future<void> logWellness({double? mood, double? energy, double? stress, String? notes}) async {}
-  @override Future<void> logWeight({required double valueKg}) async {}
+  @override Future<void> logWeight({required double valueKg, required String timeOfDay, double? bodyFatPct}) async {}
   @override Future<Map<String, dynamic>> getLatestLogValues(Set<String> types) async => const {};
+  @override Future<List<double?>> getWeightHistory({int days = 7}) async => List<double?>.filled(days, null);
   @override Future<IngestResult> submitIngest({required String metricType, required double value, required String unit, required String source, required DateTime recordedAt, String? idempotencyKey, Map<String, dynamic>? metadata}) async => IngestResult(eventId: '', dailyTotal: 0, unit: unit, date: '');
   @override Future<TodayTimeline> getTodayTimeline({int limit = 50, String? before}) async => const TodayTimeline(events: []);
   @override Future<void> deleteEvent(String eventId) async {}
@@ -99,7 +100,7 @@ void main() {
 
     test('returns map from repository for requested types', () async {
       final mockRepo = _MockRepoWithLatestValues({
-        'weight': {'value_kg': 78.4, 'logged_at': '2026-03-15T08:22:00Z', 'source': 'apple_health'},
+        'weight': {'value': 78.4, 'date': '2026-03-15T08:22:00Z'},
       });
       final container = ProviderContainer(overrides: [
         todayRepositoryProvider.overrideWithValue(mockRepo),
@@ -110,8 +111,7 @@ void main() {
         latestLogValuesProvider(latestLogValuesKey(const {'weight'})).future,
       );
       final weightEntry = result['weight'] as Map<String, dynamic>?;
-      expect(weightEntry?['value_kg'], closeTo(78.4, 0.01));
-      expect(weightEntry?['source'], 'apple_health');
+      expect(weightEntry?['value'], closeTo(78.4, 0.01));
     });
   });
 
@@ -155,10 +155,11 @@ class _MockRepoWithLatestValues implements TodayRepositoryInterface {
   @override Future<void> logSteps({required int steps, String mode = 'add', String source = 'manual'}) => _delegate.logSteps(steps: steps, mode: mode, source: source);
   @override Future<void> logWater({required double amountMl, String? vesselKey}) => _delegate.logWater(amountMl: amountMl, vesselKey: vesselKey);
   @override Future<void> logWellness({double? mood, double? energy, double? stress, String? notes}) => _delegate.logWellness(mood: mood, energy: energy, stress: stress, notes: notes);
-  @override Future<void> logWeight({required double valueKg}) => _delegate.logWeight(valueKg: valueKg);
+  @override Future<void> logWeight({required double valueKg, required String timeOfDay, double? bodyFatPct}) => _delegate.logWeight(valueKg: valueKg, timeOfDay: timeOfDay, bodyFatPct: bodyFatPct);
   @override Future<IngestResult> submitIngest({required String metricType, required double value, required String unit, required String source, required DateTime recordedAt, String? idempotencyKey, Map<String, dynamic>? metadata}) => _delegate.submitIngest(metricType: metricType, value: value, unit: unit, source: source, recordedAt: recordedAt, idempotencyKey: idempotencyKey, metadata: metadata);
   @override Future<TodayTimeline> getTodayTimeline({int limit = 50, String? before}) => _delegate.getTodayTimeline(limit: limit, before: before);
   @override Future<void> deleteEvent(String eventId) => _delegate.deleteEvent(eventId);
   @override Future<SessionIngestResult> submitSession({required String sessionType, required String source, required DateTime recordedAt, DateTime? endedAt, required List<SessionMetricPayload> metrics, String? notes, Map<String, dynamic>? metadata}) => _delegate.submitSession(sessionType: sessionType, source: source, recordedAt: recordedAt, endedAt: endedAt, metrics: metrics, notes: notes, metadata: metadata);
   @override Future<BulkIngestResult> bulkIngest({required String source, required List<BulkEventPayload> events}) => _delegate.bulkIngest(source: source, events: events);
+  @override Future<List<double?>> getWeightHistory({int days = 7}) => _delegate.getWeightHistory(days: days);
 }

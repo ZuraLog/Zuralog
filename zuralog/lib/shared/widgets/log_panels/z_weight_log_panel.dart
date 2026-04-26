@@ -4,16 +4,25 @@
 /// Allows logging body weight in kg or lbs using +/− step buttons.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/buttons/z_button.dart';
+import 'package:zuralog/shared/widgets/charts/z_mini_sparkline.dart';
+import 'package:zuralog/shared/widgets/overlays/z_log_success_overlay.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/features/today/data/weight_log_local_repository.dart';
+import 'package:zuralog/features/today/data/weight_log_sync_service.dart';
+import 'package:zuralog/features/today/domain/weight_log.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 
 // ── Top-level helpers ──────────────────────────────────────────────────────────
@@ -34,6 +43,27 @@ String? formatWeightDelta(double? previousKg, double currentKg) {
   final sign = delta > 0 ? '+' : '-';
   return '$sign${delta.abs().toStringAsFixed(1)} kg';
 }
+
+// ── Data model ─────────────────────────────────────────────────────────────────
+
+class WeightLogData {
+  const WeightLogData({
+    required this.valueKg,
+    required this.timeOfDay,
+    this.bodyFatPct,
+  });
+
+  final double valueKg;
+  final String timeOfDay;
+  final double? bodyFatPct;
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+enum _WeightSyncStatus { none, pending, synced }
+
+String _isoDateStr(DateTime dt) =>
+    '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
 
 // ── ZWeightLogPanel ────────────────────────────────────────────────────────────
 
@@ -58,8 +88,8 @@ class ZWeightLogPanel extends ConsumerStatefulWidget {
     required this.onBack,
   });
 
-  /// Called when the user taps "Save Weight". Receives the weight in kg.
-  final Future<void> Function(double valueKg) onSave;
+  /// Called when the user taps "Save Weight". Receives a [WeightLogData] payload.
+  final Future<void> Function(WeightLogData data) onSave;
 
   /// Called by the parent when the user taps the back button in the sheet header.
   final VoidCallback onBack;
@@ -82,8 +112,30 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
   /// Formatted date string of the last log entry (e.g. "15 Mar 2026").
   String? _lastLoggedAt;
 
-  /// Display name of the source (e.g. "Apple Health", "Health Connect", or "").
-  String? _lastLoggedSource;
+  /// Active long-press timer for fast-scroll. Cancelled on release.
+  Timer? _holdTimer;
+
+  /// Whether the inline edit TextField is currently shown.
+  bool _isEditing = false;
+
+  String _timeOfDay = 'morning';
+  double? _bodyFatPct;
+  bool _bodyFatExpanded = false;
+  static const double _kDefaultBodyFatPct = 20.0;
+
+  List<WeightLog> _todayLogs = [];
+
+  _WeightSyncStatus get _syncStatus {
+    if (_todayLogs.isEmpty) return _WeightSyncStatus.none;
+    if (_todayLogs.every((l) => l.synced)) return _WeightSyncStatus.synced;
+    return _WeightSyncStatus.pending;
+  }
+
+  /// Controller for the inline edit TextField.
+  final TextEditingController _editController = TextEditingController();
+
+  /// FocusNode for the inline edit TextField.
+  final FocusNode _editFocusNode = FocusNode();
 
   static const _kWeightUnitKey = 'weight_log_unit';
 
@@ -94,6 +146,14 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
 
   /// Displayed value — converts to lbs when the lbs toggle is active.
   double get _displayValue => _isKg ? _value : _value * 2.20462;
+
+  @override
+  void dispose() {
+    _holdTimer?.cancel();
+    _editController.dispose();
+    _editFocusNode.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -113,6 +173,20 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
     } else {
       final units = ref.read(unitsSystemProvider);
       setState(() => _isKg = units == UnitsSystem.metric);
+    }
+    final hour = DateTime.now().hour;
+    final auto = hour < 12
+        ? 'morning'
+        : hour < 18
+            ? 'afternoon'
+            : 'evening';
+    final localRepo = ref.read(weightLogLocalRepositoryProvider);
+    final todayLogs = localRepo.getLogsForDate(_isoDateStr(DateTime.now()));
+    if (mounted) {
+      setState(() {
+        _timeOfDay = auto;
+        _todayLogs = todayLogs;
+      });
     }
   }
 
@@ -134,10 +208,84 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
     });
   }
 
+  void _startHold(VoidCallback step) {
+    step();
+    _holdTimer?.cancel();
+    _holdTimer = Timer.periodic(const Duration(milliseconds: 80), (_) => step());
+  }
+
+  void _stopHold() {
+    _holdTimer?.cancel();
+    _holdTimer = null;
+  }
+
+  void _beginEdit() {
+    _editController.text = _displayValue.toStringAsFixed(1);
+    setState(() => _isEditing = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _editFocusNode.requestFocus();
+      _editController.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _editController.text.length,
+      );
+    });
+  }
+
+  void _commitEdit() {
+    final raw = _editController.text.trim();
+    final parsed = double.tryParse(raw);
+    if (parsed != null && parsed.isFinite) {
+      final kg = _isKg ? parsed : parsed / 2.20462;
+      setState(() => _value = kg.clamp(20.0, 500.0));
+    }
+    setState(() => _isEditing = false);
+    _editFocusNode.unfocus();
+  }
+
   Future<void> _handleSave() async {
-    debugPrint('[WeightLog] 📤 Save tapped — value=$_value kg');
-    await widget.onSave(_value);
-    debugPrint('[WeightLog] ✅ onSave callback returned');
+    debugPrint('[WeightLog] 📤 Save tapped — value=$_value kg '
+        'timeOfDay=$_timeOfDay bodyFatPct=$_bodyFatPct');
+
+    final now = DateTime.now();
+    final log = WeightLog(
+      id: const Uuid().v4(),
+      valueKg: _value,
+      timeOfDay: _timeOfDay,
+      bodyFatPct: _bodyFatPct,
+      logDate: _isoDateStr(now),
+      loggedAtTime:
+          '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
+      recordedAt: now,
+    );
+
+    // Save locally first — works offline.
+    final localRepo = ref.read(weightLogLocalRepositoryProvider);
+    await localRepo.saveLog(log);
+    if (!mounted) return;
+    setState(() {
+      _todayLogs = localRepo.getLogsForDate(log.logDate);
+      _lastLoggedKg = _value;
+      _lastLoggedAt = _formatDate(log.logDate);
+    });
+
+    // Fire sync in background — UI updates when the synced flag flips.
+    final syncService = ref.read(weightLogSyncServiceProvider);
+    unawaited(syncService.syncLog(log).then((_) {
+      if (!mounted) return;
+      setState(() => _todayLogs = localRepo.getLogsForDate(log.logDate));
+    }));
+
+    HapticFeedback.mediumImpact();
+    await Future.delayed(const Duration(milliseconds: 200));
+    if (!mounted) return;
+    ZLogSuccessOverlay.show(context);
+
+    await widget.onSave(WeightLogData(
+      valueKg: _value,
+      timeOfDay: _timeOfDay,
+      bodyFatPct: _bodyFatPct,
+    ));
+    debugPrint('[WeightLog] ✅ save complete');
   }
 
   String _formatDate(String? iso) {
@@ -153,12 +301,6 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
       return '—';
     }
   }
-
-  String _sourceDisplayName(String source) => switch (source) {
-    'apple_health'   => 'Apple Health',
-    'health_connect' => 'Health Connect',
-    _                => '',
-  };
 
   @override
   Widget build(BuildContext context) {
@@ -176,9 +318,8 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
           if (raw is! Map<String, dynamic>) return;
           final w = raw;
           if (_lastLoggedKg == null) {
-            final kg = (w['value_kg'] as num?)?.toDouble();
-            final loggedAt = w['logged_at'] as String?;
-            final source = w['source'] as String? ?? 'manual';
+            final kg = (w['value'] as num?)?.toDouble();
+            final loggedAt = w['date'] as String?;
             if (kg != null) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted) {
@@ -186,7 +327,6 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
                     _value = kg.clamp(20.0, 500.0);
                     _lastLoggedKg = kg;
                     _lastLoggedAt = _formatDate(loggedAt);
-                    _lastLoggedSource = _sourceDisplayName(source);
                   });
                 }
               });
@@ -222,70 +362,188 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
 
           const SizedBox(height: AppDimens.spaceLg),
 
-          // ── Value display with +/− controls ───────────────────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.remove_rounded),
-                iconSize: AppDimens.iconMd,
-                onPressed: _decrement,
-                tooltip: 'Decrease weight',
-                color: colors.textPrimary,
-                splashRadius: AppDimens.touchTargetMin / 2,
-              ),
-              const SizedBox(width: AppDimens.spaceMd),
-              Text(
-                displayStr,
-                style: AppTextStyles.displayMedium.copyWith(
-                  color: colors.textPrimary,
+          // ── Value display with chevron tap zones ──────────────────────────
+          SizedBox(
+            height: 96,
+            child: Stack(
+              children: [
+                Center(
+                  child: _isEditing
+                      ? IntrinsicWidth(
+                          child: TextField(
+                            controller: _editController,
+                            focusNode: _editFocusNode,
+                            autofocus: true,
+                            textAlign: TextAlign.center,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                            ],
+                            style: AppTextStyles.displayMedium.copyWith(
+                              color: colors.textPrimary,
+                              fontSize: 58,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            decoration: const InputDecoration(
+                              isCollapsed: true,
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            onSubmitted: (_) => _commitEdit(),
+                            onTapOutside: (_) => _commitEdit(),
+                          ),
+                        )
+                      : GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _beginEdit,
+                          child: Text(
+                            displayStr,
+                            style: AppTextStyles.displayMedium.copyWith(
+                              color: colors.textPrimary,
+                              fontSize: 58,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                 ),
-              ),
-              const SizedBox(width: AppDimens.spaceXs),
-              Text(
-                _isKg ? 'kg' : 'lbs',
-                style: AppTextStyles.bodyLarge.copyWith(
-                  color: colors.textSecondary,
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 64,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _decrement,
+                    onLongPressStart: (_) => _startHold(_decrement),
+                    onLongPressEnd: (_) => _stopHold(),
+                    onLongPressCancel: _stopHold,
+                    child: Center(
+                      child: Icon(
+                        Icons.chevron_left_rounded,
+                        size: 36,
+                        color: colors.textSecondary,
+                        semanticLabel: 'Decrease weight',
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppDimens.spaceMd),
-              IconButton(
-                icon: const Icon(Icons.add_rounded),
-                iconSize: AppDimens.iconMd,
-                onPressed: _increment,
-                tooltip: 'Increase weight',
-                color: colors.textPrimary,
-                splashRadius: AppDimens.touchTargetMin / 2,
-              ),
-            ],
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 64,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _increment,
+                    onLongPressStart: (_) => _startHold(_increment),
+                    onLongPressEnd: (_) => _stopHold(),
+                    onLongPressCancel: _stopHold,
+                    child: Center(
+                      child: Icon(
+                        Icons.chevron_right_rounded,
+                        size: 36,
+                        color: colors.textSecondary,
+                        semanticLabel: 'Increase weight',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
 
-          const SizedBox(height: AppDimens.spaceSm),
-
-          // ── Last logged + delta ───────────────────────────────────────────
+          // ── Last logged strip ────────────────────────────────────────────────
+          const SizedBox(height: AppDimens.spaceXs),
           Center(
-            child: Column(
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: AppDimens.spaceSm,
+              runSpacing: AppDimens.spaceXxs,
               children: [
                 Text(
                   _lastLoggedKg == null
                       ? 'Last logged: —'
-                      : 'Last logged: $_lastLoggedAt'
-                        '${(_lastLoggedSource != null && _lastLoggedSource!.isNotEmpty) ? " · $_lastLoggedSource" : ""}',
+                      : 'Last logged: ${_isKg ? _lastLoggedKg!.toStringAsFixed(1) : (_lastLoggedKg! * 2.20462).toStringAsFixed(1)} ${_isKg ? "kg" : "lbs"} · $_lastLoggedAt',
                   style: AppTextStyles.bodySmall.copyWith(color: colors.textTertiary),
                 ),
-                if (_lastLoggedKg != null) ...[
-                  const SizedBox(height: AppDimens.spaceXs),
+                if (_lastLoggedKg != null)
                   _DeltaIndicator(
                     currentKg: _value,
                     previousKg: _lastLoggedKg!,
                     isKg: _isKg,
                   ),
-                ],
+                if (_syncStatus != _WeightSyncStatus.none)
+                  Icon(
+                    _syncStatus == _WeightSyncStatus.synced
+                        ? Icons.cloud_done
+                        : Icons.cloud_upload,
+                    size: 12,
+                    color: _syncStatus == _WeightSyncStatus.synced
+                        ? AppColors.categoryBody.withValues(alpha: 0.55)
+                        : colors.textSecondary.withValues(alpha: 0.35),
+                  ),
               ],
             ),
           ),
 
           const SizedBox(height: AppDimens.spaceLg),
+
+          // ── Time-of-day chips ──────────────────────────────────────────────────
+          _TimeChipRow(
+            selected: _timeOfDay,
+            onSelect: (key) => setState(() => _timeOfDay = key),
+          ),
+
+          const SizedBox(height: AppDimens.spaceMd),
+
+          // ── Body fat % collapsible ────────────────────────────────────────────
+          _BodyFatRow(
+            expanded: _bodyFatExpanded,
+            value: _bodyFatPct,
+            onExpand: () => setState(() {
+              _bodyFatExpanded = true;
+              _bodyFatPct ??= _kDefaultBodyFatPct;
+            }),
+            onChange: (v) => setState(() => _bodyFatPct = v),
+            onCollapse: () => setState(() {
+              _bodyFatExpanded = false;
+              _bodyFatPct = null;
+            }),
+          ),
+
+          const SizedBox(height: AppDimens.spaceMd),
+
+          // ── 7-day sparkline ───────────────────────────────────────────────
+          Builder(
+            builder: (context) {
+              final asyncHistory = ref.watch(weightHistoryProvider);
+              return asyncHistory.when(
+                loading: () => const SizedBox(height: 40),
+                error: (err, _) => const SizedBox.shrink(),
+                data: (series) {
+                  final doubles = series.map((v) => v ?? 0.0).toList();
+                  final dataPointCount = series.where((v) => v != null).length;
+                  if (dataPointCount < 2) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.spaceSm),
+                    child: ZMiniSparkline(
+                      values: doubles,
+                      todayIndex: series.length - 1,
+                      color: AppColors.categoryBody,
+                      trendLabel: '7-day weight',
+                      height: 40,
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+
+          const SizedBox(height: AppDimens.spaceMd),
 
           // ── Save button ───────────────────────────────────────────────────
           ZButton(
@@ -340,13 +598,147 @@ class _UnitChip extends StatelessWidget {
   }
 }
 
+// ── _TimeChipRow ───────────────────────────────────────────────────────────────
+
+class _TimeChipRow extends StatelessWidget {
+  const _TimeChipRow({required this.selected, required this.onSelect});
+
+  final String selected;
+  final ValueChanged<String> onSelect;
+
+  static const _options = <_TimeOption>[
+    _TimeOption(key: 'morning',   label: 'Morning'),
+    _TimeOption(key: 'afternoon', label: 'Afternoon'),
+    _TimeOption(key: 'evening',   label: 'Evening'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (var i = 0; i < _options.length; i++) ...[
+          _UnitChip(
+            label: _options[i].label,
+            isSelected: selected == _options[i].key,
+            onTap: () => onSelect(_options[i].key),
+          ),
+          if (i < _options.length - 1) const SizedBox(width: AppDimens.spaceSm),
+        ],
+      ],
+    );
+  }
+}
+
+class _TimeOption {
+  const _TimeOption({required this.key, required this.label});
+  final String key;
+  final String label;
+}
+
+// ── _BodyFatRow ────────────────────────────────────────────────────────────────
+
+class _BodyFatRow extends StatelessWidget {
+  const _BodyFatRow({
+    required this.expanded,
+    required this.value,
+    required this.onExpand,
+    required this.onChange,
+    required this.onCollapse,
+  });
+
+  final bool expanded;
+  final double? value;
+  final VoidCallback onExpand;
+  final ValueChanged<double> onChange;
+  final VoidCallback onCollapse;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    if (!expanded) {
+      return InkWell(
+        borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+        onTap: onExpand,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimens.spaceSm,
+            vertical: AppDimens.spaceSm,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.add_rounded, size: AppDimens.iconSm,
+                  color: colors.textSecondary),
+              const SizedBox(width: AppDimens.spaceXs),
+              Text(
+                'Body fat %',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    final v = value ?? 20.0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceXs),
+      child: Row(
+        children: [
+          Text(
+            'Body fat',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: colors.textPrimary,
+            ),
+          ),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.chevron_left_rounded),
+            iconSize: 28,
+            color: colors.textSecondary,
+            onPressed: () => onChange(
+              double.parse(((v - 0.1).clamp(1.0, 80.0)).toStringAsFixed(1))
+            ),
+            tooltip: 'Decrease body fat',
+          ),
+          SizedBox(
+            width: 56,
+            child: Text(
+              '${v.toStringAsFixed(1)}%',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.titleMedium.copyWith(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.chevron_right_rounded),
+            iconSize: 28,
+            color: colors.textSecondary,
+            onPressed: () => onChange(
+              double.parse(((v + 0.1).clamp(1.0, 80.0)).toStringAsFixed(1))
+            ),
+            tooltip: 'Increase body fat',
+          ),
+          const SizedBox(width: AppDimens.spaceXs),
+          IconButton(
+            icon: const Icon(Icons.close_rounded),
+            iconSize: AppDimens.iconSm,
+            color: colors.textTertiary,
+            onPressed: onCollapse,
+            tooltip: 'Remove body fat',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── _DeltaIndicator ────────────────────────────────────────────────────────────
 
-/// Shows the difference between the current value and the last logged value.
-///
-/// - Green ([AppColors.categoryActivity]) when the user has lost weight.
-/// - Red ([AppColors.categoryHeart]) when the user has gained weight.
-/// - Grey ([AppColors.textTertiary]) when there is no meaningful change (< 0.05 kg).
 class _DeltaIndicator extends StatelessWidget {
   const _DeltaIndicator({
     required this.currentKg,
@@ -360,24 +752,33 @@ class _DeltaIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
     final deltaKg = currentKg - previousKg;
     if (deltaKg.abs() < 0.05) {
-      return Text(
-        'No change from last entry',
-        style: AppTextStyles.bodySmall.copyWith(color: colors.textTertiary),
-      );
+      return const SizedBox.shrink();
     }
-    final display = isKg
+    final magnitude = isKg
         ? deltaKg.abs().toStringAsFixed(1)
         : (deltaKg.abs() * 2.20462).toStringAsFixed(1);
     final unit = isKg ? 'kg' : 'lbs';
-    final sign = deltaKg > 0 ? '+' : '−';
-    // Red for weight gain, green for weight loss.
-    final color = deltaKg > 0 ? AppColors.categoryHeart : AppColors.categoryActivity;
-    return Text(
-      '$sign$display $unit from last entry',
-      style: AppTextStyles.bodySmall.copyWith(color: color),
+    final isGain = deltaKg > 0;
+    final arrow = isGain ? '↑' : '↓';
+    final color = isGain ? AppColors.categoryHeart : AppColors.categoryActivity;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimens.spaceSm,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppDimens.shapePill),
+      ),
+      child: Text(
+        '$arrow $magnitude $unit',
+        style: AppTextStyles.labelSmall.copyWith(
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }

@@ -400,20 +400,10 @@ class _PanelView extends StatelessWidget {
           onBack: onBack,
         ),
       'weight' => ZWeightLogPanel(
-          onSave: (kg) async {
-            try {
-              await repo.logWeight(valueKg: kg);
-              onSaved();
-            } catch (e) {
-              debugPrint('logWeight failed: $e');
-              final messenger = parentMessenger ??
-                  (context.mounted ? ScaffoldMessenger.of(context) : null);
-              messenger?.showSnackBar(
-                const SnackBar(
-                  content: Text('Could not save weight. Please try again.'),
-                ),
-              );
-            }
+          onSave: (data) async {
+            // Offline-first: panel has already saved locally and fired background
+            // sync via WeightLogSyncService. Just close the sheet and refresh.
+            onSaved();
           },
           onBack: onBack,
         ),
