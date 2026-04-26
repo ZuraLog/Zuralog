@@ -103,7 +103,7 @@ class _ZLogSuccessOverlayState extends State<ZLogSuccessOverlay>
             // Checkmark animation — tinted to the app primary color
             Center(
               child: Lottie.asset(
-                'assets/animations/checkmark.lottie',
+                'assets/animations/checkmark.json',
                 controller: _lottieController,
                 width: 220,
                 height: 220,
