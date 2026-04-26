@@ -81,6 +81,7 @@ export 'inputs/z_weight_picker.dart';
 export 'inputs/z_labeled_number_field.dart';
 export 'inputs/z_labeled_text_field.dart';
 export 'inputs/z_toggle.dart';
+export 'overlays/z_log_success_overlay.dart';
 export 'log_panels/z_steps_log_panel.dart';
 export 'log_panels/z_water_log_panel.dart';
 export 'log_panels/z_wellness_log_panel.dart';

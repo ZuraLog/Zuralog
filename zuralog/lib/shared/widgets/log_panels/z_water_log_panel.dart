@@ -18,6 +18,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/buttons/z_button.dart';
 import 'package:zuralog/shared/widgets/charts/z_mini_ring.dart';
+import 'package:zuralog/shared/widgets/overlays/z_log_success_overlay.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/data/water_log_local_repository.dart';
@@ -220,6 +221,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
       setState(() => _todayLogs = localRepo.getLogsForDate(log.logDate));
     }));
 
+    ZLogSuccessOverlay.show(context);
     // ignore: discarded_futures
     widget.onSave(amountMl, vesselKey: vessel.key);
     _triggerFeedback(amountMl);
@@ -343,6 +345,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
       setState(() => _todayLogs = localRepo.getLogsForDate(log.logDate));
     }));
 
+    ZLogSuccessOverlay.show(context);
     await widget.onSave(savedAmount, vesselKey: null);
     if (!mounted) return;
     _triggerFeedback(savedAmount);
