@@ -62,6 +62,8 @@ const double _kLargeRingSize = 110.0;
 const double _kLargeRingStroke = 8.0;
 const double _kVesselCardHeight = 84.0;
 const String _kLastVesselPrefKey = 'water_log_last_vessel';
+const String _kLastAmountPrefKey = 'water_log_last_amount_ml';
+const String _kLastSavedAtPrefKey = 'water_log_last_saved_at_ms';
 
 // ── ZWaterLogPanel ─────────────────────────────────────────────────────────────
 
@@ -102,6 +104,8 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
   final TextEditingController _customController = TextEditingController();
 
   String? _defaultVesselKey;
+  double? _lastAmountMl;
+  DateTime? _lastSavedAt;
   bool _initialized = false;
   final FocusNode _customFocusNode = FocusNode();
 
@@ -118,11 +122,17 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
 
   Future<void> _loadLastVessel() async {
     final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getString(_kLastVesselPrefKey);
+    final savedVessel = prefs.getString(_kLastVesselPrefKey);
+    final savedAmount = prefs.getDouble(_kLastAmountPrefKey);
+    final savedAtMs = prefs.getInt(_kLastSavedAtPrefKey);
     if (!mounted) return;
-    if (saved != null) {
-      setState(() => _defaultVesselKey = saved);
-    }
+    setState(() {
+      if (savedVessel != null) _defaultVesselKey = savedVessel;
+      _lastAmountMl = savedAmount;
+      if (savedAtMs != null) {
+        _lastSavedAt = DateTime.fromMillisecondsSinceEpoch(savedAtMs);
+      }
+    });
   }
 
   void _handlePresetTap(_VesselPreset vessel) {
@@ -133,11 +143,17 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
     HapticFeedback.mediumImpact();
     // ignore: discarded_futures
     widget.onSave(amountMl, vesselKey: vessel.key);
-    // Persist last-used preset, fire-and-forget.
+    final now = DateTime.now();
+    setState(() {
+      _lastAmountMl = amountMl;
+      _lastSavedAt = now;
+    });
     // ignore: discarded_futures
-    SharedPreferences.getInstance().then(
-      (p) => p.setString(_kLastVesselPrefKey, vessel.key),
-    );
+    SharedPreferences.getInstance().then((p) {
+      p.setString(_kLastVesselPrefKey, vessel.key);
+      p.setDouble(_kLastAmountPrefKey, amountMl);
+      p.setInt(_kLastSavedAtPrefKey, now.millisecondsSinceEpoch);
+    });
   }
 
   @override
@@ -169,13 +185,13 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
     return isImperial ? customDisplayValue * _kOzToMl : customDisplayValue;
   }
 
-  void _selectVessel(_VesselPreset vessel, {double? defaultMl}) {
+  void _selectVessel(_VesselPreset vessel) {
     if (vessel.ml != null) {
       _handlePresetTap(vessel);
       return;
     }
     final isImperial = ref.read(unitsSystemProvider) == UnitsSystem.imperial;
-    final initMl = defaultMl ?? 0;
+    final initMl = _lastAmountMl ?? 0;
     setState(() {
       _selectedVesselKey = vessel.key;
       _amountMl = initMl;
@@ -233,7 +249,19 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
   Future<void> _handleSave() async {
     if (!_isCustomSelected || _amountMl <= 0) return;
     HapticFeedback.mediumImpact();
-    await widget.onSave(_amountMl, vesselKey: null);
+    final savedAmount = _amountMl;
+    await widget.onSave(savedAmount, vesselKey: null);
+    if (!mounted) return;
+    final now = DateTime.now();
+    setState(() {
+      _lastAmountMl = savedAmount;
+      _lastSavedAt = now;
+    });
+    // ignore: discarded_futures
+    SharedPreferences.getInstance().then((p) {
+      p.setDouble(_kLastAmountPrefKey, savedAmount);
+      p.setInt(_kLastSavedAtPrefKey, now.millisecondsSinceEpoch);
+    });
   }
 
   @override
@@ -275,6 +303,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
             goalMl: waterGoalMl,
             isImperial: isImperial,
             lastDrinkDate: lastDrinkDate,
+            lastDrinkTime: _lastSavedAt,
           ),
 
           const SizedBox(height: AppDimens.spaceLg),
@@ -332,12 +361,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
             // ── Full-width Custom amount bar ──────────────────────────────
             GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: () {
-                final lastMl = lastWaterRaw is Map<String, dynamic>
-                    ? (lastWaterRaw['value'] as double?)
-                    : null;
-                _selectVessel(customVessel, defaultMl: lastMl);
-              },
+              onTap: () => _selectVessel(customVessel),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 curve: Curves.easeInOut,
@@ -495,6 +519,7 @@ class _WaterRingHeader extends StatefulWidget {
     required this.goalMl,
     required this.isImperial,
     this.lastDrinkDate,
+    this.lastDrinkTime,
   });
 
   /// Cumulative water logged today in millilitres. `null` when nothing logged.
@@ -506,8 +531,11 @@ class _WaterRingHeader extends StatefulWidget {
   /// `true` when the user prefers imperial units (oz).
   final bool isImperial;
 
-  /// ISO date string ('YYYY-MM-DD') or null.
+  /// ISO date string ('YYYY-MM-DD') or null — used as fallback when no precise timestamp.
   final String? lastDrinkDate;
+
+  /// Precise timestamp of the last logged drink, for relative-time display.
+  final DateTime? lastDrinkTime;
 
   @override
   State<_WaterRingHeader> createState() => _WaterRingHeaderState();
@@ -553,7 +581,15 @@ class _WaterRingHeaderState extends State<_WaterRingHeader> {
     return '${g.toStringAsFixed(0)} mL goal';
   }
 
-  String? _formatLastDrink(String? dateStr) {
+  String? _formatLastDrink(String? dateStr, DateTime? drinkTime) {
+    if (drinkTime != null) {
+      final diff = DateTime.now().difference(drinkTime);
+      if (diff.inMinutes < 1) return 'Last drink: just now';
+      if (diff.inMinutes < 60) return 'Last drink: ${diff.inMinutes} min ago';
+      if (diff.inHours < 24) return 'Last drink: ${diff.inHours} hr ago';
+      if (diff.inDays == 1) return 'Last drink: yesterday';
+      return 'Last drink: ${diff.inDays} days ago';
+    }
     if (dateStr == null) return 'No drinks yet today';
     try {
       final date = DateTime.parse(dateStr).toLocal();
@@ -576,53 +612,61 @@ class _WaterRingHeaderState extends State<_WaterRingHeader> {
     final progress = _computeProgress(widget.todayMl, widget.goalMl);
     final ringColor =
         progress >= 1.0 ? AppColors.success : AppColors.categoryBody;
-    final lastDrink = _formatLastDrink(widget.lastDrinkDate);
+    final lastDrink = _formatLastDrink(widget.lastDrinkDate, widget.lastDrinkTime);
     final goalInline = _formatGoalInline();
+
+    final numberWidget = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          _formatTodayNumber(),
+          style: AppTextStyles.displayMedium.copyWith(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w800,
+            height: 1.0,
+          ),
+        ),
+        Text(
+          _formatTodayUnit(),
+          style: AppTextStyles.labelSmall.copyWith(
+            color: colors.textSecondary,
+          ),
+        ),
+      ],
+    );
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // ── Large ring with today's number in the centre ──────────────────
-        SizedBox(
-          width: _kLargeRingSize,
-          height: _kLargeRingSize,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              AnimatedScale(
-                scale: _goalJustCompleted ? 1.1 : 1.0,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.elasticOut,
-                child: ZMiniRing(
-                  size: _kLargeRingSize,
-                  strokeWidth: _kLargeRingStroke,
-                  value: progress,
-                  color: ringColor,
+        if (widget.goalMl != null) ...[
+          // ── Large ring with today's number in the centre ────────────────
+          SizedBox(
+            width: _kLargeRingSize,
+            height: _kLargeRingSize,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                AnimatedScale(
+                  scale: _goalJustCompleted ? 1.1 : 1.0,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.elasticOut,
+                  child: ZMiniRing(
+                    size: _kLargeRingSize,
+                    strokeWidth: _kLargeRingStroke,
+                    value: progress,
+                    color: ringColor,
+                  ),
                 ),
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _formatTodayNumber(),
-                    style: AppTextStyles.displayMedium.copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w800,
-                      height: 1.0,
-                    ),
-                  ),
-                  Text(
-                    _formatTodayUnit(),
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                numberWidget,
+              ],
+            ),
           ),
-        ),
+        ] else
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
+            child: numberWidget,
+          ),
         const SizedBox(height: AppDimens.spaceSm),
         // ── Meta row: last drink · goal ───────────────────────────────────
         Row(
