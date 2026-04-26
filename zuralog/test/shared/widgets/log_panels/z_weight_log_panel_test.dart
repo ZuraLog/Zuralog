@@ -1,19 +1,48 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:zuralog/core/network/api_client.dart';
+import 'package:zuralog/core/storage/prefs_service.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/features/today/data/weight_log_local_repository.dart';
+import 'package:zuralog/features/today/data/weight_log_sync_service.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
+import 'package:zuralog/features/today/domain/weight_log.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/log_panels/z_weight_log_panel.dart';
 
+// ── Test doubles ───────────────────────────────────────────────────────────────
+
+/// No-op sync service — suppresses all network calls in widget tests.
+class _FakeWeightLogSyncService extends WeightLogSyncService {
+  _FakeWeightLogSyncService(WeightLogLocalRepository repo)
+      : super(localRepo: repo, client: ApiClient(dio: Dio()));
+
+  @override
+  Future<void> syncLog(WeightLog log) async {}
+
+  @override
+  Future<void> syncPending() async {}
+}
+
+// ── Test helpers ───────────────────────────────────────────────────────────────
+
 Widget _wrap(
   Widget child, {
+  required SharedPreferences prefs,
   Map<String, dynamic> latestWeight = const {},
 }) {
   return ProviderScope(
     overrides: [
+      prefsProvider.overrideWithValue(prefs),
+      weightLogSyncServiceProvider.overrideWith(
+        (ref) => _FakeWeightLogSyncService(
+          ref.watch(weightLogLocalRepositoryProvider),
+        ),
+      ),
       todayLogSummaryProvider.overrideWith(
         (ref) async => TodayLogSummary.empty,
       ),
@@ -37,6 +66,8 @@ Future<void> _settle(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 100));
 }
 
+// ── Tests ──────────────────────────────────────────────────────────────────────
+
 void main() {
   group('ZWeightLogPanel', () {
     setUp(() {
@@ -44,10 +75,11 @@ void main() {
     });
 
     testWidgets('Shows default 70.0 kg and dash when no previous log', (tester) async {
-      await tester.pumpWidget(_wrap(ZWeightLogPanel(
-        onSave: (_) async {},
-        onBack: () {},
-      )));
+      final prefs = await SharedPreferences.getInstance();
+      await tester.pumpWidget(_wrap(
+        ZWeightLogPanel(onSave: (_) async {}, onBack: () {}),
+        prefs: prefs,
+      ));
       await _settle(tester);
 
       expect(find.textContaining('70'), findsOneWidget);
@@ -55,8 +87,10 @@ void main() {
     });
 
     testWidgets('Pre-fills with latest logged weight from cloud brain', (tester) async {
+      final prefs = await SharedPreferences.getInstance();
       await tester.pumpWidget(_wrap(
         ZWeightLogPanel(onSave: (_) async {}, onBack: () {}),
+        prefs: prefs,
         latestWeight: {
           'value': 78.4,
           'date': '2026-03-15T08:22:00Z',
@@ -69,8 +103,10 @@ void main() {
     });
 
     testWidgets('Delta indicator shows positive delta after increment', (tester) async {
+      final prefs = await SharedPreferences.getInstance();
       await tester.pumpWidget(_wrap(
         ZWeightLogPanel(onSave: (_) async {}, onBack: () {}),
+        prefs: prefs,
         latestWeight: {
           'value': 78.0,
           'date': '2026-03-15T08:22:00Z',
@@ -92,21 +128,31 @@ void main() {
 
     testWidgets('Save calls onSave with current value in kg', (tester) async {
       WeightLogData? savedData;
-      await tester.pumpWidget(_wrap(ZWeightLogPanel(
-        onSave: (data) async => savedData = data,
-        onBack: () {},
-      )));
+      final prefs = await SharedPreferences.getInstance();
+      await tester.pumpWidget(_wrap(
+        ZWeightLogPanel(
+          onSave: (data) async => savedData = data,
+          onBack: () {},
+        ),
+        prefs: prefs,
+      ));
       await _settle(tester);
 
       await tester.tap(find.widgetWithText(GestureDetector, 'Save Weight'));
       await tester.pump();
+      // Pump past the SharedPreferences write and the 200 ms overlay delay.
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
+
       expect(savedData, isNotNull);
       expect(savedData!.valueKg, closeTo(70.0, 0.1));
     });
 
     testWidgets('Last logged omits source for manual entries', (tester) async {
+      final prefs = await SharedPreferences.getInstance();
       await tester.pumpWidget(_wrap(
         ZWeightLogPanel(onSave: (_) async {}, onBack: () {}),
+        prefs: prefs,
         latestWeight: {
           'value': 75.0,
           'date': '2026-03-10T09:00:00Z',
@@ -115,10 +161,8 @@ void main() {
       ));
       await _settle(tester);
 
-      // The source text should not appear (it has been removed from the display)
       expect(find.textContaining('manual'), findsNothing);
       expect(find.textContaining('Manual'), findsNothing);
-      // The date should still appear
       expect(find.textContaining('Last logged:'), findsOneWidget);
     });
   });
