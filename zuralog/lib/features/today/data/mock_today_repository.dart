@@ -361,7 +361,11 @@ final class MockTodayRepository implements TodayRepositoryInterface {
   }
 
   @override
-  Future<void> logWeight({required double valueKg}) async {
+  Future<void> logWeight({
+    required double valueKg,
+    required String timeOfDay,
+    double? bodyFatPct,
+  }) async {
     await Future<void>.delayed(const Duration(milliseconds: 600));
     // No-op in mock.
   }

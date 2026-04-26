@@ -35,6 +35,20 @@ String? formatWeightDelta(double? previousKg, double currentKg) {
   return '$sign${delta.abs().toStringAsFixed(1)} kg';
 }
 
+// ── Data model ─────────────────────────────────────────────────────────────────
+
+class WeightLogData {
+  const WeightLogData({
+    required this.valueKg,
+    required this.timeOfDay,
+    this.bodyFatPct,
+  });
+
+  final double valueKg;
+  final String timeOfDay;
+  final double? bodyFatPct;
+}
+
 // ── ZWeightLogPanel ────────────────────────────────────────────────────────────
 
 /// Inline log panel for body weight.
@@ -58,8 +72,8 @@ class ZWeightLogPanel extends ConsumerStatefulWidget {
     required this.onBack,
   });
 
-  /// Called when the user taps "Save Weight". Receives the weight in kg.
-  final Future<void> Function(double valueKg) onSave;
+  /// Called when the user taps "Save Weight". Receives a [WeightLogData] payload.
+  final Future<void> Function(WeightLogData data) onSave;
 
   /// Called by the parent when the user taps the back button in the sheet header.
   final VoidCallback onBack;
@@ -81,9 +95,6 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
 
   /// Formatted date string of the last log entry (e.g. "15 Mar 2026").
   String? _lastLoggedAt;
-
-  /// Display name of the source (e.g. "Apple Health", "Health Connect", or "").
-  String? _lastLoggedSource;
 
   static const _kWeightUnitKey = 'weight_log_unit';
 
@@ -136,7 +147,11 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
 
   Future<void> _handleSave() async {
     debugPrint('[WeightLog] 📤 Save tapped — value=$_value kg');
-    await widget.onSave(_value);
+    await widget.onSave(WeightLogData(
+      valueKg: _value,
+      timeOfDay: 'morning', // placeholder — Plan C wires real state
+      bodyFatPct: null,     // placeholder — Plan C wires real state
+    ));
     debugPrint('[WeightLog] ✅ onSave callback returned');
   }
 
@@ -154,12 +169,6 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
     }
   }
 
-  String _sourceDisplayName(String source) => switch (source) {
-    'apple_health'   => 'Apple Health',
-    'health_connect' => 'Health Connect',
-    _                => '',
-  };
-
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
@@ -176,9 +185,8 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
           if (raw is! Map<String, dynamic>) return;
           final w = raw;
           if (_lastLoggedKg == null) {
-            final kg = (w['value_kg'] as num?)?.toDouble();
-            final loggedAt = w['logged_at'] as String?;
-            final source = w['source'] as String? ?? 'manual';
+            final kg = (w['value'] as num?)?.toDouble();
+            final loggedAt = w['date'] as String?;
             if (kg != null) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted) {
@@ -186,7 +194,6 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
                     _value = kg.clamp(20.0, 500.0);
                     _lastLoggedKg = kg;
                     _lastLoggedAt = _formatDate(loggedAt);
-                    _lastLoggedSource = _sourceDisplayName(source);
                   });
                 }
               });
@@ -269,8 +276,7 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
                 Text(
                   _lastLoggedKg == null
                       ? 'Last logged: —'
-                      : 'Last logged: $_lastLoggedAt'
-                        '${(_lastLoggedSource != null && _lastLoggedSource!.isNotEmpty) ? " · $_lastLoggedSource" : ""}',
+                      : 'Last logged: $_lastLoggedAt',
                   style: AppTextStyles.bodySmall.copyWith(color: colors.textTertiary),
                 ),
                 if (_lastLoggedKg != null) ...[

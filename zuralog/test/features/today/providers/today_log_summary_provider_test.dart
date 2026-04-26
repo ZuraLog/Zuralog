@@ -30,7 +30,7 @@ class _StubRepo implements TodayRepositoryInterface {
   @override Future<void> logSteps({required int steps, String mode = 'add', String source = 'manual'}) async {}
   @override Future<void> logWater({required double amountMl, String? vesselKey}) async {}
   @override Future<void> logWellness({double? mood, double? energy, double? stress, String? notes}) async {}
-  @override Future<void> logWeight({required double valueKg}) async {}
+  @override Future<void> logWeight({required double valueKg, required String timeOfDay, double? bodyFatPct}) async {}
   @override Future<Map<String, dynamic>> getLatestLogValues(Set<String> types) async => const {};
   @override Future<IngestResult> submitIngest({required String metricType, required double value, required String unit, required String source, required DateTime recordedAt, String? idempotencyKey, Map<String, dynamic>? metadata}) async => IngestResult(eventId: '', dailyTotal: 0, unit: unit, date: '');
   @override Future<TodayTimeline> getTodayTimeline({int limit = 50, String? before}) async => const TodayTimeline(events: []);
@@ -155,7 +155,7 @@ class _MockRepoWithLatestValues implements TodayRepositoryInterface {
   @override Future<void> logSteps({required int steps, String mode = 'add', String source = 'manual'}) => _delegate.logSteps(steps: steps, mode: mode, source: source);
   @override Future<void> logWater({required double amountMl, String? vesselKey}) => _delegate.logWater(amountMl: amountMl, vesselKey: vesselKey);
   @override Future<void> logWellness({double? mood, double? energy, double? stress, String? notes}) => _delegate.logWellness(mood: mood, energy: energy, stress: stress, notes: notes);
-  @override Future<void> logWeight({required double valueKg}) => _delegate.logWeight(valueKg: valueKg);
+  @override Future<void> logWeight({required double valueKg, required String timeOfDay, double? bodyFatPct}) => _delegate.logWeight(valueKg: valueKg, timeOfDay: timeOfDay, bodyFatPct: bodyFatPct);
   @override Future<IngestResult> submitIngest({required String metricType, required double value, required String unit, required String source, required DateTime recordedAt, String? idempotencyKey, Map<String, dynamic>? metadata}) => _delegate.submitIngest(metricType: metricType, value: value, unit: unit, source: source, recordedAt: recordedAt, idempotencyKey: idempotencyKey, metadata: metadata);
   @override Future<TodayTimeline> getTodayTimeline({int limit = 50, String? before}) => _delegate.getTodayTimeline(limit: limit, before: before);
   @override Future<void> deleteEvent(String eventId) => _delegate.deleteEvent(eventId);

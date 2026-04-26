@@ -400,9 +400,13 @@ class _PanelView extends StatelessWidget {
           onBack: onBack,
         ),
       'weight' => ZWeightLogPanel(
-          onSave: (kg) async {
+          onSave: (data) async {
             try {
-              await repo.logWeight(valueKg: kg);
+              await repo.logWeight(
+                valueKg: data.valueKg,
+                timeOfDay: data.timeOfDay,
+                bodyFatPct: data.bodyFatPct,
+              );
               onSaved();
             } catch (e) {
               debugPrint('logWeight failed: $e');

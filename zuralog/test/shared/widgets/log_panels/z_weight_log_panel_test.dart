@@ -41,24 +41,23 @@ void main() {
       await tester.pumpWidget(_wrap(
         ZWeightLogPanel(onSave: (_) async {}, onBack: () {}),
         latestWeight: {
-          'value_kg': 78.4,
-          'logged_at': '2026-03-15T08:22:00Z',
-          'source': 'apple_health',
+          'value': 78.4,
+          'date': '2026-03-15T08:22:00Z',
+          'unit': 'kg',
         },
       ));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('78.4'), findsOneWidget);
-      expect(find.textContaining('Apple Health'), findsOneWidget);
     });
 
     testWidgets('Delta indicator shows positive delta after increment', (tester) async {
       await tester.pumpWidget(_wrap(
         ZWeightLogPanel(onSave: (_) async {}, onBack: () {}),
         latestWeight: {
-          'value_kg': 78.0,
-          'logged_at': '2026-03-15T08:22:00Z',
-          'source': 'manual',
+          'value': 78.0,
+          'date': '2026-03-15T08:22:00Z',
+          'unit': 'kg',
         },
       ));
       await tester.pumpAndSettle();
@@ -70,31 +69,31 @@ void main() {
     });
 
     testWidgets('Save calls onSave with current value in kg', (tester) async {
-      double? savedKg;
+      WeightLogData? savedData;
       await tester.pumpWidget(_wrap(ZWeightLogPanel(
-        onSave: (kg) async => savedKg = kg,
+        onSave: (data) async => savedData = data,
         onBack: () {},
       )));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byType(FilledButton));
       await tester.pump();
-      expect(savedKg, isNotNull);
-      expect(savedKg, closeTo(70.0, 0.1));
+      expect(savedData, isNotNull);
+      expect(savedData!.valueKg, closeTo(70.0, 0.1));
     });
 
     testWidgets('Last logged omits source for manual entries', (tester) async {
       await tester.pumpWidget(_wrap(
         ZWeightLogPanel(onSave: (_) async {}, onBack: () {}),
         latestWeight: {
-          'value_kg': 75.0,
-          'logged_at': '2026-03-10T09:00:00Z',
-          'source': 'manual',
+          'value': 75.0,
+          'date': '2026-03-10T09:00:00Z',
+          'unit': 'kg',
         },
       ));
       await tester.pumpAndSettle();
 
-      // The source text should not appear for manual entries
+      // The source text should not appear (it has been removed from the display)
       expect(find.textContaining('manual'), findsNothing);
       expect(find.textContaining('Manual'), findsNothing);
       // The date should still appear

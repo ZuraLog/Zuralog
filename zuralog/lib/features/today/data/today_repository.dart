@@ -179,8 +179,16 @@ abstract interface class TodayRepositoryInterface {
     String? notes,
   });
 
-  /// Submit a body weight log entry. Always in kg — caller converts.
-  Future<void> logWeight({required double valueKg});
+  /// Submit a body weight log entry.
+  ///
+  /// [valueKg] is always in kilograms.
+  /// [timeOfDay] must be one of `'morning'`, `'afternoon'`, or `'evening'`.
+  /// [bodyFatPct] is the body fat percentage (1.0–80.0) or null.
+  Future<void> logWeight({
+    required double valueKg,
+    required String timeOfDay,
+    double? bodyFatPct,
+  });
 
   /// Fetch the most recent log entry for each of the requested [types].
   ///
@@ -742,14 +750,23 @@ class TodayRepository implements TodayRepositoryInterface {
   }
 
   @override
-  Future<void> logWeight({required double valueKg}) async {
-    debugPrint('[TodayRepo] logWeight → valueKg=$valueKg');
+  Future<void> logWeight({
+    required double valueKg,
+    required String timeOfDay,
+    double? bodyFatPct,
+  }) async {
+    debugPrint('[TodayRepo] logWeight → valueKg=$valueKg '
+        'timeOfDay=$timeOfDay bodyFatPct=$bodyFatPct');
     await submitIngest(
       metricType: 'weight_kg',
       value: valueKg,
       unit: 'kg',
       source: 'manual',
       recordedAt: DateTime.now(),
+      metadata: {
+        'time_of_day': timeOfDay,
+        if (bodyFatPct != null) 'body_fat_pct': bodyFatPct,
+      },
     );
     debugPrint('[TodayRepo] logWeight ✅ done');
   }
