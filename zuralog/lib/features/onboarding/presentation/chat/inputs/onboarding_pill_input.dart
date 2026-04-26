@@ -57,6 +57,7 @@ enum PillLayout { row, wrap }
 
 class _OnboardingPillInputState extends State<OnboardingPillInput> {
   String? _hovered;
+  bool _submitted = false;
 
   static const double _pillHeight = 46;
   static const EdgeInsets _pillPadding =
@@ -64,9 +65,10 @@ class _OnboardingPillInputState extends State<OnboardingPillInput> {
   static const Duration _tapAnimDuration = Duration(milliseconds: 180);
 
   void _handleTap(String id) {
+    if (_submitted) return;
+    _submitted = true;
     HapticFeedback.mediumImpact();
     setState(() => _hovered = id);
-    // Give the selection animation a beat to land, then emit.
     Future.delayed(const Duration(milliseconds: 160), () {
       if (mounted) widget.onSelect(id);
     });

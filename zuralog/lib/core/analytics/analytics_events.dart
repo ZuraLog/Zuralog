@@ -77,6 +77,15 @@ abstract final class AnalyticsEvents {
   static const String todayFeedRefreshed = 'today_feed_refreshed';
   static const String dataMaturityBannerDismissed = 'data_maturity_banner_dismissed';
 
+  /// Today tab — user opened the Your-Body-Now hero detail sheet.
+  static const String todayBodyNowOpened = 'today.body_now.opened';
+
+  /// Today tab — user tapped one of the four rail chips.
+  static const String todayBodyNowChipTapped = 'today.body_now.chip_tapped';
+
+  /// Today tab — user tapped the coach-strip CTA.
+  static const String todayBodyNowCtaTapped = 'today.body_now.cta_tapped';
+
   // ── Coach Tab ────────────────────────────────────────────────────────────────
   /// Include `source` ('new_chat' | 'thread'), `char_count` (int).
   static const String coachMessageSent = 'coach_message_sent';

@@ -19,6 +19,8 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart'
+    show sessionUnitsProvider, userPreferencesProvider;
 import 'package:zuralog/features/coach/presentation/widgets/coach_blob.dart';
 import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
 import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
@@ -41,6 +43,7 @@ import 'package:zuralog/features/onboarding/presentation/chat/widgets/onboarding
 import 'package:zuralog/features/onboarding/presentation/chat/widgets/onboarding_typing_indicator.dart';
 import 'package:zuralog/features/onboarding/presentation/chat/widgets/onboarding_user_bubble.dart';
 import 'package:zuralog/shared/widgets/widgets.dart' show
+    ZButton,
     ZChipSingleSelect,
     ZChipMultiSelect,
     ZChipOption,
@@ -56,6 +59,7 @@ class ChatOnboardingScreen extends ConsumerStatefulWidget {
 
 class _ChatOnboardingScreenState extends ConsumerState<ChatOnboardingScreen> {
   final ScrollController _scrollController = ScrollController();
+  bool _isSaving = false;
 
   // Layout constants.
   static const double _topBarHeight = 56;
@@ -120,6 +124,7 @@ class _ChatOnboardingScreenState extends ConsumerState<ChatOnboardingScreen> {
                   ),
                   _InputArea(
                     state: state,
+                    isSaving: _isSaving,
                     onFinale: () => _handleFinale(state.profile),
                   ),
                 ],
@@ -132,6 +137,8 @@ class _ChatOnboardingScreenState extends ConsumerState<ChatOnboardingScreen> {
   }
 
   Future<void> _handleFinale(OnboardingProfile profile) async {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
     try {
       await ref.read(userProfileProvider.notifier).update(
             onboardingComplete: true,
@@ -157,10 +164,20 @@ class _ChatOnboardingScreenState extends ConsumerState<ChatOnboardingScreen> {
             // the catch-up intro sheet.
             profileCatchupStatus: 'completed',
           );
+      // Persist the unit choice the user made during onboarding into their
+      // permanent preferences (it was temporarily held in sessionUnitsProvider).
+      final chosenUnits = ref.read(sessionUnitsProvider);
+      ref
+          .read(userPreferencesProvider.notifier)
+          .mutate((p) => p.copyWith(unitsSystem: chosenUnits));
+      // Flush the prefs cache so any screen that loads after onboarding
+      // reads the freshly-written values from the server.
+      ref.invalidate(userPreferencesProvider);
     } catch (_) {
       // Non-fatal — router navigates by auth state regardless.
     }
     if (!mounted) return;
+    setState(() => _isSaving = false);
     // Clear the replay flag so the router guard resumes normal behaviour.
     ref.read(isReplayingOnboardingProvider.notifier).state = false;
     // Skip the paywall for users who are already on Pro (e.g. replayed
@@ -349,10 +366,12 @@ class _CardMessage extends StatelessWidget {
 class _InputArea extends ConsumerWidget {
   const _InputArea({
     required this.state,
+    required this.isSaving,
     required this.onFinale,
   });
 
   final ChatState state;
+  final bool isSaving;
   final VoidCallback onFinale;
 
   @override
@@ -387,11 +406,17 @@ class _InputArea extends ConsumerWidget {
         );
       case ChatStep.height:
         input = OnboardingHeightInput(
-          onSubmit: controller.submitHeight,
+          onSubmit: (cm) => controller.submitHeight(
+            cm,
+            ref.read(sessionUnitsProvider),
+          ),
         );
       case ChatStep.weight:
         input = OnboardingWeightInput(
-          onSubmit: controller.submitWeight,
+          onSubmit: (kg) => controller.submitWeight(
+            kg,
+            ref.read(sessionUnitsProvider),
+          ),
         );
       case ChatStep.focus:
         input = OnboardingFocusInput(
@@ -444,7 +469,7 @@ class _InputArea extends ConsumerWidget {
           onSelect: controller.submitTone,
         );
       case ChatStep.diet:
-        input = ZChipMultiSelect<String>(
+        input = _ChipMultiStepInput(
           options: const [
             ZChipOption(value: 'vegetarian', label: 'Vegetarian'),
             ZChipOption(value: 'vegan', label: 'Vegan'),
@@ -454,12 +479,12 @@ class _InputArea extends ConsumerWidget {
             ZChipOption(value: 'kosher', label: 'Kosher'),
             ZChipOption(value: 'other', label: 'Other'),
           ],
-          values: state.profile.dietaryRestrictions,
+          initialValues: state.profile.dietaryRestrictions,
           exclusiveLabel: 'None',
-          onChanged: controller.submitDiet,
+          onSubmit: controller.submitDiet,
         );
       case ChatStep.limitations:
-        input = ZChipMultiSelect<String>(
+        input = _ChipMultiStepInput(
           options: const [
             ZChipOption(value: 'lower_back', label: 'Lower back'),
             ZChipOption(value: 'knees', label: 'Knees'),
@@ -467,9 +492,9 @@ class _InputArea extends ConsumerWidget {
             ZChipOption(value: 'wrists', label: 'Wrists'),
             ZChipOption(value: 'other', label: 'Other'),
           ],
-          values: state.profile.injuries,
+          initialValues: state.profile.injuries,
           exclusiveLabel: "I'm good",
-          onChanged: controller.submitLimitations,
+          onSubmit: controller.submitLimitations,
         );
       case ChatStep.training:
         input = ZChipSingleSelect<String>(
@@ -518,14 +543,16 @@ class _InputArea extends ConsumerWidget {
           onSelect: controller.submitDiscoverySource,
         );
       case ChatStep.finale:
-        input = _MeetYourCoachButton(onPressed: onFinale);
+        input = _MeetYourCoachButton(onPressed: isSaving ? null : onFinale, isSaving: isSaving);
     }
 
     return AnimatedSize(
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOut,
       alignment: Alignment.topCenter,
-      child: AnimatedOpacity(
+      child: IgnorePointer(
+        ignoring: !showInput,
+        child: AnimatedOpacity(
         duration: const Duration(milliseconds: 160),
         opacity: showInput ? 1.0 : 0.0,
         child: Padding(
@@ -541,6 +568,7 @@ class _InputArea extends ConsumerWidget {
           child: input,
         ),
       ),
+        ),
     );
   }
 
@@ -586,9 +614,10 @@ class _InputArea extends ConsumerWidget {
 
 /// Final CTA that shows only at the finale step.
 class _MeetYourCoachButton extends StatelessWidget {
-  const _MeetYourCoachButton({required this.onPressed});
+  const _MeetYourCoachButton({required this.onPressed, this.isSaving = false});
 
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
+  final bool isSaving;
 
   static const double _buttonHeight = 52;
 
@@ -626,17 +655,88 @@ class _MeetYourCoachButton extends StatelessWidget {
                 ),
               ),
             ),
-            Text(
-              'Meet your coach',
-              style: AppTextStyles.labelLarge.copyWith(
-                color: const Color(0xFF1A2E22),
-                fontWeight: FontWeight.w600,
-                letterSpacing: -0.1,
+            if (isSaving)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1A2E22)),
+                ),
+              )
+            else
+              Text(
+                'Meet your coach',
+                style: AppTextStyles.labelLarge.copyWith(
+                  color: const Color(0xFF1A2E22),
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.1,
+                ),
               ),
-            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── _ChipMultiStepInput ───────────────────────────────────────────────────────
+
+/// Multi-select chip group with a Confirm button.
+///
+/// Unlike wiring `onChanged` directly to the submit method, this wrapper
+/// holds local selection state so the user can toggle chips freely without
+/// immediately advancing the conversation. Only tapping Confirm fires the
+/// parent's [onSubmit] callback — preventing accidental flow-through on
+/// first tap.
+class _ChipMultiStepInput extends StatefulWidget {
+  const _ChipMultiStepInput({
+    required this.options,
+    required this.onSubmit,
+    this.initialValues = const [],
+    this.exclusiveLabel,
+  });
+
+  final List<ZChipOption<String>> options;
+  final ValueChanged<List<String>> onSubmit;
+  final List<String> initialValues;
+  final String? exclusiveLabel;
+
+  @override
+  State<_ChipMultiStepInput> createState() => _ChipMultiStepInputState();
+}
+
+class _ChipMultiStepInputState extends State<_ChipMultiStepInput> {
+  late List<String> _selected;
+  bool _submitted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = List<String>.from(widget.initialValues);
+  }
+
+  void _confirm() {
+    if (_submitted) return;
+    _submitted = true;
+    widget.onSubmit(_selected);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ZChipMultiSelect<String>(
+          options: widget.options,
+          values: _selected,
+          exclusiveLabel: widget.exclusiveLabel,
+          onChanged: (vals) => setState(() => _selected = vals),
+        ),
+        const SizedBox(height: AppDimens.spaceMd),
+        ZButton(label: 'Confirm', onPressed: _confirm),
+      ],
     );
   }
 }

@@ -1,3 +1,42 @@
+## Wellness Log
+
+### Complete — Wellness Log Overhaul (2026-04-27)
+
+**Status:** Shipped on `feat/wellness-log-overhaul`
+
+What shipped:
+- Old slider-based panel replaced with an AI-first voice/text check-in system
+- Six-state panel: recording → parsing → confirm/edit → saved; plus quick offline face-tap path
+- `ZSentimentSelector` shared widget — five-level face icon row, reusable
+- `ZAudioVisualizer` shared widget — animated waveform bars during recording
+- `logWellness` extended with `tags` and `aiSummary`; stress unit bug fixed (`/100` → `/10`)
+- `parseWellnessTranscript` added to `TodayRepository`, returns `WellnessParseResult` domain model
+- Backend: `POST /api/v1/wellness/parse` — accepts transcript (max 5,000 chars), LLM extraction, returns `{mood, energy, stress, tags, summary}`, rate-limited 20/min per user, auth required
+- 11 backend tests covering happy path, validation, auth, LLM failures, and boundary conditions
+
+---
+
+## Weight Log
+
+### Complete — Weight Log Overhaul (2026-04-26)
+
+**Status:** Shipped on `feat/weight-log-overhaul`
+
+What shipped:
+- Large 58px number display with full-height left/right chevron tap zones for 0.1 kg/lbs stepping
+- Long-press chevrons for continuous fast-scroll with haptic feedback
+- Tap the number to open keyboard for direct decimal entry
+- Last-logged weight strip with live delta pill showing trend
+- Time-of-day chips (Morning, Afternoon, Evening) auto-selected by current hour, saved as metadata
+- Collapsible body fat % row (optional, 0.1% increments, 1–80% range)
+- 7-day sparkline visualization using `ZMiniSparkline` component
+- Backend: new `GET /api/v1/metrics/weight/history?days=7` endpoint for sparkline data
+- `logWeight` now sends `time_of_day` and `body_fat_pct` as structured metadata
+- Fixed pre-fill bug where wrong map keys prevented loading previous values
+- All tests pass; zero new analyzer issues
+
+---
+
 ## Workout
 
 ### Plan 1: Foundation + Exercise Catalogue — complete (2026-04-21)

@@ -21,6 +21,7 @@ import 'package:zuralog/features/workout/domain/exercise.dart' show MuscleGroup;
 import 'package:zuralog/features/workout/domain/workout_session.dart';
 import 'package:zuralog/features/workout/presentation/widgets/exercise_grid_tile.dart'
     show muscleGroupColor, muscleGroupIcon;
+import 'package:zuralog/features/workout/presentation/widgets/workout_muscle_log_sheet.dart';
 import 'package:zuralog/features/workout/presentation/widgets/workout_stats_row.dart'
     show formatWorkoutDuration;
 import 'package:zuralog/features/workout/providers/rest_timer_provider.dart';
@@ -168,6 +169,22 @@ class _WorkoutSummaryScreenState extends ConsumerState<WorkoutSummaryScreen> {
         .saveAndDiscardSession(history, toSave);
     ref.invalidate(workoutHistoryProvider);
     ref.read(restTimerProvider.notifier).skip();
+
+    if (!mounted) return;
+
+    // Prompt the user to log how the muscles they trained feel.
+    final muscles = toSave.exercises
+        .map((e) => MuscleGroup.fromString(e.muscleGroup))
+        .where((g) =>
+            g != MuscleGroup.other &&
+            g != MuscleGroup.cardio &&
+            g != MuscleGroup.fullBody)
+        .toSet()
+        .toList();
+
+    if (muscles.isNotEmpty && context.mounted) {
+      await showWorkoutMuscleLogSheet(context, muscles);
+    }
 
     if (!mounted) return;
     // Pop summary, then pop the session screen.

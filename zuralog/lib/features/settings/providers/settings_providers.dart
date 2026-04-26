@@ -250,6 +250,48 @@ final unitsSystemProvider = Provider<UnitsSystem>((ref) {
       ?.unitsSystem ?? UnitsSystem.metric;
 });
 
+/// In-memory unit choice used during onboarding before [userPreferencesProvider]
+/// has finished loading from the server. Both [ZHeightPicker] and [ZWeightPicker]
+/// read and write this when their `useSessionUnits` flag is true. Finalised into
+/// [userPreferencesProvider] at the end of the onboarding flow.
+final sessionUnitsProvider = StateProvider<UnitsSystem>(
+  (ref) => UnitsSystem.metric,
+);
+
+// ── Onboarding profile ─────────────────────────────────────────────────────────
+
+final toneProvider = Provider<Tone?>(
+  (ref) => ref.watch(userPreferencesProvider).valueOrNull?.tone,
+);
+
+final focusAreaProvider = Provider<FocusArea?>(
+  (ref) => ref.watch(userPreferencesProvider).valueOrNull?.focusArea,
+);
+
+final primaryGoalProvider = Provider<String?>(
+  (ref) => ref.watch(userPreferencesProvider).valueOrNull?.primaryGoal,
+);
+
+final dietaryRestrictionsProvider = Provider<List<String>?>(
+  (ref) => ref.watch(userPreferencesProvider).valueOrNull?.dietaryRestrictions,
+);
+
+final injuriesProvider = Provider<List<String>?>(
+  (ref) => ref.watch(userPreferencesProvider).valueOrNull?.injuries,
+);
+
+final sleepPatternProvider = Provider<SleepPattern?>(
+  (ref) => ref.watch(userPreferencesProvider).valueOrNull?.sleepPattern,
+);
+
+final healthFrustrationProvider = Provider<String?>(
+  (ref) => ref.watch(userPreferencesProvider).valueOrNull?.healthFrustration,
+);
+
+final discoverySourceProvider = Provider<String?>(
+  (ref) => ref.watch(userPreferencesProvider).valueOrNull?.discoverySource,
+);
+
 // ── AI Memory ──────────────────────────────────────────────────────────────────
 
 /// Provides the [MemoryRepository] backed by the Cloud Brain API.

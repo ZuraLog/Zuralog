@@ -493,3 +493,19 @@ final todayTimelineProvider =
   final repo = ref.read(todayRepositoryProvider);
   return TodayTimelineNotifier(repo);
 });
+
+// ── Weight History ────────────────────────────────────────────────────────────
+
+/// Last 7 days of weight readings. Index 0 = 6 days ago, index 6 = today.
+/// Null = no entry for that day. Auto-refreshes when todayLogSummaryProvider
+/// is invalidated (i.e. after any successful log submission).
+final weightHistoryProvider = FutureProvider<List<double?>>((ref) async {
+  ref.watch(todayLogSummaryProvider);
+  final repo = ref.read(todayRepositoryProvider);
+  try {
+    return await repo.getWeightHistory(days: 7);
+  } catch (e, st) {
+    debugPrint('weightHistoryProvider failed: $e\n$st');
+    return List<double?>.filled(7, null);
+  }
+});

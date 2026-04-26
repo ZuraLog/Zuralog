@@ -18,7 +18,7 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
-import 'package:zuralog/features/catchup/presentation/catchup_flow_screen.dart';
+import 'package:zuralog/features/catchup/presentation/catchup_intro_sheet.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -106,9 +106,7 @@ class SettingsHubScreen extends ConsumerWidget {
                     event: AnalyticsEvents.settingsSectionOpened,
                     properties: {'section': 'about_you'},
                   );
-                  Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => const CatchupFlowScreen(),
-                  ));
+                  showCatchupFlowSheet(context);
                 },
               ),
               ZSettingsTile(

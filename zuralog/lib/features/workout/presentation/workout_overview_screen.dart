@@ -12,14 +12,33 @@ import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/features/body/data/muscle_log_repository.dart';
+import 'package:zuralog/features/body/domain/muscle_state.dart';
+import 'package:zuralog/features/body/presentation/muscle_log_today_strip.dart';
+import 'package:zuralog/features/body/presentation/muscle_state_picker_sheet.dart';
+import 'package:zuralog/features/body/presentation/tappable_body_side.dart';
+import 'package:zuralog/features/body/providers/body_state_provider.dart';
+import 'package:zuralog/features/body/providers/muscle_state_overrides_provider.dart';
+import 'package:zuralog/features/data/domain/data_models.dart' show MetricDataPoint;
+import 'package:zuralog/features/data/domain/tile_visualization_config.dart'
+    show BarChartConfig, BarPoint;
+import 'package:zuralog/features/workout/domain/steps_summary.dart';
+import 'package:zuralog/features/workout/presentation/widgets/steps_detail_sheet.dart';
+import 'package:zuralog/features/workout/providers/steps_providers.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/workout/domain/completed_workout.dart';
+import 'package:zuralog/features/workout/domain/exercise.dart' show MuscleGroup;
 import 'package:zuralog/features/workout/domain/workout_session.dart';
 import 'package:zuralog/features/workout/presentation/widgets/workout_stats_row.dart'
     show formatWorkoutDuration;
 import 'package:zuralog/features/workout/providers/workout_session_providers.dart';
-import 'package:zuralog/shared/widgets/widgets.dart';
+
+String _todayIso() {
+  final now = DateTime.now();
+  return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+}
 
 class WorkoutOverviewScreen extends ConsumerWidget {
   const WorkoutOverviewScreen({super.key});
@@ -38,7 +57,7 @@ class WorkoutOverviewScreen extends ConsumerWidget {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            title: const Text('Workout'),
+            title: const Text('Fitness'),
             pinned: true,
             backgroundColor: colors.surface,
             surfaceTintColor: Colors.transparent,
@@ -58,6 +77,10 @@ class WorkoutOverviewScreen extends ConsumerWidget {
                   const _AiSummaryCard(),
                   const SizedBox(height: AppDimens.spaceMd),
                   _WeeklySnapshot(async: historyAsync, unitLabel: unit),
+                  const SizedBox(height: AppDimens.spaceMd),
+                  const _FitnessBodySection(),
+                  const SizedBox(height: AppDimens.spaceMd),
+                  const _StepsCard(),
                   const SizedBox(height: AppDimens.spaceSm),
                   const _ViewHistoryRow(),
                   const SizedBox(height: AppDimens.spaceLg),
@@ -361,7 +384,7 @@ class _WeeklySnapshot extends StatelessWidget {
               children: [
                 Expanded(
                   child: _StatCell(
-                    label: 'Workouts',
+                    label: 'Fitness',
                     value: '$count',
                     valueColor: AppColors.categoryActivity,
                   ),
@@ -450,5 +473,275 @@ class _ViewHistoryRow extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// ── Body map ───────────────────────────────────────────────────────────────────
+
+class _FitnessBodySection extends ConsumerWidget {
+  const _FitnessBodySection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
+    final bodyAsync = ref.watch(bodyStateProvider);
+    final overrides = ref.watch(muscleStateOverridesProvider);
+    final repo = ref.watch(muscleLogRepositoryProvider);
+    final todayLogs = repo.getLogsForDate(_todayIso());
+
+    return ZuralogCard(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.spaceMd),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'YOUR BODY',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: colors.textSecondary,
+                        letterSpacing: 1.6,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Tap a muscle to log how it feels.',
+                      style: AppTextStyles.bodySmall
+                          .copyWith(color: colors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              if (overrides.isNotEmpty)
+                TextButton(
+                  onPressed: () async {
+                    ref.read(muscleStateOverridesProvider.notifier).clearAll();
+                    await repo.clearLogsForDate(_todayIso());
+                  },
+                  child: Text(
+                    'Clear all',
+                    style: AppTextStyles.labelLarge
+                        .copyWith(color: AppColors.primary),
+                  ),
+                ),
+            ]),
+            const SizedBox(height: AppDimens.spaceMd),
+            bodyAsync.when(
+              loading: () => const SizedBox(
+                height: 180,
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (_, _) => const SizedBox.shrink(),
+              data: (state) {
+                final zones = _bodyZones(state.muscles);
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: TappableBodySide(
+                          isBack: false,
+                          zones: zones,
+                          label: 'Front',
+                          onMuscleTap: (g) => showMuscleStatePicker(context, g),
+                        ),
+                      ),
+                      const SizedBox(width: AppDimens.spaceSm),
+                      Expanded(
+                        child: TappableBodySide(
+                          isBack: true,
+                          zones: zones,
+                          label: 'Back',
+                          onMuscleTap: (g) => showMuscleStatePicker(context, g),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            if (todayLogs.isNotEmpty) ...[
+              const SizedBox(height: AppDimens.spaceMd),
+              MuscleLogTodayStrip(
+                logs: todayLogs,
+                onLogTap: (log) =>
+                    showMuscleStatePicker(context, log.muscleGroup),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Map<MuscleGroup, Color> _bodyZones(
+      Map<MuscleGroup, MuscleState> muscles) {
+    final map = <MuscleGroup, Color>{};
+    muscles.forEach((g, s) {
+      final c = switch (s) {
+        MuscleState.fresh => AppColors.categoryActivity,
+        MuscleState.worked => AppColors.categoryNutrition,
+        MuscleState.sore => AppColors.categoryHeart,
+        MuscleState.neutral => null,
+      };
+      if (c != null) map[g] = c;
+    });
+    return map;
+  }
+}
+
+// ── Steps card ─────────────────────────────────────────────────────────────────
+
+class _StepsCard extends ConsumerWidget {
+  const _StepsCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final summaryAsync = ref.watch(stepsHistoryProvider);
+    final smartTargetEnabled = ref.watch(smartTargetEnabledProvider);
+
+    return ZuralogCard(
+      onTap: () => showStepsDetailSheet(context),
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.spaceMd),
+        child: summaryAsync.when(
+          loading: () => const ZLoadingSkeleton(
+            width: double.infinity,
+            height: 100,
+          ),
+          error: (_, _) => const SizedBox(height: 100),
+          data: (summary) => _StepsCardLoaded(
+            summary: summary,
+            smartTargetEnabled: smartTargetEnabled,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StepsCardLoaded extends StatelessWidget {
+  const _StepsCardLoaded({
+    required this.summary,
+    required this.smartTargetEnabled,
+  });
+
+  final StepsSummary summary;
+  final bool smartTargetEnabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final steps = summary.todayCount;
+    final avg = summary.weekAverage;
+    final delta = avg > 0 ? steps - avg.round() : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          Text(
+            'STEPS',
+            style: AppTextStyles.labelSmall.copyWith(
+              color: colors.textSecondary,
+              letterSpacing: 1.6,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const Spacer(),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: AppDimens.iconSm,
+            color: colors.textSecondary,
+          ),
+        ]),
+        const SizedBox(height: AppDimens.spaceSm),
+        Text(
+          _fmt(steps),
+          style: AppTextStyles.displaySmall.copyWith(
+            color: AppColors.categoryActivity,
+            fontWeight: FontWeight.w800,
+            height: 1,
+          ),
+        ),
+        if (delta != null) ...[
+          const SizedBox(height: 4),
+          Row(children: [
+            Icon(
+              delta >= 0
+                  ? Icons.arrow_upward_rounded
+                  : Icons.arrow_downward_rounded,
+              size: 13,
+              color: delta >= 0
+                  ? AppColors.categoryActivity
+                  : AppColors.categoryHeart,
+            ),
+            const SizedBox(width: 3),
+            Text(
+              '${delta >= 0 ? '+' : ''}${_fmt(delta.abs())} vs 7-day avg',
+              style:
+                  AppTextStyles.bodySmall.copyWith(color: colors.textSecondary),
+            ),
+          ]),
+        ],
+        if (smartTargetEnabled && summary.smartTarget > 0) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Sweet spot: ${_fmt(summary.smartTarget)} steps',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.categoryActivity.withValues(alpha: 0.8),
+            ),
+          ),
+        ],
+        if (summary.dataPoints.isNotEmpty) ...[
+          const SizedBox(height: AppDimens.spaceMd),
+          SizedBox(
+            height: 36,
+            child: ZChart(
+              config: _toBarConfig(summary.dataPoints),
+              mode: ChartMode.sparkline,
+              color: AppColors.categoryActivity,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  static String _fmt(int n) {
+    if (n >= 1000) {
+      final k = n / 1000;
+      return '${k.toStringAsFixed(k.truncateToDouble() == k ? 0 : 1)}k';
+    }
+    return n.toString();
+  }
+
+  static BarChartConfig _toBarConfig(List<MetricDataPoint> points) {
+    return BarChartConfig(
+      bars: [
+        for (var i = 0; i < points.length; i++)
+          BarPoint(
+            label: _dayLabel(points[i].timestamp),
+            value: points[i].value,
+            isToday: i == points.length - 1,
+          ),
+      ],
+    );
+  }
+
+  static String _dayLabel(String iso) {
+    try {
+      final d = DateTime.parse(iso);
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      return days[d.weekday % 7];
+    } catch (_) {
+      return '';
+    }
   }
 }

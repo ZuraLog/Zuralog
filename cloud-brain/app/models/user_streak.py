@@ -12,9 +12,9 @@ Models:
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -58,8 +58,8 @@ class UserStreak(Base):
     streak_type: Mapped[str] = mapped_column(String)
     current_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     longest_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
-    last_activity_date: Mapped[str | None] = mapped_column(
-        String,
+    last_activity_date: Mapped[date | None] = mapped_column(
+        Date,
         nullable=True,
         default=None,
     )

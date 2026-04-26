@@ -29,6 +29,15 @@ class LatestMetricsResponse(BaseModel):
     metrics: list[LatestMetricItem]
 
 
+class WeightHistoryItem(BaseModel):
+    date: str        # ISO YYYY-MM-DD
+    value_kg: float
+
+
+class WeightHistoryResponse(BaseModel):
+    history: list[WeightHistoryItem]
+
+
 @limiter.limit("120/minute")
 @router.get("/latest", response_model=LatestMetricsResponse)
 async def metrics_latest(
@@ -92,3 +101,47 @@ async def metrics_latest(
     logger.info("[metrics_latest] user=%s requested=%s returned=%d",
         user_id[:8], requested, len(metrics))
     return LatestMetricsResponse(metrics=metrics)
+
+
+@limiter.limit("60/minute")
+@router.get("/weight/history", response_model=WeightHistoryResponse)
+async def weight_history(
+    request: Request,
+    days: int = Query(
+        default=7,
+        ge=1,
+        le=90,
+        description="Number of trailing days to return (1–90).",
+    ),
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_authenticated_user_id),
+) -> WeightHistoryResponse:
+    """Return daily-averaged weight readings for the last [days] days."""
+    from datetime import date as _date, timedelta
+
+    today = _date.today()
+    since = today - timedelta(days=days - 1)
+
+    stmt = (
+        select(DailySummary.date, DailySummary.value)
+        .where(
+            DailySummary.user_id == user_id,
+            DailySummary.metric_type == "weight_kg",
+            DailySummary.is_stale.is_(False),
+            DailySummary.date >= since,
+            DailySummary.date <= today,
+        )
+        .order_by(DailySummary.date.asc())
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    items = [
+        WeightHistoryItem(date=str(r.date), value_kg=float(r.value))
+        for r in rows
+    ]
+    logger.info(
+        "[weight_history] user=%s days=%d returned=%d",
+        user_id[:8], days, len(items),
+    )
+    return WeightHistoryResponse(history=items)

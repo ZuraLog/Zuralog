@@ -4,16 +4,17 @@
 /// responses. All models are immutable and serialize from JSON.
 ///
 /// Model overview:
-/// - [HealthScoreInput]  — single weighted input to the composite score
-/// - [HealthScoreData]   — composite health score + 7-day trend
-/// - [InsightCard]       — summary card shown in the Today feed
-/// - [InsightDetail]     — full detail view with charts + AI reasoning
-/// - [InsightDataPoint]  — single chart data point inside [InsightDetail]
-/// - [InsightSource]     — integration that contributed to an insight
-/// - [StreakData]        — current streak count + freeze status
-/// - [TodayFeedData]     — aggregated feed payload (insights + streak)
-/// - [NotificationItem]  — single notification row
-/// - [NotificationPage]  — paginated notification history
+/// - [HealthScoreInput]     — single weighted input to the composite score
+/// - [HealthScoreData]      — composite health score + 7-day trend
+/// - [InsightCard]          — summary card shown in the Today feed
+/// - [InsightDetail]        — full detail view with charts + AI reasoning
+/// - [InsightDataPoint]     — single chart data point inside [InsightDetail]
+/// - [InsightSource]        — integration that contributed to an insight
+/// - [StreakData]           — current streak count + freeze status
+/// - [TodayFeedData]        — aggregated feed payload (insights + streak)
+/// - [NotificationItem]     — single notification row
+/// - [NotificationPage]     — paginated notification history
+/// - [WellnessParseResult]  — AI-parsed values from a free-text wellness transcript
 library;
 
 // ── HealthScoreInput ──────────────────────────────────────────────────────────
@@ -712,6 +713,38 @@ class NotificationPage {
       totalCount: (json['total_count'] as num?)?.toInt() ?? 0,
       page: (json['page'] as num?)?.toInt() ?? 1,
       hasMore: json['has_more'] as bool? ?? false,
+    );
+  }
+}
+
+// ── WellnessParseResult ───────────────────────────────────────────────────────
+
+/// Parsed values extracted from a free-text wellness transcript by the AI.
+///
+/// All numeric fields default to 0 and optional lists default to empty so that
+/// partial AI responses (missing keys) are handled gracefully.
+class WellnessParseResult {
+  const WellnessParseResult({
+    required this.mood,
+    required this.energy,
+    required this.stress,
+    required this.tags,
+    required this.summary,
+  });
+
+  final double mood;
+  final double energy;
+  final double stress;
+  final List<String> tags;
+  final String summary;
+
+  factory WellnessParseResult.fromJson(Map<String, dynamic> json) {
+    return WellnessParseResult(
+      mood: (json['mood'] as num).toDouble(),
+      energy: (json['energy'] as num).toDouble(),
+      stress: (json['stress'] as num).toDouble(),
+      tags: (json['tags'] as List<dynamic>? ?? const []).cast<String>(),
+      summary: (json['summary'] as String?) ?? '',
     );
   }
 }

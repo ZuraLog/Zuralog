@@ -96,6 +96,12 @@ class AppTextField extends StatelessWidget {
   /// without consuming the submitted text value.
   final VoidCallback? onEditingComplete;
 
+  /// Maximum number of characters allowed in the field.
+  ///
+  /// When set, the field enforces a hard character limit and shows a counter
+  /// below the field. Pass `null` (default) for no limit.
+  final int? maxLength;
+
   /// Creates an [AppTextField].
   const AppTextField({
     super.key,
@@ -116,6 +122,7 @@ class AppTextField extends StatelessWidget {
     this.autofillHints,
     this.focusNode,
     this.onEditingComplete,
+    this.maxLength,
   });
 
   @override
@@ -135,6 +142,7 @@ class AppTextField extends StatelessWidget {
       keyboardType: keyboardType,
       obscureText: obscureText,
       maxLines: maxLines,
+      maxLength: maxLength,
       inputFormatters: inputFormatters,
       onChanged: onChanged,
       onFieldSubmitted: onSubmitted != null ? (_) => onSubmitted!() : null,

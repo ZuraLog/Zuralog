@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/workout/domain/exercise.dart';
 import 'package:zuralog/features/workout/providers/exercise_bookmarks_provider.dart';
+import 'package:zuralog/shared/widgets/muscle_highlight_diagram.dart';
 
 Color muscleGroupColor(MuscleGroup group) {
   switch (group) {
@@ -88,18 +89,25 @@ class ExerciseGridTile extends ConsumerWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.asset(
-                      'assets/images/exercises/${exercise.id}.webp',
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stack) => Container(
-                        color: groupColor.withValues(alpha: 0.18),
-                        child: Center(
-                          child: Icon(
-                            muscleGroupIcon(exercise.muscleGroup),
-                            size: AppDimens.emojiMd,
-                            color: groupColor,
-                          ),
+                    // Primary visual: vector muscle-highlight diagram with
+                    // the target muscle group tinted in the brand colour.
+                    // Matches the Hevy / Fitbod aesthetic and stays sharp at
+                    // every resolution because it's an SVG.
+                    Container(
+                      padding: const EdgeInsets.all(AppDimens.spaceSm),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            groupColor.withValues(alpha: 0.18),
+                            groupColor.withValues(alpha: 0.04),
+                          ],
                         ),
+                      ),
+                      child: MuscleHighlightDiagram(
+                        muscleGroup: exercise.muscleGroup,
+                        highlightColor: groupColor,
                       ),
                     ),
                     // Bookmark icon — top-left
@@ -174,6 +182,92 @@ class ExerciseGridTile extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Richly-styled placeholder shown when neither a per-exercise image nor
+/// a muscle-group illustration is available. Designed to feel intentional
+/// rather than like a missing asset: diagonal gradient in the muscle-group
+/// colour, a soft glow behind a prominent icon, and a small equipment badge.
+class _ExerciseTileFallback extends StatelessWidget {
+  const _ExerciseTileFallback({
+    required this.muscleGroup,
+    required this.equipment,
+    required this.groupColor,
+  });
+
+  final MuscleGroup muscleGroup;
+  final Equipment equipment;
+  final Color groupColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            groupColor.withValues(alpha: 0.38),
+            groupColor.withValues(alpha: 0.10),
+          ],
+        ),
+      ),
+      child: Stack(
+        children: [
+          // Soft glow halo behind the icon — adds depth so the fallback
+          // reads as a designed surface rather than a flat chip.
+          Center(
+            child: Container(
+              width: 84,
+              height: 84,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    groupColor.withValues(alpha: 0.35),
+                    groupColor.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Icon hero — larger than before for more visual weight.
+          Center(
+            child: Icon(
+              muscleGroupIcon(muscleGroup),
+              size: 40,
+              color: groupColor,
+            ),
+          ),
+          // Equipment badge — bottom-right, adds useful info without clutter.
+          Positioned(
+            right: AppDimens.spaceSm,
+            bottom: AppDimens.spaceSm,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.spaceSm,
+                vertical: 3,
+              ),
+              decoration: BoxDecoration(
+                color: colors.surface.withValues(alpha: 0.82),
+                borderRadius: BorderRadius.circular(AppDimens.shapePill),
+              ),
+              child: Text(
+                equipment.label,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 10,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

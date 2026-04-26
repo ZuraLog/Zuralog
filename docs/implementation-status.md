@@ -1,3 +1,88 @@
+## 2026-04-27 — Wellness Log Overhaul: AI Voice/Text Check-In, 6-State Panel, Sentiment Selector
+
+**Branch:** `feat/wellness-log-overhaul`
+
+Complete replacement of the old slider-based wellness panel with an AI-first voice and text check-in system.
+
+**What was built:**
+
+- **`ZWellnessLogPanel` rewritten** (`zuralog/lib/features/today/presentation/widgets/wellness_log_panel.dart`): Six-state machine replacing the previous slider row. Two entry paths: an AI path (voice or typed transcript → AI parse → confirm/edit → save) and a quick check-in path (face-tap sentiment selectors, works fully offline). Optional "Talk to Zura" handoff to the Coach after saving.
+
+- **AI path — recording state** (`wellness_log_panel.dart`): Microphone button starts recording. While recording, `ZAudioVisualizer` displays animated waveform bars. User can also type a free-form transcript directly.
+
+- **AI path — parse + confirm state** (`wellness_log_panel.dart`): On transcript submission, the panel calls `parseWellnessTranscript` on `TodayRepository`, which hits the new backend endpoint. The returned `{mood, energy, stress, tags, summary}` values are pre-filled into an editable confirm screen before saving.
+
+- **Quick check-in path** (`wellness_log_panel.dart`): Five `ZSentimentSelector` rows (one per metric level) for mood, energy, and stress. Fully offline — no AI or network required. Selection saves immediately.
+
+- **Optional transcript storage** (`wellness_log_panel.dart`): A user-controlled toggle (default off) controls whether the raw transcript is stored. Off by default to protect privacy.
+
+- **`ZSentimentSelector` — new shared widget** (`zuralog/lib/shared/widgets/inputs/z_sentiment_selector.dart`): Reusable five-level face icon row with selection state. Added to the `widgets.dart` barrel export.
+
+- **`ZAudioVisualizer` — new shared widget** (`zuralog/lib/shared/widgets/feedback/z_audio_visualizer.dart`): Animated waveform bar widget that reflects live recording state. Added to the `widgets.dart` barrel export.
+
+- **`logWellness` extended** (`zuralog/lib/features/today/data/today_repository.dart`): Now accepts `tags` (list of strings) and `aiSummary` (optional string) parameters. Also fixed a unit bug — `stress` was being sent as `/100` when the scale is `/10`.
+
+- **`parseWellnessTranscript` added** (`zuralog/lib/features/today/data/today_repository.dart`): Calls `POST /api/v1/wellness/parse`, returns a `WellnessParseResult` domain model.
+
+- **`WellnessParseResult` domain model** (`zuralog/lib/features/today/domain/wellness_parse_result.dart`): Immutable value object with `mood`, `energy`, `stress`, `tags`, and `summary` fields.
+
+- **Backend: `POST /api/v1/wellness/parse`** (`cloud-brain/app/api/v1/wellness.py`): Accepts a free-form transcript (max 5,000 characters), calls an LLM to extract structured wellness data, returns `{mood, energy, stress, tags, summary}`. Rate-limited to 20 requests per minute per user. Requires authentication.
+
+- **11 backend tests** (`cloud-brain/tests/api/v1/test_wellness.py`): Cover the happy path, input validation (empty transcript, over-limit length), auth enforcement, LLM failure handling, and boundary conditions on all numeric fields.
+
+**Files created:**
+- `zuralog/lib/shared/widgets/inputs/z_sentiment_selector.dart`
+- `zuralog/lib/shared/widgets/feedback/z_audio_visualizer.dart`
+- `zuralog/lib/features/today/domain/wellness_parse_result.dart`
+- `cloud-brain/app/api/v1/wellness.py`
+- `cloud-brain/tests/api/v1/test_wellness.py`
+
+**Files modified:**
+- `zuralog/lib/features/today/presentation/widgets/wellness_log_panel.dart`
+- `zuralog/lib/features/today/data/today_repository.dart`
+- `zuralog/lib/shared/widgets/widgets.dart`
+
+---
+
+## 2026-04-26 — Weight Log Overhaul: Large Number Input, Time-of-Day Chips, 7-Day Sparkline
+
+**Branch:** `feat/weight-log-overhaul`
+
+Completely redesigned the weight logging panel with a premium numeric input experience, metadata tracking, and data visualization.
+
+**What was built:**
+
+- **Large number display** (`weight_panel.dart`): The weight value now displays in a prominent 58px sans-serif number. Full-height left and right tap zones (`‹` `›`) allow stepping the value by 0.1 kg/lbs on each tap. Long-pressing either chevron triggers continuous fast-scroll for rapid adjustments, with haptic feedback on each step.
+
+- **Tap-to-edit keyboard entry** (`weight_panel.dart`): Tapping the large number opens a `TextField` for direct numeric input from the device keyboard. The field is pre-filled with the current value and accepts decimal input. Saves on confirm/blur.
+
+- **Last-logged delta strip** (`weight_panel.dart`): A 2-line row appears directly below the number showing the previous logged weight and a live delta pill (e.g., "+0.3 kg", "-1.2 lbs"). Uses color coding to indicate upward/downward trends.
+
+- **Time-of-day metadata chips** (`weight_panel.dart`): Three toggle chips (Morning, Afternoon, Evening) are auto-selected based on the current hour and saved as `time_of_day` metadata with each log. Helps users track which time of day they usually weigh themselves. Only one chip can be active at a time.
+
+- **Collapsible body fat % row** (`weight_panel.dart`): An optional expandable row below the time-of-day chips allows logging body fat percentage (0.1% steps, 1–80% range). The field is collapsed by default, with a tap-to-expand interaction. Saved as `body_fat_pct` metadata.
+
+- **7-day sparkline visualization** (`weight_panel.dart`): A lightweight line chart using `ZMiniSparkline` component appears above the Save button, showing the last 7 days of logged weight values. Provides instant visual context of recent trends without requiring a separate detail screen.
+
+- **Fixed pre-fill bug** (`weight_panel.dart`): The previous weight values were being read from the wrong map keys. Updated `getLatestLogValues` to use the correct Supabase column names so pre-fill works reliably on every fresh load.
+
+- **Backend support** (`cloud-brain/app/api/v1/metrics.py`): New `GET /api/v1/metrics/weight/history?days=7` endpoint returns the last N days of weight logs as `[{timestamp, value, unit, time_of_day, body_fat_pct}, ...]` to feed the sparkline UI.
+
+- **logWeight function extended** (`weight_panel.dart`, repository, API): The `logWeight` call now sends an optional `metadata` object containing `time_of_day` (string: "morning", "afternoon", "evening") and `body_fat_pct` (number, optional). The backend stores these as structured JSON in the metadata column of the metrics table.
+
+**Files created:**
+- None (all changes to existing weight panel files)
+
+**Files modified:**
+- `zuralog/lib/features/progress/presentation/widgets/weight_panel.dart`
+- `zuralog/lib/features/progress/data/progress_repository.dart`
+- `zuralog/lib/features/progress/providers/progress_providers.dart`
+- `cloud-brain/app/api/v1/metrics.py`
+- `zuralog/test/features/progress/presentation/weight_panel_test.dart`
+- `zuralog/test/features/progress/providers/progress_providers_test.dart`
+
+---
+
 ## 2026-04-23 — Exercise Catalogue Expansion: 839 Exercises, Equipment Filter, Image Assets
 
 **Branch:** `feat/exercise-catalogue-expansion`

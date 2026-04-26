@@ -342,7 +342,8 @@ enum StreakType {
   engagement,
   steps,
   workouts,
-  checkin;
+  checkin,
+  nutritionGoals;
 
   /// Human-readable display name.
   String get displayName {
@@ -355,6 +356,8 @@ enum StreakType {
         return 'Workouts';
       case StreakType.checkin:
         return 'Check-in';
+      case StreakType.nutritionGoals:
+        return 'Nutrition Goals';
     }
   }
 
@@ -369,6 +372,8 @@ enum StreakType {
         return StreakType.workouts;
       case 'checkin':
         return StreakType.checkin;
+      case 'nutrition_goals':
+        return StreakType.nutritionGoals;
       default:
         debugPrint('[StreakType] Unknown streak type: "$raw". Falling back to engagement.');
         return StreakType.engagement;
@@ -386,6 +391,8 @@ enum StreakType {
         return 'workouts';
       case StreakType.checkin:
         return 'checkin';
+      case StreakType.nutritionGoals:
+        return 'nutrition_goals';
     }
   }
 }

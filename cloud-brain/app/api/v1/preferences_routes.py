@@ -40,6 +40,11 @@ _VALID_PROACTIVITY: frozenset[str] = frozenset({"low", "medium", "high"})
 _VALID_RESPONSE_LENGTHS: frozenset[str] = frozenset({"concise", "detailed"})
 _VALID_THEMES: frozenset[str] = frozenset({"dark", "light", "system"})
 _VALID_FITNESS_LEVELS: frozenset[str] = frozenset({"beginner", "active", "athletic"})
+_VALID_TONES: frozenset[str] = frozenset({"direct", "warm", "minimal", "thorough"})
+_VALID_FOCUS_AREAS: frozenset[str] = frozenset({"sleep", "activity", "nutrition", "overall"})
+_VALID_SLEEP_PATTERNS: frozenset[str] = frozenset({
+    "great", "hard_to_fall_asleep", "wake_up_a_lot", "short_hours"
+})
 
 # HH:MM in 24-hour format
 _TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
@@ -80,6 +85,13 @@ class PreferencesResponse(BaseModel):
     memory_enabled: bool = True
     nudges_enabled: bool = False
     discovery_source: str | None = None
+    tone: str | None = None
+    focus_area: str | None = None
+    primary_goal: str | None = None
+    dietary_restrictions: list | None = None
+    injuries: list | None = None
+    sleep_pattern: str | None = None
+    health_frustration: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -129,6 +141,15 @@ class PreferencesUpdate(BaseModel):
     memory_enabled: bool | None = None
     nudges_enabled: bool | None = None
     discovery_source: str | None = None
+    tone: str | None = Field(None, description="direct | warm | minimal | thorough")
+    focus_area: str | None = Field(None, description="sleep | activity | nutrition | overall")
+    primary_goal: str | None = Field(None, max_length=200)
+    dietary_restrictions: list | None = None
+    injuries: list | None = None
+    sleep_pattern: str | None = Field(
+        None, description="great | hard_to_fall_asleep | wake_up_a_lot | short_hours"
+    )
+    health_frustration: str | None = Field(None, max_length=120)
 
 
 class PreferencesCreate(BaseModel):
@@ -161,6 +182,15 @@ class PreferencesCreate(BaseModel):
     memory_enabled: bool | None = None
     nudges_enabled: bool | None = None
     discovery_source: str | None = None
+    tone: str | None = Field(None, description="direct | warm | minimal | thorough")
+    focus_area: str | None = Field(None, description="sleep | activity | nutrition | overall")
+    primary_goal: str | None = Field(None, max_length=200)
+    dietary_restrictions: list | None = None
+    injuries: list | None = None
+    sleep_pattern: str | None = Field(
+        None, description="great | hard_to_fall_asleep | wake_up_a_lot | short_hours"
+    )
+    health_frustration: str | None = Field(None, max_length=120)
 
 
 # ---------------------------------------------------------------------------
@@ -230,6 +260,19 @@ def _validate_enums(data: dict[str, Any]) -> None:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"response_length must be one of: {sorted(_VALID_RESPONSE_LENGTHS)}",
         )
+    for field, valid_set in (
+        ("tone", _VALID_TONES),
+        ("focus_area", _VALID_FOCUS_AREAS),
+        ("sleep_pattern", _VALID_SLEEP_PATTERNS),
+    ):
+        if field in data:
+            if data[field] == "":
+                del data[field]
+            elif data[field] not in valid_set:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"{field} must be one of: {sorted(valid_set)}",
+                )
 
 
 # ---------------------------------------------------------------------------

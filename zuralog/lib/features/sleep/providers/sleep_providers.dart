@@ -30,3 +30,29 @@ final sleepTrendProvider =
     return const [];
   }
 });
+
+/// Today's sleep quality normalized against the user's 28-day baseline (0–100).
+///
+/// TODO(body): wire to HealthKit/Health Connect sleep stages. Null = no data.
+final sleepQualityNormalizedProvider =
+    FutureProvider<double?>((ref) async => null);
+
+/// User's 7-day rolling average readiness score for delta computation.
+///
+/// TODO(body): aggregate from stored daily readiness history. Null = no history.
+final readinessSevenDayAverageProvider =
+    FutureProvider<double?>((ref) async => null);
+
+/// Last night's sleep reading. Null = no data.
+class SleepLastNightReading {
+  const SleepLastNightReading({
+    required this.durationMinutes,
+    required this.quality,
+  });
+  final int durationMinutes;
+  final int? quality;
+}
+
+/// TODO(body): wire to the real sleep source. Null = no data.
+final sleepLastNightProvider =
+    FutureProvider<SleepLastNightReading?>((ref) async => null);

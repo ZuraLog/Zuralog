@@ -26,15 +26,18 @@ Public API
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
+from celery import shared_task
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database import worker_async_session
 from app.models.nutrition_daily_summary import NutritionDailySummary
 from app.models.user_goal import UserGoal
 from app.models.user_streak import UserStreak
@@ -59,6 +62,70 @@ _METRIC_MAP: dict[str, tuple[str, bool]] = {
     "nutrition.daily_sodium_mg":     ("total_sodium_mg", False),  # max
     "nutrition.daily_sugar_g":       ("total_sugar_g", False),    # max
 }
+
+
+# ---------------------------------------------------------------------------
+# Celery task — daily fan-out
+# ---------------------------------------------------------------------------
+
+
+@shared_task(name="app.tasks.nutrition_streak_task.evaluate_nutrition_streaks_daily")
+def evaluate_nutrition_streaks_daily() -> dict:
+    """Fan-out task: evaluate nutrition goal streaks for all users with active goals.
+
+    Scheduled by Celery beat at 00:15 UTC daily, after the nightly summary
+    aggregation completes.  Runs synchronously via asyncio.run so Celery can
+    call it from a regular (non-async) worker.
+    """
+    return asyncio.run(_run_daily_evaluation())
+
+
+async def _run_daily_evaluation() -> dict:
+    """Async implementation for the daily fan-out."""
+    yesterday = date.today() - timedelta(days=1)
+
+    async with worker_async_session() as db:
+        result = await db.execute(
+            select(UserGoal.user_id)
+            .where(
+                UserGoal.is_active.is_(True),
+                UserGoal.metric.like("nutrition.%"),
+            )
+            .distinct()
+        )
+        user_ids: list[str] = [str(row) for row in result.scalars()]
+
+    logger.info(
+        "evaluate_nutrition_streaks_daily: evaluating %d users for %s",
+        len(user_ids),
+        yesterday,
+    )
+
+    updated = 0
+    skipped = 0
+    errors = 0
+    for user_id in user_ids:
+        try:
+            async with worker_async_session() as db:
+                streak = await evaluate_nutrition_streak_for_user(db, user_id, yesterday)
+            if streak is not None:
+                updated += 1
+            else:
+                skipped += 1
+        except Exception:
+            logger.exception(
+                "evaluate_nutrition_streaks_daily: error for user=%s", user_id
+            )
+            errors += 1
+
+    logger.info(
+        "evaluate_nutrition_streaks_daily: done for %s — updated=%d skipped=%d errors=%d",
+        yesterday,
+        updated,
+        skipped,
+        errors,
+    )
+    return {"date": yesterday.isoformat(), "updated": updated, "skipped": skipped, "errors": errors}
 
 
 # ---------------------------------------------------------------------------

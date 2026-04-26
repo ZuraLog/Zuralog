@@ -9,8 +9,6 @@ import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/nutrition/domain/tdee_calculator.dart';
 import 'package:zuralog/features/nutrition/presentation/nutrition_macro_review_screen.dart';
-import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
-import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── Enums ─────────────────────────────────────────────────────────────────────
@@ -341,7 +339,7 @@ class _WizardPage extends StatelessWidget {
 
 // ── _HeightStep ───────────────────────────────────────────────────────────────
 
-class _HeightStep extends ConsumerStatefulWidget {
+class _HeightStep extends StatelessWidget {
   const _HeightStep({
     required this.initialCm,
     required this.onContinue,
@@ -353,123 +351,14 @@ class _HeightStep extends ConsumerStatefulWidget {
   final AppColorsOf colors;
 
   @override
-  ConsumerState<_HeightStep> createState() => _HeightStepState();
-}
-
-class _HeightStepState extends ConsumerState<_HeightStep> {
-  late TextEditingController _cmCtrl;
-  late TextEditingController _ftCtrl;
-  late TextEditingController _inCtrl;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    final h = widget.initialCm;
-    final isMetric = ref.read(unitsSystemProvider) == UnitsSystem.metric;
-    if (isMetric) {
-      _cmCtrl = TextEditingController(text: h != null ? h.toStringAsFixed(0) : '');
-      _ftCtrl = TextEditingController();
-      _inCtrl = TextEditingController();
-    } else {
-      _cmCtrl = TextEditingController();
-      if (h != null) {
-        final totalIn = h / 2.54;
-        _ftCtrl = TextEditingController(text: (totalIn / 12).floor().toString());
-        _inCtrl = TextEditingController(text: (totalIn % 12).round().toString());
-      } else {
-        _ftCtrl = TextEditingController();
-        _inCtrl = TextEditingController();
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _cmCtrl.dispose();
-    _ftCtrl.dispose();
-    _inCtrl.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final isMetric = ref.read(unitsSystemProvider) == UnitsSystem.metric;
-    double? cm;
-    if (isMetric) {
-      final raw = double.tryParse(_cmCtrl.text.trim());
-      if (raw == null || raw < 30 || raw > 300) {
-        setState(() => _error = 'Enter a height between 30 and 300 cm.');
-        return;
-      }
-      cm = raw;
-    } else {
-      final ft = double.tryParse(_ftCtrl.text.trim());
-      final inches = double.tryParse(_inCtrl.text.trim()) ?? 0;
-      if (ft == null) {
-        setState(() => _error = 'Enter your height in feet and inches.');
-        return;
-      }
-      cm = ft * 30.48 + inches * 2.54;
-      if (cm < 30 || cm > 300) {
-        setState(() => _error = 'Enter a valid height.');
-        return;
-      }
-    }
-    widget.onContinue(cm);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final isMetric = ref.watch(unitsSystemProvider) == UnitsSystem.metric;
     return _WizardPage(
       question: "What's your height?",
       subtitle: 'Used to calculate your daily calorie target. This saves to your Health Profile in Settings.',
-      colors: widget.colors,
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (isMetric)
-            ZLabeledNumberField(
-              label: 'Height',
-              controller: _cmCtrl,
-              unit: 'cm',
-              allowDecimal: false,
-              textInputAction: TextInputAction.done,
-            )
-          else
-            Row(
-              children: [
-                Expanded(
-                  child: ZLabeledNumberField(
-                    label: 'Feet',
-                    controller: _ftCtrl,
-                    unit: 'ft',
-                    allowDecimal: false,
-                    textInputAction: TextInputAction.next,
-                  ),
-                ),
-                const SizedBox(width: AppDimens.spaceMd),
-                Expanded(
-                  child: ZLabeledNumberField(
-                    label: 'Inches',
-                    controller: _inCtrl,
-                    unit: 'in',
-                    allowDecimal: false,
-                    textInputAction: TextInputAction.done,
-                  ),
-                ),
-              ],
-            ),
-          if (_error != null) ...[
-            const SizedBox(height: AppDimens.spaceSm),
-            Text(
-              _error!,
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.statusError),
-            ),
-          ],
-          const SizedBox(height: AppDimens.spaceLg),
-          ZButton(label: 'Continue', onPressed: _submit),
-        ],
+      colors: colors,
+      content: ZHeightPicker(
+        initialCm: initialCm,
+        onSubmit: onContinue,
       ),
     );
   }
@@ -477,7 +366,7 @@ class _HeightStepState extends ConsumerState<_HeightStep> {
 
 // ── _WeightStep ───────────────────────────────────────────────────────────────
 
-class _WeightStep extends ConsumerStatefulWidget {
+class _WeightStep extends StatelessWidget {
   const _WeightStep({
     required this.initialKg,
     required this.onContinue,
@@ -489,81 +378,12 @@ class _WeightStep extends ConsumerStatefulWidget {
   final AppColorsOf colors;
 
   @override
-  ConsumerState<_WeightStep> createState() => _WeightStepState();
-}
-
-class _WeightStepState extends ConsumerState<_WeightStep> {
-  late TextEditingController _ctrl;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    final w = widget.initialKg;
-    final isMetric = ref.read(unitsSystemProvider) == UnitsSystem.metric;
-    _ctrl = TextEditingController(
-      text: w != null
-          ? isMetric
-              ? w.toStringAsFixed(1)
-              : (w / 0.453592).round().toString()
-          : '',
-    );
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final isMetric = ref.read(unitsSystemProvider) == UnitsSystem.metric;
-    final raw = double.tryParse(_ctrl.text.trim());
-    double? kg;
-    if (isMetric) {
-      if (raw == null || raw < 1 || raw > 500) {
-        setState(() => _error = 'Enter a weight between 1 and 500 kg.');
-        return;
-      }
-      kg = raw;
-    } else {
-      if (raw == null || raw < 2 || raw > 1100) {
-        setState(() => _error = 'Enter a weight between 2 and 1,100 lbs.');
-        return;
-      }
-      kg = raw * 0.453592;
-    }
-    widget.onContinue(kg);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final isMetric = ref.watch(unitsSystemProvider) == UnitsSystem.metric;
     return _WizardPage(
       question: "What's your weight?",
       subtitle: 'Used to calculate your daily calorie target. This saves to your Health Profile in Settings.',
-      colors: widget.colors,
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ZLabeledNumberField(
-            label: 'Weight',
-            controller: _ctrl,
-            unit: isMetric ? 'kg' : 'lbs',
-            allowDecimal: true,
-            textInputAction: TextInputAction.done,
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: AppDimens.spaceSm),
-            Text(
-              _error!,
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.statusError),
-            ),
-          ],
-          const SizedBox(height: AppDimens.spaceLg),
-          ZButton(label: 'Continue', onPressed: _submit),
-        ],
-      ),
+      colors: colors,
+      content: ZWeightPicker(initialKg: initialKg, onSubmit: onContinue),
     );
   }
 }

@@ -177,10 +177,24 @@ abstract interface class TodayRepositoryInterface {
     double? energy,
     double? stress,
     String? notes,
+    String? aiSummary,
+    String? transcript,
   });
 
-  /// Submit a body weight log entry. Always in kg — caller converts.
-  Future<void> logWeight({required double valueKg});
+  /// Sends a free-text [transcript] to the AI parser and returns structured
+  /// wellness values extracted from the text.
+  Future<WellnessParseResult> parseWellnessTranscript(String transcript);
+
+  /// Submit a body weight log entry.
+  ///
+  /// [valueKg] is always in kilograms.
+  /// [timeOfDay] must be one of `'morning'`, `'afternoon'`, or `'evening'`.
+  /// [bodyFatPct] is the body fat percentage (1.0–80.0) or null.
+  Future<void> logWeight({
+    required double valueKg,
+    required String timeOfDay,
+    double? bodyFatPct,
+  });
 
   /// Fetch the most recent log entry for each of the requested [types].
   ///
@@ -194,6 +208,12 @@ abstract interface class TodayRepositoryInterface {
   /// // latest['weight'] → { 'value_kg': 78.4, 'logged_at': '...', 'source': 'apple_health' }
   /// ```
   Future<Map<String, dynamic>> getLatestLogValues(Set<String> types);
+
+  /// Fetch up to [days] of daily-averaged weight readings, oldest first.
+  ///
+  /// Returns a list of exactly [days] entries: index 0 = oldest, index [days-1] = today.
+  /// Null means no weigh-in was recorded that day.
+  Future<List<double?>> getWeightHistory({int days = 7});
 }
 
 // ── TodayRepository ──────────────────────────────────────────────────────────
@@ -713,43 +733,58 @@ class TodayRepository implements TodayRepositoryInterface {
     double? energy,
     double? stress,
     String? notes,
+    String? aiSummary,
+    String? transcript,
   }) async {
     final now = DateTime.now();
-    if (mood != null) {
-      await submitIngest(
-          metricType: 'mood',
-          value: mood,
-          unit: '/10',
-          source: 'manual',
-          recordedAt: now);
-    }
-    if (energy != null) {
-      await submitIngest(
-          metricType: 'energy',
-          value: energy,
-          unit: '/10',
-          source: 'manual',
-          recordedAt: now);
-    }
-    if (stress != null) {
-      await submitIngest(
-          metricType: 'stress',
-          value: stress,
-          unit: '/100',
-          source: 'manual',
-          recordedAt: now);
-    }
+    final sharedMeta = <String, dynamic>{
+      if (aiSummary != null) 'ai_summary': aiSummary,
+      if (notes != null) 'notes': notes,
+      if (transcript != null) 'transcript': transcript,
+    };
+    final meta = sharedMeta.isEmpty ? null : Map<String, dynamic>.unmodifiable(sharedMeta);
+    await Future.wait([
+      if (mood != null)
+        submitIngest(metricType: 'mood', value: mood, unit: '/10', source: 'manual', recordedAt: now, metadata: meta),
+      if (energy != null)
+        submitIngest(metricType: 'energy', value: energy, unit: '/10', source: 'manual', recordedAt: now, metadata: meta),
+      if (stress != null)
+        submitIngest(metricType: 'stress', value: stress, unit: '/10', source: 'manual', recordedAt: now, metadata: meta),
+    ]);
   }
 
   @override
-  Future<void> logWeight({required double valueKg}) async {
-    debugPrint('[TodayRepo] logWeight → valueKg=$valueKg');
+  Future<WellnessParseResult> parseWellnessTranscript(
+      String transcript) async {
+    final resp = await _api.post(
+      '/api/v1/wellness/parse',
+      data: {'transcript': transcript},
+    );
+    return WellnessParseResult.fromJson(resp.data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<void> logWeight({
+    required double valueKg,
+    required String timeOfDay,
+    double? bodyFatPct,
+  }) async {
+    assert(
+      ['morning', 'afternoon', 'evening'].contains(timeOfDay),
+      'timeOfDay must be morning, afternoon, or evening — got: $timeOfDay',
+    );
+    debugPrint('[TodayRepo] logWeight → valueKg=$valueKg '
+        'timeOfDay=$timeOfDay bodyFatPct=$bodyFatPct');
     await submitIngest(
       metricType: 'weight_kg',
       value: valueKg,
       unit: 'kg',
       source: 'manual',
       recordedAt: DateTime.now(),
+      metadata: {
+        'time_of_day': timeOfDay,
+        if (bodyFatPct != null) 'body_fat_pct': bodyFatPct,
+      },
     );
     debugPrint('[TodayRepo] logWeight ✅ done');
   }
@@ -777,6 +812,43 @@ class TodayRepository implements TodayRepositoryInterface {
     'supplement': 'supplement_taken',
     'water': 'water_ml',
   };
+
+  @override
+  Future<List<double?>> getWeightHistory({int days = 7}) async {
+    debugPrint('[TodayRepo] getWeightHistory days=$days');
+    try {
+      final response = await _api.get(
+        '/api/v1/metrics/weight/history',
+        queryParameters: {'days': days},
+      );
+      final data = response.data as Map<String, dynamic>;
+      final rawList = (data['history'] as List<dynamic>? ?? const [])
+          .cast<Map<String, dynamic>>();
+
+      final byDate = <String, double>{
+        for (final m in rawList)
+          (m['date'] as String): (m['value_kg'] as num).toDouble(),
+      };
+
+      final today = DateTime.now();
+      final result = <double?>[];
+      for (var i = days - 1; i >= 0; i--) {
+        final d = DateTime(today.year, today.month, today.day)
+            .subtract(Duration(days: i));
+        final iso =
+            '${d.year.toString().padLeft(4, '0')}-'
+            '${d.month.toString().padLeft(2, '0')}-'
+            '${d.day.toString().padLeft(2, '0')}';
+        result.add(byDate[iso]);
+      }
+
+      debugPrint('[TodayRepo] getWeightHistory ← ${result.length} entries');
+      return result;
+    } catch (e, st) {
+      debugPrint('[TodayRepo] getWeightHistory failed: $e\n$st');
+      return List<double?>.filled(days, null);
+    }
+  }
 
   @override
   Future<Map<String, dynamic>> getLatestLogValues(Set<String> types) async {

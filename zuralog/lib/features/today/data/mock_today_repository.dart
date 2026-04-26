@@ -355,13 +355,32 @@ final class MockTodayRepository implements TodayRepositoryInterface {
     double? energy,
     double? stress,
     String? notes,
+    String? aiSummary,
+    String? transcript,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 600));
     // No-op in mock.
   }
 
   @override
-  Future<void> logWeight({required double valueKg}) async {
+  Future<WellnessParseResult> parseWellnessTranscript(
+      String transcript) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    return const WellnessParseResult(
+      mood: 6.0,
+      energy: 5.0,
+      stress: 4.0,
+      tags: ['calm'],
+      summary: 'Seems like a decent day.',
+    );
+  }
+
+  @override
+  Future<void> logWeight({
+    required double valueKg,
+    required String timeOfDay,
+    double? bodyFatPct,
+  }) async {
     await Future<void>.delayed(const Duration(milliseconds: 600));
     // No-op in mock.
   }
@@ -369,6 +388,11 @@ final class MockTodayRepository implements TodayRepositoryInterface {
   @override
   Future<Map<String, dynamic>> getLatestLogValues(Set<String> types) async {
     return const {};
+  }
+
+  @override
+  Future<List<double?>> getWeightHistory({int days = 7}) async {
+    return List<double?>.filled(days, null);
   }
 
   // ── Fixture Builders ──────────────────────────────────────────────────────

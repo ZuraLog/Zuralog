@@ -1,0 +1,96 @@
+/// Zuralog Design System — Log Success Overlay.
+///
+/// A full-screen celebration overlay shown after any successful log action.
+library;
+
+import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
+
+/// Full-screen log-success celebration overlay.
+///
+/// Inserts above the root navigator so it appears above bottom sheets, dialogs,
+/// and every other route. Auto-removes itself when the animation finishes.
+///
+/// ## Usage
+/// ```dart
+/// ZLogSuccessOverlay.show(context);
+/// ```
+class ZLogSuccessOverlay extends StatefulWidget {
+  const ZLogSuccessOverlay({super.key, this.onComplete});
+
+  final VoidCallback? onComplete;
+
+  static void show(BuildContext context, {VoidCallback? onComplete}) {
+    final overlay = Navigator.of(context, rootNavigator: true).overlay;
+    if (overlay == null) return;
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => ZLogSuccessOverlay(
+        onComplete: () {
+          entry.remove();
+          onComplete?.call();
+        },
+      ),
+    );
+    overlay.insert(entry);
+  }
+
+  @override
+  State<ZLogSuccessOverlay> createState() => _ZLogSuccessOverlayState();
+}
+
+class _ZLogSuccessOverlayState extends State<ZLogSuccessOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _lottieController;
+  bool _fadingOut = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _lottieController = AnimationController(vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _lottieController.dispose();
+    super.dispose();
+  }
+
+  void _onLoaded(LottieComposition composition) {
+    _lottieController.duration = composition.duration;
+    _lottieController.forward().whenComplete(_startDismiss);
+  }
+
+  void _startDismiss() {
+    if (!mounted) return;
+    setState(() => _fadingOut = true);
+    Future.delayed(const Duration(milliseconds: 350), () {
+      if (mounted) widget.onComplete?.call();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: _fadingOut ? 0.0 : 1.0,
+      duration: const Duration(milliseconds: 350),
+      child: Material(
+        type: MaterialType.transparency,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Container(color: const Color(0xD9000000)),
+            Positioned.fill(
+              child: Lottie.asset(
+                'assets/animations/checkmark.json',
+                controller: _lottieController,
+                fit: BoxFit.contain,
+                onLoaded: _onLoaded,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
