@@ -8,6 +8,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -59,6 +60,7 @@ const _kVesselIcons = <String, IconData>{
 };
 
 const double _kRingSize = 56.0;
+const String _kLastVesselPrefKey = 'water_log_last_vessel';
 
 // ── ZWaterLogPanel ─────────────────────────────────────────────────────────────
 
@@ -98,7 +100,28 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
   double _amountMl = 0;
   final TextEditingController _customController = TextEditingController();
 
+  String? _defaultVesselKey;
+  bool _initialized = false;
+
   bool get _isCustomSelected => _selectedVesselKey == 'custom';
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      _loadLastVessel();
+    }
+  }
+
+  Future<void> _loadLastVessel() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_kLastVesselPrefKey);
+    if (!mounted) return;
+    if (saved != null) {
+      setState(() => _defaultVesselKey = saved);
+    }
+  }
 
   void _handlePresetTap(_VesselPreset vessel) {
     final isImperial =
@@ -106,9 +129,13 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
     final amountMl = _toMl(vessel, isImperial: isImperial);
     if (amountMl <= 0) return;
     HapticFeedback.mediumImpact();
-    // ignore: discarded_futures — instant-save is fire-and-forget; the parent
-    // sheet handles error snackbars and pops itself when the future resolves.
+    // ignore: discarded_futures
     widget.onSave(amountMl, vesselKey: vessel.key);
+    // Persist last-used preset, fire-and-forget.
+    // ignore: discarded_futures
+    SharedPreferences.getInstance().then(
+      (p) => p.setString(_kLastVesselPrefKey, vessel.key),
+    );
   }
 
   @override
@@ -179,6 +206,14 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
         const <DailyGoal>[];
     final waterGoalMl = waterGoals.isEmpty ? null : waterGoals.first.target;
 
+    final lastWaterAsync = ref.watch(
+      latestLogValuesProvider(latestLogValuesKey(const {'water'})),
+    );
+    final lastWaterRaw = lastWaterAsync.valueOrNull?['water'];
+    final lastDrinkDate = lastWaterRaw is Map<String, dynamic>
+        ? lastWaterRaw['date'] as String?
+        : null;
+
     return Padding(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       child: Column(
@@ -190,6 +225,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
             todayMl: todayMl,
             goalMl: waterGoalMl,
             isImperial: isImperial,
+            lastDrinkDate: lastDrinkDate,
           ),
 
           const SizedBox(height: AppDimens.spaceLg),
@@ -204,6 +240,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
                 vessel: vessel,
                 isSelected: _selectedVesselKey == vessel.key,
                 amountLabel: amountLabel,
+                isDefault: vessel.key == _defaultVesselKey,
                 onTap: () => _selectVessel(vessel),
               );
             }).toList(),
@@ -252,12 +289,14 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
 /// Goal-progress ring + numeric summary row at the top of the water panel.
 ///
 /// Renders a [ZMiniRing] tinted [AppColors.categoryBody] (body blue) sized
-/// [_kRingSize] on the left, with a two-line text column on the right.
-class _WaterRingHeader extends StatelessWidget {
+/// [_kRingSize] on the left, with a text column on the right. Animates the
+/// ring with a brief scale-up when the goal is first reached.
+class _WaterRingHeader extends StatefulWidget {
   const _WaterRingHeader({
     required this.todayMl,
     required this.goalMl,
     required this.isImperial,
+    this.lastDrinkDate,
   });
 
   /// Cumulative water logged today in millilitres. `null` when nothing logged.
@@ -269,17 +308,39 @@ class _WaterRingHeader extends StatelessWidget {
   /// `true` when the user prefers imperial units (oz).
   final bool isImperial;
 
-  double get _progress {
-    final t = todayMl;
-    final g = goalMl;
-    if (t == null || g == null || g <= 0) return 0.0;
-    return (t / g).clamp(0.0, 1.0);
+  /// ISO date string ('YYYY-MM-DD') or null.
+  final String? lastDrinkDate;
+
+  @override
+  State<_WaterRingHeader> createState() => _WaterRingHeaderState();
+}
+
+class _WaterRingHeaderState extends State<_WaterRingHeader> {
+  bool _goalJustCompleted = false;
+
+  static double _computeProgress(double? todayMl, double? goalMl) {
+    if (todayMl == null || goalMl == null || goalMl <= 0) return 0.0;
+    return (todayMl / goalMl).clamp(0.0, 1.0);
+  }
+
+  @override
+  void didUpdateWidget(_WaterRingHeader oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldProgress =
+        _computeProgress(oldWidget.todayMl, oldWidget.goalMl);
+    final newProgress = _computeProgress(widget.todayMl, widget.goalMl);
+    if (oldProgress < 1.0 && newProgress >= 1.0) {
+      setState(() => _goalJustCompleted = true);
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (mounted) setState(() => _goalJustCompleted = false);
+      });
+    }
   }
 
   String _formatToday() {
-    final t = todayMl;
-    if (t == null) return '0 ${isImperial ? 'oz' : 'ml'}';
-    if (isImperial) {
+    final t = widget.todayMl;
+    if (t == null) return '0 ${widget.isImperial ? 'oz' : 'ml'}';
+    if (widget.isImperial) {
       final oz = t / _kOzToMl;
       return '${oz.toStringAsFixed(1)} oz';
     }
@@ -287,26 +348,52 @@ class _WaterRingHeader extends StatelessWidget {
   }
 
   String _formatGoalLine() {
-    final g = goalMl;
+    final g = widget.goalMl;
     if (g == null) return 'Set a water goal in Settings';
-    if (isImperial) {
+    if (widget.isImperial) {
       final oz = g / _kOzToMl;
       return 'of ${oz.toStringAsFixed(0)} oz daily goal';
     }
     return 'of ${g.toStringAsFixed(0)} ml daily goal';
   }
 
+  String? _formatLastDrink(String? dateStr) {
+    if (dateStr == null) return 'No drinks yet today';
+    try {
+      final date = DateTime.parse(dateStr).toLocal();
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final logDate = DateTime(date.year, date.month, date.day);
+      final diff = today.difference(logDate).inDays;
+      if (diff == 0) return 'Last drink: today';
+      if (diff == 1) return 'Last drink: yesterday';
+      if (diff > 1) return 'Last drink: $diff days ago';
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
+    final progress = _computeProgress(widget.todayMl, widget.goalMl);
+    final ringColor =
+        progress >= 1.0 ? AppColors.success : AppColors.categoryBody;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        ZMiniRing(
-          size: _kRingSize,
-          strokeWidth: 5,
-          value: _progress,
-          color: AppColors.categoryBody,
+        AnimatedScale(
+          scale: _goalJustCompleted ? 1.15 : 1.0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.elasticOut,
+          child: ZMiniRing(
+            size: _kRingSize,
+            strokeWidth: 5,
+            value: progress,
+            color: ringColor,
+          ),
         ),
         const SizedBox(width: AppDimens.spaceMd),
         Expanded(
@@ -327,6 +414,15 @@ class _WaterRingHeader extends StatelessWidget {
                   color: colors.textTertiary,
                 ),
               ),
+              if (_formatLastDrink(widget.lastDrinkDate) != null) ...[
+                const SizedBox(height: AppDimens.spaceXs),
+                Text(
+                  _formatLastDrink(widget.lastDrinkDate)!,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: colors.textTertiary,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -343,12 +439,16 @@ class _WaterRingHeader extends StatelessWidget {
 /// the brand sage [primary] surface with `textOnSage` foreground; unselected
 /// uses the neutral surface with a 1.5px border. Animates background and
 /// border with a 150ms ease-in-out tween.
+///
+/// When [isDefault] is true and the pill is not selected, a small dot is shown
+/// beneath the amount label as a visual hint that this was the last-used vessel.
 class _VesselPill extends StatelessWidget {
   const _VesselPill({
     required this.vessel,
     required this.isSelected,
     required this.amountLabel,
     required this.onTap,
+    this.isDefault = false,
   });
 
   final _VesselPreset vessel;
@@ -358,6 +458,10 @@ class _VesselPill extends StatelessWidget {
   final String amountLabel;
 
   final VoidCallback onTap;
+
+  /// When true, shows a small dot beneath the amount label to hint this was the
+  /// last-used vessel. Only visible when the pill is not currently selected.
+  final bool isDefault;
 
   @override
   Widget build(BuildContext context) {
@@ -413,6 +517,17 @@ class _VesselPill extends StatelessWidget {
                       color: foregroundColor,
                     ),
                   ),
+                if (isDefault && !isSelected) ...[
+                  const SizedBox(height: 2),
+                  Container(
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: colors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
               ],
             ),
           ],

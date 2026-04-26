@@ -1,24 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/buttons/z_button.dart';
+import 'package:zuralog/shared/widgets/charts/z_mini_ring.dart';
 import 'package:zuralog/shared/widgets/log_panels/z_water_log_panel.dart';
 
-Widget _wrap(Widget child, {
+Widget _wrap(
+  Widget child, {
   UnitsSystem units = UnitsSystem.metric,
   List<DailyGoal> goals = const <DailyGoal>[],
+  Map<String, dynamic> lastWater = const <String, dynamic>{},
+  TodayLogSummary summary = TodayLogSummary.empty,
 }) {
   return ProviderScope(
     overrides: [
-      todayLogSummaryProvider.overrideWith(
-        (ref) async => TodayLogSummary.empty,
-      ),
+      todayLogSummaryProvider.overrideWith((ref) async => summary),
       dailyGoalsProvider.overrideWith((ref) async => goals),
+      latestLogValuesProvider(latestLogValuesKey(const {'water'}))
+          .overrideWith((ref) async => lastWater),
       unitsSystemProvider.overrideWithValue(units),
     ],
     child: MaterialApp(home: Scaffold(body: child)),
@@ -35,6 +41,10 @@ Future<void> _settle(WidgetTester tester) async {
 
 void main() {
   group('ZWaterLogPanel', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
     testWidgets('Add Water button is absent before any selection', (tester) async {
       await tester.pumpWidget(_wrap(ZWaterLogPanel(
         onSave: (ml, {String? vesselKey}) async {},
@@ -175,6 +185,135 @@ void main() {
       )));
       await _settle(tester);
       expect(find.widgetWithText(ZButton, 'Add Water'), findsNothing);
+    });
+
+    testWidgets('Smart default: persisted vessel renders the indicator dot',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({'water_log_last_vessel': 'glass'});
+      await tester.pumpWidget(_wrap(ZWaterLogPanel(
+        onSave: (ml, {String? vesselKey}) async {},
+        onBack: () {},
+      )));
+      await tester.pump(); // first frame
+      await tester.pump(const Duration(milliseconds: 50)); // SharedPreferences load
+
+      // The Glass pill should now contain a 4×4 circle Container (the dot).
+      final glassPillFinder = find.ancestor(
+        of: find.text('Glass'),
+        matching: find.byType(GestureDetector),
+      );
+      expect(glassPillFinder, findsOneWidget);
+
+      final dot = find.descendant(
+        of: glassPillFinder,
+        matching: find.byWidgetPredicate((w) =>
+            w is Container &&
+            (w.decoration is BoxDecoration) &&
+            ((w.decoration as BoxDecoration).shape == BoxShape.circle)),
+      );
+      expect(dot, findsOneWidget);
+    });
+
+    testWidgets('Last drink hint reads "Last drink: today" when date == today',
+        (tester) async {
+      final today = DateTime.now();
+      final iso = '${today.year.toString().padLeft(4, '0')}-'
+          '${today.month.toString().padLeft(2, '0')}-'
+          '${today.day.toString().padLeft(2, '0')}';
+      await tester.pumpWidget(_wrap(
+        ZWaterLogPanel(
+          onSave: (ml, {String? vesselKey}) async {},
+          onBack: () {},
+        ),
+        lastWater: {
+          'water': {'value': 250.0, 'unit': 'mL', 'date': iso},
+        },
+      ));
+      await tester.pump();
+      expect(find.text('Last drink: today'), findsOneWidget);
+    });
+
+    testWidgets('Last drink hint reads "Last drink: yesterday"', (tester) async {
+      final y = DateTime.now().subtract(const Duration(days: 1));
+      final iso = '${y.year.toString().padLeft(4, '0')}-'
+          '${y.month.toString().padLeft(2, '0')}-'
+          '${y.day.toString().padLeft(2, '0')}';
+      await tester.pumpWidget(_wrap(
+        ZWaterLogPanel(
+          onSave: (ml, {String? vesselKey}) async {},
+          onBack: () {},
+        ),
+        lastWater: {
+          'water': {'value': 250.0, 'unit': 'mL', 'date': iso},
+        },
+      ));
+      await tester.pump();
+      expect(find.text('Last drink: yesterday'), findsOneWidget);
+    });
+
+    testWidgets('Last drink hint shows empty state when no log exists',
+        (tester) async {
+      await tester.pumpWidget(_wrap(ZWaterLogPanel(
+        onSave: (ml, {String? vesselKey}) async {},
+        onBack: () {},
+      )));
+      await tester.pump();
+      expect(find.text('No drinks yet today'), findsOneWidget);
+    });
+
+    testWidgets('Ring colour switches to success when goal is reached',
+        (tester) async {
+      await tester.pumpWidget(_wrap(
+        ZWaterLogPanel(
+          onSave: (ml, {String? vesselKey}) async {},
+          onBack: () {},
+        ),
+        summary: const TodayLogSummary(
+          loggedTypes: <String>{'water'},
+          latestValues: <String, dynamic>{'water': 2000.0},
+        ),
+        goals: [
+          const DailyGoal(
+            id: 'g1',
+            label: 'Water',
+            current: 2000.0,
+            target: 2000.0,
+            unit: 'mL',
+          ),
+        ],
+      ));
+      await tester.pump();
+      final ring = tester.widget<ZMiniRing>(find.byType(ZMiniRing));
+      expect(ring.color, AppColors.success);
+      // The goal-completion animation schedules a 400ms timer inside
+      // _WaterRingHeaderState.didUpdateWidget. Drain it so the widget tree
+      // can be disposed cleanly without a "pending timers" assertion.
+      await tester.pump(const Duration(milliseconds: 400));
+    });
+
+    testWidgets('Ring colour is categoryBody mid-progress', (tester) async {
+      await tester.pumpWidget(_wrap(
+        ZWaterLogPanel(
+          onSave: (ml, {String? vesselKey}) async {},
+          onBack: () {},
+        ),
+        summary: const TodayLogSummary(
+          loggedTypes: <String>{'water'},
+          latestValues: <String, dynamic>{'water': 1000.0},
+        ),
+        goals: [
+          const DailyGoal(
+            id: 'g1',
+            label: 'Water',
+            current: 1000.0,
+            target: 2000.0,
+            unit: 'mL',
+          ),
+        ],
+      ));
+      await tester.pump();
+      final ring = tester.widget<ZMiniRing>(find.byType(ZMiniRing));
+      expect(ring.color, AppColors.categoryBody);
     });
   });
 }
