@@ -57,14 +57,54 @@ void main() {
       await tester.pumpWidget(
         _themed(
           ZSentimentSelector(
-            selectedLevel: 4,
+            selectedLevel: 1,
             onChanged: (_) {},
           ),
         ),
       );
 
-      // Widget should build without error when a level is pre-selected.
-      expect(find.byType(ZSentimentSelector), findsOneWidget);
+      // All 5 AnimatedContainers must be present.
+      expect(find.byType(AnimatedContainer), findsNWidgets(5));
+
+      // The first container (index 0, level 1) should be selected — its
+      // BoxDecoration color is non-null (tinted), while the others use the
+      // surface color (also non-null but different).  We verify by checking
+      // that the selected container's decoration differs from the last one's.
+      final containers = tester
+          .widgetList<AnimatedContainer>(find.byType(AnimatedContainer))
+          .toList();
+
+      final selectedDecoration =
+          containers.first.decoration as BoxDecoration;
+      final unselectedDecoration =
+          containers.last.decoration as BoxDecoration;
+
+      expect(selectedDecoration.color, isNotNull);
+      expect(unselectedDecoration.color, isNotNull);
+      expect(selectedDecoration.color, isNot(equals(unselectedDecoration.color)));
+    });
+
+    testWidgets('reversed: true — icon order flips but level emission stays 1–5', (tester) async {
+      int? tappedLevel;
+      await tester.pumpWidget(
+        _themed(
+          ZSentimentSelector(
+            reversed: true,
+            selectedLevel: null,
+            onChanged: (level) => tappedLevel = level,
+          ),
+        ),
+      );
+
+      // 5 icons must render.
+      expect(find.byType(GestureDetector), findsNWidgets(5));
+
+      // Tap the leftmost icon (position 0) — should still emit level 1.
+      final detectors = find.byType(GestureDetector);
+      await tester.tap(detectors.at(0));
+      await tester.pump();
+
+      expect(tappedLevel, 1);
     });
   });
 }

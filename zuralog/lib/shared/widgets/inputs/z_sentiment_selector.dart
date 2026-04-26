@@ -61,6 +61,14 @@ class ZSentimentSelector extends StatelessWidget {
     Icons.sentiment_very_satisfied_rounded,
   ];
 
+  static const List<String> _semanticLabels = [
+    'Very dissatisfied',
+    'Dissatisfied',
+    'Neutral',
+    'Satisfied',
+    'Very satisfied',
+  ];
+
   static const List<Color> _colors = [
     AppColors.categoryHeart,       // index 0 — red
     AppColors.categoryNutrition,   // index 1 — amber
@@ -79,36 +87,41 @@ class ZSentimentSelector extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: List.generate(5, (index) {
           final level = index + 1; // 1-based level emitted to onChanged
-          final colorIndex = reversed ? (4 - index) : index;
-          final color = _colors[colorIndex];
+          final iconIndex = reversed ? (4 - index) : index;
+          final color = _colors[iconIndex];
           final isSelected = selectedLevel == level;
 
-          return GestureDetector(
-            onTap: () {
-              HapticFeedback.selectionClick();
-              onChanged(level);
-            },
-            behavior: HitTestBehavior.opaque,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              curve: Curves.easeInOut,
-              width: AppDimens.touchTargetMin,
-              height: AppDimens.touchTargetMin,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isSelected
-                    ? color.withValues(alpha: 0.15)
-                    : colors.surface,
-                border: Border.all(
-                  color: isSelected ? color : colors.border,
-                  width: isSelected ? 2.0 : 1.5,
+          return Semantics(
+            label: _semanticLabels[iconIndex],
+            button: true,
+            selected: isSelected,
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onChanged(level);
+              },
+              behavior: HitTestBehavior.opaque,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                curve: Curves.easeInOut,
+                width: AppDimens.touchTargetMin,
+                height: AppDimens.touchTargetMin,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isSelected
+                      ? color.withValues(alpha: 0.15)
+                      : colors.surface,
+                  border: Border.all(
+                    color: isSelected ? color : colors.border,
+                    width: isSelected ? 2.0 : 1.5,
+                  ),
                 ),
-              ),
-              child: Center(
-                child: Icon(
-                  _icons[index],
-                  size: AppDimens.iconMd,
-                  color: isSelected ? color : colors.textTertiary,
+                child: Center(
+                  child: Icon(
+                    _icons[iconIndex],
+                    size: AppDimens.iconMd,
+                    color: isSelected ? color : colors.textTertiary,
+                  ),
                 ),
               ),
             ),
