@@ -105,6 +105,11 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
   /// Whether the inline edit TextField is currently shown.
   bool _isEditing = false;
 
+  String _timeOfDay = 'morning';
+  double? _bodyFatPct;
+  bool _bodyFatExpanded = false;
+  static const double _kDefaultBodyFatPct = 20.0;
+
   /// Controller for the inline edit TextField.
   final TextEditingController _editController = TextEditingController();
 
@@ -147,6 +152,15 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
     } else {
       final units = ref.read(unitsSystemProvider);
       setState(() => _isKg = units == UnitsSystem.metric);
+    }
+    final hour = DateTime.now().hour;
+    final auto = hour < 12
+        ? 'morning'
+        : hour < 18
+            ? 'afternoon'
+            : 'evening';
+    if (mounted) {
+      setState(() => _timeOfDay = auto);
     }
   }
 
@@ -203,11 +217,12 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
   }
 
   Future<void> _handleSave() async {
-    debugPrint('[WeightLog] 📤 Save tapped — value=$_value kg');
+    debugPrint('[WeightLog] 📤 Save tapped — value=$_value kg '
+        'timeOfDay=$_timeOfDay bodyFatPct=$_bodyFatPct');
     await widget.onSave(WeightLogData(
       valueKg: _value,
-      timeOfDay: 'morning', // placeholder — Plan C wires real state
-      bodyFatPct: null,     // placeholder — Plan C wires real state
+      timeOfDay: _timeOfDay,
+      bodyFatPct: _bodyFatPct,
     ));
     debugPrint('[WeightLog] ✅ onSave callback returned');
   }
@@ -429,6 +444,31 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
 
           const SizedBox(height: AppDimens.spaceLg),
 
+          // ── Time-of-day chips ──────────────────────────────────────────────────
+          _TimeChipRow(
+            selected: _timeOfDay,
+            onSelect: (key) => setState(() => _timeOfDay = key),
+          ),
+
+          const SizedBox(height: AppDimens.spaceMd),
+
+          // ── Body fat % collapsible ────────────────────────────────────────────
+          _BodyFatRow(
+            expanded: _bodyFatExpanded,
+            value: _bodyFatPct,
+            onExpand: () => setState(() {
+              _bodyFatExpanded = true;
+              _bodyFatPct ??= _kDefaultBodyFatPct;
+            }),
+            onChange: (v) => setState(() => _bodyFatPct = v),
+            onCollapse: () => setState(() {
+              _bodyFatExpanded = false;
+              _bodyFatPct = null;
+            }),
+          ),
+
+          const SizedBox(height: AppDimens.spaceMd),
+
           // ── Save button ───────────────────────────────────────────────────
           ZButton(
             label: 'Save Weight',
@@ -477,6 +517,141 @@ class _UnitChip extends StatelessWidget {
             color: isSelected ? colors.textOnSage : colors.textPrimary,
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── _TimeChipRow ───────────────────────────────────────────────────────────────
+
+class _TimeChipRow extends StatelessWidget {
+  const _TimeChipRow({required this.selected, required this.onSelect});
+
+  final String selected;
+  final ValueChanged<String> onSelect;
+
+  static const _options = <_TimeOption>[
+    _TimeOption(key: 'morning',   label: 'Morning'),
+    _TimeOption(key: 'afternoon', label: 'Afternoon'),
+    _TimeOption(key: 'evening',   label: 'Evening'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (var i = 0; i < _options.length; i++) ...[
+          _UnitChip(
+            label: _options[i].label,
+            isSelected: selected == _options[i].key,
+            onTap: () => onSelect(_options[i].key),
+          ),
+          if (i < _options.length - 1) const SizedBox(width: AppDimens.spaceSm),
+        ],
+      ],
+    );
+  }
+}
+
+class _TimeOption {
+  const _TimeOption({required this.key, required this.label});
+  final String key;
+  final String label;
+}
+
+// ── _BodyFatRow ────────────────────────────────────────────────────────────────
+
+class _BodyFatRow extends StatelessWidget {
+  const _BodyFatRow({
+    required this.expanded,
+    required this.value,
+    required this.onExpand,
+    required this.onChange,
+    required this.onCollapse,
+  });
+
+  final bool expanded;
+  final double? value;
+  final VoidCallback onExpand;
+  final ValueChanged<double> onChange;
+  final VoidCallback onCollapse;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    if (!expanded) {
+      return InkWell(
+        borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+        onTap: onExpand,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimens.spaceSm,
+            vertical: AppDimens.spaceSm,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.add_rounded, size: AppDimens.iconSm,
+                  color: colors.textSecondary),
+              const SizedBox(width: AppDimens.spaceXs),
+              Text(
+                'Body fat %',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    final v = value ?? 20.0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceXs),
+      child: Row(
+        children: [
+          Text(
+            'Body fat',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: colors.textPrimary,
+            ),
+          ),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.chevron_left_rounded),
+            iconSize: 28,
+            color: colors.textSecondary,
+            onPressed: () => onChange((v - 0.1).clamp(1.0, 80.0)),
+            tooltip: 'Decrease body fat',
+          ),
+          SizedBox(
+            width: 56,
+            child: Text(
+              '${v.toStringAsFixed(1)}%',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.titleMedium.copyWith(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.chevron_right_rounded),
+            iconSize: 28,
+            color: colors.textSecondary,
+            onPressed: () => onChange((v + 0.1).clamp(1.0, 80.0)),
+            tooltip: 'Increase body fat',
+          ),
+          const SizedBox(width: AppDimens.spaceXs),
+          IconButton(
+            icon: const Icon(Icons.close_rounded),
+            iconSize: AppDimens.iconSm,
+            color: colors.textTertiary,
+            onPressed: onCollapse,
+            tooltip: 'Remove body fat',
+          ),
+        ],
       ),
     );
   }
