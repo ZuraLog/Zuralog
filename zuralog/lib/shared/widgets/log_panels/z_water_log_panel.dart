@@ -156,7 +156,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
       _showBadge = true;
       _badgeKey++;
     });
-    Future.delayed(const Duration(milliseconds: 800), () {
+    Future.delayed(const Duration(milliseconds: 1500), () {
       if (mounted) setState(() => _showBadge = false);
     });
   }
@@ -543,9 +543,10 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
                 child: TweenAnimationBuilder<double>(
                   key: ValueKey(_badgeKey),
                   tween: Tween(begin: 0.0, end: 1.0),
-                  duration: const Duration(milliseconds: 700),
+                  duration: const Duration(milliseconds: 1400),
                   builder: (_, t, child) => Opacity(
-                    opacity: (1.0 - t * 1.5).clamp(0.0, 1.0),
+                    // Hold at full opacity for first 60%, then fade out
+                    opacity: t < 0.6 ? 1.0 : (1.0 - (t - 0.6) / 0.4).clamp(0.0, 1.0),
                     child: Transform.translate(
                       offset: Offset(0, -50 * t),
                       child: child,

@@ -72,8 +72,8 @@ void main() {
 
       expect(savedAmount, closeTo(250.0, 0.01));
       expect(savedVesselKey, 'glass');
-      // Drain animation controller (400ms) + badge dismiss timer (800ms).
-      await tester.pump(const Duration(milliseconds: 800));
+      // Drain animation controller (400ms) + badge dismiss timer (1500ms).
+      await tester.pump(const Duration(milliseconds: 1500));
     });
 
     testWidgets('Tapping Small cup pill instant-saves 150 ml with vesselKey "small_cup"',
@@ -94,7 +94,7 @@ void main() {
 
       expect(savedAmount, closeTo(150.0, 0.01));
       expect(savedVesselKey, 'small_cup');
-      await tester.pump(const Duration(milliseconds: 800));
+      await tester.pump(const Duration(milliseconds: 1500));
     });
 
     testWidgets('Tapping Bottle pill instant-saves 500 ml with vesselKey "bottle"',
@@ -115,7 +115,7 @@ void main() {
 
       expect(savedAmount, closeTo(500.0, 0.01));
       expect(savedVesselKey, 'bottle');
-      await tester.pump(const Duration(milliseconds: 800));
+      await tester.pump(const Duration(milliseconds: 1500));
     });
 
     testWidgets('Tapping Large bottle pill instant-saves 750 ml with vesselKey "large"',
@@ -136,7 +136,7 @@ void main() {
 
       expect(savedAmount, closeTo(750.0, 0.01));
       expect(savedVesselKey, 'large');
-      await tester.pump(const Duration(milliseconds: 800));
+      await tester.pump(const Duration(milliseconds: 1500));
     });
 
     testWidgets('Custom flow saves entered amount with vesselKey null',
@@ -164,7 +164,7 @@ void main() {
 
       expect(savedAmount, closeTo(300.0, 0.01));
       expect(savedVesselKey, isNull);
-      await tester.pump(const Duration(milliseconds: 800));
+      await tester.pump(const Duration(milliseconds: 1500));
     });
 
     testWidgets('In imperial mode vessel chips show oz labels', (tester) async {
@@ -201,7 +201,7 @@ void main() {
       // 8 oz * 29.5735 = 236.588 ml
       expect(savedAmount, closeTo(236.6, 1.0));
       expect(savedVesselKey, 'glass');
-      await tester.pump(const Duration(milliseconds: 800));
+      await tester.pump(const Duration(milliseconds: 1500));
     });
 
     testWidgets('No Add Water button is rendered for preset-only flow',
