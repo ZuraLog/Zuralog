@@ -1,3 +1,42 @@
+## 2026-04-26 — Weight Log Overhaul: Large Number Input, Time-of-Day Chips, 7-Day Sparkline
+
+**Branch:** `feat/weight-log-overhaul`
+
+Completely redesigned the weight logging panel with a premium numeric input experience, metadata tracking, and data visualization.
+
+**What was built:**
+
+- **Large number display** (`weight_panel.dart`): The weight value now displays in a prominent 58px sans-serif number. Full-height left and right tap zones (`‹` `›`) allow stepping the value by 0.1 kg/lbs on each tap. Long-pressing either chevron triggers continuous fast-scroll for rapid adjustments, with haptic feedback on each step.
+
+- **Tap-to-edit keyboard entry** (`weight_panel.dart`): Tapping the large number opens a `TextField` for direct numeric input from the device keyboard. The field is pre-filled with the current value and accepts decimal input. Saves on confirm/blur.
+
+- **Last-logged delta strip** (`weight_panel.dart`): A 2-line row appears directly below the number showing the previous logged weight and a live delta pill (e.g., "+0.3 kg", "-1.2 lbs"). Uses color coding to indicate upward/downward trends.
+
+- **Time-of-day metadata chips** (`weight_panel.dart`): Three toggle chips (Morning, Afternoon, Evening) are auto-selected based on the current hour and saved as `time_of_day` metadata with each log. Helps users track which time of day they usually weigh themselves. Only one chip can be active at a time.
+
+- **Collapsible body fat % row** (`weight_panel.dart`): An optional expandable row below the time-of-day chips allows logging body fat percentage (0.1% steps, 1–80% range). The field is collapsed by default, with a tap-to-expand interaction. Saved as `body_fat_pct` metadata.
+
+- **7-day sparkline visualization** (`weight_panel.dart`): A lightweight line chart using `ZMiniSparkline` component appears above the Save button, showing the last 7 days of logged weight values. Provides instant visual context of recent trends without requiring a separate detail screen.
+
+- **Fixed pre-fill bug** (`weight_panel.dart`): The previous weight values were being read from the wrong map keys. Updated `getLatestLogValues` to use the correct Supabase column names so pre-fill works reliably on every fresh load.
+
+- **Backend support** (`cloud-brain/app/api/v1/metrics.py`): New `GET /api/v1/metrics/weight/history?days=7` endpoint returns the last N days of weight logs as `[{timestamp, value, unit, time_of_day, body_fat_pct}, ...]` to feed the sparkline UI.
+
+- **logWeight function extended** (`weight_panel.dart`, repository, API): The `logWeight` call now sends an optional `metadata` object containing `time_of_day` (string: "morning", "afternoon", "evening") and `body_fat_pct` (number, optional). The backend stores these as structured JSON in the metadata column of the metrics table.
+
+**Files created:**
+- None (all changes to existing weight panel files)
+
+**Files modified:**
+- `zuralog/lib/features/progress/presentation/widgets/weight_panel.dart`
+- `zuralog/lib/features/progress/data/progress_repository.dart`
+- `zuralog/lib/features/progress/providers/progress_providers.dart`
+- `cloud-brain/app/api/v1/metrics.py`
+- `zuralog/test/features/progress/presentation/weight_panel_test.dart`
+- `zuralog/test/features/progress/providers/progress_providers_test.dart`
+
+---
+
 ## 2026-04-23 — Exercise Catalogue Expansion: 839 Exercises, Equipment Filter, Image Assets
 
 **Branch:** `feat/exercise-catalogue-expansion`
