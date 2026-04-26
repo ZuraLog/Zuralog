@@ -42,6 +42,7 @@ class WellnessLogData {
     this.notes,
     this.tags = const [],
     this.aiSummary,
+    this.transcript,
   });
 
   final double? mood;
@@ -50,6 +51,10 @@ class WellnessLogData {
   final String? notes;
   final List<String> tags;
   final String? aiSummary;
+
+  /// Raw transcript of what the user said or wrote, only set when the user
+  /// opts in via the "Remember my words" toggle.
+  final String? transcript;
 }
 
 // ── State enum ─────────────────────────────────────────────────────────────────
@@ -99,6 +104,10 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
 
   _WellnessState _state = _WellnessState.idle;
 
+  // ── Save guard ────────────────────────────────────────────────────────────
+
+  bool _saving = false;
+
   // ── Connectivity ──────────────────────────────────────────────────────────
 
   bool _isOnline = true;
@@ -144,6 +153,7 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
 
   @override
   void dispose() {
+    if (_speech.isListening) _speech.stop();
     _writeController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -205,6 +215,7 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
 
   Future<void> _parseTranscript(String text) async {
     setState(() => _state = _WellnessState.parsing);
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final repo = ref.read(todayRepositoryProvider);
       final result = await repo.parseWellnessTranscript(text);
@@ -220,7 +231,7 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _state = _WellnessState.idle);
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(
           content: Text('Could not parse your check-in. Please try again.'),
         ),
@@ -231,38 +242,53 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
   // ── Save helpers ──────────────────────────────────────────────────────────
 
   Future<void> _saveConfirmed({bool continueWithZura = false}) async {
-    final data = WellnessLogData(
-      mood: _moodLevel != null ? _levelToValue(_moodLevel!) : null,
-      energy: _energyLevel != null ? _levelToValue(_energyLevel!) : null,
-      stress: _stressLevel != null ? _levelToValue(_stressLevel!) : null,
-      tags: _selectedTags,
-      aiSummary: _aiSummary.isNotEmpty ? _aiSummary : null,
-    );
-    HapticFeedback.mediumImpact();
-    await widget.onSave(data);
-    if (!mounted) return;
-    ZLogSuccessOverlay.show(context);
-    if (continueWithZura) {
-      await Future.delayed(const Duration(milliseconds: 300));
-      if (mounted) context.goNamed(RouteNames.coach);
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      final data = WellnessLogData(
+        mood: _moodLevel != null ? _levelToValue(_moodLevel!) : null,
+        energy: _energyLevel != null ? _levelToValue(_energyLevel!) : null,
+        stress: _stressLevel != null ? _levelToValue(_stressLevel!) : null,
+        tags: _selectedTags,
+        aiSummary: _aiSummary.isNotEmpty ? _aiSummary : null,
+        transcript: _saveTranscript && _savedTranscript.isNotEmpty
+            ? _savedTranscript
+            : null,
+      );
+      HapticFeedback.mediumImpact();
+      await widget.onSave(data);
+      if (!mounted) return;
+      ZLogSuccessOverlay.show(context);
+      if (continueWithZura) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (mounted) context.goNamed(RouteNames.coach);
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
   Future<void> _saveQuickCheckin({bool continueWithZura = false}) async {
-    final data = WellnessLogData(
-      mood: _quickMood != null ? _levelToValue(_quickMood!) : null,
-      energy: _quickEnergy != null ? _levelToValue(_quickEnergy!) : null,
-      stress: _quickStress != null ? _levelToValue(_quickStress!) : null,
-      notes: _notesController.text.isNotEmpty ? _notesController.text : null,
-      tags: _quickTags,
-    );
-    HapticFeedback.mediumImpact();
-    await widget.onSave(data);
-    if (!mounted) return;
-    ZLogSuccessOverlay.show(context);
-    if (continueWithZura) {
-      await Future.delayed(const Duration(milliseconds: 300));
-      if (mounted) context.goNamed(RouteNames.coach);
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      final data = WellnessLogData(
+        mood: _quickMood != null ? _levelToValue(_quickMood!) : null,
+        energy: _quickEnergy != null ? _levelToValue(_quickEnergy!) : null,
+        stress: _quickStress != null ? _levelToValue(_quickStress!) : null,
+        notes: _notesController.text.isNotEmpty ? _notesController.text : null,
+        tags: _quickTags,
+      );
+      HapticFeedback.mediumImpact();
+      await widget.onSave(data);
+      if (!mounted) return;
+      ZLogSuccessOverlay.show(context);
+      if (continueWithZura) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (mounted) context.goNamed(RouteNames.coach);
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -392,6 +418,8 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
         AppTextField(
           controller: _writeController,
           hintText: "Just write how you're feeling...",
+          maxLines: null,
+          maxLength: 2000,
         ),
         const SizedBox(height: AppDimens.spaceMd),
         ZButton(
@@ -534,13 +562,34 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
 
         ZButton(
           label: 'Save check-in',
-          onPressed: _saveConfirmed,
+          onPressed: !_saving ? _saveConfirmed : null,
         ),
         const SizedBox(height: AppDimens.spaceSm),
         ZButton(
           label: 'Talk to Zura about this',
           variant: ZButtonVariant.secondary,
-          onPressed: () => _saveConfirmed(continueWithZura: true),
+          onPressed: !_saving ? () => _saveConfirmed(continueWithZura: true) : null,
+        ),
+        const SizedBox(height: AppDimens.spaceSm),
+        Center(
+          child: TextButton(
+            onPressed: () => setState(() {
+              _state = _WellnessState.idle;
+              _moodLevel = null;
+              _energyLevel = null;
+              _stressLevel = null;
+              _selectedTags = [];
+              _aiSummary = '';
+              _savedTranscript = '';
+              _saveTranscript = false;
+            }),
+            child: Text(
+              'Start over',
+              style: AppTextStyles.labelMedium.copyWith(
+                color: AppColorsOf(context).textTertiary,
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -604,20 +653,22 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
         AppTextField(
           controller: _notesController,
           hintText: 'Anything else on your mind?',
+          maxLength: 500,
         ),
 
         const SizedBox(height: AppDimens.spaceLg),
 
         ZButton(
           label: 'Save check-in',
-          onPressed: canSave ? _saveQuickCheckin : null,
+          onPressed: (canSave && !_saving) ? _saveQuickCheckin : null,
         ),
         const SizedBox(height: AppDimens.spaceSm),
         ZButton(
           label: 'Talk to Zura about this',
           variant: ZButtonVariant.secondary,
-          onPressed:
-              canSave ? () => _saveQuickCheckin(continueWithZura: true) : null,
+          onPressed: (canSave && !_saving)
+              ? () => _saveQuickCheckin(continueWithZura: true)
+              : null,
         ),
       ],
     );
