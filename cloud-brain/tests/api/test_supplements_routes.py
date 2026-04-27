@@ -163,3 +163,57 @@ def test_user_supplement_has_structured_dose_fields():
     assert hasattr(s, "dose_amount")
     assert hasattr(s, "dose_unit")
     assert hasattr(s, "form")
+
+
+def test_post_supplements_accepts_structured_dose_fields(client):
+    payload = {
+        "supplements": [
+            {
+                "name": "Vitamin D",
+                "dose_amount": 5000,
+                "dose_unit": "IU",
+                "form": "capsule",
+                "timing": "morning",
+            }
+        ]
+    }
+    resp = client.post("/api/v1/supplements", json=payload, headers=AUTH_HEADER)
+    assert resp.status_code == 200
+    s = resp.json()["supplements"][0]
+    assert s["dose_amount"] == 5000.0
+    assert s["dose_unit"] == "IU"
+    assert s["form"] == "capsule"
+
+
+def test_post_supplements_new_fields_default_to_none(client):
+    payload = {"supplements": [{"name": "Magnesium"}]}
+    resp = client.post("/api/v1/supplements", json=payload, headers=AUTH_HEADER)
+    assert resp.status_code == 200
+    s = resp.json()["supplements"][0]
+    assert s["dose_amount"] is None
+    assert s["dose_unit"] is None
+    assert s["form"] is None
+
+
+def test_get_supplements_returns_structured_dose_fields(client, mock_db):
+    from app.models.user_supplement import UserSupplement
+    from decimal import Decimal
+
+    row = UserSupplement(
+        id="abc",
+        name="Omega-3",
+        dose=None,
+        timing="evening",
+        dose_amount=Decimal("1000"),
+        dose_unit="mg",
+        form="softgel",
+        sort_order=0,
+    )
+    mock_db.execute.return_value.scalars.return_value.all.return_value = [row]
+
+    resp = client.get("/api/v1/supplements", headers=AUTH_HEADER)
+    assert resp.status_code == 200
+    s = resp.json()["supplements"][0]
+    assert s["dose_amount"] == 1000.0
+    assert s["dose_unit"] == "mg"
+    assert s["form"] == "softgel"

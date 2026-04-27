@@ -25,6 +25,9 @@ class SupplementItem(BaseModel):
     name: str = Field(max_length=200)
     dose: str | None = Field(default=None, max_length=100)
     timing: str | None = Field(default=None, max_length=50)
+    dose_amount: float | None = Field(default=None, ge=0)
+    dose_unit: str | None = Field(default=None, max_length=20)
+    form: str | None = Field(default=None, max_length=20)
 
 
 class SupplementListRequest(BaseModel):
@@ -36,6 +39,9 @@ class SupplementResponse(BaseModel):
     name: str
     dose: str | None
     timing: str | None
+    dose_amount: float | None
+    dose_unit: str | None
+    form: str | None
 
 
 class SupplementListResponse(BaseModel):
@@ -51,6 +57,9 @@ def _row_to_response(row: UserSupplement) -> SupplementResponse:
         name=row.name,
         dose=row.dose,
         timing=row.timing,
+        dose_amount=float(row.dose_amount) if row.dose_amount is not None else None,
+        dose_unit=row.dose_unit,
+        form=row.form,
     )
 
 
@@ -111,6 +120,9 @@ async def replace_supplements(
             name=item.name,
             dose=item.dose,
             timing=item.timing,
+            dose_amount=item.dose_amount,
+            dose_unit=item.dose_unit,
+            form=item.form,
             sort_order=idx,
             is_active=True,
         )
