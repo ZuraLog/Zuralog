@@ -186,5 +186,3 @@ class ExerciseGridTile extends ConsumerWidget {
     );
   }
 }
-
-}
