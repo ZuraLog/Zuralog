@@ -15,6 +15,7 @@
 /// - [userLoggedTypesProvider]        — set of metric types user has ever logged
 /// - [dailyGoalsProvider]             — user's daily goals with today's progress
 /// - [supplementsListProvider]        — user's saved supplement and medication list
+/// - [supplementsTodayLogProvider]    — which supplements have been logged today
 /// - [stepsLogModeProvider]           — persisted steps log mode (add vs override)
 /// - [mealLogModeProvider]             — persisted meal log mode (quick vs full)
 /// (quickLogLoadingProvider removed — superseded by FAB system in Part 2)
@@ -29,6 +30,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/today/data/today_repository.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
+import 'package:zuralog/features/today/domain/supplement_today_entry.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
 // ── Repository ────────────────────────────────────────────────────────────────
@@ -192,6 +194,30 @@ final supplementsListProvider =
     return await repo.getSupplementsList();
   } catch (e, st) {
     debugPrint('supplementsListProvider failed: $e\n$st');
+    return const [];
+  }
+});
+
+// ── Supplements Today Log ─────────────────────────────────────────────────────
+
+/// Which supplements have already been logged today, keyed by supplement_id.
+///
+/// Returns supplement_id + log_id pairs so the check-off panel knows which
+/// rows are already ticked and can pass the correct log_id to the delete
+/// endpoint for the undo / uncheck operation.
+///
+/// Never puts the UI into an error state — returns empty list on any failure
+/// so the panel defaults to "nothing logged yet" rather than showing an error.
+///
+/// Invalidate after every tap (check-in or undo) so the panel reflects the
+/// new state immediately.
+final supplementsTodayLogProvider =
+    FutureProvider<List<SupplementTodayLogEntry>>((ref) async {
+  final repo = ref.read(todayRepositoryProvider);
+  try {
+    return await repo.getSupplementsTodayLog();
+  } catch (e, st) {
+    debugPrint('supplementsTodayLogProvider failed: $e\n$st');
     return const [];
   }
 });
