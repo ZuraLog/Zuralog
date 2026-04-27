@@ -269,7 +269,13 @@ class _StackBody extends StatelessWidget {
       children: [
         Expanded(
           child: supplements.isEmpty
-              ? _EmptyState(onAdd: onAdd)
+              ? ZEmptyState(
+                  icon: Icons.medication_outlined,
+                  title: 'No supplements yet',
+                  message: 'Add the supplements and meds you take regularly.',
+                  actionLabel: 'Add supplement',
+                  onAction: onAdd,
+                )
               : ReorderableListView.builder(
                   padding: const EdgeInsets.only(
                     top: AppDimens.spaceMd,
@@ -304,49 +310,6 @@ class _StackBody extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-// ── Empty State ───────────────────────────────────────────────────────────────
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onAdd});
-
-  final VoidCallback onAdd;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceLg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.medication_outlined,
-              size: 48,
-              color: colors.textSecondary,
-            ),
-            const SizedBox(height: AppDimens.spaceMd),
-            Text(
-              'No supplements yet',
-              style: AppTextStyles.titleMedium.copyWith(
-                color: colors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: AppDimens.spaceXs),
-            Text(
-              'Add the supplements and meds you take regularly.',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: colors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -649,40 +612,13 @@ class _AddEditFormState extends ConsumerState<_AddEditForm> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Scan label button
-                GestureDetector(
-                  onTap: _openScanSheet,
-                  child: Builder(
-                    builder: (context) {
-                      final colors = AppColorsOf(context);
-                      return Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppDimens.spaceMd,
-                          vertical: AppDimens.spaceSm,
-                        ),
-                        decoration: BoxDecoration(
-                          color: colors.surfaceRaised,
-                          borderRadius: BorderRadius.circular(AppDimens.shapeMd),
-                          border: Border.all(
-                              color: colors.border.withValues(alpha: 0.2)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.qr_code_scanner_rounded,
-                                size: 18, color: colors.textSecondary),
-                            const SizedBox(width: AppDimens.spaceXs),
-                            Text(
-                              'Scan label',
-                              style: AppTextStyles.bodySmall
-                                  .copyWith(color: colors.textSecondary),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                // Scan label
+                ZButton(
+                  label: 'Scan label',
+                  icon: Icons.qr_code_scanner_rounded,
+                  variant: ZButtonVariant.secondary,
+                  size: ZButtonSize.medium,
+                  onPressed: _openScanSheet,
                 ),
                 const SizedBox(height: AppDimens.spaceMd),
                 // Name field
@@ -719,39 +655,60 @@ class _AddEditFormState extends ConsumerState<_AddEditForm> {
                 ),
                 const SizedBox(height: AppDimens.spaceLg),
 
-                // Unit grid
-                _OptionGrid(
-                  sectionLabel: 'Unit',
-                  options: _kUnitOptions,
-                  selected: _selectedUnit,
-                  onSelect: (v) => setState(
-                      () => _selectedUnit = v == _selectedUnit ? null : v),
+                // Unit
+                ZSectionLabel(label: 'Unit'),
+                const SizedBox(height: AppDimens.spaceSm),
+                Wrap(
+                  spacing: AppDimens.spaceSm,
+                  runSpacing: AppDimens.spaceSm,
+                  children: _kUnitOptions
+                      .map((v) => ZChip(
+                            label: v,
+                            isActive: _selectedUnit == v,
+                            onTap: () => setState(
+                                () => _selectedUnit = v == _selectedUnit ? null : v),
+                          ))
+                      .toList(),
                 ),
                 const SizedBox(height: AppDimens.spaceLg),
 
-                // Form grid
-                _OptionGrid(
-                  sectionLabel: 'Form',
-                  options: _kFormOptions,
-                  selected: _selectedForm,
-                  onSelect: (v) => setState(
-                      () => _selectedForm = v == _selectedForm ? null : v),
+                // Form
+                ZSectionLabel(label: 'Form'),
+                const SizedBox(height: AppDimens.spaceSm),
+                Wrap(
+                  spacing: AppDimens.spaceSm,
+                  runSpacing: AppDimens.spaceSm,
+                  children: _kFormOptions
+                      .map((v) => ZChip(
+                            label: v,
+                            isActive: _selectedForm == v,
+                            onTap: () => setState(
+                                () => _selectedForm = v == _selectedForm ? null : v),
+                          ))
+                      .toList(),
                 ),
                 const SizedBox(height: AppDimens.spaceLg),
 
-                // Timing grid
-                _OptionGrid(
-                  sectionLabel: 'Timing',
-                  options: _kTimingOptions,
-                  selected: _selectedTiming,
-                  onSelect: (v) {
-                    final newVal = _selectedTiming == v ? null : v;
-                    setState(() {
-                      _selectedTiming = newVal;
-                      if (newVal == null) _timingSuggestion = null;
-                    });
-                    if (newVal != null) _fetchTimingTip(newVal);
-                  },
+                // Timing
+                ZSectionLabel(label: 'Timing'),
+                const SizedBox(height: AppDimens.spaceSm),
+                Wrap(
+                  spacing: AppDimens.spaceSm,
+                  runSpacing: AppDimens.spaceSm,
+                  children: _kTimingOptions
+                      .map((v) => ZChip(
+                            label: v,
+                            isActive: _selectedTiming == v,
+                            onTap: () {
+                              final newVal = _selectedTiming == v ? null : v;
+                              setState(() {
+                                _selectedTiming = newVal;
+                                if (newVal == null) _timingSuggestion = null;
+                              });
+                              if (newVal != null) _fetchTimingTip(newVal);
+                            },
+                          ))
+                      .toList(),
                 ),
                 // Loading bar while tip is being fetched
                 if (_isLoadingTip) ...[
@@ -798,93 +755,6 @@ class _AddEditFormState extends ConsumerState<_AddEditForm> {
             ],
           ),
         ),
-      ],
-    );
-  }
-}
-
-// ── Option Grid ───────────────────────────────────────────────────────────────
-
-/// 2-column option grid. If count is odd, last item spans full width.
-class _OptionGrid extends StatelessWidget {
-  const _OptionGrid({
-    required this.sectionLabel,
-    required this.options,
-    required this.selected,
-    required this.onSelect,
-  });
-
-  final String sectionLabel;
-  final List<String> options;
-  final String? selected;
-  final ValueChanged<String> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-
-    // Build rows: pair items; last item spans full width if count is odd
-    final rows = <Widget>[];
-    for (var i = 0; i < options.length; i += 2) {
-      final isLastOddItem = i + 1 >= options.length;
-      if (isLastOddItem) {
-        // Full-width last item
-        rows.add(
-          Padding(
-            padding: EdgeInsets.only(
-              top: i > 0 ? AppDimens.spaceXs : 0,
-            ),
-            child: SizedBox(
-              width: double.infinity,
-              child: _OptionChip(
-                label: options[i],
-                isSelected: selected == options[i],
-                onTap: () => onSelect(options[i]),
-              ),
-            ),
-          ),
-        );
-      } else {
-        rows.add(
-          Padding(
-            padding: EdgeInsets.only(
-              top: i > 0 ? AppDimens.spaceXs : 0,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _OptionChip(
-                    label: options[i],
-                    isSelected: selected == options[i],
-                    onTap: () => onSelect(options[i]),
-                  ),
-                ),
-                const SizedBox(width: AppDimens.spaceXs),
-                Expanded(
-                  child: _OptionChip(
-                    label: options[i + 1],
-                    isSelected: selected == options[i + 1],
-                    onTap: () => onSelect(options[i + 1]),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          sectionLabel,
-          style: AppTextStyles.labelMedium.copyWith(
-            color: colors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: AppDimens.spaceXs),
-        ...rows,
       ],
     );
   }
@@ -1135,47 +1005,6 @@ class _BarcodeScannerViewState extends State<_BarcodeScannerView> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── Option Chip ───────────────────────────────────────────────────────────────
-
-class _OptionChip extends StatelessWidget {
-  const _OptionChip({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 40,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: isSelected ? colors.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppDimens.shapeSm),
-          border: Border.all(
-            color: isSelected ? colors.primary : colors.border,
-            width: 1.5,
-          ),
-        ),
-        child: Text(
-          label,
-          style: AppTextStyles.labelMedium.copyWith(
-            color: isSelected ? colors.textOnSage : colors.textPrimary,
-          ),
-        ),
       ),
     );
   }

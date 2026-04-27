@@ -39,17 +39,8 @@ class SupplementInsightsScreen extends ConsumerWidget {
 
     return ZuralogScaffold(
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: colors.canvas,
-        foregroundColor: colors.textPrimary,
-        title: Text(
-          'Supplement Insights',
-          style: AppTextStyles.titleMedium.copyWith(
-            color: colors.textPrimary,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        centerTitle: false,
+        title: const Text('Supplement Insights'),
+        leading: const BackButton(),
       ),
       body: insightsAsync.when(
         loading: () =>
@@ -63,34 +54,11 @@ class SupplementInsightsScreen extends ConsumerWidget {
         ),
         data: (result) {
           if (!result.hasEnoughData) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppDimens.spaceLg),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.bar_chart_rounded,
-                      size: 48,
-                      color: colors.textSecondary.withValues(alpha: 0.4),
-                    ),
-                    const SizedBox(height: AppDimens.spaceMd),
-                    Text(
-                      'Not enough data yet',
-                      style: AppTextStyles.titleMedium
-                          .copyWith(color: colors.textPrimary),
-                    ),
-                    const SizedBox(height: AppDimens.spaceXs),
-                    Text(
-                      'Log your supplements for at least 14 days to see how '
-                      'they connect to your sleep, HRV, and energy.',
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.bodySmall
-                          .copyWith(color: colors.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
+            return const ZEmptyState(
+              icon: Icons.bar_chart_rounded,
+              title: 'Not enough data yet',
+              message: 'Log your supplements for at least 14 days to see how '
+                  'they connect to your sleep, HRV, and energy.',
             );
           }
 
@@ -121,12 +89,8 @@ class _InsightCard extends StatelessWidget {
     final isPositive = item.direction == 'positive';
     final isNeutral = item.direction == 'neutral';
 
-    return Container(
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: colors.surfaceRaised,
-        borderRadius: BorderRadius.circular(AppDimens.shapeMd),
-      ),
+    return ZuralogCard(
+      variant: ZCardVariant.feature,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
