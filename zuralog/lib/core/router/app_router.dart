@@ -75,6 +75,7 @@ import 'package:zuralog/features/today/presentation/log_screens/run_log_screen.d
 import 'package:zuralog/features/today/presentation/log_screens/meal_log_screen.dart';
 import 'package:zuralog/features/today/presentation/log_screens/symptom_log_screen.dart';
 import 'package:zuralog/features/today/presentation/log_screens/metric_picker_screen.dart';
+import 'package:zuralog/features/today/presentation/log_screens/supplements_stack_screen.dart';
 
 // ── Workout (pushed over shell) ───────────────────────────────────────────────
 import 'package:zuralog/features/workout/presentation/workout_session_screen.dart';
@@ -363,15 +364,15 @@ List<RouteBase> _buildRoutes() {
     GoRoute(
       path: RouteNames.supplementsStackPath,
       name: RouteNames.supplementsStack,
-      pageBuilder: (context, state) => MaterialPage(
-        child: SentryErrorBoundary(
-          module: 'today.supplements_stack',
-          child: Scaffold(
-            appBar: AppBar(title: const Text('Supplement Stack')),
-            body: const Center(child: Text('Coming soon')),
+      pageBuilder: (context, state) {
+        final openAddForm = state.extra as bool? ?? false;
+        return MaterialPage(
+          child: SentryErrorBoundary(
+            module: 'today.supplements_stack',
+            child: SupplementsStackScreen(openAddFormOnStart: openAddForm),
           ),
-        ),
-      ),
+        );
+      },
     ),
     GoRoute(
       path: RouteNames.symptomLogPath,
