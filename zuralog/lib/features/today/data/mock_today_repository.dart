@@ -13,6 +13,7 @@ import 'package:zuralog/features/today/domain/log_summary_models.dart';
 import 'package:zuralog/features/today/domain/supplement_conflict.dart';
 import 'package:zuralog/features/today/domain/supplement_scan_result.dart';
 import 'package:zuralog/features/today/domain/supplement_today_entry.dart';
+import 'package:zuralog/features/today/domain/timing_suggestion.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
 // ── MockTodayRepository ───────────────────────────────────────────────────────
@@ -304,6 +305,15 @@ final class MockTodayRepository implements TodayRepositoryInterface {
   }) async {
     await Future<void>.delayed(_delay);
     return SupplementConflict.none;
+  }
+
+  @override
+  Future<TimingSuggestion> getTimingSuggestion({
+    required String supplementName,
+    required String timing,
+  }) async {
+    await Future<void>.delayed(_delay);
+    return const TimingSuggestion(tip: 'Take in the morning for best absorption.');
   }
 
   // ── Log Endpoints ─────────────────────────────────────────────────────────

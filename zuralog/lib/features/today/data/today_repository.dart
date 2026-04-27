@@ -23,6 +23,7 @@ import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
 import 'package:zuralog/features/today/domain/supplement_conflict.dart';
 import 'package:zuralog/features/today/domain/supplement_scan_result.dart';
+import 'package:zuralog/features/today/domain/timing_suggestion.dart';
 import 'package:zuralog/features/today/domain/supplement_today_entry.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
@@ -244,6 +245,15 @@ abstract interface class TodayRepositoryInterface {
     required String name,
     required List<String> existingNames,
     String? excludeId,
+  });
+
+  /// Fetches a timing tip for the given supplement and timing combination.
+  ///
+  /// Returns a [TimingSuggestion] whose [TimingSuggestion.hasTip] is false when
+  /// the server has no tip to offer.
+  Future<TimingSuggestion> getTimingSuggestion({
+    required String supplementName,
+    required String timing,
   });
 }
 
@@ -990,6 +1000,23 @@ class TodayRepository implements TodayRepositoryInterface {
       },
     );
     return SupplementConflict.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<TimingSuggestion> getTimingSuggestion({
+    required String supplementName,
+    required String timing,
+  }) async {
+    final response = await _api.get(
+      '/api/v1/supplements/timing-tip',
+      queryParameters: {
+        'supplement_name': supplementName,
+        'timing': timing,
+      },
+    );
+    return TimingSuggestion.fromJson(
+      response.data as Map<String, dynamic>? ?? {},
+    );
   }
 
   static double _severityToValue(String severity) {
