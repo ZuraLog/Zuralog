@@ -20,7 +20,6 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/features/today/data/supplement_log_local_repository.dart';
 import 'package:zuralog/features/today/data/supplement_log_sync_service.dart';
 import 'package:zuralog/features/today/domain/supplement_taken_log.dart';
-import 'package:zuralog/features/today/domain/supplement_today_entry.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
@@ -65,8 +64,8 @@ class _ZSupplementsLogPanelState
     // WidgetsBinding.instance.addObserver is available during initState.
     try {
       ref.read(supplementLogSyncServiceProvider);
-    } catch (_) {
-      // Silently ignore if sync service is unavailable (e.g. in tests).
+    } catch (e) {
+      debugPrint('[ZSupplementsLogPanel] sync service unavailable: $e');
     }
   }
 
@@ -206,6 +205,7 @@ class _ZSupplementsLogPanelState
   }
 
   void _invalidateProviders() {
+    _initialised = false;
     ref.invalidate(supplementsTodayLogProvider);
     ref.invalidate(supplementsSyncStatusProvider);
     ref.invalidate(todayLogSummaryProvider);
@@ -236,15 +236,16 @@ class _ZSupplementsLogPanelState
   @override
   Widget build(BuildContext context) {
     final supplementsAsync = ref.watch(supplementsListProvider);
-    final todayLogAsync = ref.watch(supplementsTodayLogProvider);
     final syncStatusAsync = ref.watch(supplementsSyncStatusProvider);
 
-    todayLogAsync.whenData((entries) {
+    ref.listen(supplementsTodayLogProvider, (_, next) {
       if (!_initialised) {
-        _serverTaken = {
-          for (final e in entries) e.supplementId: e.logId,
-        };
-        _initialised = true;
+        next.whenData((entries) {
+          setState(() {
+            _serverTaken = {for (final e in entries) e.supplementId: e.logId};
+            _initialised = true;
+          });
+        });
       }
     });
 
@@ -253,10 +254,10 @@ class _ZSupplementsLogPanelState
 
     return supplementsAsync.when(
       loading: () => const _LoadingState(),
-      error: (_, __) => const _ErrorState(),
+      error: (e, _) => const _ErrorState(),
       data: (supplements) {
         if (supplements.isEmpty) {
-          return _EmptyState(onSetUpStack: widget.onSave);
+          return const _EmptyState();
         }
         final takenCount =
             supplements.where((s) => _isTaken(s.id)).length;
@@ -541,9 +542,7 @@ class _PanelFooter extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onSetUpStack});
-
-  final VoidCallback onSetUpStack;
+  const _EmptyState();
 
   @override
   Widget build(BuildContext context) {
