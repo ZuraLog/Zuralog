@@ -134,6 +134,7 @@ class _ZSupplementsLogPanelState
         '${supplement.name} logged',
         action: 'Undo',
         onAction: () => _undoCheckin(supplement, localId, log),
+        displayDuration: const Duration(seconds: 4),
       );
     }
 

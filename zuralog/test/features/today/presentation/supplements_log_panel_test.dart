@@ -82,4 +82,71 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     expect(find.textContaining('1 of 2'), findsOneWidget);
   });
+
+  testWidgets('cloud icon hidden when sync status is none', (tester) async {
+    await tester.pumpWidget(_buildPanel(
+      supplements: [const SupplementEntry(id: 's1', name: 'Vitamin D')],
+      syncStatus: SupplementSyncStatus.none,
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byIcon(Icons.cloud_upload_outlined), findsNothing);
+    expect(find.byIcon(Icons.cloud_done_outlined), findsNothing);
+  });
+
+  testWidgets('cloud upload icon shown when pending', (tester) async {
+    await tester.pumpWidget(_buildPanel(
+      supplements: [const SupplementEntry(id: 's1', name: 'Vitamin D')],
+      syncStatus: SupplementSyncStatus.pending,
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byIcon(Icons.cloud_upload_outlined), findsOneWidget);
+  });
+
+  testWidgets('cloud done icon shown when synced', (tester) async {
+    await tester.pumpWidget(_buildPanel(
+      supplements: [const SupplementEntry(id: 's1', name: 'Vitamin D')],
+      syncStatus: SupplementSyncStatus.synced,
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byIcon(Icons.cloud_done_outlined), findsOneWidget);
+  });
+
+  testWidgets('uncheck shows confirmation dialog not undo toast', (tester) async {
+    final supplements = [
+      const SupplementEntry(id: 's1', name: 'Magnesium', timing: 'evening'),
+    ];
+    final todayLog = [
+      const SupplementTodayLogEntry(supplementId: 's1', logId: 'log1'),
+    ];
+    await tester.pumpWidget(_buildPanel(supplements: supplements, todayLog: todayLog));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.text('Magnesium'));
+    await tester.pump();
+    // Dialog should appear
+    expect(find.text('Remove log entry?'), findsOneWidget);
+    expect(find.text('Remove entry'), findsOneWidget);
+    expect(find.text('Cancel'), findsOneWidget);
+  });
+
+  testWidgets('cancelling uncheck dialog keeps supplement as taken', (tester) async {
+    final supplements = [
+      const SupplementEntry(id: 's1', name: 'Magnesium', timing: 'evening'),
+    ];
+    final todayLog = [
+      const SupplementTodayLogEntry(supplementId: 's1', logId: 'log1'),
+    ];
+    await tester.pumpWidget(_buildPanel(supplements: supplements, todayLog: todayLog));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.text('Magnesium'));
+    await tester.pump();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    // Should still show taken (check_circle)
+    expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+  });
 }
