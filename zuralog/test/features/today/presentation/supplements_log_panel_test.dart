@@ -169,10 +169,10 @@ void main() {
     expect(find.text('Log today'), findsOneWidget);
   });
 
-  testWidgets('settings icon is present in panel header', (tester) async {
+  testWidgets('insights icon is present in panel header', (tester) async {
     await tester.pumpWidget(_buildPanel(supplements: []));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
-    expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.insights_rounded), findsOneWidget);
   });
 }

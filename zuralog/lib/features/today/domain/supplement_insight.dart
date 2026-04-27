@@ -36,11 +36,11 @@ class SupplementInsightsResult {
 
   factory SupplementInsightsResult.fromJson(Map<String, dynamic> json) =>
       SupplementInsightsResult(
-        insights: (json['insights'] as List<dynamic>)
+        insights: (json['insights'] as List<dynamic>? ?? [])
             .map((e) => SupplementInsightItem.fromJson(e as Map<String, dynamic>))
             .toList(),
-        dataDays: json['data_days'] as int,
-        hasEnoughData: json['has_enough_data'] as bool,
+        dataDays: json['data_days'] as int? ?? 0,
+        hasEnoughData: json['has_enough_data'] as bool? ?? false,
       );
 
   static const SupplementInsightsResult empty = SupplementInsightsResult(

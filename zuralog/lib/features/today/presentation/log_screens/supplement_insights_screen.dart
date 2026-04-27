@@ -21,7 +21,7 @@ import 'package:zuralog/shared/widgets/widgets.dart';
 /// can override it directly via [ProviderScope.overrides].
 final insightsProvider =
     FutureProvider.autoDispose<SupplementInsightsResult>((ref) async {
-  return ref.read(todayRepositoryProvider).getSupplementInsights(days: 60);
+  return ref.watch(todayRepositoryProvider).getSupplementInsights(days: 60);
 });
 
 /// Screen that displays AI-generated correlations between a user's supplement

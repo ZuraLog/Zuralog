@@ -105,7 +105,10 @@ class _SupplementsStackScreenState
       final repo = ref.read(todayRepositoryProvider);
       final saved = await repo.updateSupplementsList(updated);
       if (mounted) {
-        setState(() => _localList = saved);
+        setState(() {
+          _localList = saved;
+          _seeded = false;
+        });
         ref.invalidate(supplementsListProvider);
         _closeForm();
       }
@@ -138,7 +141,10 @@ class _SupplementsStackScreenState
       final repo = ref.read(todayRepositoryProvider);
       final saved = await repo.updateSupplementsList(updated);
       if (mounted) {
-        setState(() => _localList = saved);
+        setState(() {
+          _localList = saved;
+          _seeded = false;
+        });
         ref.invalidate(supplementsListProvider);
       }
     } catch (e) {
@@ -159,7 +165,10 @@ class _SupplementsStackScreenState
       final repo = ref.read(todayRepositoryProvider);
       final saved = await repo.updateSupplementsList(updated);
       if (mounted) {
-        setState(() => _localList = saved);
+        setState(() {
+          _localList = saved;
+          _seeded = false;
+        });
         ref.invalidate(supplementsListProvider);
       }
     } catch (e) {
@@ -591,7 +600,13 @@ class _AddEditFormState extends ConsumerState<_AddEditForm> {
             : result.doseAmount!.toStringAsFixed(1);
       }
       if (result.doseUnit != null) _selectedUnit = result.doseUnit;
-      if (result.form != null) _selectedForm = result.form!.toLowerCase();
+      if (result.form != null) {
+        final scannedForm = result.form!;
+        _selectedForm = _kFormOptions.firstWhere(
+          (f) => f.toLowerCase() == scannedForm.toLowerCase(),
+          orElse: () => scannedForm,
+        );
+      }
     });
   }
 
@@ -947,7 +962,10 @@ class _ScanLabelSheetState extends ConsumerState<_ScanLabelSheet> {
       if (mounted) Navigator.of(context).pop(result);
     } catch (e) {
       if (mounted) {
-        setState(() => _error = 'Could not look up barcode. Please try again.');
+        setState(() {
+          _scanned = false;
+          _error = 'Could not look up barcode. Please try again.';
+        });
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

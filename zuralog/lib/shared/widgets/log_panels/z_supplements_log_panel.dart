@@ -175,8 +175,14 @@ class _ZSupplementsLogPanelState
     SupplementTakenLog log,
   ) async {
     final localRepo = ref.read(supplementLogLocalRepositoryProvider);
+    // Read the synced log ID from local storage BEFORE removing — syncLog may
+    // have completed and stored the server-assigned ID there already.
+    final syncedEntry = localRepo
+        .getLogsForDate(log.logDate)
+        .where((l) => l.id == localId)
+        .firstOrNull;
     await localRepo.removeLog(localId, log.logDate);
-    final serverLogId = _serverTaken[supplement.id];
+    final serverLogId = _serverTaken[supplement.id] ?? syncedEntry?.logId;
     if (serverLogId != null) {
       try {
         final repo = ref.read(todayRepositoryProvider);
@@ -478,7 +484,7 @@ class _PanelHeader extends StatelessWidget {
           ),
           IconButton(
             icon: Icon(
-              Icons.settings_outlined,
+              Icons.insights_rounded,
               size: 18,
               color: colors.textSecondary,
             ),
