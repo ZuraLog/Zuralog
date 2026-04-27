@@ -3,9 +3,11 @@
 import logging
 import uuid as _uuid
 from datetime import datetime, timezone
+from typing import Any
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import delete as sa_delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
@@ -57,6 +59,25 @@ class TodayLogEntry(BaseModel):
 
 class TodayLogResponse(BaseModel):
     entries: list[TodayLogEntry]
+
+
+class ScanLabelRequest(BaseModel):
+    image_base64: str | None = Field(default=None)
+    barcode: str | None = Field(default=None)
+
+    @model_validator(mode='after')
+    def _require_one(self) -> 'ScanLabelRequest':
+        if not self.image_base64 and not self.barcode:
+            raise ValueError("Either image_base64 or barcode must be provided")
+        return self
+
+
+class ScanLabelResponse(BaseModel):
+    name: str | None = None
+    dose_amount: float | None = None
+    dose_unit: str | None = None
+    form: str | None = None
+    confidence: float | None = None
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -200,3 +221,60 @@ async def delete_supplement_log_entry(
         )
     )
     await db.commit()
+
+
+# ── Scan-label helpers ────────────────────────────────────────────────────────
+
+
+async def _parse_supplement_barcode(barcode: str) -> dict[str, Any]:
+    """Look up a barcode via Open Food Facts and return supplement fields."""
+    url = f"https://world.openfoodfacts.org/api/v2/product/{barcode}.json"
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(url)
+        if resp.status_code != 200:
+            return {}
+        payload = resp.json()
+        product = payload.get("product", {})
+        name = product.get("product_name") or product.get("generic_name")
+        if not name:
+            return {}
+        return {"name": name}
+    except Exception as exc:
+        logger.warning("_parse_supplement_barcode failed for barcode=%s: %s", barcode, exc)
+        return {}
+
+
+async def _parse_supplement_image(image_base64: str | None) -> dict[str, Any]:
+    """Parse a supplement label image — AI hook reserved for future wiring."""
+    # Graceful no-op: returns empty dict; confidence 0 signals to the client
+    # that no fields could be extracted from the image.
+    return {}
+
+
+# ── Scan-label route ──────────────────────────────────────────────────────────
+
+
+@limiter.limit("20/minute")
+@router.post("/scan-label", response_model=ScanLabelResponse)
+async def scan_supplement_label(
+    request: Request,
+    body: ScanLabelRequest,
+    user_id: str = Depends(get_authenticated_user_id),
+) -> ScanLabelResponse:
+    """Parse a supplement label from a barcode or image and return structured fields."""
+    try:
+        if body.barcode:
+            parsed = await _parse_supplement_barcode(body.barcode)
+        else:
+            parsed = await _parse_supplement_image(body.image_base64)
+        return ScanLabelResponse(
+            name=parsed.get("name"),
+            dose_amount=parsed.get("dose_amount"),
+            dose_unit=parsed.get("dose_unit"),
+            form=parsed.get("form"),
+            confidence=parsed.get("confidence"),
+        )
+    except Exception as exc:
+        logger.warning("scan_supplement_label failed: %s", exc)
+        return ScanLabelResponse()
