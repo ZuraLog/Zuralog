@@ -21,6 +21,7 @@ import 'package:dio/dio.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
+import 'package:zuralog/features/today/domain/supplement_conflict.dart';
 import 'package:zuralog/features/today/domain/supplement_scan_result.dart';
 import 'package:zuralog/features/today/domain/supplement_today_entry.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
@@ -233,6 +234,16 @@ abstract interface class TodayRepositoryInterface {
   Future<SupplementScanResult> scanSupplementLabel({
     String? imageBase64,
     String? barcode,
+  });
+
+  /// Checks whether [name] conflicts with any supplement in [existingNames].
+  ///
+  /// Pass [excludeId] when editing an existing supplement so that item's own
+  /// name is not treated as a conflict.
+  Future<SupplementConflict> checkSupplementConflicts({
+    required String name,
+    required List<String> existingNames,
+    String? excludeId,
   });
 }
 
@@ -962,6 +973,23 @@ class TodayRepository implements TodayRepositoryInterface {
     return SupplementScanResult.fromJson(
       response.data as Map<String, dynamic>? ?? {},
     );
+  }
+
+  @override
+  Future<SupplementConflict> checkSupplementConflicts({
+    required String name,
+    required List<String> existingNames,
+    String? excludeId,
+  }) async {
+    final response = await _api.post(
+      '/api/v1/supplements/check-conflicts',
+      data: {
+        'name': name,
+        'existing_names': existingNames,
+        if (excludeId != null) 'exclude_id': excludeId,
+      },
+    );
+    return SupplementConflict.fromJson(response.data as Map<String, dynamic>);
   }
 
   static double _severityToValue(String severity) {

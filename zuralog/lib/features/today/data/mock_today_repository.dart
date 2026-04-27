@@ -10,6 +10,7 @@ library;
 
 import 'package:zuralog/features/today/data/today_repository.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
+import 'package:zuralog/features/today/domain/supplement_conflict.dart';
 import 'package:zuralog/features/today/domain/supplement_scan_result.dart';
 import 'package:zuralog/features/today/domain/supplement_today_entry.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
@@ -293,6 +294,16 @@ final class MockTodayRepository implements TodayRepositoryInterface {
       form: 'softgel',
       confidence: 0.92,
     );
+  }
+
+  @override
+  Future<SupplementConflict> checkSupplementConflicts({
+    required String name,
+    required List<String> existingNames,
+    String? excludeId,
+  }) async {
+    await Future<void>.delayed(_delay);
+    return SupplementConflict.none;
   }
 
   // ── Log Endpoints ─────────────────────────────────────────────────────────
