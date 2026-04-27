@@ -45,6 +45,33 @@ void main() {
       expect(log.toJson().containsKey('logId'), isFalse);
     });
 
+    test('equality: same fields are equal', () {
+      final a = SupplementTakenLog(
+        id: 'local-1',
+        supplementId: 'sup-abc',
+        logDate: '2026-04-27',
+        recordedAt: DateTime(2026, 4, 27, 8, 0),
+        logId: 'server-log-xyz',
+        synced: true,
+      );
+      final b = SupplementTakenLog(
+        id: 'local-1',
+        supplementId: 'sup-abc',
+        logDate: '2026-04-27',
+        recordedAt: DateTime(2026, 4, 27, 8, 0),
+        logId: 'server-log-xyz',
+        synced: true,
+      );
+      final c = SupplementTakenLog(
+        id: 'local-9',
+        supplementId: 'sup-xyz',
+        logDate: '2026-04-27',
+        recordedAt: DateTime(2026, 4, 27, 8, 0),
+      );
+      expect(a, equals(b));
+      expect(a, isNot(equals(c)));
+    });
+
     test('copyWith updates synced and logId', () {
       final log = SupplementTakenLog(
         id: 'local-4',

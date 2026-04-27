@@ -65,4 +65,19 @@ class SupplementTakenLog {
         logId: logId != null ? logId() : this.logId,
         synced: synced ?? this.synced,
       );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SupplementTakenLog &&
+          id == other.id &&
+          supplementId == other.supplementId &&
+          logDate == other.logDate &&
+          recordedAt == other.recordedAt &&
+          logId == other.logId &&
+          synced == other.synced;
+
+  @override
+  int get hashCode =>
+      Object.hash(id, supplementId, logDate, recordedAt, logId, synced);
 }
