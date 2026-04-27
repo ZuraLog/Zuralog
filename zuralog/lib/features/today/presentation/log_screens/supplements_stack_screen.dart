@@ -4,6 +4,7 @@
 /// medication stack. Supports add, edit, reorder, and swipe-to-delete.
 library;
 
+import 'dart:async' show Timer;
 import 'dart:convert' show base64Encode;
 
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/features/today/domain/supplement_conflict.dart';
 import 'package:zuralog/features/today/domain/supplement_scan_result.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
@@ -208,6 +210,7 @@ class _SupplementsStackScreenState
               existing: _editingEntry,
               onSave: _saveEntry,
               onCancel: _closeForm,
+              existingSupplements: _localList ?? [],
             ),
           );
         }
@@ -423,22 +426,24 @@ class _SupplementRow extends StatelessWidget {
 
 // ── Add / Edit Form ────────────────────────────────────────────────────────────
 
-class _AddEditForm extends StatefulWidget {
+class _AddEditForm extends ConsumerStatefulWidget {
   const _AddEditForm({
     this.existing,
     required this.onSave,
     required this.onCancel,
+    required this.existingSupplements,
   });
 
   final SupplementEntry? existing;
   final Future<void> Function(SupplementEntry entry) onSave;
   final VoidCallback onCancel;
+  final List<SupplementEntry> existingSupplements;
 
   @override
-  State<_AddEditForm> createState() => _AddEditFormState();
+  ConsumerState<_AddEditForm> createState() => _AddEditFormState();
 }
 
-class _AddEditFormState extends State<_AddEditForm> {
+class _AddEditFormState extends ConsumerState<_AddEditForm> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _amountCtrl;
   String? _selectedUnit;
@@ -446,11 +451,16 @@ class _AddEditFormState extends State<_AddEditForm> {
   String? _selectedTiming;
   bool _isSaving = false;
 
+  SupplementConflict? _conflict;
+  bool _conflictAcknowledged = false;
+  Timer? _conflictDebounce;
+
   @override
   void initState() {
     super.initState();
     final e = widget.existing;
     _nameCtrl = TextEditingController(text: e?.name ?? '');
+    _nameCtrl.addListener(_onNameChanged);
     _amountCtrl = TextEditingController(
       text: e?.doseAmount != null
           ? (e!.doseAmount! % 1 == 0
@@ -470,9 +480,67 @@ class _AddEditFormState extends State<_AddEditForm> {
 
   @override
   void dispose() {
+    _conflictDebounce?.cancel();
     _nameCtrl.dispose();
     _amountCtrl.dispose();
     super.dispose();
+  }
+
+  void _onNameChanged() {
+    if (_conflictAcknowledged) setState(() => _conflictAcknowledged = false);
+    _conflict = null;
+    _conflictDebounce?.cancel();
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) {
+      setState(() => _conflict = null);
+      return;
+    }
+    _conflictDebounce = Timer(
+      const Duration(milliseconds: 800),
+      () => _checkConflict(name),
+    );
+  }
+
+  Future<void> _checkConflict(String name) async {
+    final others = widget.existingSupplements
+        .where((e) => e.id != (widget.existing?.id ?? ''))
+        .toList();
+    if (others.isEmpty) return;
+
+    // Client-side exact match — no API call needed
+    final lowerName = name.toLowerCase().trim();
+    final exactMatch = others.firstWhere(
+      (e) => e.name.toLowerCase().trim() == lowerName,
+      orElse: () => const SupplementEntry(id: '', name: ''),
+    );
+    if (exactMatch.id.isNotEmpty) {
+      if (mounted) {
+        setState(() {
+          _conflict = SupplementConflict(
+            hasConflict: true,
+            conflictType: 'duplicate',
+            conflictingName: exactMatch.name,
+            message: null,
+          );
+        });
+      }
+      return;
+    }
+
+    // API call for semantic overlap
+    if (!mounted) return;
+    try {
+      final result = await ref.read(todayRepositoryProvider).checkSupplementConflicts(
+            name: name,
+            existingNames: others.map((e) => e.name).toList(),
+            excludeId: widget.existing?.id,
+          );
+      if (mounted) {
+        setState(() => _conflict = result);
+      }
+    } catch (_) {
+      // Silently ignore — conflict check is advisory, not blocking
+    }
   }
 
   bool get _canSave => _nameCtrl.text.trim().isNotEmpty && !_isSaving;
@@ -575,6 +643,21 @@ class _AddEditFormState extends State<_AddEditForm> {
                   onChanged: (_) => setState(() {}),
                   textInputAction: TextInputAction.next,
                 ),
+                if (_conflict != null && _conflict!.hasConflict && !_conflictAcknowledged) ...[
+                  const SizedBox(height: AppDimens.spaceSm),
+                  _ConflictWarningCard(
+                    conflict: _conflict!,
+                    onAdjustDose: () {
+                      setState(() => _conflictAcknowledged = true);
+                      _amountCtrl.selection = TextSelection.fromPosition(
+                        TextPosition(offset: _amountCtrl.text.length),
+                      );
+                      FocusScope.of(context).nextFocus();
+                    },
+                    onAddAnyway: () => setState(() => _conflictAcknowledged = true),
+                  ),
+                  const SizedBox(height: AppDimens.spaceSm),
+                ],
                 const SizedBox(height: AppDimens.spaceLg),
 
                 // Amount field
@@ -1018,6 +1101,90 @@ class _OptionChip extends StatelessWidget {
             color: isSelected ? colors.textOnSage : colors.textPrimary,
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Conflict Warning Card ─────────────────────────────────────────────────────
+
+class _ConflictWarningCard extends StatelessWidget {
+  const _ConflictWarningCard({
+    required this.conflict,
+    required this.onAdjustDose,
+    required this.onAddAnyway,
+  });
+
+  final SupplementConflict conflict;
+  final VoidCallback onAdjustDose;
+  final VoidCallback onAddAnyway;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final isDuplicate = conflict.conflictType == 'duplicate';
+    return Container(
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
+      decoration: BoxDecoration(
+        color: colors.warning.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+        border: Border.all(color: colors.warning.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, size: 16, color: colors.warning),
+              const SizedBox(width: AppDimens.spaceXs),
+              Text(
+                isDuplicate ? 'Already in your stack' : 'Possible overlap',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: colors.warning,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppDimens.spaceXs),
+          Text(
+            conflict.message ??
+                (isDuplicate
+                    ? 'You already have "${conflict.conflictingName}" in your stack.'
+                    : '"${conflict.conflictingName}" in your stack may contain the same ingredient.'),
+            style: AppTextStyles.bodySmall.copyWith(color: colors.textSecondary),
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          Row(
+            children: [
+              TextButton(
+                onPressed: onAdjustDose,
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  'Adjust dose',
+                  style: AppTextStyles.labelMedium.copyWith(color: colors.warning),
+                ),
+              ),
+              const SizedBox(width: AppDimens.spaceMd),
+              TextButton(
+                onPressed: onAddAnyway,
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  'Add anyway',
+                  style: AppTextStyles.labelMedium.copyWith(color: colors.textSecondary),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
