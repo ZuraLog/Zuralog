@@ -503,13 +503,59 @@ class SupplementEntry {
     required this.name,
     this.dose,
     this.timing,
+    this.doseAmount,
+    this.doseUnit,
+    this.form,
   });
 
-  /// Server-assigned UUID. Used as `taken_supplement_id` when logging.
+  /// Server-assigned UUID. Used as `supplement_id` when logging taken status.
   final String id;
   final String name;
   final String? dose;
   final String? timing;
+  final double? doseAmount;
+  final String? doseUnit;
+  final String? form;
+
+  factory SupplementEntry.fromJson(Map<String, dynamic> json) =>
+      SupplementEntry(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        dose: json['dose'] as String?,
+        timing: json['timing'] as String?,
+        doseAmount: (json['dose_amount'] as num?)?.toDouble(),
+        doseUnit: json['dose_unit'] as String?,
+        form: json['form'] as String?,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        if (dose != null) 'dose': dose,
+        if (timing != null) 'timing': timing,
+        if (doseAmount != null) 'dose_amount': doseAmount,
+        if (doseUnit != null) 'dose_unit': doseUnit,
+        if (form != null) 'form': form,
+      };
+
+  SupplementEntry copyWith({
+    String? id,
+    String? name,
+    String? Function()? dose,
+    String? Function()? timing,
+    double? Function()? doseAmount,
+    String? Function()? doseUnit,
+    String? Function()? form,
+  }) =>
+      SupplementEntry(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        dose: dose != null ? dose() : this.dose,
+        timing: timing != null ? timing() : this.timing,
+        doseAmount: doseAmount != null ? doseAmount() : this.doseAmount,
+        doseUnit: doseUnit != null ? doseUnit() : this.doseUnit,
+        form: form != null ? form() : this.form,
+      );
 }
 
 // ── IngestResult ──────────────────────────────────────────────────────────
