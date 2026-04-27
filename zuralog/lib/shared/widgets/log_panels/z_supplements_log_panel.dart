@@ -319,7 +319,18 @@ class _ZSupplementsLogPanelState
       error: (e, _) => const _ErrorState(),
       data: (supplements) {
         if (supplements.isEmpty) {
-          return const _EmptyState();
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _PanelHeader(
+                takenCount: 0,
+                totalCount: 0,
+                syncStatus: syncStatus,
+                onBack: widget.onBack,
+              ),
+              const Expanded(child: _EmptyState()),
+            ],
+          );
         }
         final takenCount =
             supplements.where((s) => _isTaken(s.id)).length;
@@ -464,6 +475,16 @@ class _PanelHeader extends StatelessWidget {
                 _SyncIcon(syncStatus: syncStatus),
               ],
             ),
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.settings_outlined,
+              size: 18,
+              color: colors.textSecondary,
+            ),
+            onPressed: () => context.push(RouteNames.supplementInsightsPath),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
           ),
         ],
       ),

@@ -466,6 +466,12 @@ abstract final class RouteNames {
   /// Path for the Supplements Stack management screen.
   static const String supplementsStackPath = '/supplements/stack';
 
+  /// Name for the Supplement Insights screen.
+  static const String supplementInsights = 'supplementInsights';
+
+  /// Path for the Supplement Insights screen.
+  static const String supplementInsightsPath = '/supplements/insights';
+
   // ── Developer Tools ───────────────────────────────────────────────────────
 
   /// Name for the component showcase screen (dev only).

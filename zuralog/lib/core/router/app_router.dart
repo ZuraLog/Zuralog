@@ -76,6 +76,7 @@ import 'package:zuralog/features/today/presentation/log_screens/meal_log_screen.
 import 'package:zuralog/features/today/presentation/log_screens/symptom_log_screen.dart';
 import 'package:zuralog/features/today/presentation/log_screens/metric_picker_screen.dart';
 import 'package:zuralog/features/today/presentation/log_screens/supplements_stack_screen.dart';
+import 'package:zuralog/features/today/presentation/log_screens/supplement_insights_screen.dart';
 
 // ── Workout (pushed over shell) ───────────────────────────────────────────────
 import 'package:zuralog/features/workout/presentation/workout_session_screen.dart';
@@ -373,6 +374,16 @@ List<RouteBase> _buildRoutes() {
           ),
         );
       },
+    ),
+    GoRoute(
+      path: RouteNames.supplementInsightsPath,
+      name: RouteNames.supplementInsights,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: SentryErrorBoundary(
+          module: 'today.supplement_insights',
+          child: SupplementInsightsScreen(),
+        ),
+      ),
     ),
     GoRoute(
       path: RouteNames.symptomLogPath,
