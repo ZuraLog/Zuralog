@@ -28,6 +28,7 @@ class SupplementLogLocalRepository {
   /// Appends [log] to the stored list for its date.
   Future<void> saveLog(SupplementTakenLog log) async {
     final existing = getLogsForDate(log.logDate);
+    if (existing.any((l) => l.id == log.id)) return;
     existing.add(log);
     await _prefs.setString(
       _logsKey(log.logDate),

@@ -52,6 +52,20 @@ void main() {
       expect(logs.length, 2);
     });
 
+    test('saveLog is idempotent — duplicate id is a no-op', () async {
+      final log = SupplementTakenLog(
+        id: 'local-1',
+        supplementId: 'sup-abc',
+        logDate: '2026-04-27',
+        recordedAt: DateTime(2026, 4, 27, 8, 0),
+      );
+
+      await repo.saveLog(log);
+      await repo.saveLog(log); // second call with same id
+      final logs = repo.getLogsForDate('2026-04-27');
+      expect(logs.length, 1); // only one entry, not two
+    });
+
     test('markSynced updates only the matching entry', () async {
       final log = SupplementTakenLog(
         id: 'local-1',
