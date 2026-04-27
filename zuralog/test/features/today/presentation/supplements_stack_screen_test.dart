@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:zuralog/features/today/data/mock_today_repository.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/domain/supplement_conflict.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
@@ -14,6 +15,7 @@ void main() {
   Widget _buildScreen({List<SupplementEntry> supplements = const [], bool openAddForm = false}) {
     return ProviderScope(
       overrides: [
+        todayRepositoryProvider.overrideWithValue(const MockTodayRepository()),
         supplementsListProvider.overrideWith((_) async => supplements),
       ],
       child: MaterialApp(
@@ -141,5 +143,63 @@ void main() {
     await tester.tap(find.text('Add anyway'));
     await tester.pump();
     expect(find.text('Add anyway'), findsNothing);
+  });
+
+  testWidgets('timing tip appears after selecting a timing option', (tester) async {
+    // MockTodayRepository returns 'Take in the morning for best absorption.'
+    await tester.pumpWidget(_buildScreen(supplements: []));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Open the Add form
+    await tester.tap(find.text('Add supplement or med'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Fill in a supplement name so the tip fetch is triggered
+    await tester.enterText(find.byType(TextField).first, 'Vitamin D');
+    await tester.pump();
+
+    // Ensure the Morning option is visible before tapping
+    await tester.ensureVisible(find.text('Morning'));
+    await tester.pump();
+
+    // Tap the Morning timing option
+    await tester.tap(find.text('Morning'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500)); // wait for mock delay
+    await tester.pump();
+
+    expect(find.text('Take in the morning for best absorption.'), findsOneWidget);
+  });
+
+  testWidgets('timing tip can be dismissed', (tester) async {
+    await tester.pumpWidget(_buildScreen(supplements: []));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.tap(find.text('Add supplement or med'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.enterText(find.byType(TextField).first, 'Vitamin D');
+    await tester.pump();
+
+    // Ensure the Morning option is visible before tapping
+    await tester.ensureVisible(find.text('Morning'));
+    await tester.pump();
+
+    await tester.tap(find.text('Morning'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
+
+    expect(find.text('Take in the morning for best absorption.'), findsOneWidget);
+
+    // Tap the dismiss (X) button on the ZAlertBanner
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pump();
+
+    expect(find.text('Take in the morning for best absorption.'), findsNothing);
   });
 }

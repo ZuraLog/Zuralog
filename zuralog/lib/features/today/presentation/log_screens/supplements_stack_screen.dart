@@ -14,6 +14,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/today/domain/supplement_conflict.dart';
+import 'package:zuralog/features/today/domain/timing_suggestion.dart';
 import 'package:zuralog/features/today/domain/supplement_scan_result.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
@@ -451,6 +452,9 @@ class _AddEditFormState extends ConsumerState<_AddEditForm> {
   String? _selectedTiming;
   bool _isSaving = false;
 
+  TimingSuggestion? _timingSuggestion;
+  bool _isLoadingTip = false;
+
   SupplementConflict? _conflict;
   bool _conflictAcknowledged = false;
   Timer? _conflictDebounce;
@@ -539,6 +543,38 @@ class _AddEditFormState extends ConsumerState<_AddEditForm> {
       }
     } catch (_) {
       // Silently ignore — conflict check is advisory, not blocking
+    }
+  }
+
+  Future<void> _fetchTimingTip(String timingLabel) async {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) return;
+
+    final idx = _kTimingOptions.indexOf(timingLabel);
+    final timingValue =
+        idx >= 0 ? _kTimingValues[idx] : timingLabel.toLowerCase();
+
+    if (!mounted) return;
+    setState(() {
+      _isLoadingTip = true;
+      _timingSuggestion = null;
+    });
+
+    try {
+      final suggestion = await ref
+          .read(todayRepositoryProvider)
+          .getTimingSuggestion(
+            supplementName: name,
+            timing: timingValue,
+          );
+      if (mounted) {
+        setState(() {
+          _timingSuggestion = suggestion;
+          _isLoadingTip = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingTip = false);
     }
   }
 
@@ -693,9 +729,31 @@ class _AddEditFormState extends ConsumerState<_AddEditForm> {
                   sectionLabel: 'Timing',
                   options: _kTimingOptions,
                   selected: _selectedTiming,
-                  onSelect: (v) => setState(
-                      () => _selectedTiming = v == _selectedTiming ? null : v),
+                  onSelect: (v) {
+                    final newVal = _selectedTiming == v ? null : v;
+                    setState(() {
+                      _selectedTiming = newVal;
+                      if (newVal == null) _timingSuggestion = null;
+                    });
+                    if (newVal != null) _fetchTimingTip(newVal);
+                  },
                 ),
+                // Loading bar while tip is being fetched
+                if (_isLoadingTip) ...[
+                  const SizedBox(height: AppDimens.spaceSm),
+                  const LinearProgressIndicator(),
+                ],
+                // Tip card
+                if (_timingSuggestion != null &&
+                    _timingSuggestion!.hasTip &&
+                    !_isLoadingTip) ...[
+                  const SizedBox(height: AppDimens.spaceSm),
+                  ZAlertBanner(
+                    variant: ZAlertVariant.info,
+                    message: _timingSuggestion!.tip!,
+                    onDismiss: () => setState(() => _timingSuggestion = null),
+                  ),
+                ],
                 const SizedBox(height: AppDimens.spaceLg),
               ],
             ),
