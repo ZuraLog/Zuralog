@@ -16,6 +16,8 @@
 /// - [dailyGoalsProvider]             — user's daily goals with today's progress
 /// - [supplementsListProvider]        — user's saved supplement and medication list
 /// - [supplementsTodayLogProvider]    — which supplements have been logged today
+/// - [supplementsSyncStatusProvider]  — sync state for today's supplement taken logs
+/// - [SupplementSyncStatus]           — three-state enum (none / pending / synced)
 /// - [stepsLogModeProvider]           — persisted steps log mode (add vs override)
 /// - [mealLogModeProvider]             — persisted meal log mode (quick vs full)
 /// (quickLogLoadingProvider removed — superseded by FAB system in Part 2)
@@ -28,8 +30,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/core/storage/prefs_service.dart';
+import 'package:zuralog/features/today/data/supplement_log_local_repository.dart';
 import 'package:zuralog/features/today/data/today_repository.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
+import 'package:zuralog/features/today/domain/supplement_taken_log.dart';
 import 'package:zuralog/features/today/domain/supplement_today_entry.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
@@ -219,6 +224,39 @@ final supplementsTodayLogProvider =
   } catch (e, st) {
     debugPrint('supplementsTodayLogProvider failed: $e\n$st');
     return const [];
+  }
+});
+
+// ── Supplements Sync Status ───────────────────────────────────────────────────
+
+/// Three-state sync status for today's supplement taken logs.
+///
+/// - [none]: no logs recorded today
+/// - [pending]: at least one log not yet confirmed by the server
+/// - [synced]: all logs confirmed by the server
+enum SupplementSyncStatus { none, pending, synced }
+
+/// Reads today's supplement logs from local storage and returns the aggregate
+/// sync state. The check-off panel uses this to show the cloud icon.
+///
+/// Never puts the UI into an error state — returns [SupplementSyncStatus.none]
+/// on any failure.
+///
+/// Invalidate after every tap (check-in, undo) and after every successful sync.
+final supplementsSyncStatusProvider =
+    FutureProvider<SupplementSyncStatus>((ref) async {
+  try {
+    final localRepo = ref.read(supplementLogLocalRepositoryProvider);
+    final today = DateTime.now();
+    final todayStr =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final logs = localRepo.getLogsForDate(todayStr);
+    if (logs.isEmpty) return SupplementSyncStatus.none;
+    final anyPending = logs.any((l) => !l.synced);
+    return anyPending ? SupplementSyncStatus.pending : SupplementSyncStatus.synced;
+  } catch (e, st) {
+    debugPrint('supplementsSyncStatusProvider failed: $e\n$st');
+    return SupplementSyncStatus.none;
   }
 });
 
