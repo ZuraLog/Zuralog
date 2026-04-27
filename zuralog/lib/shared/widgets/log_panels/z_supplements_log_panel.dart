@@ -245,11 +245,20 @@ class _ZSupplementsLogPanelState
       adHocDoseUnit: _oneOffUnit,
     );
     final localRepo = ref.read(supplementLogLocalRepositoryProvider);
-    await localRepo.saveLog(log);
-    final syncService = ref.read(supplementLogSyncServiceProvider);
-    unawaited(syncService.syncLog(log).then((_) {
-      if (mounted) setState(() {});
-    }));
+    try {
+      await localRepo.saveLog(log);
+    } catch (e) {
+      if (mounted) ZToast.error(context, 'Could not save — please try again.');
+      return;
+    }
+    try {
+      final syncService = ref.read(supplementLogSyncServiceProvider);
+      unawaited(syncService.syncLog(log).then((_) {
+        if (mounted) setState(() {});
+      }));
+    } catch (e) {
+      debugPrint('[ZSupplementsLogPanel] sync service unavailable: $e');
+    }
     setState(() {
       _showOneOffForm = false;
       _oneOffNameController.clear();
@@ -774,6 +783,15 @@ class _LogTodayButtonState extends State<_LogTodayButton> {
   void initState() {
     super.initState();
     widget.nameController.addListener(_rebuild);
+  }
+
+  @override
+  void didUpdateWidget(_LogTodayButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.nameController != widget.nameController) {
+      oldWidget.nameController.removeListener(_rebuild);
+      widget.nameController.addListener(_rebuild);
+    }
   }
 
   void _rebuild() => setState(() {});

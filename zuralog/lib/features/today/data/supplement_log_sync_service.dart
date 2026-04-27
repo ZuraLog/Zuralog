@@ -7,6 +7,7 @@ library;
 
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -75,8 +76,11 @@ class SupplementLogSyncService with WidgetsBindingObserver {
       final serverLogId = response.data['event_id'] as String;
       await _localRepo.markSynced(log.id, log.logDate,
           serverLogId: serverLogId);
-    } catch (_) {
-      // Network failure or 4xx/5xx — will retry on next syncPending() call.
+    } on DioException catch (e) {
+      debugPrint('[SupplementLogSyncService] sync failed: $e');
+    } catch (e, st) {
+      debugPrint('[SupplementLogSyncService] unexpected sync error: $e\n$st');
+      rethrow;
     }
   }
 
