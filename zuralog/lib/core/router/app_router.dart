@@ -73,7 +73,6 @@ import 'package:zuralog/features/today/presentation/notification_history_screen.
 import 'package:zuralog/features/today/presentation/log_screens/sleep_log_screen.dart';
 import 'package:zuralog/features/today/presentation/log_screens/run_log_screen.dart';
 import 'package:zuralog/features/today/presentation/log_screens/meal_log_screen.dart';
-import 'package:zuralog/features/today/presentation/log_screens/supplements_log_screen.dart';
 import 'package:zuralog/features/today/presentation/log_screens/symptom_log_screen.dart';
 import 'package:zuralog/features/today/presentation/log_screens/metric_picker_screen.dart';
 
@@ -362,10 +361,16 @@ List<RouteBase> _buildRoutes() {
       ),
     ),
     GoRoute(
-      path: RouteNames.supplementsLogPath,
-      name: RouteNames.supplementsLog,
-      pageBuilder: (context, state) => const MaterialPage(
-        child: SentryErrorBoundary(module: 'today.supplements_log', child: SupplementsLogScreen()),
+      path: RouteNames.supplementsStackPath,
+      name: RouteNames.supplementsStack,
+      pageBuilder: (context, state) => MaterialPage(
+        child: SentryErrorBoundary(
+          module: 'today.supplements_stack',
+          child: Scaffold(
+            appBar: AppBar(title: const Text('Supplement Stack')),
+            body: const Center(child: Text('Coming soon')),
+          ),
+        ),
       ),
     ),
     GoRoute(

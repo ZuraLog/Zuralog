@@ -152,12 +152,6 @@ abstract final class RouteNames {
   /// Path for the Meal Log screen.
   static const String mealLogPath = '/today/log/meal';
 
-  /// Name for the Supplements Log full-screen form.
-  static const String supplementsLog = 'supplementsLog';
-
-  /// Path for the Supplements Log screen.
-  static const String supplementsLogPath = '/today/log/supplements';
-
   /// Name for the Symptom Log full-screen form.
   static const String symptomLog = 'symptomLog';
 

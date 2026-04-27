@@ -15,6 +15,7 @@ import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/today/data/today_repository.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/log_panels/z_steps_log_panel.dart';
+import 'package:zuralog/shared/widgets/log_panels/z_supplements_log_panel.dart';
 import 'package:zuralog/shared/widgets/log_panels/z_water_log_panel.dart';
 import 'package:zuralog/shared/widgets/log_panels/z_wellness_log_panel.dart';
 import 'package:zuralog/shared/widgets/log_panels/z_weight_log_panel.dart';
@@ -58,7 +59,7 @@ const List<_TileDef> _tiles = [
   _TileDef(key: 'steps',      icon: Icons.directions_walk_rounded,  label: 'Steps',        behaviour: _TileBehaviour.inline),
   _TileDef(key: 'run',        icon: Icons.directions_run_rounded,   label: 'Run / Cardio', behaviour: _TileBehaviour.fullScreen),
   _TileDef(key: 'meal',       icon: Icons.restaurant_rounded,       label: 'Meal',         behaviour: _TileBehaviour.fullScreen),
-  _TileDef(key: 'supplement', icon: Icons.medication_rounded,       label: 'Supplements',  behaviour: _TileBehaviour.fullScreen),
+  _TileDef(key: 'supplement', icon: Icons.medication_rounded,       label: 'Supplements',  behaviour: _TileBehaviour.inline),
   _TileDef(key: 'symptom',    icon: Icons.healing_rounded,          label: 'Symptom',      behaviour: _TileBehaviour.fullScreen),
   _TileDef(key: 'workout',    icon: Icons.fitness_center_rounded,   label: 'Fitness',      behaviour: _TileBehaviour.fullScreen),
 ];
@@ -199,13 +200,12 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
 
   String _routeForTile(String key) {
     return switch (key) {
-      'sleep'      => RouteNames.sleepLog,
-      'run'        => RouteNames.runLog,
-      'meal'       => RouteNames.mealLog,
-      'supplement' => RouteNames.supplementsLog,
-      'symptom'    => RouteNames.symptomLog,
-      'workout'    => RouteNames.workoutLog,
-      _            => throw AssertionError('No route mapped for full-screen tile key: $key'),
+      'sleep'   => RouteNames.sleepLog,
+      'run'     => RouteNames.runLog,
+      'meal'    => RouteNames.mealLog,
+      'symptom' => RouteNames.symptomLog,
+      'workout' => RouteNames.workoutLog,
+      _         => throw AssertionError('No route mapped for full-screen tile key: $key'),
     };
   }
 
@@ -308,6 +308,8 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
                         ref.invalidate(todayLogSummaryProvider);
                         ref.invalidate(progressHomeProvider);
                         ref.invalidate(goalsProvider);
+                        ref.invalidate(supplementsTodayLogProvider);
+                        ref.invalidate(supplementsSyncStatusProvider);
                       });
                     },
                   ),
@@ -450,6 +452,10 @@ class _PanelView extends StatelessWidget {
               );
             }
           },
+          onBack: onBack,
+        ),
+      'supplement' => ZSupplementsLogPanel(
+          onSave: onSaved,
           onBack: onBack,
         ),
       _ => Center(
