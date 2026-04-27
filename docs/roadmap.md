@@ -1,3 +1,51 @@
+## Supplements Log
+
+### Complete — Plan 4: Daily Check-in Panel (2026-04-27)
+
+**Status:** Shipped on `feat/supplements-log-overhaul`
+
+What shipped:
+- `ZSupplementsLogPanel` — inline Today panel with write-first offline sync
+- `SupplementSyncStatus` cloud icon reflecting live sync state (idle / syncing / error)
+
+### Complete — Plan 5: Panel Interactions (2026-04-27)
+
+**Status:** Shipped on `feat/supplements-log-overhaul`
+
+What shipped:
+- 4-second undo toast before marking a supplement taken is committed
+- `ZToast.displayDuration` parameter — configurable display time for the shared toast widget
+- Uncheck confirmation dialog to prevent accidental log deletion
+
+### Complete — Plan 6: Stack Management Screen (2026-04-27)
+
+**Status:** Shipped on `feat/supplements-log-overhaul`
+
+What shipped:
+- `SupplementsStackScreen` — full stack management with drag reorder, swipe-to-delete, and add/edit form
+- Option grids for timing (Morning, Afternoon, Evening, Bedtime) and form factor (Pill, Capsule, Powder, Liquid, Gummy, Other)
+
+### Complete — Plan 7: One-off Daily Log (2026-04-27)
+
+**Status:** Shipped on `feat/supplements-log-overhaul`
+
+What shipped:
+- Ad-hoc supplement logging from the Today panel ("Log something else" affordance)
+- `SupplementTakenLog` gained `is_ad_hoc` and `ad_hoc_name` database columns
+- `isAdHoc` sync branching in `SupplementsRepository` — ad-hoc entries follow a separate upsert path
+
+### Complete — Plan 8: Scan Label Integration (2026-04-27)
+
+**Status:** Shipped on `feat/supplements-log-overhaul`
+
+What shipped:
+- `POST /api/v1/supplements/scan-label` — accepts image (base64, max 4 MB) or barcode string; SSRF guard; returns `SupplementScanResult`
+- Scan button in stack add/edit form — pre-fills form fields from scan result automatically
+- Scanner disposal on screen close so the camera is never left open
+- 3 backend tests covering barcode happy path, missing-input validation, and auth enforcement
+
+---
+
 ## Wellness Log
 
 ### Complete — Wellness Log Overhaul (2026-04-27)

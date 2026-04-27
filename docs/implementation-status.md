@@ -1,3 +1,52 @@
+## 2026-04-27 — Supplements Log Overhaul: Plans 4–8 (Daily Check-in, Panel Interactions, Stack Management, One-off Logging, Scan Label)
+
+**Branch:** `feat/supplements-log-overhaul`
+
+Plans 4 through 8 of the 11-plan supplements overhaul. Covers the full daily check-in panel, all panel interactions, the stack management screen, ad-hoc supplement logging, and the scan-label integration endpoint.
+
+**Plan 4 — Daily Check-in Panel:**
+
+- **`ZSupplementsLogPanel`** (`zuralog/lib/features/today/presentation/widgets/supplements_log_panel.dart`): Inline check-in panel on the Today screen. Renders the user's supplement stack as a tappable checklist. Write-first offline sync — marking a supplement taken writes to the local database immediately and syncs to the cloud in the background.
+- **`SupplementSyncStatus` cloud icon** (`supplements_log_panel.dart`): A small cloud icon in the panel header reflects the current sync state (idle, syncing, error). Users can see at a glance whether their check-ins have reached the server.
+
+**Plan 5 — Panel Interactions:**
+
+- **4-second undo toast** (`supplements_log_panel.dart`): Marking a supplement taken shows an undo toast for 4 seconds before the action is committed. Prevents accidental double-taps from being permanent.
+- **`ZToast.displayDuration` parameter** (`zuralog/lib/shared/widgets/feedback/z_toast.dart`): The shared toast widget now accepts a configurable `displayDuration` parameter so callers can control how long a toast stays visible. Added to the `widgets.dart` barrel export.
+- **Uncheck confirmation dialog** (`supplements_log_panel.dart`): Unchecking a supplement that was already logged asks the user to confirm before deleting the log entry. Prevents accidental data loss.
+
+**Plan 6 — Stack Management Screen:**
+
+- **`SupplementsStackScreen`** (`zuralog/lib/features/supplements/presentation/supplements_stack_screen.dart`): Full stack management screen reachable from the Today panel. Supports reordering (drag handle), swipe-to-delete with undo, and an add/edit form.
+- **Add/edit form with option grids** (`supplements_stack_screen.dart`): The add and edit form uses option grid chips for timing (Morning, Afternoon, Evening, Bedtime) and form factor (Pill, Capsule, Powder, Liquid, Gummy, Other). Free-text fields for name, dose amount, and dose unit.
+
+**Plan 7 — One-off Daily Log:**
+
+- **Ad-hoc supplement logging** (`supplements_log_panel.dart`): A "Log something else" affordance in the panel lets users log a supplement that is not in their stack. The logged entry is flagged as ad-hoc so it does not pollute the stack.
+- **`SupplementTakenLog` ad-hoc fields** (database): The `supplement_taken_logs` table gained `is_ad_hoc` (boolean) and `ad_hoc_name` (text) columns to support one-off entries without a corresponding stack item.
+- **`isAdHoc` sync branching** (`zuralog/lib/features/supplements/data/supplements_repository.dart`): The sync path branches on `isAdHoc` — ad-hoc entries go through a separate upsert path that does not touch the user's supplement stack.
+
+**Plan 8 — Scan Label Integration:**
+
+- **`POST /api/v1/supplements/scan-label`** (`cloud-brain/app/api/v1/supplements_routes.py`): Accepts either an image (base64, max 4 MB) or a barcode string. Barcode path returns product data from a public nutrition database. Image path is an AI-ready hook stubbed for future LLM wiring. SSRF guard rejects non-HTTPS and private-range URLs. Both paths return `SupplementScanResult`.
+- **`SupplementScanResult`** (`cloud-brain/app/api/v1/supplements_routes.py`): Pydantic response model with `name`, `brand`, `dose`, `dose_unit`, `form`, `ingredients`, and `imageUrl` fields (all optional). Lets the caller pre-fill the add form without mapping differences.
+- **Scan button in stack form** (`supplements_stack_screen.dart`): A camera icon in the add form header opens the device camera (or photo picker). The captured image is sent to the scan-label endpoint; on success the form fields are pre-filled automatically.
+- **Scanner disposal** (`supplements_stack_screen.dart`): Camera resources are released in `dispose()` so the device camera is never left open after the screen closes.
+- **3 backend tests** (`cloud-brain/tests/api/v1/test_scan_label.py`): Cover barcode happy path (fields returned), missing-input validation (400 when neither image nor barcode provided), and auth enforcement (401 without token). All pass.
+
+**Files created:**
+- `zuralog/lib/features/today/presentation/widgets/supplements_log_panel.dart`
+- `zuralog/lib/features/supplements/presentation/supplements_stack_screen.dart`
+- `zuralog/lib/shared/widgets/feedback/z_toast.dart` (if not pre-existing)
+- `cloud-brain/tests/api/v1/test_scan_label.py`
+
+**Files modified:**
+- `cloud-brain/app/api/v1/supplements_routes.py` (scan-label endpoint, `SupplementScanResult`, SSRF guard, image size cap)
+- `zuralog/lib/features/supplements/data/supplements_repository.dart` (ad-hoc sync branching)
+- `zuralog/lib/shared/widgets/widgets.dart` (barrel export for `ZToast`)
+
+---
+
 ## 2026-04-27 — Wellness Log Overhaul: AI Voice/Text Check-In, 6-State Panel, Sentiment Selector
 
 **Branch:** `feat/wellness-log-overhaul`
