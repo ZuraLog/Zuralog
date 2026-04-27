@@ -21,6 +21,7 @@ import 'package:dio/dio.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
+import 'package:zuralog/features/today/domain/supplement_today_entry.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
 // ── TodayRepositoryInterface ──────────────────────────────────────────────────
@@ -108,6 +109,15 @@ abstract interface class TodayRepositoryInterface {
   /// Replace the user's supplement list with [supplements].
   Future<List<SupplementEntry>> updateSupplementsList(
       List<SupplementEntry> supplements);
+
+  /// Fetches today's supplement_taken log entries from the server.
+  ///
+  /// Returns supplement_id + log_id pairs for all supplements already logged
+  /// today (UTC day). Returns empty list on any failure.
+  Future<List<SupplementTodayLogEntry>> getSupplementsTodayLog();
+
+  /// Deletes a supplement_taken log entry by its server log ID.
+  Future<void> deleteSupplementLogEntry(String logEntryId);
 
   /// Submit a sleep log entry.
   Future<void> logSleep({
@@ -895,12 +905,7 @@ class TodayRepository implements TodayRepositoryInterface {
     final response = await _api.get('/api/v1/supplements');
     final list = response.data['supplements'] as List<dynamic>? ?? [];
     return list
-        .map((e) => SupplementEntry(
-              id: e['id'] as String,
-              name: e['name'] as String,
-              dose: e['dose'] as String?,
-              timing: e['timing'] as String?,
-            ))
+        .map((e) => SupplementEntry.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 
@@ -908,23 +913,24 @@ class TodayRepository implements TodayRepositoryInterface {
   Future<List<SupplementEntry>> updateSupplementsList(
       List<SupplementEntry> supplements) async {
     final response = await _api.post('/api/v1/supplements', data: {
-      'supplements': supplements
-          .map((s) => {
-                'name': s.name,
-                if (s.dose != null) 'dose': s.dose,
-                if (s.timing != null) 'timing': s.timing,
-              })
-          .toList(),
+      'supplements': supplements.map((s) => s.toJson()..remove('id')).toList(),
     });
     final list = response.data['supplements'] as List<dynamic>? ?? [];
     return list
-        .map((e) => SupplementEntry(
-              id: e['id'] as String,
-              name: e['name'] as String,
-              dose: e['dose'] as String?,
-              timing: e['timing'] as String?,
-            ))
+        .map((e) => SupplementEntry.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  @override
+  Future<List<SupplementTodayLogEntry>> getSupplementsTodayLog() async {
+    final response = await _api.get('/api/v1/supplements/today-log');
+    return parseTodayLogResponse(
+        response.data as Map<String, dynamic>? ?? {});
+  }
+
+  @override
+  Future<void> deleteSupplementLogEntry(String logEntryId) async {
+    await _api.delete('/api/v1/supplements/log/$logEntryId');
   }
 
   static double _severityToValue(String severity) {
