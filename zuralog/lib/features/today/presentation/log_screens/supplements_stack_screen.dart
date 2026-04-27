@@ -487,14 +487,13 @@ class _AddEditFormState extends ConsumerState<_AddEditForm> {
   }
 
   void _onNameChanged() {
-    if (_conflictAcknowledged) setState(() => _conflictAcknowledged = false);
-    _conflict = null;
+    setState(() {
+      _conflictAcknowledged = false;
+      _conflict = null;
+    });
     _conflictDebounce?.cancel();
     final name = _nameCtrl.text.trim();
-    if (name.isEmpty) {
-      setState(() => _conflict = null);
-      return;
-    }
+    if (name.isEmpty) return;
     _conflictDebounce = Timer(
       const Duration(milliseconds: 800),
       () => _checkConflict(name),
