@@ -3,9 +3,11 @@
 import logging
 import uuid as _uuid
 from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, model_validator
-from sqlalchemy import delete as sa_delete, select, update
+from sqlalchemy import delete as sa_delete
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 
@@ -226,6 +228,7 @@ async def delete_supplement_log_entry(
 async def _parse_supplement_barcode(barcode: str) -> ScanLabelResponse:
     """Look up a barcode via Open Food Facts and return parsed supplement fields."""
     import re  # noqa: PLC0415
+
     import httpx  # noqa: PLC0415
     if not re.match(r'^\d{6,14}$', barcode):
         return ScanLabelResponse()
@@ -244,7 +247,9 @@ async def _parse_supplement_barcode(barcode: str) -> ScanLabelResponse:
         return ScanLabelResponse()
 
 
-async def _parse_supplement_image(_image_base64: str | None) -> ScanLabelResponse:
+async def _parse_supplement_image(  # pyright: ignore[reportUnusedParameter]
+    _image_base64: str | None,
+) -> ScanLabelResponse:
     """Parse a supplement label image — AI hook reserved for future wiring."""
     return ScanLabelResponse()
 
