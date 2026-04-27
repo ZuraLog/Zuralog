@@ -247,8 +247,8 @@ async def _parse_supplement_barcode(barcode: str) -> ScanLabelResponse:
         return ScanLabelResponse()
 
 
-async def _parse_supplement_image(  # pyright: ignore[reportUnusedParameter]
-    _image_base64: str | None,
+async def _parse_supplement_image(
+    _image_base64: str | None,  # pyright: ignore[reportUnusedParameter]
 ) -> ScanLabelResponse:
     """Parse a supplement label image — AI hook reserved for future wiring."""
     return ScanLabelResponse()
