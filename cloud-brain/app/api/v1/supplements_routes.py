@@ -190,10 +190,13 @@ async def delete_supplement_log_entry(
             QuickLog.metric_type == "supplement_taken",
         )
     )
-    row = result.scalars().first()
-    if row is None:
+    if result.scalars().first() is None:
         raise HTTPException(status_code=404, detail="Log entry not found")
     await db.execute(
-        sa_delete(QuickLog).where(QuickLog.id == log_entry_id)
+        sa_delete(QuickLog).where(
+            QuickLog.id == log_entry_id,
+            QuickLog.user_id == user_id,
+            QuickLog.metric_type == "supplement_taken",
+        )
     )
     await db.commit()
