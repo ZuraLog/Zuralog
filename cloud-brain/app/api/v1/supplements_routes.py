@@ -96,6 +96,20 @@ class TimingTipResponse(BaseModel):
     tip: str | None = None
 
 
+class SupplementInsightItem(BaseModel):
+    metric_type: str
+    metric_label: str
+    direction: str  # 'positive' | 'negative' | 'neutral'
+    correlation: float
+    insight_text: str
+
+
+class SupplementInsightsResponse(BaseModel):
+    insights: list[SupplementInsightItem]
+    data_days: int
+    has_enough_data: bool
+
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 
@@ -301,6 +315,34 @@ Respond with valid JSON only: {"tip": "your tip here"}
 If you cannot generate a meaningful tip, respond: {"tip": null}"""
 
 
+_METRIC_LABELS: dict[str, str] = {
+    "sleep_duration": "Sleep",
+    "hrv_ms": "HRV",
+    "energy": "Energy",
+    "stress": "Stress",
+}
+
+_INSIGHTS_SYSTEM = """You are a health data analyst. For each supplement-health correlation, write a single clear insight sentence (max 100 characters) that a non-technical user can understand.
+
+Format: "Your [metric] is [X]% [better/worse] on days you [fully/mostly] take your supplements."
+If the correlation is near zero (|r| < 0.15), write a neutral observation.
+Respond with valid JSON: {"insights": [{"metric_type": "...", "insight_text": "..."}, ...]}"""
+
+
+def _pearson(x: list[float], y: list[float]) -> float | None:
+    """Pearson r. Returns None if fewer than 7 shared points."""
+    if len(x) < 7:
+        return None
+    n = len(x)
+    mx, my = sum(x) / n, sum(y) / n
+    num = sum((xi - mx) * (yi - my) for xi, yi in zip(x, y))
+    den_x = sum((xi - mx) ** 2 for xi in x) ** 0.5
+    den_y = sum((yi - my) ** 2 for yi in y) ** 0.5
+    if den_x == 0 or den_y == 0:
+        return None
+    return num / (den_x * den_y)
+
+
 _CONFLICT_SYSTEM = """You are a supplement expert. Given a new supplement name and a list of existing supplements in a user's stack, determine if the new supplement contains the same active ingredient as any existing supplement, which would create a duplicate or overlap.
 
 Respond with valid JSON only:
@@ -419,6 +461,163 @@ async def check_supplement_conflicts(
     except Exception as exc:
         logger.warning("check_supplement_conflicts: LLM call failed (%s), failing open", exc)
         return ConflictCheckResponse(has_conflict=False)
+
+
+# ── Insights route ───────────────────────────────────────────────────────────
+
+
+@limiter.limit("10/minute")
+@router.get("/insights", response_model=SupplementInsightsResponse)
+async def get_supplement_insights(
+    request: Request,
+    days: int = Query(default=60, ge=14, le=90),
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_authenticated_user_id),
+) -> SupplementInsightsResponse:
+    """Return correlations between supplement consistency and health metrics."""
+    from datetime import date, time as _time  # noqa: PLC0415
+
+    cutoff = date.today() - timedelta(days=days)
+
+    # 1. Active stack size
+    stack_result = await db.execute(
+        select(func.count()).select_from(UserSupplement).where(
+            UserSupplement.user_id == user_id,
+            UserSupplement.is_active.is_(True),
+        )
+    )
+    stack_size: int = stack_result.scalar() or 0
+
+    # 2. Early return if no supplements on the stack — no LLM needed
+    if stack_size == 0:
+        return SupplementInsightsResponse(insights=[], data_days=0, has_enough_data=False)
+
+    # 3. LLM guard — only checked after confirming we have data to analyse
+    llm_client = getattr(request.app.state, "llm_client", None)
+    if llm_client is None:
+        raise HTTPException(status_code=503, detail="LLM service unavailable.")
+
+    # 4. Daily health metrics from DailySummary
+    from app.models.daily_summary import DailySummary  # noqa: PLC0415
+
+    metric_types = list(_METRIC_LABELS.keys())
+    ds_result = await db.execute(
+        select(DailySummary).where(
+            DailySummary.user_id == user_id,
+            DailySummary.metric_type.in_(metric_types),
+            DailySummary.date >= cutoff,
+            DailySummary.is_stale.is_(False),
+        )
+    )
+    ds_rows = ds_result.scalars().all()
+
+    # Build dict: metric_type → {date: value}
+    health_by_metric: dict[str, dict[date, float]] = {m: {} for m in metric_types}
+    for row in ds_rows:
+        health_by_metric[row.metric_type][row.date] = row.value
+
+    # 5. Supplement-taken logs from QuickLog
+    cutoff_dt = datetime.combine(cutoff, _time.min, tzinfo=timezone.utc)
+    ql_result = await db.execute(
+        select(QuickLog).where(
+            QuickLog.user_id == user_id,
+            QuickLog.metric_type == "supplement_taken",
+            QuickLog.logged_at >= cutoff_dt,
+        )
+    )
+    ql_rows = ql_result.scalars().all()
+
+    taken_by_date: dict[date, set[str]] = {}
+    for row in ql_rows:
+        supplement_id = (row.data or {}).get("supplement_id")
+        if supplement_id:
+            d = row.logged_at.astimezone(timezone.utc).date()
+            taken_by_date.setdefault(d, set()).add(str(supplement_id))
+
+    consistency_by_date: dict[date, float] = {
+        d: min(1.0, len(taken_ids) / stack_size)
+        for d, taken_ids in taken_by_date.items()
+    }
+
+    # 6. Early return if no consistency data
+    if not consistency_by_date:
+        return SupplementInsightsResponse(insights=[], data_days=0, has_enough_data=False)
+
+    data_days = len(consistency_by_date)
+    has_enough_data = data_days >= 14
+
+    # 7. Compute Pearson correlations for each metric
+    correlations: list[tuple[str, float]] = []
+    for metric_type, daily_values in health_by_metric.items():
+        # Find days present in BOTH datasets
+        shared_dates = sorted(set(consistency_by_date.keys()) & set(daily_values.keys()))
+        x = [consistency_by_date[d] for d in shared_dates]
+        y = [daily_values[d] for d in shared_dates]
+        r = _pearson(x, y)
+        if r is not None:
+            correlations.append((metric_type, r))
+
+    if not correlations:
+        return SupplementInsightsResponse(
+            insights=[], data_days=data_days, has_enough_data=has_enough_data
+        )
+
+    # 8. LLM generates insight text for each correlation
+    corr_payload = [
+        {"metric_type": mt, "correlation": round(r, 4)}
+        for mt, r in correlations
+    ]
+    try:
+        messages = [
+            {"role": "system", "content": _INSIGHTS_SYSTEM},
+            {"role": "user", "content": json.dumps(corr_payload)},
+        ]
+        response = await llm_client.chat(
+            messages=messages,
+            temperature=0.3,
+            response_format={"type": "json_object"},
+            reasoning={"effort": "none"},
+            plugins=[{"id": "response-healing"}],
+        )
+        llm_data: dict = json.loads(response.choices[0].message.content)
+        insight_texts: dict[str, str] = {
+            item["metric_type"]: item["insight_text"]
+            for item in llm_data.get("insights", [])
+            if "metric_type" in item and "insight_text" in item
+        }
+    except Exception as exc:
+        logger.warning("get_supplement_insights: LLM call failed (%s), returning empty insights", exc)
+        return SupplementInsightsResponse(
+            insights=[], data_days=data_days, has_enough_data=has_enough_data
+        )
+
+    # 9. Build final response
+    result_items: list[SupplementInsightItem] = []
+    for metric_type, r in correlations:
+        if abs(r) < 0.15:
+            direction = "neutral"
+        elif r > 0:
+            direction = "positive"
+        else:
+            direction = "negative"
+        insight_text = insight_texts.get(metric_type, "")
+        if not insight_text:
+            continue
+        result_items.append(
+            SupplementInsightItem(
+                metric_type=metric_type,
+                metric_label=_METRIC_LABELS.get(metric_type, metric_type),
+                direction=direction,
+                correlation=round(r, 4),
+                insight_text=insight_text,
+            )
+        )
+
+    return SupplementInsightsResponse(
+        insights=result_items,
+        data_days=data_days,
+        has_enough_data=has_enough_data,
+    )
 
 
 # ── Timing-tip route ──────────────────────────────────────────────────────────
