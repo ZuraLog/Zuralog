@@ -21,6 +21,7 @@ import 'package:dio/dio.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
+import 'package:zuralog/features/today/domain/supplement_scan_result.dart';
 import 'package:zuralog/features/today/domain/supplement_today_entry.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
@@ -224,6 +225,15 @@ abstract interface class TodayRepositoryInterface {
   /// Returns a list of exactly [days] entries: index 0 = oldest, index [days-1] = today.
   /// Null means no weigh-in was recorded that day.
   Future<List<double?>> getWeightHistory({int days = 7});
+
+  /// Sends a supplement label image or barcode to the AI scan endpoint and
+  /// returns the parsed supplement information.
+  ///
+  /// At least one of [imageBase64] or [barcode] must be non-null.
+  Future<SupplementScanResult> scanSupplementLabel({
+    String? imageBase64,
+    String? barcode,
+  });
 }
 
 // ── TodayRepository ──────────────────────────────────────────────────────────
@@ -931,6 +941,27 @@ class TodayRepository implements TodayRepositoryInterface {
   @override
   Future<void> deleteSupplementLogEntry(String logEntryId) async {
     await _api.delete('/api/v1/supplements/log/$logEntryId');
+  }
+
+  // ── Supplement Label Scan ──────────────────────────────────────────────────
+
+  @override
+  Future<SupplementScanResult> scanSupplementLabel({
+    String? imageBase64,
+    String? barcode,
+  }) async {
+    assert(imageBase64 != null || barcode != null,
+        'Either imageBase64 or barcode must be provided');
+    final response = await _api.post(
+      '/api/v1/supplements/scan-label',
+      data: {
+        if (imageBase64 != null) 'image_base64': imageBase64,
+        if (barcode != null) 'barcode': barcode,
+      },
+    );
+    return SupplementScanResult.fromJson(
+      response.data as Map<String, dynamic>? ?? {},
+    );
   }
 
   static double _severityToValue(String severity) {

@@ -10,6 +10,7 @@ library;
 
 import 'package:zuralog/features/today/data/today_repository.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
+import 'package:zuralog/features/today/domain/supplement_scan_result.dart';
 import 'package:zuralog/features/today/domain/supplement_today_entry.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
@@ -277,6 +278,21 @@ final class MockTodayRepository implements TodayRepositoryInterface {
   Future<void> deleteSupplementLogEntry(String logEntryId) async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
     // No-op in mock.
+  }
+
+  @override
+  Future<SupplementScanResult> scanSupplementLabel({
+    String? imageBase64,
+    String? barcode,
+  }) async {
+    await Future<void>.delayed(_delay);
+    return const SupplementScanResult(
+      name: 'Vitamin D3',
+      doseAmount: 5000.0,
+      doseUnit: 'IU',
+      form: 'softgel',
+      confidence: 0.92,
+    );
   }
 
   // ── Log Endpoints ─────────────────────────────────────────────────────────
