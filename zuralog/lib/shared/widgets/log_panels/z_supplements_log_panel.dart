@@ -60,17 +60,14 @@ class _ZSupplementsLogPanelState
   @override
   void initState() {
     super.initState();
-    // Warm up the sync service on first mount — deferred to avoid initState
-    // provider access issues in test environments.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        try {
-          ref.read(supplementLogSyncServiceProvider);
-        } catch (_) {
-          // Silently ignore if sync service is unavailable (e.g. in tests).
-        }
-      }
-    });
+    // Eagerly initialize the sync service so its WidgetsBindingObserver is
+    // registered before the first frame. Safe to call here because
+    // WidgetsBinding.instance.addObserver is available during initState.
+    try {
+      ref.read(supplementLogSyncServiceProvider);
+    } catch (_) {
+      // Silently ignore if sync service is unavailable (e.g. in tests).
+    }
   }
 
   @override
