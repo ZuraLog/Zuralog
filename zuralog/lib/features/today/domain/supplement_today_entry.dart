@@ -12,6 +12,20 @@ class SupplementTodayLogEntry {
 
   final String supplementId;
   final String logId;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SupplementTodayLogEntry &&
+          supplementId == other.supplementId &&
+          logId == other.logId;
+
+  @override
+  int get hashCode => Object.hash(supplementId, logId);
+
+  @override
+  String toString() =>
+      'SupplementTodayLogEntry(supplementId: $supplementId, logId: $logId)';
 }
 
 /// Parses the `{ "entries": [...] }` response body from the today-log endpoint.

@@ -11,6 +11,14 @@ void main() {
       expect(entry.supplementId, 'supp-1');
       expect(entry.logId, 'log-abc');
     });
+
+    test('equality: same fields are equal', () {
+      const a = SupplementTodayLogEntry(supplementId: 's1', logId: 'l1');
+      const b = SupplementTodayLogEntry(supplementId: 's1', logId: 'l1');
+      const c = SupplementTodayLogEntry(supplementId: 's2', logId: 'l1');
+      expect(a, equals(b));
+      expect(a, isNot(equals(c)));
+    });
   });
 
   group('parseTodayLogResponse', () {
