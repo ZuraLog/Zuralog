@@ -155,3 +155,11 @@ def test_post_supplements_optional_fields(client):
 
 def test_supplement_taken_is_valid_metric_type():
     assert "supplement_taken" in VALID_METRIC_TYPES
+
+
+def test_user_supplement_has_structured_dose_fields():
+    from app.models.user_supplement import UserSupplement
+    s = UserSupplement()
+    assert hasattr(s, "dose_amount")
+    assert hasattr(s, "dose_unit")
+    assert hasattr(s, "form")

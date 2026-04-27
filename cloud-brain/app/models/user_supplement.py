@@ -7,8 +7,9 @@ The list is displayed in SupplementsLogScreen as a tap-to-check-off checklist.
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, SmallInteger, String
+from sqlalchemy import Boolean, DateTime, Numeric, SmallInteger, String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -60,6 +61,21 @@ class UserSupplement(Base):
         String(50),
         nullable=True,
         comment="morning | evening | anytime | etc.",
+    )
+    dose_amount: Mapped[Decimal | None] = mapped_column(
+        Numeric(8, 2),
+        nullable=True,
+        comment="Numeric dose quantity e.g. 5000 (for 5000 IU)",
+    )
+    dose_unit: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+        comment="Unit of dose e.g. IU, mg, mcg, g, ml",
+    )
+    form: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+        comment="Physical form e.g. capsule, softgel, tablet, powder",
     )
     sort_order: Mapped[int] = mapped_column(
         SmallInteger,
