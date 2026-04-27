@@ -76,4 +76,15 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Name'), findsOneWidget);
   });
+
+  testWidgets('each supplement row shows supplement name', (tester) async {
+    final supplements = [
+      const SupplementEntry(id: 's1', name: 'Iron', doseAmount: 18, doseUnit: 'mg'),
+    ];
+    await tester.pumpWidget(buildScreen(supplements: supplements));
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Iron'), findsOneWidget);
+    // Dose label should appear in the row subtitle
+    expect(find.textContaining('18'), findsOneWidget);
+  });
 }

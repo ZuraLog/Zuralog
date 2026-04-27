@@ -44,6 +44,8 @@ class _SupplementsStackScreenState
   SupplementEntry? _editingEntry;
   // Local mutable copy of the list for reordering
   List<SupplementEntry>? _localList;
+  // Guards one-time seeding of _localList from server data
+  bool _seeded = false;
 
   @override
   void initState() {
@@ -182,13 +184,12 @@ class _SupplementsStackScreenState
         body: const Center(child: Text('Could not load supplements.')),
       ),
       data: (serverList) {
-        // Seed local list on first data arrival
-        if (_localList == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && _localList == null) {
-              setState(() => _localList = List.from(serverList));
-            }
-          });
+        // Seed local list on first data arrival — safe inside build because
+        // no setState is called; we just set the field directly before the
+        // first frame is painted.
+        if (!_seeded) {
+          _seeded = true;
+          _localList = List.from(serverList);
         }
         final list = _localList ?? serverList;
 
