@@ -4,8 +4,6 @@ import json
 import logging
 import uuid as _uuid
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
-
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import delete as sa_delete
@@ -18,9 +16,6 @@ from app.database import get_db
 from app.limiter import limiter
 from app.models.quick_log import QuickLog
 from app.models.user_supplement import UserSupplement
-
-if TYPE_CHECKING:
-    from app.agent.llm_client import LLMClient
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/supplements", tags=["supplements"])
@@ -307,7 +302,7 @@ Do NOT flag clearly different supplements as overlaps."""
 async def _check_overlap_with_ai(
     name: str,
     existing_names: list[str],
-    llm_client: "LLMClient | None",
+    llm_client,
 ) -> dict[str, object]:
     """Call LLM to detect ingredient overlap. Returns no-conflict sentinel if llm_client is None."""
     if llm_client is None:
@@ -329,7 +324,7 @@ async def _check_overlap_with_ai(
         plugins=[{"id": "response-healing"}],
     )
     raw = response.choices[0].message.content
-    return json.loads(raw)  # type: ignore[no-any-return]
+    return json.loads(raw)
 
 
 # ── Conflict-check route ──────────────────────────────────────────────────────
