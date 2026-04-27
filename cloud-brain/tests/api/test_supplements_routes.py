@@ -254,3 +254,39 @@ def test_get_today_log_requires_auth():
     from app.main import app as _app
     resp = TestClient(_app).get("/api/v1/supplements/today-log")
     assert resp.status_code in (401, 403)
+
+
+# ── DELETE /api/v1/supplements/log/{log_entry_id} ────────────────────────────
+
+
+def test_delete_supplement_log_returns_204(client, mock_db):
+    from datetime import datetime, timezone
+    from app.models.quick_log import QuickLog
+    row = QuickLog(
+        id="log-uuid-del",
+        user_id=TEST_USER_ID,
+        metric_type="supplement_taken",
+        value=1.0,
+        data={"supplement_id": "supp-abc"},
+        logged_at=datetime.now(timezone.utc),
+    )
+    mock_db.execute.return_value.scalars.return_value.first.return_value = row
+    resp = client.delete(
+        "/api/v1/supplements/log/log-uuid-del", headers=AUTH_HEADER
+    )
+    assert resp.status_code == 204
+
+
+def test_delete_supplement_log_returns_404_when_not_found(client, mock_db):
+    mock_db.execute.return_value.scalars.return_value.first.return_value = None
+    resp = client.delete(
+        "/api/v1/supplements/log/does-not-exist", headers=AUTH_HEADER
+    )
+    assert resp.status_code == 404
+
+
+def test_delete_supplement_log_requires_auth():
+    from fastapi.testclient import TestClient
+    from app.main import app as _app
+    resp = TestClient(_app).delete("/api/v1/supplements/log/some-id")
+    assert resp.status_code in (401, 403)

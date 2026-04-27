@@ -4,9 +4,9 @@ import logging
 import uuid as _uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import select, update
+from sqlalchemy import delete as sa_delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 
@@ -172,3 +172,28 @@ async def replace_supplements(
     return SupplementListResponse(
         supplements=[_row_to_response(r) for r in new_rows],
     )
+
+
+@limiter.limit("30/minute")
+@router.delete("/log/{log_entry_id}", status_code=204)
+async def delete_supplement_log_entry(
+    log_entry_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_authenticated_user_id),
+) -> None:
+    """Delete a specific supplement_taken log entry owned by the authenticated user."""
+    result = await db.execute(
+        select(QuickLog).where(
+            QuickLog.id == log_entry_id,
+            QuickLog.user_id == user_id,
+            QuickLog.metric_type == "supplement_taken",
+        )
+    )
+    row = result.scalars().first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Log entry not found")
+    await db.execute(
+        sa_delete(QuickLog).where(QuickLog.id == log_entry_id)
+    )
+    await db.commit()
