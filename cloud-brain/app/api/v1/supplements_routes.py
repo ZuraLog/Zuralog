@@ -3,8 +3,8 @@
 import json
 import logging
 import uuid as _uuid
-from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Request
+from datetime import datetime, timedelta, timezone
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import select, update
@@ -90,6 +90,10 @@ class ConflictCheckResponse(BaseModel):
     conflict_type: str | None = None  # 'duplicate' | 'overlap'
     conflicting_name: str | None = None
     message: str | None = None
+
+
+class TimingTipResponse(BaseModel):
+    tip: str | None = None
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -290,6 +294,13 @@ async def scan_supplement_label(
 # ── Conflict-check helpers ────────────────────────────────────────────────────
 
 
+_TIMING_TIP_SYSTEM = """You are a supplement timing expert. Given a supplement name, the user's selected timing, and optionally their meal pattern, write a single short tip (1-2 sentences, max 120 characters) that helps the user understand why or how this timing works for this supplement.
+
+Be specific to the supplement name and timing. If meal pattern data is provided, personalize the tip to it.
+Respond with valid JSON only: {"tip": "your tip here"}
+If you cannot generate a meaningful tip, respond: {"tip": null}"""
+
+
 _CONFLICT_SYSTEM = """You are a supplement expert. Given a new supplement name and a list of existing supplements in a user's stack, determine if the new supplement contains the same active ingredient as any existing supplement, which would create a duplicate or overlap.
 
 Respond with valid JSON only:
@@ -325,6 +336,34 @@ async def _check_overlap_with_ai(
     )
     raw = response.choices[0].message.content
     return json.loads(raw)
+
+
+async def _get_meal_hour_pattern(user_id: str, db: AsyncSession) -> str | None:
+    """Return a plain-English description of when the user typically eats, or None if insufficient data."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    result = await db.execute(
+        select(QuickLog.logged_at).where(
+            QuickLog.user_id == user_id,
+            QuickLog.metric_type == "meal",
+            QuickLog.logged_at >= cutoff,
+        ).limit(200)
+    )
+    rows = result.scalars().all()
+    if len(rows) < 3:
+        return None
+    hours = [r.astimezone(timezone.utc).hour for r in rows]
+    buckets: dict[str, int] = {"morning": 0, "afternoon": 0, "evening": 0}
+    for h in hours:
+        if 5 <= h < 11:
+            buckets["morning"] += 1
+        elif 11 <= h < 15:
+            buckets["afternoon"] += 1
+        else:
+            buckets["evening"] += 1
+    dominant = max(buckets, key=buckets.get)  # type: ignore[arg-type]
+    total = sum(buckets.values())
+    pct = int(buckets[dominant] / total * 100)
+    return f"The user typically eats in the {dominant} ({pct}% of logged meals in the past 30 days)."
 
 
 # ── Conflict-check route ──────────────────────────────────────────────────────
@@ -380,3 +419,42 @@ async def check_supplement_conflicts(
     except Exception as exc:
         logger.warning("check_supplement_conflicts: LLM call failed (%s), failing open", exc)
         return ConflictCheckResponse(has_conflict=False)
+
+
+# ── Timing-tip route ──────────────────────────────────────────────────────────
+
+
+@limiter.limit("30/minute")
+@router.get("/timing-tip", response_model=TimingTipResponse)
+async def get_timing_tip(
+    request: Request,
+    supplement_name: str = Query(min_length=1, max_length=200),
+    timing: str = Query(min_length=1, max_length=50),
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_authenticated_user_id),
+) -> TimingTipResponse:
+    """Return an AI-generated timing tip for the given supplement + timing combination."""
+    llm_client = getattr(request.app.state, "llm_client", None)
+    if llm_client is None:
+        raise HTTPException(status_code=503, detail="AI service unavailable")
+    try:
+        meal_pattern = await _get_meal_hour_pattern(user_id, db)
+        user_content = f"Supplement: {supplement_name}\nTiming: {timing}"
+        if meal_pattern:
+            user_content += f"\nMeal pattern: {meal_pattern}"
+        messages = [
+            {"role": "system", "content": _TIMING_TIP_SYSTEM},
+            {"role": "user", "content": user_content},
+        ]
+        response = await llm_client.chat(
+            messages=messages,
+            temperature=0.4,
+            response_format={"type": "json_object"},
+            reasoning={"effort": "none"},
+            plugins=[{"id": "response-healing"}],
+        )
+        data = json.loads(response.choices[0].message.content)
+        return TimingTipResponse(tip=data.get("tip"))
+    except Exception as exc:
+        logger.warning("get_timing_tip failed: %s", exc)
+        return TimingTipResponse()
