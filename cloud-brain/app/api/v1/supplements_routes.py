@@ -96,14 +96,11 @@ async def get_today_supplement_log(
         )
     )
     rows = result.scalars().all()
-    entries = [
-        TodayLogEntry(
-            supplement_id=row.data.get("supplement_id", ""),
-            log_id=row.id,
-        )
-        for row in rows
-        if row.data.get("supplement_id")
-    ]
+    entries: list[TodayLogEntry] = []
+    for row in rows:
+        supplement_id = row.data.get("supplement_id")
+        if supplement_id:
+            entries.append(TodayLogEntry(supplement_id=supplement_id, log_id=row.id))
     return TodayLogResponse(entries=entries)
 
 
