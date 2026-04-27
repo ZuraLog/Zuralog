@@ -1,8 +1,10 @@
 """Supplements list management endpoints."""
 
+import json
 import logging
 import uuid as _uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, model_validator
@@ -16,6 +18,9 @@ from app.database import get_db
 from app.limiter import limiter
 from app.models.quick_log import QuickLog
 from app.models.user_supplement import UserSupplement
+
+if TYPE_CHECKING:
+    from app.agent.llm_client import LLMClient
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/supplements", tags=["supplements"])
@@ -77,6 +82,19 @@ class ScanLabelResponse(BaseModel):
     dose_unit: str | None = None
     form: str | None = None
     confidence: float | None = None
+
+
+class ConflictCheckRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    existing_names: list[str] = Field(max_length=50)
+    exclude_id: str | None = Field(default=None)
+
+
+class ConflictCheckResponse(BaseModel):
+    has_conflict: bool
+    conflict_type: str | None = None  # 'duplicate' | 'overlap'
+    conflicting_name: str | None = None
+    message: str | None = None
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -272,3 +290,98 @@ async def scan_supplement_label(
     except Exception as exc:
         logger.warning("scan_supplement_label failed for user=%s: %s", user_id, exc)
         return ScanLabelResponse()
+
+
+# ── Conflict-check helpers ────────────────────────────────────────────────────
+
+
+_CONFLICT_SYSTEM = """You are a supplement expert. Given a new supplement name and a list of existing supplements in a user's stack, determine if the new supplement contains the same active ingredient as any existing supplement, which would create a duplicate or overlap.
+
+Respond with valid JSON only:
+{"has_overlap": true|false, "conflicting_name": "name or null", "reason": "brief reason or null"}
+
+Be conservative — only flag clear overlaps (e.g. "Vitamin D" and "Vitamin D3" are the same; "Fish Oil" and "Omega-3" are the same; "Magnesium Glycinate" and "Magnesium Citrate" are different forms of Magnesium and DO overlap).
+Do NOT flag clearly different supplements as overlaps."""
+
+
+async def _check_overlap_with_ai(
+    name: str,
+    existing_names: list[str],
+    llm_client: "LLMClient | None",
+) -> dict[str, object]:
+    """Call LLM to detect ingredient overlap. Returns no-conflict sentinel if llm_client is None."""
+    if llm_client is None:
+        logger.warning("check_supplement_conflicts: llm_client not available, skipping overlap check")
+        return {"has_overlap": False, "conflicting_name": None, "reason": None}
+    user_content = (
+        f"New supplement: {name}\n"
+        f"Existing stack: {', '.join(existing_names)}"
+    )
+    messages = [
+        {"role": "system", "content": _CONFLICT_SYSTEM},
+        {"role": "user", "content": user_content},
+    ]
+    response = await llm_client.chat(
+        messages=messages,
+        temperature=0.3,
+        response_format={"type": "json_object"},
+        reasoning={"effort": "none"},
+        plugins=[{"id": "response-healing"}],
+    )
+    raw = response.choices[0].message.content
+    return json.loads(raw)  # type: ignore[no-any-return]
+
+
+# ── Conflict-check route ──────────────────────────────────────────────────────
+
+
+@limiter.limit("30/minute")
+@router.post("/check-conflicts", response_model=ConflictCheckResponse)
+async def check_supplement_conflicts(
+    request: Request,
+    body: ConflictCheckRequest,
+    user_id: str = Depends(get_authenticated_user_id),
+) -> ConflictCheckResponse:
+    """Check whether a supplement name conflicts with the user's existing stack.
+
+    Exact match → immediate duplicate result, no LLM call.
+    Semantic overlap → LLM call. If LLM fails, fail open (return no conflict).
+    """
+    lower_name = body.name.lower().strip()
+    normalised_existing = [n.lower().strip() for n in body.existing_names]
+
+    # 1. Exact-match check — no LLM needed
+    for original, normalised in zip(body.existing_names, normalised_existing):
+        if normalised == lower_name:
+            return ConflictCheckResponse(
+                has_conflict=True,
+                conflict_type="duplicate",
+                conflicting_name=original,
+                message=f'You already have "{original}" in your stack.',
+            )
+
+    # 2. Nothing to compare against
+    if not body.existing_names:
+        return ConflictCheckResponse(has_conflict=False)
+
+    # 3. Semantic overlap via LLM — fail open on any error
+    llm_client = getattr(request.app.state, "llm_client", None)
+
+    try:
+        result = await _check_overlap_with_ai(body.name, body.existing_names, llm_client)
+        if result.get("has_overlap"):
+            conflicting = result.get("conflicting_name")
+            return ConflictCheckResponse(
+                has_conflict=True,
+                conflict_type="overlap",
+                conflicting_name=conflicting,  # type: ignore[arg-type]
+                message=(
+                    f'"{conflicting}" in your stack may contain the same ingredient.'
+                    if conflicting
+                    else "A supplement in your stack may contain the same ingredient."
+                ),
+            )
+        return ConflictCheckResponse(has_conflict=False)
+    except Exception as exc:
+        logger.warning("check_supplement_conflicts: LLM call failed (%s), failing open", exc)
+        return ConflictCheckResponse(has_conflict=False)
