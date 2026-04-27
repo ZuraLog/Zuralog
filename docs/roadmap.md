@@ -44,6 +44,38 @@ What shipped:
 - Scanner disposal on screen close so the camera is never left open
 - 3 backend tests covering barcode happy path, missing-input validation, and auth enforcement
 
+### Complete — Plan 9: Conflict & Overlap Warnings (2026-04-27)
+
+**Status:** Shipped on `feat/supplements-log-overhaul`
+
+What shipped:
+- `POST /api/v1/supplements/check-conflicts` — exact name match first (no LLM), then semantic overlap via LLM; fails open so the user is never blocked
+- `SupplementConflict` domain model with `name`, `conflictType`, and `message` fields
+- `checkSupplementConflicts` in `TodayRepository` — deserializes endpoint results into `SupplementConflict` objects
+- `_ConflictWarningCard` in `_AddEditForm` — 800ms debounce, client-side exact match runs first; "Adjust dose" and "Add anyway" action buttons
+
+### Complete — Plan 10: Timing Suggestions (2026-04-27)
+
+**Status:** Shipped on `feat/supplements-log-overhaul`
+
+What shipped:
+- `GET /api/v1/supplements/timing-tip?supplement_name=&timing=` — meal pattern analysis + LLM tip; fails open to empty tip on any error
+- `TimingSuggestion` domain model with `tip` and optional `confidence` fields
+- `getTimingSuggestion` in `TodayRepository` — calls the timing-tip endpoint
+- `ZAlertBanner` (info variant) below the timing grid in `_AddEditForm` — `LinearProgressIndicator` while loading, dismiss button to hide
+
+### Complete — Plan 11: Correlation Insights Screen (2026-04-27)
+
+**Status:** Shipped on `feat/supplements-log-overhaul`
+
+What shipped:
+- `GET /api/v1/supplements/insights?days=60` — Pearson r between supplement consistency and DailySummary health metrics; LLM-generated plain-language insight text per correlation; rate-limited at 10/min per user
+- `SupplementInsightItem` + `SupplementInsightsResult` domain models
+- `getSupplementInsights` in `TodayRepository` — calls the insights endpoint
+- `SupplementInsightsScreen` with `insightsProvider` (FutureProvider.autoDispose) — loading, empty, and data states; `_InsightCard` widget per correlation
+- Routing: `RouteNames.supplementInsightsPath = '/supplements/insights'` registered in GoRouter
+- Entry point: gear icon (`Icons.settings_outlined`) in `_PanelHeader` of `ZSupplementsLogPanel`, navigates via `context.push`
+
 ---
 
 ## Wellness Log
