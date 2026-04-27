@@ -3,6 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:zuralog/features/today/data/mock_today_repository.dart';
 import 'package:zuralog/features/today/data/today_repository.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
+import 'package:zuralog/features/today/domain/supplement_conflict.dart';
+import 'package:zuralog/features/today/domain/supplement_scan_result.dart';
+import 'package:zuralog/features/today/domain/supplement_today_entry.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 
@@ -22,6 +25,8 @@ class _StubRepo implements TodayRepositoryInterface {
   @override Future<Set<String>> getUserLoggedTypes() async => const {};
   @override Future<List<SupplementEntry>> getSupplementsList() async => const [];
   @override Future<List<SupplementEntry>> updateSupplementsList(List<SupplementEntry> supplements) async => supplements;
+  @override Future<List<SupplementTodayLogEntry>> getSupplementsTodayLog() async => const [];
+  @override Future<void> deleteSupplementLogEntry(String logEntryId) async {}
   @override Future<void> logSleep({required DateTime bedtime, required DateTime wakeTime, required int durationMinutes, int? qualityRating, int? interruptions, List<String> factors = const [], String? notes}) async {}
   @override Future<void> logRun({required String activityType, required double distanceKm, required int durationSeconds, int? avgPaceSecondsPerKm, String? effortLevel, String? notes}) async {}
   @override Future<void> logMeal({required String mealType, required bool quickMode, String? description, int? caloriesKcal, List<String> feelChips = const [], List<String> tags = const [], String? notes}) async {}
@@ -29,7 +34,8 @@ class _StubRepo implements TodayRepositoryInterface {
   @override Future<void> logSymptom({required List<String> bodyAreas, required String severity, String? symptomType, String? timing, String? notes}) async {}
   @override Future<void> logSteps({required int steps, String mode = 'add', String source = 'manual'}) async {}
   @override Future<void> logWater({required double amountMl, String? vesselKey}) async {}
-  @override Future<void> logWellness({double? mood, double? energy, double? stress, String? notes}) async {}
+  @override Future<void> logWellness({double? mood, double? energy, double? stress, String? notes, String? aiSummary, String? transcript}) async {}
+  @override Future<WellnessParseResult> parseWellnessTranscript(String transcript) async => throw UnimplementedError();
   @override Future<void> logWeight({required double valueKg, required String timeOfDay, double? bodyFatPct}) async {}
   @override Future<Map<String, dynamic>> getLatestLogValues(Set<String> types) async => const {};
   @override Future<List<double?>> getWeightHistory({int days = 7}) async => List<double?>.filled(days, null);
@@ -38,6 +44,8 @@ class _StubRepo implements TodayRepositoryInterface {
   @override Future<void> deleteEvent(String eventId) async {}
   @override Future<SessionIngestResult> submitSession({required String sessionType, required String source, required DateTime recordedAt, DateTime? endedAt, required List<SessionMetricPayload> metrics, String? notes, Map<String, dynamic>? metadata}) async => SessionIngestResult(sessionId: '', eventIds: [], date: '');
   @override Future<BulkIngestResult> bulkIngest({required String source, required List<BulkEventPayload> events}) async => BulkIngestResult(eventCount: 0, status: 'ok', taskId: '');
+  @override Future<SupplementScanResult> scanSupplementLabel({String? imageBase64, String? barcode}) async => throw UnimplementedError();
+  @override Future<SupplementConflict> checkSupplementConflicts({required String name, required List<String> existingNames, String? excludeId}) async => SupplementConflict.none;
 }
 
 ProviderContainer _container({List<Override> overrides = const []}) =>
@@ -147,6 +155,8 @@ class _MockRepoWithLatestValues implements TodayRepositoryInterface {
   @override Future<Set<String>> getUserLoggedTypes() => _delegate.getUserLoggedTypes();
   @override Future<List<SupplementEntry>> getSupplementsList() => _delegate.getSupplementsList();
   @override Future<List<SupplementEntry>> updateSupplementsList(List<SupplementEntry> supplements) => _delegate.updateSupplementsList(supplements);
+  @override Future<List<SupplementTodayLogEntry>> getSupplementsTodayLog() => _delegate.getSupplementsTodayLog();
+  @override Future<void> deleteSupplementLogEntry(String logEntryId) => _delegate.deleteSupplementLogEntry(logEntryId);
   @override Future<void> logSleep({required DateTime bedtime, required DateTime wakeTime, required int durationMinutes, int? qualityRating, int? interruptions, List<String> factors = const [], String? notes}) => _delegate.logSleep(bedtime: bedtime, wakeTime: wakeTime, durationMinutes: durationMinutes, qualityRating: qualityRating, interruptions: interruptions, factors: factors, notes: notes);
   @override Future<void> logRun({required String activityType, required double distanceKm, required int durationSeconds, int? avgPaceSecondsPerKm, String? effortLevel, String? notes}) => _delegate.logRun(activityType: activityType, distanceKm: distanceKm, durationSeconds: durationSeconds, avgPaceSecondsPerKm: avgPaceSecondsPerKm, effortLevel: effortLevel, notes: notes);
   @override Future<void> logMeal({required String mealType, required bool quickMode, String? description, int? caloriesKcal, List<String> feelChips = const [], List<String> tags = const [], String? notes}) => _delegate.logMeal(mealType: mealType, quickMode: quickMode, description: description, caloriesKcal: caloriesKcal, feelChips: feelChips, tags: tags, notes: notes);
@@ -154,7 +164,8 @@ class _MockRepoWithLatestValues implements TodayRepositoryInterface {
   @override Future<void> logSymptom({required List<String> bodyAreas, required String severity, String? symptomType, String? timing, String? notes}) => _delegate.logSymptom(bodyAreas: bodyAreas, severity: severity, symptomType: symptomType, timing: timing, notes: notes);
   @override Future<void> logSteps({required int steps, String mode = 'add', String source = 'manual'}) => _delegate.logSteps(steps: steps, mode: mode, source: source);
   @override Future<void> logWater({required double amountMl, String? vesselKey}) => _delegate.logWater(amountMl: amountMl, vesselKey: vesselKey);
-  @override Future<void> logWellness({double? mood, double? energy, double? stress, String? notes}) => _delegate.logWellness(mood: mood, energy: energy, stress: stress, notes: notes);
+  @override Future<void> logWellness({double? mood, double? energy, double? stress, String? notes, String? aiSummary, String? transcript}) => _delegate.logWellness(mood: mood, energy: energy, stress: stress, notes: notes, aiSummary: aiSummary, transcript: transcript);
+  @override Future<WellnessParseResult> parseWellnessTranscript(String transcript) => _delegate.parseWellnessTranscript(transcript);
   @override Future<void> logWeight({required double valueKg, required String timeOfDay, double? bodyFatPct}) => _delegate.logWeight(valueKg: valueKg, timeOfDay: timeOfDay, bodyFatPct: bodyFatPct);
   @override Future<IngestResult> submitIngest({required String metricType, required double value, required String unit, required String source, required DateTime recordedAt, String? idempotencyKey, Map<String, dynamic>? metadata}) => _delegate.submitIngest(metricType: metricType, value: value, unit: unit, source: source, recordedAt: recordedAt, idempotencyKey: idempotencyKey, metadata: metadata);
   @override Future<TodayTimeline> getTodayTimeline({int limit = 50, String? before}) => _delegate.getTodayTimeline(limit: limit, before: before);
@@ -162,4 +173,6 @@ class _MockRepoWithLatestValues implements TodayRepositoryInterface {
   @override Future<SessionIngestResult> submitSession({required String sessionType, required String source, required DateTime recordedAt, DateTime? endedAt, required List<SessionMetricPayload> metrics, String? notes, Map<String, dynamic>? metadata}) => _delegate.submitSession(sessionType: sessionType, source: source, recordedAt: recordedAt, endedAt: endedAt, metrics: metrics, notes: notes, metadata: metadata);
   @override Future<BulkIngestResult> bulkIngest({required String source, required List<BulkEventPayload> events}) => _delegate.bulkIngest(source: source, events: events);
   @override Future<List<double?>> getWeightHistory({int days = 7}) => _delegate.getWeightHistory(days: days);
+  @override Future<SupplementScanResult> scanSupplementLabel({String? imageBase64, String? barcode}) => _delegate.scanSupplementLabel(imageBase64: imageBase64, barcode: barcode);
+  @override Future<SupplementConflict> checkSupplementConflicts({required String name, required List<String> existingNames, String? excludeId}) => _delegate.checkSupplementConflicts(name: name, existingNames: existingNames, excludeId: excludeId);
 }

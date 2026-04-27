@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zuralog/features/today/data/today_repository.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
-import 'package:zuralog/features/today/presentation/log_screens/supplements_log_screen.dart';
+import 'package:zuralog/features/today/presentation/log_screens/supplements_stack_screen.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 
 class _MockTodayRepository extends Mock implements TodayRepositoryInterface {}
@@ -16,6 +17,7 @@ final _fakeSupplements = [
 
 ProviderContainer _container({List<SupplementEntry>? supplements}) {
   final mock = _MockTodayRepository();
+  when(() => mock.updateSupplementsList(any())).thenAnswer((_) async => []);
   return ProviderContainer(overrides: [
     supplementsListProvider
         .overrideWith((ref) async => supplements ?? _fakeSupplements),
@@ -30,51 +32,50 @@ Widget _wrap(Widget child, ProviderContainer container) =>
     );
 
 void main() {
-  group('SupplementsLogScreen', () {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
+  group('SupplementsStackScreen', () {
     testWidgets('shows empty state prompt when no supplements saved',
         (tester) async {
       final container = _container(supplements: []);
-      await tester.pumpWidget(_wrap(const SupplementsLogScreen(), container));
-      await tester.pumpAndSettle();
+      await tester.pumpWidget(_wrap(const SupplementsStackScreen(), container));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
       expect(
-        find.text('Add your supplements and medications to get started.'),
+        find.text('No supplements yet'),
         findsOneWidget,
       );
     });
 
     testWidgets('shows supplement list when supplements exist', (tester) async {
       final container = _container();
-      await tester.pumpWidget(_wrap(const SupplementsLogScreen(), container));
-      await tester.pumpAndSettle();
-      expect(find.text('Vitamin D'), findsOneWidget);
-      expect(find.text('1000 IU'), findsOneWidget);
-    });
-
-    testWidgets('Save button disabled when no supplements selected',
-        (tester) async {
-      final container = _container();
-      await tester.pumpWidget(_wrap(const SupplementsLogScreen(), container));
-      await tester.pumpAndSettle();
-      final btn = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Save'),
-      );
-      expect(btn.onPressed, isNull);
-    });
-
-    testWidgets('Save button enabled after tapping a supplement',
-        (tester) async {
-      final container = _container();
-      await tester.pumpWidget(_wrap(const SupplementsLogScreen(), container));
-      await tester.pumpAndSettle();
-
-      // Tap the first supplement's trailing toggle circle (AnimatedContainer inside GestureDetector)
-      await tester.tap(find.byType(AnimatedContainer).first);
+      await tester.pumpWidget(_wrap(const SupplementsStackScreen(), container));
       await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Vitamin D'), findsOneWidget);
+      expect(find.text('Magnesium'), findsOneWidget);
+    });
 
-      final btn = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Save'),
-      );
-      expect(btn.onPressed, isNotNull);
+    testWidgets('shows add supplement button', (tester) async {
+      final container = _container();
+      await tester.pumpWidget(_wrap(const SupplementsStackScreen(), container));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Add supplement or med'), findsOneWidget);
+    });
+
+    testWidgets('tapping add opens the add form', (tester) async {
+      final container = _container(supplements: []);
+      await tester.pumpWidget(_wrap(const SupplementsStackScreen(), container));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      // Tap the add button
+      await tester.tap(find.text('Add supplement or med'));
+      await tester.pump();
+      // The form should be visible — look for a typical form field label
+      expect(find.text('Name'), findsAtLeastNWidgets(1));
     });
   });
 }

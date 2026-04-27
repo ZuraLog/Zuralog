@@ -3,5 +3,6 @@
   "venv": ".venv",
   "pythonVersion": "3.12",
   "include": ["app", "tests"],
-  "exclude": [".venv"]
+  "exclude": [".venv"],
+  "reportUnusedParameter": "none"
 }

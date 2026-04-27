@@ -15,6 +15,9 @@
 /// - [userLoggedTypesProvider]        — set of metric types user has ever logged
 /// - [dailyGoalsProvider]             — user's daily goals with today's progress
 /// - [supplementsListProvider]        — user's saved supplement and medication list
+/// - [supplementsTodayLogProvider]    — which supplements have been logged today
+/// - [supplementsSyncStatusProvider]  — sync state for today's supplement taken logs
+/// - [SupplementSyncStatus]           — three-state enum (none / pending / synced)
 /// - [stepsLogModeProvider]           — persisted steps log mode (add vs override)
 /// - [mealLogModeProvider]             — persisted meal log mode (quick vs full)
 /// (quickLogLoadingProvider removed — superseded by FAB system in Part 2)
@@ -27,8 +30,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/features/today/data/supplement_log_local_repository.dart';
 import 'package:zuralog/features/today/data/today_repository.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
+import 'package:zuralog/features/today/domain/supplement_today_entry.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
 // ── Repository ────────────────────────────────────────────────────────────────
@@ -193,6 +198,63 @@ final supplementsListProvider =
   } catch (e, st) {
     debugPrint('supplementsListProvider failed: $e\n$st');
     return const [];
+  }
+});
+
+// ── Supplements Today Log ─────────────────────────────────────────────────────
+
+/// Which supplements have already been logged today, keyed by supplement_id.
+///
+/// Returns supplement_id + log_id pairs so the check-off panel knows which
+/// rows are already ticked and can pass the correct log_id to the delete
+/// endpoint for the undo / uncheck operation.
+///
+/// Never puts the UI into an error state — returns empty list on any failure
+/// so the panel defaults to "nothing logged yet" rather than showing an error.
+///
+/// Invalidate after every tap (check-in or undo) so the panel reflects the
+/// new state immediately.
+final supplementsTodayLogProvider =
+    FutureProvider<List<SupplementTodayLogEntry>>((ref) async {
+  final repo = ref.read(todayRepositoryProvider);
+  try {
+    return await repo.getSupplementsTodayLog();
+  } catch (e, st) {
+    debugPrint('supplementsTodayLogProvider failed: $e\n$st');
+    return const [];
+  }
+});
+
+// ── Supplements Sync Status ───────────────────────────────────────────────────
+
+/// Three-state sync status for today's supplement taken logs.
+///
+/// - [none]: no logs recorded today
+/// - [pending]: at least one log not yet confirmed by the server
+/// - [synced]: all logs confirmed by the server
+enum SupplementSyncStatus { none, pending, synced }
+
+/// Reads today's supplement logs from local storage and returns the aggregate
+/// sync state. The check-off panel uses this to show the cloud icon.
+///
+/// Never puts the UI into an error state — returns [SupplementSyncStatus.none]
+/// on any failure.
+///
+/// Invalidate after every tap (check-in, undo) and after every successful sync.
+final supplementsSyncStatusProvider =
+    FutureProvider<SupplementSyncStatus>((ref) async {
+  try {
+    final localRepo = ref.read(supplementLogLocalRepositoryProvider);
+    final today = DateTime.now();
+    final todayStr =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final logs = localRepo.getLogsForDate(todayStr);
+    if (logs.isEmpty) return SupplementSyncStatus.none;
+    final anyPending = logs.any((l) => !l.synced);
+    return anyPending ? SupplementSyncStatus.pending : SupplementSyncStatus.synced;
+  } catch (e, st) {
+    debugPrint('supplementsSyncStatusProvider failed: $e\n$st');
+    return SupplementSyncStatus.none;
   }
 });
 

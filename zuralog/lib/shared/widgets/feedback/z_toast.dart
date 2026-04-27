@@ -41,23 +41,23 @@ class ZToast {
   static const int _maxQueueSize = 3;
 
   /// Shows a success toast with a green status dot.
-  static void success(BuildContext context, String message, {String? action, VoidCallback? onAction}) {
-    _enqueue(_ToastRequest(context: context, message: message, variant: ZToastVariant.success, action: action, onAction: onAction));
+  static void success(BuildContext context, String message, {String? action, VoidCallback? onAction, Duration displayDuration = const Duration(milliseconds: 3500)}) {
+    _enqueue(_ToastRequest(context: context, message: message, variant: ZToastVariant.success, action: action, onAction: onAction, displayDuration: displayDuration));
   }
 
   /// Shows an error toast with a red status dot.
-  static void error(BuildContext context, String message, {String? action, VoidCallback? onAction}) {
-    _enqueue(_ToastRequest(context: context, message: message, variant: ZToastVariant.error, action: action, onAction: onAction));
+  static void error(BuildContext context, String message, {String? action, VoidCallback? onAction, Duration displayDuration = const Duration(milliseconds: 3500)}) {
+    _enqueue(_ToastRequest(context: context, message: message, variant: ZToastVariant.error, action: action, onAction: onAction, displayDuration: displayDuration));
   }
 
   /// Shows a warning toast with an amber status dot.
-  static void warning(BuildContext context, String message, {String? action, VoidCallback? onAction}) {
-    _enqueue(_ToastRequest(context: context, message: message, variant: ZToastVariant.warning, action: action, onAction: onAction));
+  static void warning(BuildContext context, String message, {String? action, VoidCallback? onAction, Duration displayDuration = const Duration(milliseconds: 3500)}) {
+    _enqueue(_ToastRequest(context: context, message: message, variant: ZToastVariant.warning, action: action, onAction: onAction, displayDuration: displayDuration));
   }
 
   /// Shows an info toast with a blue status dot.
-  static void info(BuildContext context, String message, {String? action, VoidCallback? onAction}) {
-    _enqueue(_ToastRequest(context: context, message: message, variant: ZToastVariant.info, action: action, onAction: onAction));
+  static void info(BuildContext context, String message, {String? action, VoidCallback? onAction, Duration displayDuration = const Duration(milliseconds: 3500)}) {
+    _enqueue(_ToastRequest(context: context, message: message, variant: ZToastVariant.info, action: action, onAction: onAction, displayDuration: displayDuration));
   }
 
   static void _enqueue(_ToastRequest request) {
@@ -103,6 +103,7 @@ class ZToast {
         variant: request.variant,
         action: request.action,
         onAction: request.onAction,
+        displayDuration: request.displayDuration,
         onDismissed: dismiss,
       ),
     );
@@ -120,6 +121,7 @@ class _ToastRequest {
     required this.variant,
     this.action,
     this.onAction,
+    this.displayDuration = const Duration(milliseconds: 3500),
   });
 
   final BuildContext context;
@@ -127,6 +129,7 @@ class _ToastRequest {
   final ZToastVariant variant;
   final String? action;
   final VoidCallback? onAction;
+  final Duration displayDuration;
 }
 
 // ── Private overlay widget ──────────────────────────────────────────────────
@@ -136,6 +139,7 @@ class _ZToastOverlay extends StatefulWidget {
     required this.message,
     required this.variant,
     required this.onDismissed,
+    required this.displayDuration,
     this.action,
     this.onAction,
   });
@@ -145,6 +149,7 @@ class _ZToastOverlay extends StatefulWidget {
   final String? action;
   final VoidCallback? onAction;
   final VoidCallback onDismissed;
+  final Duration displayDuration;
 
   @override
   State<_ZToastOverlay> createState() => _ZToastOverlayState();
@@ -161,13 +166,12 @@ class _ZToastOverlayState extends State<_ZToastOverlay>
 
   static const _enterDuration = Duration(milliseconds: 350);
   static const _exitDuration = Duration(milliseconds: 250);
-  static const _displayDuration = Duration(milliseconds: 3500);
 
   /// Total animation length = enter + display + exit.
   Duration get _totalDuration => Duration(
         milliseconds:
             _enterDuration.inMilliseconds +
-            _displayDuration.inMilliseconds +
+            widget.displayDuration.inMilliseconds +
             _exitDuration.inMilliseconds,
       );
 

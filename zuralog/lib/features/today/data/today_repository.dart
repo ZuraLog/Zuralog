@@ -21,6 +21,11 @@ import 'package:dio/dio.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
+import 'package:zuralog/features/today/domain/supplement_conflict.dart';
+import 'package:zuralog/features/today/domain/supplement_insight.dart';
+import 'package:zuralog/features/today/domain/supplement_scan_result.dart';
+import 'package:zuralog/features/today/domain/timing_suggestion.dart';
+import 'package:zuralog/features/today/domain/supplement_today_entry.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
 // ── TodayRepositoryInterface ──────────────────────────────────────────────────
@@ -108,6 +113,15 @@ abstract interface class TodayRepositoryInterface {
   /// Replace the user's supplement list with [supplements].
   Future<List<SupplementEntry>> updateSupplementsList(
       List<SupplementEntry> supplements);
+
+  /// Fetches today's supplement_taken log entries from the server.
+  ///
+  /// Returns supplement_id + log_id pairs for all supplements already logged
+  /// today (UTC day). Returns empty list on any failure.
+  Future<List<SupplementTodayLogEntry>> getSupplementsTodayLog();
+
+  /// Deletes a supplement_taken log entry by its server log ID.
+  Future<void> deleteSupplementLogEntry(String logEntryId);
 
   /// Submit a sleep log entry.
   Future<void> logSleep({
@@ -214,6 +228,40 @@ abstract interface class TodayRepositoryInterface {
   /// Returns a list of exactly [days] entries: index 0 = oldest, index [days-1] = today.
   /// Null means no weigh-in was recorded that day.
   Future<List<double?>> getWeightHistory({int days = 7});
+
+  /// Sends a supplement label image or barcode to the AI scan endpoint and
+  /// returns the parsed supplement information.
+  ///
+  /// At least one of [imageBase64] or [barcode] must be non-null.
+  Future<SupplementScanResult> scanSupplementLabel({
+    String? imageBase64,
+    String? barcode,
+  });
+
+  /// Checks whether [name] conflicts with any supplement in [existingNames].
+  ///
+  /// Pass [excludeId] when editing an existing supplement so that item's own
+  /// name is not treated as a conflict.
+  Future<SupplementConflict> checkSupplementConflicts({
+    required String name,
+    required List<String> existingNames,
+    String? excludeId,
+  });
+
+  /// Fetches a timing tip for the given supplement and timing combination.
+  ///
+  /// Returns a [TimingSuggestion] whose [TimingSuggestion.hasTip] is false when
+  /// the server has no tip to offer.
+  Future<TimingSuggestion> getTimingSuggestion({
+    required String supplementName,
+    required String timing,
+  });
+
+  /// Fetches AI-generated insights correlating the user's supplement stack
+  /// against health metrics over the last [days] days.
+  ///
+  /// Returns [SupplementInsightsResult.empty] when the server returns no data.
+  Future<SupplementInsightsResult> getSupplementInsights({int days = 60});
 }
 
 // ── TodayRepository ──────────────────────────────────────────────────────────
@@ -895,12 +943,7 @@ class TodayRepository implements TodayRepositoryInterface {
     final response = await _api.get('/api/v1/supplements');
     final list = response.data['supplements'] as List<dynamic>? ?? [];
     return list
-        .map((e) => SupplementEntry(
-              id: e['id'] as String,
-              name: e['name'] as String,
-              dose: e['dose'] as String?,
-              timing: e['timing'] as String?,
-            ))
+        .map((e) => SupplementEntry.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 
@@ -908,23 +951,90 @@ class TodayRepository implements TodayRepositoryInterface {
   Future<List<SupplementEntry>> updateSupplementsList(
       List<SupplementEntry> supplements) async {
     final response = await _api.post('/api/v1/supplements', data: {
-      'supplements': supplements
-          .map((s) => {
-                'name': s.name,
-                if (s.dose != null) 'dose': s.dose,
-                if (s.timing != null) 'timing': s.timing,
-              })
-          .toList(),
+      'supplements': supplements.map((s) => s.toJson()..remove('id')).toList(),
     });
     final list = response.data['supplements'] as List<dynamic>? ?? [];
     return list
-        .map((e) => SupplementEntry(
-              id: e['id'] as String,
-              name: e['name'] as String,
-              dose: e['dose'] as String?,
-              timing: e['timing'] as String?,
-            ))
+        .map((e) => SupplementEntry.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  @override
+  Future<List<SupplementTodayLogEntry>> getSupplementsTodayLog() async {
+    final response = await _api.get('/api/v1/supplements/today-log');
+    return parseTodayLogResponse(
+        response.data as Map<String, dynamic>? ?? {});
+  }
+
+  @override
+  Future<void> deleteSupplementLogEntry(String logEntryId) async {
+    await _api.delete('/api/v1/supplements/log/$logEntryId');
+  }
+
+  // ── Supplement Label Scan ──────────────────────────────────────────────────
+
+  @override
+  Future<SupplementScanResult> scanSupplementLabel({
+    String? imageBase64,
+    String? barcode,
+  }) async {
+    assert(imageBase64 != null || barcode != null,
+        'Either imageBase64 or barcode must be provided');
+    final response = await _api.post(
+      '/api/v1/supplements/scan-label',
+      data: {
+        if (imageBase64 != null) 'image_base64': imageBase64,
+        if (barcode != null) 'barcode': barcode,
+      },
+    );
+    return SupplementScanResult.fromJson(
+      response.data as Map<String, dynamic>? ?? {},
+    );
+  }
+
+  @override
+  Future<SupplementConflict> checkSupplementConflicts({
+    required String name,
+    required List<String> existingNames,
+    String? excludeId,
+  }) async {
+    final response = await _api.post(
+      '/api/v1/supplements/check-conflicts',
+      data: {
+        'name': name,
+        'existing_names': existingNames,
+        if (excludeId != null) 'exclude_id': excludeId,
+      },
+    );
+    return SupplementConflict.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<TimingSuggestion> getTimingSuggestion({
+    required String supplementName,
+    required String timing,
+  }) async {
+    final response = await _api.get(
+      '/api/v1/supplements/timing-tip',
+      queryParameters: {
+        'supplement_name': supplementName,
+        'timing': timing,
+      },
+    );
+    return TimingSuggestion.fromJson(
+      response.data as Map<String, dynamic>? ?? {},
+    );
+  }
+
+  @override
+  Future<SupplementInsightsResult> getSupplementInsights({int days = 60}) async {
+    final response = await _api.get(
+      '/api/v1/supplements/insights',
+      queryParameters: {'days': days},
+    );
+    return SupplementInsightsResult.fromJson(
+      response.data as Map<String, dynamic>? ?? {},
+    );
   }
 
   static double _severityToValue(String severity) {

@@ -1,3 +1,97 @@
+## 2026-04-27 — Supplements Log Overhaul: Plans 9–11 (AI Conflict Warnings, Timing Suggestions, Correlation Insights)
+
+**Branch:** `feat/supplements-log-overhaul`
+
+Plans 9 through 11 of the 11-plan supplements overhaul. Adds a full AI intelligence layer on top of the supplement stack — conflict and overlap detection, meal-timing suggestions, and a correlation insights screen that surfaces relationships between supplement consistency and health metrics.
+
+**Plan 9 — Conflict & Overlap Warnings:**
+
+- **`POST /api/v1/supplements/check-conflicts`** (`cloud-brain/app/api/v1/supplements_routes.py`): Two-step conflict check — exact name match runs first (no LLM call) and returns immediately when a conflict is found. If no exact match, a semantic overlap check runs via LLM. Both paths fail open so a network or LLM error never blocks the user from adding a supplement.
+- **`SupplementConflict` domain model** (`zuralog/lib/features/supplements/domain/supplement_conflict.dart`): Immutable value object representing a single detected conflict with `name`, `conflictType`, and `message` fields.
+- **`checkSupplementConflicts` in `TodayRepository`** (`zuralog/lib/features/today/data/today_repository.dart`): Calls the conflict-check endpoint and deserializes results into `SupplementConflict` objects.
+- **`_ConflictWarningCard` in `_AddEditForm`** (`zuralog/lib/features/supplements/presentation/supplements_stack_screen.dart`): Inline warning card that appears below the supplement name field when conflicts are detected. Fires after an 800ms debounce once the user stops typing. Client-side exact match runs first to avoid unnecessary API calls. "Adjust dose" and "Add anyway" actions let the user decide how to proceed.
+
+**Plan 10 — Timing Suggestions:**
+
+- **`GET /api/v1/supplements/timing-tip`** (`cloud-brain/app/api/v1/supplements_routes.py`): Query parameters `supplement_name` and `timing`. Analyses the user's meal log patterns, then generates a context-aware tip via LLM. Fails open to an empty tip string so the UI degrades gracefully.
+- **`TimingSuggestion` domain model** (`zuralog/lib/features/supplements/domain/timing_suggestion.dart`): Immutable value object with `tip` (string) and `confidence` (optional double) fields.
+- **`getTimingSuggestion` in `TodayRepository`** (`zuralog/lib/features/today/data/today_repository.dart`): Calls the timing-tip endpoint and returns a `TimingSuggestion`.
+- **`ZAlertBanner` info variant below timing grid** (`zuralog/lib/features/supplements/presentation/supplements_stack_screen.dart`): Appears below the timing option grid in `_AddEditForm` when a tip is available. A `LinearProgressIndicator` displays while the tip is loading. A dismiss button allows the user to hide the banner.
+
+**Plan 11 — Correlation Insights Screen:**
+
+- **`GET /api/v1/supplements/insights?days=60`** (`cloud-brain/app/api/v1/supplements_routes.py`): Computes Pearson r between supplement consistency (days taken / days in window) and each DailySummary health metric (mood, energy, sleep quality, HRV, etc.). An LLM generates a plain-language insight text for each correlation. Rate-limited at 10 requests per minute per user.
+- **`SupplementInsightItem` + `SupplementInsightsResult` domain models** (`zuralog/lib/features/supplements/domain/supplement_insight.dart`): `SupplementInsightItem` holds `supplementName`, `metric`, `correlationScore`, and `insightText`. `SupplementInsightsResult` is the top-level container with a list of items and a `generatedAt` timestamp.
+- **`getSupplementInsights` in `TodayRepository`** (`zuralog/lib/features/today/data/today_repository.dart`): Calls the insights endpoint and deserializes into `SupplementInsightsResult`.
+- **`SupplementInsightsScreen`** (`zuralog/lib/features/supplements/presentation/supplement_insights_screen.dart`): Full screen with loading state (skeleton cards), empty state (no data yet message), and data state (scrollable list of `_InsightCard` widgets). Powered by `insightsProvider` — a `FutureProvider.autoDispose` that calls `getSupplementInsights`.
+- **`_InsightCard` widget** (`supplement_insights_screen.dart`): One card per correlation insight. Shows supplement name, the correlated metric, the Pearson r score visualised as a bar, and the LLM-generated insight text.
+- **Routing** (`zuralog/lib/core/router/route_names.dart`, `zuralog/lib/core/router/app_router.dart`): `RouteNames.supplementInsightsPath = '/supplements/insights'` registered in GoRouter.
+- **Entry point** (`zuralog/lib/features/supplements/presentation/supplements_stack_screen.dart`): `Icons.settings_outlined` gear icon added to `_PanelHeader` in `ZSupplementsLogPanel`. Tapping it calls `context.push` to navigate to `SupplementInsightsScreen`.
+
+**Files created:**
+- `zuralog/lib/features/supplements/domain/supplement_conflict.dart`
+- `zuralog/lib/features/supplements/domain/timing_suggestion.dart`
+- `zuralog/lib/features/supplements/domain/supplement_insight.dart`
+- `zuralog/lib/features/supplements/presentation/supplement_insights_screen.dart`
+
+**Files modified:**
+- `cloud-brain/app/api/v1/supplements_routes.py` (conflict-check, timing-tip, and insights endpoints)
+- `zuralog/lib/features/today/data/today_repository.dart` (`checkSupplementConflicts`, `getTimingSuggestion`, `getSupplementInsights`)
+- `zuralog/lib/features/supplements/presentation/supplements_stack_screen.dart` (`_ConflictWarningCard`, `ZAlertBanner` timing tip, gear icon entry point)
+- `zuralog/lib/core/router/route_names.dart` (`supplementInsightsPath`)
+- `zuralog/lib/core/router/app_router.dart` (insights screen route)
+
+---
+
+## 2026-04-27 — Supplements Log Overhaul: Plans 4–8 (Daily Check-in, Panel Interactions, Stack Management, One-off Logging, Scan Label)
+
+**Branch:** `feat/supplements-log-overhaul`
+
+Plans 4 through 8 of the 11-plan supplements overhaul. Covers the full daily check-in panel, all panel interactions, the stack management screen, ad-hoc supplement logging, and the scan-label integration endpoint.
+
+**Plan 4 — Daily Check-in Panel:**
+
+- **`ZSupplementsLogPanel`** (`zuralog/lib/features/today/presentation/widgets/supplements_log_panel.dart`): Inline check-in panel on the Today screen. Renders the user's supplement stack as a tappable checklist. Write-first offline sync — marking a supplement taken writes to the local database immediately and syncs to the cloud in the background.
+- **`SupplementSyncStatus` cloud icon** (`supplements_log_panel.dart`): A small cloud icon in the panel header reflects the current sync state (idle, syncing, error). Users can see at a glance whether their check-ins have reached the server.
+
+**Plan 5 — Panel Interactions:**
+
+- **4-second undo toast** (`supplements_log_panel.dart`): Marking a supplement taken shows an undo toast for 4 seconds before the action is committed. Prevents accidental double-taps from being permanent.
+- **`ZToast.displayDuration` parameter** (`zuralog/lib/shared/widgets/feedback/z_toast.dart`): The shared toast widget now accepts a configurable `displayDuration` parameter so callers can control how long a toast stays visible. Added to the `widgets.dart` barrel export.
+- **Uncheck confirmation dialog** (`supplements_log_panel.dart`): Unchecking a supplement that was already logged asks the user to confirm before deleting the log entry. Prevents accidental data loss.
+
+**Plan 6 — Stack Management Screen:**
+
+- **`SupplementsStackScreen`** (`zuralog/lib/features/supplements/presentation/supplements_stack_screen.dart`): Full stack management screen reachable from the Today panel. Supports reordering (drag handle), swipe-to-delete with undo, and an add/edit form.
+- **Add/edit form with option grids** (`supplements_stack_screen.dart`): The add and edit form uses option grid chips for timing (Morning, Afternoon, Evening, Bedtime) and form factor (Pill, Capsule, Powder, Liquid, Gummy, Other). Free-text fields for name, dose amount, and dose unit.
+
+**Plan 7 — One-off Daily Log:**
+
+- **Ad-hoc supplement logging** (`supplements_log_panel.dart`): A "Log something else" affordance in the panel lets users log a supplement that is not in their stack. The logged entry is flagged as ad-hoc so it does not pollute the stack.
+- **`SupplementTakenLog` ad-hoc fields** (database): The `supplement_taken_logs` table gained `is_ad_hoc` (boolean) and `ad_hoc_name` (text) columns to support one-off entries without a corresponding stack item.
+- **`isAdHoc` sync branching** (`zuralog/lib/features/supplements/data/supplements_repository.dart`): The sync path branches on `isAdHoc` — ad-hoc entries go through a separate upsert path that does not touch the user's supplement stack.
+
+**Plan 8 — Scan Label Integration:**
+
+- **`POST /api/v1/supplements/scan-label`** (`cloud-brain/app/api/v1/supplements_routes.py`): Accepts either an image (base64, max 4 MB) or a barcode string. Barcode path returns product data from a public nutrition database. Image path is an AI-ready hook stubbed for future LLM wiring. SSRF guard rejects non-HTTPS and private-range URLs. Both paths return `SupplementScanResult`.
+- **`SupplementScanResult`** (`cloud-brain/app/api/v1/supplements_routes.py`): Pydantic response model with `name`, `brand`, `dose`, `dose_unit`, `form`, `ingredients`, and `imageUrl` fields (all optional). Lets the caller pre-fill the add form without mapping differences.
+- **Scan button in stack form** (`supplements_stack_screen.dart`): A camera icon in the add form header opens the device camera (or photo picker). The captured image is sent to the scan-label endpoint; on success the form fields are pre-filled automatically.
+- **Scanner disposal** (`supplements_stack_screen.dart`): Camera resources are released in `dispose()` so the device camera is never left open after the screen closes.
+- **3 backend tests** (`cloud-brain/tests/api/v1/test_scan_label.py`): Cover barcode happy path (fields returned), missing-input validation (400 when neither image nor barcode provided), and auth enforcement (401 without token). All pass.
+
+**Files created:**
+- `zuralog/lib/features/today/presentation/widgets/supplements_log_panel.dart`
+- `zuralog/lib/features/supplements/presentation/supplements_stack_screen.dart`
+- `zuralog/lib/shared/widgets/feedback/z_toast.dart` (if not pre-existing)
+- `cloud-brain/tests/api/v1/test_scan_label.py`
+
+**Files modified:**
+- `cloud-brain/app/api/v1/supplements_routes.py` (scan-label endpoint, `SupplementScanResult`, SSRF guard, image size cap)
+- `zuralog/lib/features/supplements/data/supplements_repository.dart` (ad-hoc sync branching)
+- `zuralog/lib/shared/widgets/widgets.dart` (barrel export for `ZToast`)
+
+---
+
 ## 2026-04-27 — Wellness Log Overhaul: AI Voice/Text Check-In, 6-State Panel, Sentiment Selector
 
 **Branch:** `feat/wellness-log-overhaul`

@@ -1,0 +1,157 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:zuralog/features/today/domain/supplement_taken_log.dart';
+
+void main() {
+  group('SupplementTakenLog', () {
+    final recordedAt = DateTime(2026, 4, 27, 8, 0);
+
+    // ── Ad-hoc field tests ────────────────────────────────────────────────────
+
+    test('isAdHoc returns true for adhoc_ prefix', () {
+      final log = SupplementTakenLog(
+        id: 'local-1',
+        supplementId: 'adhoc_local-1',
+        logDate: '2026-04-27',
+        recordedAt: DateTime(2026, 4, 27),
+        adHocName: 'Iron',
+      );
+      expect(log.isAdHoc, isTrue);
+    });
+
+    test('isAdHoc returns false for regular supplement', () {
+      final log = SupplementTakenLog(
+        id: 'local-1',
+        supplementId: 'regular-id',
+        logDate: '2026-04-27',
+        recordedAt: DateTime(2026, 4, 27),
+      );
+      expect(log.isAdHoc, isFalse);
+    });
+
+    test('toJson includes adHoc fields when present', () {
+      final log = SupplementTakenLog(
+        id: 'local-1',
+        supplementId: 'adhoc_local-1',
+        logDate: '2026-04-27',
+        recordedAt: DateTime(2026, 4, 27),
+        adHocName: 'Iron',
+        adHocDoseAmount: 18.0,
+        adHocDoseUnit: 'mg',
+      );
+      final json = log.toJson();
+      expect(json['adHocName'], equals('Iron'));
+      expect(json['adHocDoseAmount'], equals(18.0));
+      expect(json['adHocDoseUnit'], equals('mg'));
+    });
+
+    test('toJson omits adHoc fields when null', () {
+      final log = SupplementTakenLog(
+        id: 'local-1',
+        supplementId: 'sup-abc',
+        logDate: '2026-04-27',
+        recordedAt: DateTime(2026, 4, 27),
+      );
+      final json = log.toJson();
+      expect(json.containsKey('adHocName'), isFalse);
+      expect(json.containsKey('adHocDoseAmount'), isFalse);
+      expect(json.containsKey('adHocDoseUnit'), isFalse);
+    });
+
+    test('fromJson round-trips adHoc fields', () {
+      final original = SupplementTakenLog(
+        id: 'local-1',
+        supplementId: 'adhoc_local-1',
+        logDate: '2026-04-27',
+        recordedAt: DateTime(2026, 4, 27, 8, 0),
+        adHocName: 'Zinc',
+        adHocDoseAmount: 50.0,
+        adHocDoseUnit: 'mg',
+      );
+      final restored = SupplementTakenLog.fromJson(original.toJson());
+      expect(restored.adHocName, equals('Zinc'));
+      expect(restored.adHocDoseAmount, equals(50.0));
+      expect(restored.adHocDoseUnit, equals('mg'));
+      expect(restored.isAdHoc, isTrue);
+    });
+
+    test('round-trips through toJson / fromJson', () {
+      final log = SupplementTakenLog(
+        id: 'local-1',
+        supplementId: 'sup-abc',
+        logDate: '2026-04-27',
+        recordedAt: recordedAt,
+        logId: 'server-log-xyz',
+        synced: true,
+      );
+
+      final restored = SupplementTakenLog.fromJson(log.toJson());
+      expect(restored.id, log.id);
+      expect(restored.supplementId, log.supplementId);
+      expect(restored.logDate, log.logDate);
+      expect(restored.recordedAt, log.recordedAt);
+      expect(restored.logId, log.logId);
+      expect(restored.synced, log.synced);
+    });
+
+    test('defaults synced to false and logId to null', () {
+      final log = SupplementTakenLog(
+        id: 'local-2',
+        supplementId: 'sup-def',
+        logDate: '2026-04-27',
+        recordedAt: recordedAt,
+      );
+      expect(log.synced, isFalse);
+      expect(log.logId, isNull);
+    });
+
+    test('toJson omits null logId', () {
+      final log = SupplementTakenLog(
+        id: 'local-3',
+        supplementId: 'sup-ghi',
+        logDate: '2026-04-27',
+        recordedAt: recordedAt,
+      );
+      expect(log.toJson().containsKey('logId'), isFalse);
+    });
+
+    test('equality: same fields are equal', () {
+      final a = SupplementTakenLog(
+        id: 'local-1',
+        supplementId: 'sup-abc',
+        logDate: '2026-04-27',
+        recordedAt: DateTime(2026, 4, 27, 8, 0),
+        logId: 'server-log-xyz',
+        synced: true,
+      );
+      final b = SupplementTakenLog(
+        id: 'local-1',
+        supplementId: 'sup-abc',
+        logDate: '2026-04-27',
+        recordedAt: DateTime(2026, 4, 27, 8, 0),
+        logId: 'server-log-xyz',
+        synced: true,
+      );
+      final c = SupplementTakenLog(
+        id: 'local-9',
+        supplementId: 'sup-xyz',
+        logDate: '2026-04-27',
+        recordedAt: DateTime(2026, 4, 27, 8, 0),
+      );
+      expect(a, equals(b));
+      expect(a, isNot(equals(c)));
+    });
+
+    test('copyWith updates synced and logId', () {
+      final log = SupplementTakenLog(
+        id: 'local-4',
+        supplementId: 'sup-jkl',
+        logDate: '2026-04-27',
+        recordedAt: recordedAt,
+      );
+      final synced = log.copyWith(synced: true, logId: () => 'server-log-999');
+      expect(synced.synced, isTrue);
+      expect(synced.logId, 'server-log-999');
+      expect(synced.supplementId, log.supplementId);
+    });
+  });
+}

@@ -152,12 +152,6 @@ abstract final class RouteNames {
   /// Path for the Meal Log screen.
   static const String mealLogPath = '/today/log/meal';
 
-  /// Name for the Supplements Log full-screen form.
-  static const String supplementsLog = 'supplementsLog';
-
-  /// Path for the Supplements Log screen.
-  static const String supplementsLogPath = '/today/log/supplements';
-
   /// Name for the Symptom Log full-screen form.
   static const String symptomLog = 'symptomLog';
 
@@ -461,6 +455,22 @@ abstract final class RouteNames {
 
   /// Path for the Edit Profile screen.
   static const String editProfilePath = '/settings/account/edit-profile';
+
+  // ── Supplements Stack (managed stack / setup) ─────────────────────────────
+
+  /// Name for the Supplements Stack management screen.
+  ///
+  /// Stub added in Plan 4 Task 1; full route registered in Task 4.
+  static const String supplementsStack = 'supplementsStack';
+
+  /// Path for the Supplements Stack management screen.
+  static const String supplementsStackPath = '/supplements/stack';
+
+  /// Name for the Supplement Insights screen.
+  static const String supplementInsights = 'supplementInsights';
+
+  /// Path for the Supplement Insights screen.
+  static const String supplementInsightsPath = '/supplements/insights';
 
   // ── Developer Tools ───────────────────────────────────────────────────────
 
