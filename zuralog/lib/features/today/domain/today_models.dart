@@ -556,6 +556,27 @@ class SupplementEntry {
         doseUnit: doseUnit != null ? doseUnit() : this.doseUnit,
         form: form != null ? form() : this.form,
       );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SupplementEntry &&
+          id == other.id &&
+          name == other.name &&
+          dose == other.dose &&
+          timing == other.timing &&
+          doseAmount == other.doseAmount &&
+          doseUnit == other.doseUnit &&
+          form == other.form;
+
+  @override
+  int get hashCode =>
+      Object.hash(id, name, dose, timing, doseAmount, doseUnit, form);
+
+  @override
+  String toString() =>
+      'SupplementEntry(id: $id, name: $name, dose: $dose, timing: $timing, '
+      'doseAmount: $doseAmount, doseUnit: $doseUnit, form: $form)';
 }
 
 // ── IngestResult ──────────────────────────────────────────────────────────

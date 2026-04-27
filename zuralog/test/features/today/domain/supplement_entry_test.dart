@@ -79,5 +79,25 @@ void main() {
       expect(updated.doseAmount, 5000.0);
       expect(updated.form, 'capsule');
     });
+
+    test('equality: same fields are equal', () {
+      const a = SupplementEntry(
+        id: 'abc',
+        name: 'Vitamin D',
+        doseAmount: 5000.0,
+        doseUnit: 'IU',
+        form: 'softgel',
+      );
+      const b = SupplementEntry(
+        id: 'abc',
+        name: 'Vitamin D',
+        doseAmount: 5000.0,
+        doseUnit: 'IU',
+        form: 'softgel',
+      );
+      const c = SupplementEntry(id: 'xyz', name: 'Zinc');
+      expect(a, equals(b));
+      expect(a, isNot(equals(c)));
+    });
   });
 }
