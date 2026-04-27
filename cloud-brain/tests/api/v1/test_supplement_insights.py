@@ -1,6 +1,6 @@
 """Tests for GET /api/v1/supplements/insights endpoint."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 from fastapi.testclient import TestClient
 
