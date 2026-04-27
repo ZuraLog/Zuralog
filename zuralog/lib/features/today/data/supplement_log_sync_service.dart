@@ -50,15 +50,27 @@ class SupplementLogSyncService with WidgetsBindingObserver {
   /// Posts [log] to the backend. Marks it synced locally on success,
   /// storing the server-assigned log row UUID so the UI can undo the tap.
   /// Silently swallows network errors — [syncPending] will retry later.
+  ///
+  /// Ad-hoc logs (one-off supplements not in the user's stack) send their
+  /// name and dose inline as metadata instead of a supplement_id reference.
   Future<void> syncLog(SupplementTakenLog log) async {
     try {
+      final metadata = log.isAdHoc
+          ? {
+              'supplement_id': null,
+              'supplement_name': log.adHocName,
+              if (log.adHocDoseAmount != null) 'dose_amount': log.adHocDoseAmount,
+              if (log.adHocDoseUnit != null) 'dose_unit': log.adHocDoseUnit,
+            }
+          : {'supplement_id': log.supplementId};
+
       final response = await _client.post('/api/v1/ingest', data: {
         'metric_type': 'supplement_taken',
         'value': 1.0,
         'unit': 'count',
         'source': 'manual',
         'recorded_at': _isoWithOffset(log.recordedAt),
-        'metadata': {'supplement_id': log.supplementId},
+        'metadata': metadata,
       });
       final serverLogId = response.data['event_id'] as String;
       await _localRepo.markSynced(log.id, log.logDate,

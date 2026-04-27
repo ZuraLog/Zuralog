@@ -149,4 +149,23 @@ void main() {
     // Should still show taken (check_circle)
     expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
   });
+
+  testWidgets('one-off log link visible below supplement list', (tester) async {
+    await tester.pumpWidget(_buildPanel(
+      supplements: [const SupplementEntry(id: 's1', name: 'Vitamin D')],
+    ));
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('+ Log something extra today'), findsOneWidget);
+  });
+
+  testWidgets('tapping one-off link expands inline form', (tester) async {
+    await tester.pumpWidget(_buildPanel(
+      supplements: [const SupplementEntry(id: 's1', name: 'Vitamin D')],
+    ));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.text('+ Log something extra today'));
+    await tester.pump();
+    expect(find.text('Name'), findsOneWidget);
+    expect(find.text('Log today'), findsOneWidget);
+  });
 }

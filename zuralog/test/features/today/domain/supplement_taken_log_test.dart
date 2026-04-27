@@ -5,6 +5,75 @@ void main() {
   group('SupplementTakenLog', () {
     final recordedAt = DateTime(2026, 4, 27, 8, 0);
 
+    // ── Ad-hoc field tests ────────────────────────────────────────────────────
+
+    test('isAdHoc returns true for adhoc_ prefix', () {
+      final log = SupplementTakenLog(
+        id: 'local-1',
+        supplementId: 'adhoc_local-1',
+        logDate: '2026-04-27',
+        recordedAt: DateTime(2026, 4, 27),
+        adHocName: 'Iron',
+      );
+      expect(log.isAdHoc, isTrue);
+    });
+
+    test('isAdHoc returns false for regular supplement', () {
+      final log = SupplementTakenLog(
+        id: 'local-1',
+        supplementId: 'regular-id',
+        logDate: '2026-04-27',
+        recordedAt: DateTime(2026, 4, 27),
+      );
+      expect(log.isAdHoc, isFalse);
+    });
+
+    test('toJson includes adHoc fields when present', () {
+      final log = SupplementTakenLog(
+        id: 'local-1',
+        supplementId: 'adhoc_local-1',
+        logDate: '2026-04-27',
+        recordedAt: DateTime(2026, 4, 27),
+        adHocName: 'Iron',
+        adHocDoseAmount: 18.0,
+        adHocDoseUnit: 'mg',
+      );
+      final json = log.toJson();
+      expect(json['adHocName'], equals('Iron'));
+      expect(json['adHocDoseAmount'], equals(18.0));
+      expect(json['adHocDoseUnit'], equals('mg'));
+    });
+
+    test('toJson omits adHoc fields when null', () {
+      final log = SupplementTakenLog(
+        id: 'local-1',
+        supplementId: 'sup-abc',
+        logDate: '2026-04-27',
+        recordedAt: DateTime(2026, 4, 27),
+      );
+      final json = log.toJson();
+      expect(json.containsKey('adHocName'), isFalse);
+      expect(json.containsKey('adHocDoseAmount'), isFalse);
+      expect(json.containsKey('adHocDoseUnit'), isFalse);
+    });
+
+    test('fromJson round-trips adHoc fields', () {
+      final original = SupplementTakenLog(
+        id: 'local-1',
+        supplementId: 'adhoc_local-1',
+        logDate: '2026-04-27',
+        recordedAt: DateTime(2026, 4, 27, 8, 0),
+        adHocName: 'Zinc',
+        adHocDoseAmount: 50.0,
+        adHocDoseUnit: 'mg',
+      );
+      final restored = SupplementTakenLog.fromJson(original.toJson());
+      expect(restored.adHocName, equals('Zinc'));
+      expect(restored.adHocDoseAmount, equals(50.0));
+      expect(restored.adHocDoseUnit, equals('mg'));
+      expect(restored.isAdHoc, isTrue);
+    });
+
     test('round-trips through toJson / fromJson', () {
       final log = SupplementTakenLog(
         id: 'local-1',

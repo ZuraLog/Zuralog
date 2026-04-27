@@ -23,8 +23,11 @@ import 'package:zuralog/features/today/domain/supplement_taken_log.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
+import 'package:zuralog/shared/widgets/buttons/z_button.dart';
 import 'package:zuralog/shared/widgets/feedback/z_alert_dialog.dart';
 import 'package:zuralog/shared/widgets/feedback/z_toast.dart';
+import 'package:zuralog/shared/widgets/inputs/z_labeled_number_field.dart';
+import 'package:zuralog/shared/widgets/inputs/z_labeled_text_field.dart';
 import 'package:zuralog/shared/widgets/overlays/z_log_success_overlay.dart';
 
 const _kTimingOrder = ['morning', 'afternoon', 'evening', 'anytime'];
@@ -56,6 +59,12 @@ class _ZSupplementsLogPanelState
   Map<String, String> _serverTaken = {};
   bool _initialised = false;
 
+  // One-off form state
+  bool _showOneOffForm = false;
+  final _oneOffNameController = TextEditingController();
+  final _oneOffAmountController = TextEditingController();
+  String? _oneOffUnit;
+
   @override
   void initState() {
     super.initState();
@@ -67,6 +76,13 @@ class _ZSupplementsLogPanelState
     } catch (e) {
       debugPrint('[ZSupplementsLogPanel] sync service unavailable: $e');
     }
+  }
+
+  @override
+  void dispose() {
+    _oneOffNameController.dispose();
+    _oneOffAmountController.dispose();
+    super.dispose();
   }
 
   @override
@@ -214,6 +230,42 @@ class _ZSupplementsLogPanelState
     ref.invalidate(goalsProvider);
   }
 
+  Future<void> _logOneOff() async {
+    final name = _oneOffNameController.text.trim();
+    if (name.isEmpty) return;
+    HapticFeedback.lightImpact();
+    final localId = const Uuid().v4();
+    final log = SupplementTakenLog(
+      id: localId,
+      supplementId: 'adhoc_$localId',
+      logDate: _today(),
+      recordedAt: DateTime.now(),
+      adHocName: name,
+      adHocDoseAmount: double.tryParse(_oneOffAmountController.text.trim()),
+      adHocDoseUnit: _oneOffUnit,
+    );
+    final localRepo = ref.read(supplementLogLocalRepositoryProvider);
+    await localRepo.saveLog(log);
+    final syncService = ref.read(supplementLogSyncServiceProvider);
+    unawaited(syncService.syncLog(log).then((_) {
+      if (mounted) setState(() {});
+    }));
+    setState(() {
+      _showOneOffForm = false;
+      _oneOffNameController.clear();
+      _oneOffAmountController.clear();
+      _oneOffUnit = null;
+    });
+    if (mounted) {
+      ZToast.success(
+        context,
+        '$name logged for today',
+        displayDuration: const Duration(seconds: 4),
+      );
+    }
+    _invalidateProviders();
+  }
+
   Map<String?, List<SupplementEntry>> _groupByTiming(
       List<SupplementEntry> supplements) {
     final grouped = <String?, List<SupplementEntry>>{};
@@ -272,6 +324,15 @@ class _ZSupplementsLogPanelState
           isTaken: _isTaken,
           onTap: _handleTap,
           onBack: widget.onBack,
+          oneOffSection: _OneOffSection(
+            showForm: _showOneOffForm,
+            nameController: _oneOffNameController,
+            amountController: _oneOffAmountController,
+            selectedUnit: _oneOffUnit,
+            onToggle: () => setState(() => _showOneOffForm = !_showOneOffForm),
+            onUnitSelect: (u) => setState(() => _oneOffUnit = u),
+            onLog: _logOneOff,
+          ),
         );
       },
     );
@@ -287,6 +348,7 @@ class _PanelContent extends StatelessWidget {
     required this.isTaken,
     required this.onTap,
     required this.onBack,
+    required this.oneOffSection,
   });
 
   final List<SupplementEntry> supplements;
@@ -296,6 +358,7 @@ class _PanelContent extends StatelessWidget {
   final bool Function(String) isTaken;
   final void Function(SupplementEntry) onTap;
   final VoidCallback onBack;
+  final Widget oneOffSection;
 
   @override
   Widget build(BuildContext context) {
@@ -334,6 +397,7 @@ class _PanelContent extends StatelessWidget {
                 ),
                 const SizedBox(height: AppDimens.spaceMd),
               ],
+              oneOffSection,
               const _PanelFooter(),
               const SizedBox(height: AppDimens.spaceLg),
             ],
@@ -538,6 +602,193 @@ class _PanelFooter extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _OneOffSection extends StatelessWidget {
+  const _OneOffSection({
+    required this.showForm,
+    required this.nameController,
+    required this.amountController,
+    required this.selectedUnit,
+    required this.onToggle,
+    required this.onUnitSelect,
+    required this.onLog,
+  });
+
+  final bool showForm;
+  final TextEditingController nameController;
+  final TextEditingController amountController;
+  final String? selectedUnit;
+  final VoidCallback onToggle;
+  final void Function(String) onUnitSelect;
+  final VoidCallback onLog;
+
+  static const _kUnitOptions = ['mg', 'mcg', 'IU', 'g', 'ml', 'other'];
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: onToggle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
+            child: Text(
+              '+ Log something extra today',
+              style: AppTextStyles.bodySmall.copyWith(color: colors.textSecondary),
+            ),
+          ),
+        ),
+        if (showForm) ...[
+          const SizedBox(height: AppDimens.spaceSm),
+          ZLabeledTextField(
+            label: 'Name',
+            controller: nameController,
+            hint: 'e.g. Iron',
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          ZLabeledNumberField(
+            label: 'Amount',
+            controller: amountController,
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          _OneOffUnitGrid(
+            options: _kUnitOptions,
+            selected: selectedUnit,
+            onSelect: onUnitSelect,
+          ),
+          const SizedBox(height: AppDimens.spaceMd),
+          _LogTodayButton(
+            nameController: nameController,
+            onLog: onLog,
+          ),
+          const SizedBox(height: AppDimens.spaceMd),
+        ],
+      ],
+    );
+  }
+}
+
+class _OneOffUnitGrid extends StatelessWidget {
+  const _OneOffUnitGrid({
+    required this.options,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final List<String> options;
+  final String? selected;
+  final void Function(String) onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[];
+    for (int i = 0; i < options.length; i += 2) {
+      rows.add(Row(children: [
+        Expanded(
+          child: _UnitCell(
+            label: options[i],
+            selected: options[i] == selected,
+            onTap: () => onSelect(options[i]),
+          ),
+        ),
+        const SizedBox(width: AppDimens.spaceXs),
+        if (i + 1 < options.length)
+          Expanded(
+            child: _UnitCell(
+              label: options[i + 1],
+              selected: options[i + 1] == selected,
+              onTap: () => onSelect(options[i + 1]),
+            ),
+          )
+        else
+          const Expanded(child: SizedBox.shrink()),
+      ]));
+      if (i + 2 < options.length) rows.add(const SizedBox(height: AppDimens.spaceXs));
+    }
+    return Column(children: rows);
+  }
+}
+
+class _UnitCell extends StatelessWidget {
+  const _UnitCell({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceXs),
+        decoration: BoxDecoration(
+          color: selected
+              ? colors.primary.withValues(alpha: 0.15)
+              : colors.surfaceRaised,
+          borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+          border: Border.all(
+            color: selected
+                ? colors.primary.withValues(alpha: 0.4)
+                : colors.border.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: AppTextStyles.bodySmall.copyWith(
+            color: selected ? colors.primary : colors.textPrimary,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LogTodayButton extends StatefulWidget {
+  const _LogTodayButton({
+    required this.nameController,
+    required this.onLog,
+  });
+
+  final TextEditingController nameController;
+  final VoidCallback onLog;
+
+  @override
+  State<_LogTodayButton> createState() => _LogTodayButtonState();
+}
+
+class _LogTodayButtonState extends State<_LogTodayButton> {
+  @override
+  void initState() {
+    super.initState();
+    widget.nameController.addListener(_rebuild);
+  }
+
+  void _rebuild() => setState(() {});
+
+  @override
+  void dispose() {
+    widget.nameController.removeListener(_rebuild);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ZButton(
+      label: 'Log today',
+      onPressed: widget.nameController.text.trim().isNotEmpty ? widget.onLog : null,
     );
   }
 }
