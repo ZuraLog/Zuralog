@@ -11,6 +11,7 @@ library;
 import 'package:zuralog/features/today/data/today_repository.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
 import 'package:zuralog/features/today/domain/supplement_conflict.dart';
+import 'package:zuralog/features/today/domain/supplement_insight.dart';
 import 'package:zuralog/features/today/domain/supplement_scan_result.dart';
 import 'package:zuralog/features/today/domain/supplement_today_entry.dart';
 import 'package:zuralog/features/today/domain/timing_suggestion.dart';
@@ -314,6 +315,32 @@ final class MockTodayRepository implements TodayRepositoryInterface {
   }) async {
     await Future<void>.delayed(_delay);
     return const TimingSuggestion(tip: 'Take in the morning for best absorption.');
+  }
+
+  @override
+  Future<SupplementInsightsResult> getSupplementInsights({int days = 60}) async {
+    await Future<void>.delayed(_delay);
+    return SupplementInsightsResult(
+      insights: [
+        const SupplementInsightItem(
+          metricType: 'sleep_duration',
+          metricLabel: 'Sleep',
+          direction: 'positive',
+          correlation: 0.42,
+          insightText: 'Your sleep is 12% better when you take your stack.',
+        ),
+        const SupplementInsightItem(
+          metricType: 'hrv_ms',
+          metricLabel: 'HRV',
+          direction: 'positive',
+          correlation: 0.31,
+          insightText:
+              'Your HRV is slightly higher on days you complete your stack.',
+        ),
+      ],
+      dataDays: 30,
+      hasEnoughData: true,
+    );
   }
 
   // ── Log Endpoints ─────────────────────────────────────────────────────────

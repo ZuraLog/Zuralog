@@ -22,6 +22,7 @@ import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
 import 'package:zuralog/features/today/domain/supplement_conflict.dart';
+import 'package:zuralog/features/today/domain/supplement_insight.dart';
 import 'package:zuralog/features/today/domain/supplement_scan_result.dart';
 import 'package:zuralog/features/today/domain/timing_suggestion.dart';
 import 'package:zuralog/features/today/domain/supplement_today_entry.dart';
@@ -255,6 +256,12 @@ abstract interface class TodayRepositoryInterface {
     required String supplementName,
     required String timing,
   });
+
+  /// Fetches AI-generated insights correlating the user's supplement stack
+  /// against health metrics over the last [days] days.
+  ///
+  /// Returns [SupplementInsightsResult.empty] when the server returns no data.
+  Future<SupplementInsightsResult> getSupplementInsights({int days = 60});
 }
 
 // ── TodayRepository ──────────────────────────────────────────────────────────
@@ -1015,6 +1022,17 @@ class TodayRepository implements TodayRepositoryInterface {
       },
     );
     return TimingSuggestion.fromJson(
+      response.data as Map<String, dynamic>? ?? {},
+    );
+  }
+
+  @override
+  Future<SupplementInsightsResult> getSupplementInsights({int days = 60}) async {
+    final response = await _api.get(
+      '/api/v1/supplements/insights',
+      queryParameters: {'days': days},
+    );
+    return SupplementInsightsResult.fromJson(
       response.data as Map<String, dynamic>? ?? {},
     );
   }
