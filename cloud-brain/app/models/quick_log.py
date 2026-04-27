@@ -51,8 +51,7 @@ class QuickLog(Base):
     Attributes:
         id: UUID primary key.
         user_id: Supabase UID of the owning user. Indexed.
-        metric_type: One of: water, mood, energy, stress, sleep_quality, pain,
-            notes, sleep, run, meal, supplement, symptom, workout, weight, steps.
+        metric_type: One of the values in VALID_METRIC_TYPES. See that frozenset for the canonical list.
         value: Numeric measurement. Nullable for text-only metrics.
         text_value: Free-text content. Nullable for numeric-only metrics.
         tags: JSON array of tag strings.
@@ -77,7 +76,7 @@ class QuickLog(Base):
     metric_type: Mapped[str] = mapped_column(
         String,
         nullable=False,
-        comment="water | mood | energy | stress | sleep_quality | pain | notes | sleep | run | meal | supplement | symptom | workout | weight | steps",
+        comment="See VALID_METRIC_TYPES for all accepted values",
     )
     value: Mapped[float | None] = mapped_column(
         Float,
