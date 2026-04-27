@@ -39,9 +39,9 @@ class SupplementResponse(BaseModel):
     name: str
     dose: str | None
     timing: str | None
-    dose_amount: float | None
-    dose_unit: str | None
-    form: str | None
+    dose_amount: float | None = None
+    dose_unit: str | None = None
+    form: str | None = None
 
 
 class SupplementListResponse(BaseModel):
