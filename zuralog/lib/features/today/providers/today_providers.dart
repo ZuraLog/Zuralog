@@ -30,11 +30,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/di/providers.dart';
-import 'package:zuralog/core/storage/prefs_service.dart';
 import 'package:zuralog/features/today/data/supplement_log_local_repository.dart';
 import 'package:zuralog/features/today/data/today_repository.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
-import 'package:zuralog/features/today/domain/supplement_taken_log.dart';
 import 'package:zuralog/features/today/domain/supplement_today_entry.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
