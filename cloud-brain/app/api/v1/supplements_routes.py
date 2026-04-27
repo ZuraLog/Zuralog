@@ -2,6 +2,7 @@
 
 import logging
 import uuid as _uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
@@ -12,6 +13,7 @@ from sqlalchemy.sql import func
 from app.api.deps import get_authenticated_user_id
 from app.database import get_db
 from app.limiter import limiter
+from app.models.quick_log import QuickLog
 from app.models.user_supplement import UserSupplement
 
 logger = logging.getLogger(__name__)
@@ -48,6 +50,15 @@ class SupplementListResponse(BaseModel):
     supplements: list[SupplementResponse]
 
 
+class TodayLogEntry(BaseModel):
+    supplement_id: str
+    log_id: str
+
+
+class TodayLogResponse(BaseModel):
+    entries: list[TodayLogEntry]
+
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 
@@ -64,6 +75,36 @@ def _row_to_response(row: UserSupplement) -> SupplementResponse:
 
 
 # ── Routes ───────────────────────────────────────────────────────────────────
+
+
+@limiter.limit("60/minute")
+@router.get("/today-log", response_model=TodayLogResponse)
+async def get_today_supplement_log(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_authenticated_user_id),
+) -> TodayLogResponse:
+    """Return supplement_id + log_id pairs for all supplements logged today (UTC day)."""
+    today_start = datetime.now(timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    result = await db.execute(
+        select(QuickLog).where(
+            QuickLog.user_id == user_id,
+            QuickLog.metric_type == "supplement_taken",
+            QuickLog.logged_at >= today_start,
+        )
+    )
+    rows = result.scalars().all()
+    entries = [
+        TodayLogEntry(
+            supplement_id=row.data.get("supplement_id", ""),
+            log_id=row.id,
+        )
+        for row in rows
+        if row.data.get("supplement_id")
+    ]
+    return TodayLogResponse(entries=entries)
 
 
 @limiter.limit("60/minute")

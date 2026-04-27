@@ -217,3 +217,40 @@ def test_get_supplements_returns_structured_dose_fields(client, mock_db):
     assert s["dose_amount"] == 1000.0
     assert s["dose_unit"] == "mg"
     assert s["form"] == "softgel"
+
+
+# ── GET /api/v1/supplements/today-log ────────────────────────────────────────
+
+
+def test_get_today_log_returns_200_empty(client, mock_db):
+    mock_db.execute.return_value.scalars.return_value.all.return_value = []
+    resp = client.get("/api/v1/supplements/today-log", headers=AUTH_HEADER)
+    assert resp.status_code == 200
+    assert resp.json() == {"entries": []}
+
+
+def test_get_today_log_returns_entries(client, mock_db):
+    from datetime import datetime, timezone
+    from app.models.quick_log import QuickLog
+    row = QuickLog(
+        id="log-uuid-1",
+        user_id=TEST_USER_ID,
+        metric_type="supplement_taken",
+        value=1.0,
+        data={"supplement_id": "supp-abc"},
+        logged_at=datetime.now(timezone.utc),
+    )
+    mock_db.execute.return_value.scalars.return_value.all.return_value = [row]
+    resp = client.get("/api/v1/supplements/today-log", headers=AUTH_HEADER)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["entries"]) == 1
+    assert data["entries"][0]["supplement_id"] == "supp-abc"
+    assert data["entries"][0]["log_id"] == "log-uuid-1"
+
+
+def test_get_today_log_requires_auth():
+    from fastapi.testclient import TestClient
+    from app.main import app as _app
+    resp = TestClient(_app).get("/api/v1/supplements/today-log")
+    assert resp.status_code in (401, 403)
