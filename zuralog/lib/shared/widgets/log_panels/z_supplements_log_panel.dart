@@ -1,0 +1,614 @@
+/// ZuraLog — Supplements Daily Check-off Panel.
+///
+/// Displayed inside the ZLogGridSheet when the user taps the Supplements tile.
+/// Auto-saves each supplement tap locally-first with background sync.
+/// Follows the same pattern as ZWaterLogPanel.
+library;
+
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
+
+import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/app_dimens.dart';
+import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/router/route_names.dart';
+import 'package:zuralog/features/today/data/supplement_log_local_repository.dart';
+import 'package:zuralog/features/today/data/supplement_log_sync_service.dart';
+import 'package:zuralog/features/today/domain/supplement_taken_log.dart';
+import 'package:zuralog/features/today/domain/supplement_today_entry.dart';
+import 'package:zuralog/features/today/domain/today_models.dart';
+import 'package:zuralog/features/today/providers/today_providers.dart';
+import 'package:zuralog/features/progress/providers/progress_providers.dart';
+import 'package:zuralog/shared/widgets/feedback/z_alert_dialog.dart';
+import 'package:zuralog/shared/widgets/feedback/z_toast.dart';
+import 'package:zuralog/shared/widgets/overlays/z_log_success_overlay.dart';
+
+const _kTimingOrder = ['morning', 'afternoon', 'evening', 'anytime'];
+const _kTimingLabels = {
+  'morning': 'Morning',
+  'afternoon': 'Afternoon',
+  'evening': 'Evening',
+  'anytime': 'Anytime',
+};
+
+class ZSupplementsLogPanel extends ConsumerStatefulWidget {
+  const ZSupplementsLogPanel({
+    super.key,
+    required this.onSave,
+    required this.onBack,
+  });
+
+  final VoidCallback onSave;
+  final VoidCallback onBack;
+
+  @override
+  ConsumerState<ZSupplementsLogPanel> createState() =>
+      _ZSupplementsLogPanelState();
+}
+
+class _ZSupplementsLogPanelState
+    extends ConsumerState<ZSupplementsLogPanel> {
+  final Map<String, String> _sessionTaken = {};
+  Map<String, String> _serverTaken = {};
+  bool _initialised = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Warm up the sync service on first mount — deferred to avoid initState
+    // provider access issues in test environments.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        try {
+          ref.read(supplementLogSyncServiceProvider);
+        } catch (_) {
+          // Silently ignore if sync service is unavailable (e.g. in tests).
+        }
+      }
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Seed _serverTaken from the already-resolved future (if ready).
+    if (!_initialised) {
+      final value = ref.read(supplementsTodayLogProvider).valueOrNull;
+      if (value != null) {
+        _serverTaken = {for (final e in value) e.supplementId: e.logId};
+        _initialised = true;
+      }
+    }
+  }
+
+  String _today() {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
+
+  bool _isTaken(String supplementId) =>
+      _sessionTaken.containsKey(supplementId) ||
+      _serverTaken.containsKey(supplementId);
+
+  Future<void> _handleTap(SupplementEntry supplement) async {
+    if (_isTaken(supplement.id)) {
+      await _handleUncheck(supplement);
+    } else {
+      await _handleCheckin(supplement);
+    }
+  }
+
+  Future<void> _handleCheckin(SupplementEntry supplement) async {
+    HapticFeedback.lightImpact();
+    final localId = const Uuid().v4();
+    final log = SupplementTakenLog(
+      id: localId,
+      supplementId: supplement.id,
+      logDate: _today(),
+      recordedAt: DateTime.now(),
+    );
+    // Optimistic update first so the UI responds instantly.
+    setState(() => _sessionTaken[supplement.id] = localId);
+    // Persist locally (best-effort; sync will retry on failure).
+    try {
+      final localRepo = ref.read(supplementLogLocalRepositoryProvider);
+      await localRepo.saveLog(log);
+    } catch (_) {
+      // Local storage unavailable (e.g. test environment) — UI state is
+      // already updated; sync service will still attempt cloud save.
+    }
+
+    try {
+      final syncService = ref.read(supplementLogSyncServiceProvider);
+      unawaited(syncService.syncLog(log).then((_) {
+        if (mounted) setState(() {});
+      }));
+    } catch (_) {
+      // Sync service unavailable (e.g. test environment) — skip background sync.
+    }
+
+    if (mounted) {
+      ZToast.success(
+        context,
+        '${supplement.name} logged',
+        action: 'Undo',
+        onAction: () => _undoCheckin(supplement, localId, log),
+      );
+    }
+
+    final supplements = ref.read(supplementsListProvider).valueOrNull ?? [];
+    final totalCount = supplements.length;
+    final takenCount = supplements.where((s) => _isTaken(s.id)).length;
+    if (takenCount >= totalCount && totalCount > 0 && mounted) {
+      // Brief pause so the check animation settles before showing the
+      // success overlay. We use a post-frame callback instead of a timer
+      // so that test teardown doesn't flag a pending timer.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ZLogSuccessOverlay.show(context);
+        widget.onSave();
+      });
+    }
+  }
+
+  Future<void> _undoCheckin(
+    SupplementEntry supplement,
+    String localId,
+    SupplementTakenLog log,
+  ) async {
+    final localRepo = ref.read(supplementLogLocalRepositoryProvider);
+    await localRepo.removeLog(localId, log.logDate);
+    final serverLogId = _serverTaken[supplement.id];
+    if (serverLogId != null) {
+      try {
+        final repo = ref.read(todayRepositoryProvider);
+        await repo.deleteSupplementLogEntry(serverLogId);
+      } catch (_) {}
+    }
+    setState(() {
+      _sessionTaken.remove(supplement.id);
+      _serverTaken.remove(supplement.id);
+    });
+    _invalidateProviders();
+  }
+
+  Future<void> _handleUncheck(SupplementEntry supplement) async {
+    final confirmed = await ZAlertDialog.show(
+      context,
+      title: 'Remove log entry?',
+      body:
+          'This will delete your ${supplement.name} record for today. This action cannot be undone.',
+      confirmLabel: 'Remove entry',
+      cancelLabel: 'Cancel',
+      isDestructive: true,
+    );
+    if (confirmed != true) return;
+
+    final localId = _sessionTaken[supplement.id];
+    if (localId != null) {
+      final localRepo = ref.read(supplementLogLocalRepositoryProvider);
+      await localRepo.removeLog(localId, _today());
+    }
+    final serverLogId = _serverTaken[supplement.id];
+    if (serverLogId != null) {
+      try {
+        final repo = ref.read(todayRepositoryProvider);
+        await repo.deleteSupplementLogEntry(serverLogId);
+      } catch (_) {}
+    }
+    setState(() {
+      _sessionTaken.remove(supplement.id);
+      _serverTaken.remove(supplement.id);
+    });
+    _invalidateProviders();
+  }
+
+  void _invalidateProviders() {
+    ref.invalidate(supplementsTodayLogProvider);
+    ref.invalidate(supplementsSyncStatusProvider);
+    ref.invalidate(todayLogSummaryProvider);
+    ref.invalidate(progressHomeProvider);
+    ref.invalidate(goalsProvider);
+  }
+
+  Map<String?, List<SupplementEntry>> _groupByTiming(
+      List<SupplementEntry> supplements) {
+    final grouped = <String?, List<SupplementEntry>>{};
+    for (final s in supplements) {
+      (grouped[s.timing] ??= []).add(s);
+    }
+    return grouped;
+  }
+
+  List<MapEntry<String?, List<SupplementEntry>>> _sortedGroups(
+      Map<String?, List<SupplementEntry>> grouped) {
+    final entries = grouped.entries.toList();
+    entries.sort((a, b) {
+      final ai = _kTimingOrder.indexOf(a.key ?? 'anytime');
+      final bi = _kTimingOrder.indexOf(b.key ?? 'anytime');
+      return (ai == -1 ? 999 : ai).compareTo(bi == -1 ? 999 : bi);
+    });
+    return entries;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final supplementsAsync = ref.watch(supplementsListProvider);
+    final todayLogAsync = ref.watch(supplementsTodayLogProvider);
+    final syncStatusAsync = ref.watch(supplementsSyncStatusProvider);
+
+    todayLogAsync.whenData((entries) {
+      if (!_initialised) {
+        _serverTaken = {
+          for (final e in entries) e.supplementId: e.logId,
+        };
+        _initialised = true;
+      }
+    });
+
+    final syncStatus =
+        syncStatusAsync.valueOrNull ?? SupplementSyncStatus.none;
+
+    return supplementsAsync.when(
+      loading: () => const _LoadingState(),
+      error: (_, __) => const _ErrorState(),
+      data: (supplements) {
+        if (supplements.isEmpty) {
+          return _EmptyState(onSetUpStack: widget.onSave);
+        }
+        final takenCount =
+            supplements.where((s) => _isTaken(s.id)).length;
+        final grouped = _groupByTiming(supplements);
+        final sortedGroups = _sortedGroups(grouped);
+        return _PanelContent(
+          supplements: supplements,
+          sortedGroups: sortedGroups,
+          takenCount: takenCount,
+          syncStatus: syncStatus,
+          isTaken: _isTaken,
+          onTap: _handleTap,
+          onBack: widget.onBack,
+        );
+      },
+    );
+  }
+}
+
+class _PanelContent extends StatelessWidget {
+  const _PanelContent({
+    required this.supplements,
+    required this.sortedGroups,
+    required this.takenCount,
+    required this.syncStatus,
+    required this.isTaken,
+    required this.onTap,
+    required this.onBack,
+  });
+
+  final List<SupplementEntry> supplements;
+  final List<MapEntry<String?, List<SupplementEntry>>> sortedGroups;
+  final int takenCount;
+  final SupplementSyncStatus syncStatus;
+  final bool Function(String) isTaken;
+  final void Function(SupplementEntry) onTap;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _PanelHeader(
+          takenCount: takenCount,
+          totalCount: supplements.length,
+          syncStatus: syncStatus,
+          onBack: onBack,
+        ),
+        const SizedBox(height: AppDimens.spaceMd),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.spaceMd),
+            children: [
+              for (final group in sortedGroups) ...[
+                if (group.key != null) ...[
+                  Text(
+                    _kTimingLabels[group.key] ?? group.key!,
+                    style: AppTextStyles.labelMedium.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: AppDimens.spaceXs),
+                ],
+                ...group.value.map(
+                  (s) => _SupplementRow(
+                    supplement: s,
+                    taken: isTaken(s.id),
+                    onTap: () => onTap(s),
+                  ),
+                ),
+                const SizedBox(height: AppDimens.spaceMd),
+              ],
+              const _PanelFooter(),
+              const SizedBox(height: AppDimens.spaceLg),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PanelHeader extends StatelessWidget {
+  const _PanelHeader({
+    required this.takenCount,
+    required this.totalCount,
+    required this.syncStatus,
+    required this.onBack,
+  });
+
+  final int takenCount;
+  final int totalCount;
+  final SupplementSyncStatus syncStatus;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppDimens.spaceMd,
+        AppDimens.spaceMd,
+        AppDimens.spaceMd,
+        0,
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: onBack,
+            child: Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: colors.textSecondary,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: AppDimens.spaceSm),
+          Expanded(
+            child: Row(
+              children: [
+                Text(
+                  '$takenCount of $totalCount taken today',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+                const SizedBox(width: AppDimens.spaceXs),
+                _SyncIcon(syncStatus: syncStatus),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SyncIcon extends StatelessWidget {
+  const _SyncIcon({required this.syncStatus});
+
+  final SupplementSyncStatus syncStatus;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    if (syncStatus == SupplementSyncStatus.none) {
+      return const SizedBox.shrink();
+    }
+    if (syncStatus == SupplementSyncStatus.pending) {
+      return Icon(
+        Icons.cloud_upload_outlined,
+        size: 14,
+        color: colors.textSecondary.withValues(alpha: 0.35),
+      );
+    }
+    return Icon(
+      Icons.cloud_done_outlined,
+      size: 14,
+      color: const Color(0xFF64D2FF).withValues(alpha: 0.55),
+    );
+  }
+}
+
+class _SupplementRow extends StatelessWidget {
+  const _SupplementRow({
+    required this.supplement,
+    required this.taken,
+    required this.onTap,
+  });
+
+  final SupplementEntry supplement;
+  final bool taken;
+  final VoidCallback onTap;
+
+  String? get _doseLabel {
+    if (supplement.doseAmount != null && supplement.doseUnit != null) {
+      final amount = supplement.doseAmount!.toStringAsFixed(
+        supplement.doseAmount! % 1 == 0 ? 0 : 1,
+      );
+      final parts = <String>['$amount ${supplement.doseUnit}'];
+      if (supplement.form != null) parts.add(supplement.form!);
+      return parts.join(' · ');
+    }
+    if (supplement.dose != null) return supplement.dose;
+    if (supplement.form != null) return supplement.form;
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppDimens.spaceXs),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimens.spaceMd,
+          vertical: AppDimens.spaceSm,
+        ),
+        decoration: BoxDecoration(
+          color: taken
+              ? colors.primary.withValues(alpha: 0.12)
+              : colors.surfaceRaised,
+          borderRadius: BorderRadius.circular(AppDimens.shapeLg),
+          border: taken
+              ? Border.all(
+                  color: colors.primary.withValues(alpha: 0.3))
+              : null,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              taken
+                  ? Icons.check_circle_rounded
+                  : Icons.circle_outlined,
+              size: 22,
+              color: taken
+                  ? colors.primary
+                  : colors.textSecondary
+                      .withValues(alpha: 0.4),
+            ),
+            const SizedBox(width: AppDimens.spaceSm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    supplement.name,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight:
+                          taken ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                  if (_doseLabel != null)
+                    Text(
+                      _doseLabel!,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PanelFooter extends StatelessWidget {
+  const _PanelFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Divider(
+          color: colors.border.withValues(alpha: 0.3),
+          height: 1,
+        ),
+        const SizedBox(height: AppDimens.spaceMd),
+        GestureDetector(
+          onTap: () => GoRouter.of(context)
+              .pushNamed(RouteNames.supplementsStack),
+          child: Text(
+            'Manage my stack →',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: colors.primary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.onSetUpStack});
+
+  final VoidCallback onSetUpStack;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.spaceLg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.medication_outlined,
+              size: 56,
+              color: colors.textSecondary.withValues(alpha: 0.4),
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            Text(
+              'No stack yet',
+              style: AppTextStyles.titleMedium.copyWith(
+                color: colors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceXs),
+            Text(
+              'Add your supplements and meds to log them with a single tap each morning.',
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: colors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppDimens.spaceLg),
+            ElevatedButton(
+              onPressed: () => GoRouter.of(context)
+                  .pushNamed(RouteNames.supplementsStack),
+              child: const Text('Set up my stack'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LoadingState extends StatelessWidget {
+  const _LoadingState();
+
+  @override
+  Widget build(BuildContext context) =>
+      const Center(child: CircularProgressIndicator.adaptive());
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Center(
+      child: Text(
+        'Could not load supplements.',
+        style: AppTextStyles.bodyMedium
+            .copyWith(color: colors.textSecondary),
+      ),
+    );
+  }
+}

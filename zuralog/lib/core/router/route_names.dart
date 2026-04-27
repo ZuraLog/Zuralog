@@ -462,6 +462,16 @@ abstract final class RouteNames {
   /// Path for the Edit Profile screen.
   static const String editProfilePath = '/settings/account/edit-profile';
 
+  // ── Supplements Stack (managed stack / setup) ─────────────────────────────
+
+  /// Name for the Supplements Stack management screen.
+  ///
+  /// Stub added in Plan 4 Task 1; full route registered in Task 4.
+  static const String supplementsStack = 'supplementsStack';
+
+  /// Path for the Supplements Stack management screen.
+  static const String supplementsStackPath = '/supplements/stack';
+
   // ── Developer Tools ───────────────────────────────────────────────────────
 
   /// Name for the component showcase screen (dev only).
