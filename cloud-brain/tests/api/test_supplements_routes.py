@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from app.api.deps import get_authenticated_user_id
 from app.database import get_db
 from app.main import app
+from app.models.quick_log import VALID_METRIC_TYPES
 
 TEST_USER_ID = str(uuid.uuid4())
 AUTH_HEADER = {"Authorization": "Bearer test-token"}
@@ -150,3 +151,7 @@ def test_post_supplements_optional_fields(client):
     assert s["name"] == "Magnesium"
     assert s["dose"] is None
     assert s["timing"] is None
+
+
+def test_supplement_taken_is_valid_metric_type():
+    assert "supplement_taken" in VALID_METRIC_TYPES

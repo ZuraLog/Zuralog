@@ -32,6 +32,7 @@ VALID_METRIC_TYPES = frozenset(
         "run",
         "meal",
         "supplement",
+        "supplement_taken",
         "symptom",
         "workout",
         "weight",
