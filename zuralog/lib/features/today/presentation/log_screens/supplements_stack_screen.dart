@@ -759,10 +759,16 @@ class _ScanLabelSheetState extends ConsumerState<_ScanLabelSheet> {
   bool _showBarcodeScanner = false;
   bool _isLoading = false;
   String? _error;
+  bool _scanned = false;
 
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
-    final xFile = await picker.pickImage(source: source, imageQuality: 85);
+    final xFile = await picker.pickImage(
+      source: source,
+      imageQuality: 85,
+      maxWidth: 1280,
+      maxHeight: 1280,
+    );
     if (xFile == null) return;
     setState(() {
       _isLoading = true;
@@ -785,8 +791,10 @@ class _ScanLabelSheetState extends ConsumerState<_ScanLabelSheet> {
   }
 
   Future<void> _handleBarcode(BarcodeCapture capture) async {
+    if (_scanned) return;
     final code = capture.barcodes.firstOrNull?.rawValue;
     if (code == null || code.isEmpty) return;
+    _scanned = true;
     setState(() {
       _showBarcodeScanner = false;
       _isLoading = true;
@@ -922,14 +930,24 @@ class _ScanOption extends StatelessWidget {
 
 // ── Barcode Scanner View ──────────────────────────────────────────────────────
 
-class _BarcodeScannerView extends StatelessWidget {
-  const _BarcodeScannerView({
-    required this.onDetect,
-    required this.onClose,
-  });
+class _BarcodeScannerView extends StatefulWidget {
+  const _BarcodeScannerView({required this.onDetect, required this.onClose});
 
   final void Function(BarcodeCapture) onDetect;
   final VoidCallback onClose;
+
+  @override
+  State<_BarcodeScannerView> createState() => _BarcodeScannerViewState();
+}
+
+class _BarcodeScannerViewState extends State<_BarcodeScannerView> {
+  late final MobileScannerController _controller = MobileScannerController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -942,20 +960,19 @@ class _BarcodeScannerView extends StatelessWidget {
       clipBehavior: Clip.hardEdge,
       child: Stack(
         children: [
-          MobileScanner(onDetect: onDetect),
+          MobileScanner(controller: _controller, onDetect: widget.onDetect),
           Positioned(
             top: AppDimens.spaceSm,
             right: AppDimens.spaceSm,
             child: GestureDetector(
-              onTap: onClose,
+              onTap: widget.onClose,
               child: Container(
                 padding: const EdgeInsets.all(AppDimens.spaceXs),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.5),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.close_rounded,
-                    color: Colors.white, size: 18),
+                child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
               ),
             ),
           ),

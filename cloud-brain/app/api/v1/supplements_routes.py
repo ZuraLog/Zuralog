@@ -59,8 +59,8 @@ class TodayLogResponse(BaseModel):
 
 
 class ScanLabelRequest(BaseModel):
-    image_base64: str | None = Field(default=None)
-    barcode: str | None = Field(default=None)
+    image_base64: str | None = Field(default=None, max_length=2_800_000)
+    barcode: str | None = Field(default=None, pattern=r'^\d{6,14}$', max_length=14)
 
     @model_validator(mode='after')
     def _require_one(self) -> 'ScanLabelRequest':
@@ -225,7 +225,10 @@ async def delete_supplement_log_entry(
 
 async def _parse_supplement_barcode(barcode: str) -> ScanLabelResponse:
     """Look up a barcode via Open Food Facts and return parsed supplement fields."""
+    import re  # noqa: PLC0415
     import httpx  # noqa: PLC0415
+    if not re.match(r'^\d{6,14}$', barcode):
+        return ScanLabelResponse()
     url = f"https://world.openfoodfacts.org/api/v2/product/{barcode}.json"
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
@@ -237,7 +240,7 @@ async def _parse_supplement_barcode(barcode: str) -> ScanLabelResponse:
         name = product.get("product_name") or product.get("generic_name")
         return ScanLabelResponse(name=name or None)
     except Exception as exc:
-        logger.warning("_parse_supplement_barcode failed for barcode=%s: %s", barcode, exc)
+        logger.warning("_parse_supplement_barcode failed: %s", type(exc).__name__)
         return ScanLabelResponse()
 
 
