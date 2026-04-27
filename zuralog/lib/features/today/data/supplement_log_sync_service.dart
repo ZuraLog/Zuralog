@@ -80,7 +80,7 @@ class SupplementLogSyncService with WidgetsBindingObserver {
       debugPrint('[SupplementLogSyncService] sync failed: $e');
     } catch (e, st) {
       debugPrint('[SupplementLogSyncService] unexpected sync error: $e\n$st');
-      rethrow;
+      // Silently swallow unexpected errors — syncPending will retry later.
     }
   }
 

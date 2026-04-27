@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:zuralog/features/today/data/mock_today_repository.dart';
 import 'package:zuralog/features/today/data/today_repository.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
+import 'package:zuralog/features/today/domain/supplement_conflict.dart';
+import 'package:zuralog/features/today/domain/supplement_scan_result.dart';
 import 'package:zuralog/features/today/domain/supplement_today_entry.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
@@ -42,6 +44,8 @@ class _StubRepo implements TodayRepositoryInterface {
   @override Future<void> deleteEvent(String eventId) async {}
   @override Future<SessionIngestResult> submitSession({required String sessionType, required String source, required DateTime recordedAt, DateTime? endedAt, required List<SessionMetricPayload> metrics, String? notes, Map<String, dynamic>? metadata}) async => SessionIngestResult(sessionId: '', eventIds: [], date: '');
   @override Future<BulkIngestResult> bulkIngest({required String source, required List<BulkEventPayload> events}) async => BulkIngestResult(eventCount: 0, status: 'ok', taskId: '');
+  @override Future<SupplementScanResult> scanSupplementLabel({String? imageBase64, String? barcode}) async => throw UnimplementedError();
+  @override Future<SupplementConflict> checkSupplementConflicts({required String name, required List<String> existingNames, String? excludeId}) async => SupplementConflict.none;
 }
 
 ProviderContainer _container({List<Override> overrides = const []}) =>
@@ -169,4 +173,6 @@ class _MockRepoWithLatestValues implements TodayRepositoryInterface {
   @override Future<SessionIngestResult> submitSession({required String sessionType, required String source, required DateTime recordedAt, DateTime? endedAt, required List<SessionMetricPayload> metrics, String? notes, Map<String, dynamic>? metadata}) => _delegate.submitSession(sessionType: sessionType, source: source, recordedAt: recordedAt, endedAt: endedAt, metrics: metrics, notes: notes, metadata: metadata);
   @override Future<BulkIngestResult> bulkIngest({required String source, required List<BulkEventPayload> events}) => _delegate.bulkIngest(source: source, events: events);
   @override Future<List<double?>> getWeightHistory({int days = 7}) => _delegate.getWeightHistory(days: days);
+  @override Future<SupplementScanResult> scanSupplementLabel({String? imageBase64, String? barcode}) => _delegate.scanSupplementLabel(imageBase64: imageBase64, barcode: barcode);
+  @override Future<SupplementConflict> checkSupplementConflicts({required String name, required List<String> existingNames, String? excludeId}) => _delegate.checkSupplementConflicts(name: name, existingNames: existingNames, excludeId: excludeId);
 }

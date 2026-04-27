@@ -27,7 +27,7 @@ import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/workout/domain/exercise.dart' show MuscleGroup;
 import 'package:zuralog/features/workout/domain/workout_session.dart';
 import 'package:zuralog/features/workout/presentation/widgets/exercise_grid_tile.dart'
-    show muscleGroupColor, muscleGroupIcon;
+    show muscleGroupColor;
 import 'package:zuralog/features/workout/presentation/widgets/rest_timer_editor_sheet.dart';
 import 'package:zuralog/features/workout/providers/exercise_providers.dart';
 import 'package:zuralog/features/workout/providers/rest_timer_provider.dart';
