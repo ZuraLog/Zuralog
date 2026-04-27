@@ -87,4 +87,14 @@ void main() {
     // Dose label should appear in the row subtitle
     expect(find.textContaining('18'), findsOneWidget);
   });
+
+  testWidgets('Scan label button is visible in the add form', (tester) async {
+    await tester.pumpWidget(buildScreen(supplements: []));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Add supplement or med'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Scan label'), findsOneWidget);
+  });
 }

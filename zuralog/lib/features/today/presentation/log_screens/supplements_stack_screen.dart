@@ -4,10 +4,15 @@
 /// medication stack. Supports add, edit, reorder, and swipe-to-delete.
 library;
 
+import 'dart:convert' show base64Encode;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/features/today/domain/supplement_scan_result.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
@@ -472,6 +477,21 @@ class _AddEditFormState extends State<_AddEditForm> {
 
   bool get _canSave => _nameCtrl.text.trim().isNotEmpty && !_isSaving;
 
+  Future<void> _openScanSheet() async {
+    final result = await _ScanLabelSheet.show(context);
+    if (result == null || !mounted) return;
+    setState(() {
+      if (result.name != null) _nameCtrl.text = result.name!;
+      if (result.doseAmount != null) {
+        _amountCtrl.text = result.doseAmount! % 1 == 0
+            ? result.doseAmount!.toStringAsFixed(0)
+            : result.doseAmount!.toStringAsFixed(1);
+      }
+      if (result.doseUnit != null) _selectedUnit = result.doseUnit;
+      if (result.form != null) _selectedForm = result.form!.toLowerCase();
+    });
+  }
+
   Future<void> _submit() async {
     if (!_canSave) return;
     setState(() => _isSaving = true);
@@ -511,6 +531,42 @@ class _AddEditFormState extends State<_AddEditForm> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Scan label button
+                GestureDetector(
+                  onTap: _openScanSheet,
+                  child: Builder(
+                    builder: (context) {
+                      final colors = AppColorsOf(context);
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimens.spaceMd,
+                          vertical: AppDimens.spaceSm,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.surfaceRaised,
+                          borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+                          border: Border.all(
+                              color: colors.border.withValues(alpha: 0.2)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.qr_code_scanner_rounded,
+                                size: 18, color: colors.textSecondary),
+                            const SizedBox(width: AppDimens.spaceXs),
+                            Text(
+                              'Scan label',
+                              style: AppTextStyles.bodySmall
+                                  .copyWith(color: colors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: AppDimens.spaceMd),
                 // Name field
                 ZLabeledTextField(
                   label: 'Name',
@@ -675,6 +731,236 @@ class _OptionGrid extends StatelessWidget {
         const SizedBox(height: AppDimens.spaceXs),
         ...rows,
       ],
+    );
+  }
+}
+
+// ── Scan Label Sheet ──────────────────────────────────────────────────────────
+
+class _ScanLabelSheet extends ConsumerStatefulWidget {
+  const _ScanLabelSheet();
+
+  static Future<SupplementScanResult?> show(BuildContext context) {
+    return showModalBottomSheet<SupplementScanResult>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => const _ScanLabelSheet(),
+    );
+  }
+
+  @override
+  ConsumerState<_ScanLabelSheet> createState() => _ScanLabelSheetState();
+}
+
+class _ScanLabelSheetState extends ConsumerState<_ScanLabelSheet> {
+  bool _showBarcodeScanner = false;
+  bool _isLoading = false;
+  String? _error;
+
+  Future<void> _pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    final xFile = await picker.pickImage(source: source, imageQuality: 85);
+    if (xFile == null) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final bytes = await xFile.readAsBytes();
+      final base64 = base64Encode(bytes);
+      final result = await ref.read(todayRepositoryProvider).scanSupplementLabel(
+            imageBase64: base64,
+          );
+      if (mounted) Navigator.of(context).pop(result);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = 'Could not read label. Please try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleBarcode(BarcodeCapture capture) async {
+    final code = capture.barcodes.firstOrNull?.rawValue;
+    if (code == null || code.isEmpty) return;
+    setState(() {
+      _showBarcodeScanner = false;
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final result = await ref.read(todayRepositoryProvider).scanSupplementLabel(
+            barcode: code,
+          );
+      if (mounted) Navigator.of(context).pop(result);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = 'Could not look up barcode. Please try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Container(
+      padding: EdgeInsets.only(
+        left: AppDimens.spaceMd,
+        right: AppDimens.spaceMd,
+        top: AppDimens.spaceMd,
+        bottom: MediaQuery.of(context).viewInsets.bottom + AppDimens.spaceLg,
+      ),
+      decoration: BoxDecoration(
+        color: colors.surfaceOverlay,
+        borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppDimens.shapeXl)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Scan label',
+            style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
+          ),
+          const SizedBox(height: AppDimens.spaceMd),
+          if (_isLoading)
+            const Padding(
+              padding: EdgeInsets.all(AppDimens.spaceLg),
+              child: CircularProgressIndicator.adaptive(),
+            )
+          else if (_showBarcodeScanner)
+            _BarcodeScannerView(
+              onDetect: _handleBarcode,
+              onClose: () => setState(() => _showBarcodeScanner = false),
+            )
+          else ...[
+            Row(
+              children: [
+                Expanded(
+                  child: _ScanOption(
+                    icon: Icons.camera_alt_outlined,
+                    label: 'Camera',
+                    onTap: () => _pickImage(ImageSource.camera),
+                  ),
+                ),
+                const SizedBox(width: AppDimens.spaceSm),
+                Expanded(
+                  child: _ScanOption(
+                    icon: Icons.photo_library_outlined,
+                    label: 'Photos',
+                    onTap: () => _pickImage(ImageSource.gallery),
+                  ),
+                ),
+                const SizedBox(width: AppDimens.spaceSm),
+                Expanded(
+                  child: _ScanOption(
+                    icon: Icons.qr_code_scanner_rounded,
+                    label: 'Barcode',
+                    onTap: () => setState(() => _showBarcodeScanner = true),
+                  ),
+                ),
+              ],
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: AppDimens.spaceSm),
+              Text(
+                _error!,
+                style: AppTextStyles.bodySmall.copyWith(color: colors.error),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Scan Option ───────────────────────────────────────────────────────────────
+
+class _ScanOption extends StatelessWidget {
+  const _ScanOption({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceMd),
+        decoration: BoxDecoration(
+          color: colors.surfaceRaised,
+          borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: colors.textSecondary),
+            const SizedBox(height: AppDimens.spaceXs),
+            Text(
+              label,
+              style: AppTextStyles.bodySmall.copyWith(color: colors.textSecondary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Barcode Scanner View ──────────────────────────────────────────────────────
+
+class _BarcodeScannerView extends StatelessWidget {
+  const _BarcodeScannerView({
+    required this.onDetect,
+    required this.onClose,
+  });
+
+  final void Function(BarcodeCapture) onDetect;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 300,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppDimens.shapeLg),
+        color: Colors.black,
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: Stack(
+        children: [
+          MobileScanner(onDetect: onDetect),
+          Positioned(
+            top: AppDimens.spaceSm,
+            right: AppDimens.spaceSm,
+            child: GestureDetector(
+              onTap: onClose,
+              child: Container(
+                padding: const EdgeInsets.all(AppDimens.spaceXs),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close_rounded,
+                    color: Colors.white, size: 18),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
