@@ -45,3 +45,4 @@ next-env.d.ts
 lint-results.json
 test.spec.ts
 .vade-report
+.superpowers/
