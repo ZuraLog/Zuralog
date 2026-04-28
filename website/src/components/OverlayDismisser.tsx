@@ -45,6 +45,9 @@ const MIN_DISPLAY_MS = 800;
  */
 const PAGES_WITH_3D = new Set(["/"]);
 
+/** On mobile (<768px) there is no 3D shell, so dismiss quickly. */
+const MOBILE_DISMISS_MS = 600;
+
 export function OverlayDismisser() {
     const pathname = usePathname();
     const dismissedRef = useRef(false);
@@ -70,8 +73,9 @@ export function OverlayDismisser() {
                 // Re-check: LoadingScreen may have already removed it
                 const el = document.getElementById("ssr-loading-overlay");
                 if (!el) return;
+                el.style.transition = "opacity 0.4s ease-out";
                 el.style.opacity = "0";
-                setTimeout(() => el.remove(), 600);
+                setTimeout(() => el.remove(), 400);
             }, remaining);
         };
 
@@ -83,7 +87,14 @@ export function OverlayDismisser() {
             return () => clearTimeout(timer);
         }
 
-        // Page HAS 3D content. LoadingScreen handles the normal path.
+        // On mobile, ClientShellGate skips 3D entirely — dismiss quickly.
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) {
+            const timer = setTimeout(dismiss, MOBILE_DISMISS_MS);
+            return () => clearTimeout(timer);
+        }
+
+        // Page HAS 3D content (desktop). LoadingScreen handles the normal path.
         // We only set an absolute safety timeout here as a last resort.
         const safetyTimer = setTimeout(dismiss, ABSOLUTE_MAX_MS);
 
