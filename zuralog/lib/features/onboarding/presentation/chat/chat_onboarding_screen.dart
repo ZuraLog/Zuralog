@@ -96,6 +96,12 @@ class _ChatOnboardingScreenState extends ConsumerState<ChatOnboardingScreen> {
         if (prev == null || prev.messages.length != next.messages.length) {
           _autoScrollToBottom();
         }
+        // When the coach finishes composing, the input area expands (220ms
+        // AnimatedSize). Scroll again after it settles so the last message
+        // isn't hidden behind the newly-expanded input.
+        if (prev != null && prev.isCoachComposing && !next.isCoachComposing) {
+          Future.delayed(const Duration(milliseconds: 260), _autoScrollToBottom);
+        }
       },
     );
 
@@ -213,7 +219,7 @@ class _TopBar extends StatelessWidget {
             const CoachBlob(state: BlobState.idle, size: 28),
             const SizedBox(width: AppDimens.spaceSm),
             Text(
-              'Coach',
+              'Zura',
               style: AppTextStyles.labelLarge.copyWith(
                 color: colors.textPrimary,
                 letterSpacing: -0.15,
@@ -470,6 +476,7 @@ class _InputArea extends ConsumerWidget {
         );
       case ChatStep.diet:
         input = _ChipMultiStepInput(
+          key: const ValueKey(ChatStep.diet),
           options: const [
             ZChipOption(value: 'vegetarian', label: 'Vegetarian'),
             ZChipOption(value: 'vegan', label: 'Vegan'),
@@ -485,6 +492,7 @@ class _InputArea extends ConsumerWidget {
         );
       case ChatStep.limitations:
         input = _ChipMultiStepInput(
+          key: const ValueKey(ChatStep.limitations),
           options: const [
             ZChipOption(value: 'lower_back', label: 'Lower back'),
             ZChipOption(value: 'knees', label: 'Knees'),
@@ -550,25 +558,20 @@ class _InputArea extends ConsumerWidget {
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOut,
       alignment: Alignment.topCenter,
-      child: IgnorePointer(
-        ignoring: !showInput,
-        child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 160),
-        opacity: showInput ? 1.0 : 0.0,
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: AppDimens.spaceLg,
-            right: AppDimens.spaceLg,
-            bottom: bottomSafe +
-                (keyboard > 0
-                    ? AppDimens.spaceSm
-                    : _ChatOnboardingScreenState._inputAreaBottomInset),
-            top: AppDimens.spaceSm,
-          ),
-          child: input,
-        ),
-      ),
-        ),
+      child: showInput
+        ? Padding(
+            padding: EdgeInsets.only(
+              left: AppDimens.spaceLg,
+              right: AppDimens.spaceLg,
+              bottom: bottomSafe +
+                  (keyboard > 0
+                      ? AppDimens.spaceSm
+                      : _ChatOnboardingScreenState._inputAreaBottomInset),
+              top: AppDimens.spaceSm,
+            ),
+            child: input,
+          )
+        : const SizedBox.shrink(),
     );
   }
 
@@ -691,6 +694,7 @@ class _MeetYourCoachButton extends StatelessWidget {
 /// first tap.
 class _ChipMultiStepInput extends StatefulWidget {
   const _ChipMultiStepInput({
+    super.key,
     required this.options,
     required this.onSubmit,
     this.initialValues = const [],

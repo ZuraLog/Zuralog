@@ -236,6 +236,11 @@ class _ZSupplementsLogPanelState
     ref.invalidate(goalsProvider);
   }
 
+  Future<void> _navigateToStack() async {
+    await GoRouter.of(context).pushNamed(RouteNames.supplementsStack);
+    if (mounted) ref.invalidate(supplementsListProvider);
+  }
+
   Future<void> _logOneOff() async {
     final name = _oneOffNameController.text.trim();
     if (name.isEmpty) return;
@@ -326,6 +331,7 @@ class _ZSupplementsLogPanelState
       data: (supplements) {
         if (supplements.isEmpty) {
           return Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _PanelHeader(
@@ -334,7 +340,7 @@ class _ZSupplementsLogPanelState
                 syncStatus: syncStatus,
                 onBack: widget.onBack,
               ),
-              const Expanded(child: _EmptyState()),
+              _EmptyState(onManageStack: _navigateToStack),
             ],
           );
         }
@@ -350,6 +356,7 @@ class _ZSupplementsLogPanelState
           isTaken: _isTaken,
           onTap: _handleTap,
           onBack: widget.onBack,
+          onManageStack: _navigateToStack,
           oneOffSection: _OneOffSection(
             showForm: _showOneOffForm,
             nameController: _oneOffNameController,
@@ -374,6 +381,7 @@ class _PanelContent extends StatelessWidget {
     required this.isTaken,
     required this.onTap,
     required this.onBack,
+    required this.onManageStack,
     required this.oneOffSection,
   });
 
@@ -384,12 +392,14 @@ class _PanelContent extends StatelessWidget {
   final bool Function(String) isTaken;
   final void Function(SupplementEntry) onTap;
   final VoidCallback onBack;
+  final VoidCallback onManageStack;
   final Widget oneOffSection;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _PanelHeader(
@@ -399,35 +409,35 @@ class _PanelContent extends StatelessWidget {
           onBack: onBack,
         ),
         const SizedBox(height: AppDimens.spaceMd),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppDimens.spaceMd),
-            children: [
-              for (final group in sortedGroups) ...[
-                if (group.key != null) ...[
-                  Text(
-                    _kTimingLabels[group.key] ?? group.key!,
-                    style: AppTextStyles.labelMedium.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: AppDimens.spaceXs),
-                ],
-                ...group.value.map(
-                  (s) => _SupplementRow(
-                    supplement: s,
-                    taken: isTaken(s.id),
-                    onTap: () => onTap(s),
+        ListView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppDimens.spaceMd),
+          children: [
+            for (final group in sortedGroups) ...[
+              if (group.key != null) ...[
+                Text(
+                  _kTimingLabels[group.key] ?? group.key!,
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: colors.textSecondary,
                   ),
                 ),
-                const SizedBox(height: AppDimens.spaceMd),
+                const SizedBox(height: AppDimens.spaceXs),
               ],
-              oneOffSection,
-              const _PanelFooter(),
-              const SizedBox(height: AppDimens.spaceLg),
+              ...group.value.map(
+                (s) => _SupplementRow(
+                  supplement: s,
+                  taken: isTaken(s.id),
+                  onTap: () => onTap(s),
+                ),
+              ),
+              const SizedBox(height: AppDimens.spaceMd),
             ],
-          ),
+            oneOffSection,
+            _PanelFooter(onManageStack: onManageStack),
+            const SizedBox(height: AppDimens.spaceLg),
+          ],
         ),
       ],
     );
@@ -613,7 +623,9 @@ class _SupplementRow extends StatelessWidget {
 }
 
 class _PanelFooter extends StatelessWidget {
-  const _PanelFooter();
+  const _PanelFooter({required this.onManageStack});
+
+  final VoidCallback onManageStack;
 
   @override
   Widget build(BuildContext context) {
@@ -627,8 +639,7 @@ class _PanelFooter extends StatelessWidget {
         ),
         const SizedBox(height: AppDimens.spaceMd),
         GestureDetector(
-          onTap: () => GoRouter.of(context)
-              .pushNamed(RouteNames.supplementsStack),
+          onTap: onManageStack,
           child: Text(
             'Manage my stack →',
             style: AppTextStyles.bodyMedium.copyWith(
@@ -839,7 +850,9 @@ class _LogTodayButtonState extends State<_LogTodayButton> {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+  const _EmptyState({required this.onManageStack});
+
+  final VoidCallback onManageStack;
 
   @override
   Widget build(BuildContext context) {
@@ -871,8 +884,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: AppDimens.spaceLg),
             ElevatedButton(
-              onPressed: () => GoRouter.of(context)
-                  .pushNamed(RouteNames.supplementsStack),
+              onPressed: onManageStack,
               child: const Text('Set up my stack'),
             ),
           ],

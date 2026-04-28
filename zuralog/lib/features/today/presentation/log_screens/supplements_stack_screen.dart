@@ -105,10 +105,7 @@ class _SupplementsStackScreenState
       final repo = ref.read(todayRepositoryProvider);
       final saved = await repo.updateSupplementsList(updated);
       if (mounted) {
-        setState(() {
-          _localList = saved;
-          _seeded = false;
-        });
+        setState(() => _localList = saved);
         ref.invalidate(supplementsListProvider);
         _closeForm();
       }
@@ -141,10 +138,7 @@ class _SupplementsStackScreenState
       final repo = ref.read(todayRepositoryProvider);
       final saved = await repo.updateSupplementsList(updated);
       if (mounted) {
-        setState(() {
-          _localList = saved;
-          _seeded = false;
-        });
+        setState(() => _localList = saved);
         ref.invalidate(supplementsListProvider);
       }
     } catch (e) {
@@ -165,10 +159,7 @@ class _SupplementsStackScreenState
       final repo = ref.read(todayRepositoryProvider);
       final saved = await repo.updateSupplementsList(updated);
       if (mounted) {
-        setState(() {
-          _localList = saved;
-          _seeded = false;
-        });
+        setState(() => _localList = saved);
         ref.invalidate(supplementsListProvider);
       }
     } catch (e) {
@@ -185,60 +176,63 @@ class _SupplementsStackScreenState
   Widget build(BuildContext context) {
     final supplementsAsync = ref.watch(supplementsListProvider);
 
-    return supplementsAsync.when(
-      loading: () => ZuralogScaffold(
-        appBar: AppBar(
-          title: const Text('My Supplement Stack'),
-          leading: const BackButton(),
-        ),
-        body: const Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, _) => ZuralogScaffold(
-        appBar: AppBar(
-          title: const Text('My Supplement Stack'),
-          leading: const BackButton(),
-        ),
-        body: const Center(child: Text('Could not load supplements.')),
-      ),
-      data: (serverList) {
-        // Seed local list on first data arrival — safe inside build because
-        // no setState is called; we just set the field directly before the
-        // first frame is painted.
-        if (!_seeded) {
-          _seeded = true;
-          _localList = List.from(serverList);
-        }
-        final list = _localList ?? serverList;
+    // Seed local list on first server data arrival.
+    if (!_seeded && supplementsAsync.hasValue) {
+      _seeded = true;
+      _localList = List.from(supplementsAsync.value!);
+    }
 
-        if (_showForm) {
-          return ZuralogScaffold(
-            appBar: AppBar(
-              title: Text(_editingEntry == null ? 'Add Supplement' : 'Edit Supplement'),
-              leading: BackButton(onPressed: _closeForm),
-            ),
-            body: _AddEditForm(
-              existing: _editingEntry,
-              onSave: _saveEntry,
-              onCancel: _closeForm,
-              existingSupplements: _localList ?? [],
-            ),
-          );
-        }
-
+    // Only show spinner / error when we have no local data yet (initial load).
+    if (_localList == null) {
+      if (supplementsAsync.isLoading) {
         return ZuralogScaffold(
           appBar: AppBar(
             title: const Text('My Supplement Stack'),
             leading: const BackButton(),
           ),
-          body: _StackBody(
-            supplements: list,
-            onAdd: _openAddForm,
-            onEdit: _openEditForm,
-            onDelete: _confirmDelete,
-            onReorder: (oldIndex, newIndex) => _reorder(oldIndex, newIndex, list),
-          ),
+          body: const Center(child: CircularProgressIndicator()),
         );
-      },
+      }
+      if (supplementsAsync.hasError) {
+        return ZuralogScaffold(
+          appBar: AppBar(
+            title: const Text('My Supplement Stack'),
+            leading: const BackButton(),
+          ),
+          body: const Center(child: Text('Could not load supplements.')),
+        );
+      }
+    }
+
+    final list = _localList ?? supplementsAsync.valueOrNull ?? [];
+
+    if (_showForm) {
+      return ZuralogScaffold(
+        appBar: AppBar(
+          title: Text(_editingEntry == null ? 'Add Supplement' : 'Edit Supplement'),
+          leading: BackButton(onPressed: _closeForm),
+        ),
+        body: _AddEditForm(
+          existing: _editingEntry,
+          onSave: _saveEntry,
+          onCancel: _closeForm,
+          existingSupplements: _localList ?? [],
+        ),
+      );
+    }
+
+    return ZuralogScaffold(
+      appBar: AppBar(
+        title: const Text('My Supplement Stack'),
+        leading: const BackButton(),
+      ),
+      body: _StackBody(
+        supplements: list,
+        onAdd: _openAddForm,
+        onEdit: _openEditForm,
+        onDelete: _confirmDelete,
+        onReorder: (oldIndex, newIndex) => _reorder(oldIndex, newIndex, list),
+      ),
     );
   }
 }
@@ -646,69 +640,64 @@ class _AddEditFormState extends ConsumerState<_AddEditForm> {
                 ],
                 const SizedBox(height: AppDimens.spaceLg),
 
-                // Amount field
-                ZLabeledNumberField(
-                  label: 'Amount',
-                  controller: _amountCtrl,
-                  allowDecimal: true,
-                  textInputAction: TextInputAction.done,
+                // Amount + Unit row
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: ZLabeledNumberField(
+                        label: 'Amount',
+                        controller: _amountCtrl,
+                        allowDecimal: true,
+                        textInputAction: TextInputAction.done,
+                      ),
+                    ),
+                    const SizedBox(width: AppDimens.spaceSm),
+                    Expanded(
+                      flex: 2,
+                      child: ZSelect(
+                        label: 'Unit',
+                        value: _selectedUnit,
+                        options: _kUnitOptions,
+                        placeholder: 'Select',
+                        onChanged: (v) => setState(() => _selectedUnit = v),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: AppDimens.spaceLg),
 
-                // Unit
-                ZSectionLabel(label: 'Unit'),
-                const SizedBox(height: AppDimens.spaceSm),
-                Wrap(
-                  spacing: AppDimens.spaceSm,
-                  runSpacing: AppDimens.spaceSm,
-                  children: _kUnitOptions
-                      .map((v) => ZChip(
-                            label: v,
-                            isActive: _selectedUnit == v,
-                            onTap: () => setState(
-                                () => _selectedUnit = v == _selectedUnit ? null : v),
-                          ))
-                      .toList(),
-                ),
-                const SizedBox(height: AppDimens.spaceLg),
-
-                // Form
-                ZSectionLabel(label: 'Form'),
-                const SizedBox(height: AppDimens.spaceSm),
-                Wrap(
-                  spacing: AppDimens.spaceSm,
-                  runSpacing: AppDimens.spaceSm,
-                  children: _kFormOptions
-                      .map((v) => ZChip(
-                            label: v,
-                            isActive: _selectedForm == v,
-                            onTap: () => setState(
-                                () => _selectedForm = v == _selectedForm ? null : v),
-                          ))
-                      .toList(),
-                ),
-                const SizedBox(height: AppDimens.spaceLg),
-
-                // Timing
-                ZSectionLabel(label: 'Timing'),
-                const SizedBox(height: AppDimens.spaceSm),
-                Wrap(
-                  spacing: AppDimens.spaceSm,
-                  runSpacing: AppDimens.spaceSm,
-                  children: _kTimingOptions
-                      .map((v) => ZChip(
-                            label: v,
-                            isActive: _selectedTiming == v,
-                            onTap: () {
-                              final newVal = _selectedTiming == v ? null : v;
-                              setState(() {
-                                _selectedTiming = newVal;
-                                if (newVal == null) _timingSuggestion = null;
-                              });
-                              if (newVal != null) _fetchTimingTip(newVal);
-                            },
-                          ))
-                      .toList(),
+                // Form + Timing row
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: ZSelect(
+                        label: 'Form',
+                        value: _selectedForm,
+                        options: _kFormOptions,
+                        placeholder: 'Select',
+                        onChanged: (v) => setState(() => _selectedForm = v),
+                      ),
+                    ),
+                    const SizedBox(width: AppDimens.spaceSm),
+                    Expanded(
+                      child: ZSelect(
+                        label: 'Timing',
+                        value: _selectedTiming,
+                        options: _kTimingOptions,
+                        placeholder: 'Select',
+                        onChanged: (v) {
+                          setState(() {
+                            _selectedTiming = v;
+                            _timingSuggestion = null;
+                          });
+                          _fetchTimingTip(v);
+                        },
+                      ),
+                    ),
+                  ],
                 ),
                 // Loading bar while tip is being fetched
                 if (_isLoadingTip) ...[

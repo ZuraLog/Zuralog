@@ -95,7 +95,7 @@ class _ZSelectState extends State<ZSelect> {
                     },
                     child: Container(
                       height: 48,
-                      color: sheetColors.surface,
+                      color: sheetColors.surfaceOverlay,
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppDimens.spaceMd,
                       ),
@@ -181,11 +181,11 @@ class _ZSelectState extends State<ZSelect> {
       children: [
         Text(
           widget.label!,
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: colors.textPrimary,
+          style: AppTextStyles.labelMedium.copyWith(
+            color: colors.textSecondary,
           ),
         ),
-        const SizedBox(height: AppDimens.spaceXs),
+        const SizedBox(height: AppDimens.spaceXxs),
         trigger,
       ],
     );
