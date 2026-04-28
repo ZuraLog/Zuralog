@@ -961,9 +961,16 @@ class TodayRepository implements TodayRepositoryInterface {
 
   @override
   Future<List<SupplementTodayLogEntry>> getSupplementsTodayLog() async {
-    final response = await _api.get('/api/v1/supplements/today-log');
-    return parseTodayLogResponse(
-        response.data as Map<String, dynamic>? ?? {});
+    try {
+      final response = await _api.get('/api/v1/supplements/today-log');
+      debugPrint('[TodayRepo] getSupplementsTodayLog ← HTTP ${response.statusCode}');
+      return parseTodayLogResponse(
+          response.data as Map<String, dynamic>? ?? {});
+    } on DioException catch (e) {
+      debugPrint('[TodayRepo] getSupplementsTodayLog ← '
+          'HTTP ${e.response?.statusCode} body=${e.response?.data}');
+      rethrow;
+    }
   }
 
   @override

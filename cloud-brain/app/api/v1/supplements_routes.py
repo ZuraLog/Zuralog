@@ -6,7 +6,6 @@ import uuid as _uuid
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field, model_validator
-from sqlalchemy import delete as sa_delete
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
@@ -14,7 +13,7 @@ from sqlalchemy.sql import func
 from app.api.deps import get_authenticated_user_id
 from app.database import get_db
 from app.limiter import limiter
-from app.models.quick_log import QuickLog
+from app.models.health_event import HealthEvent
 from app.models.user_supplement import UserSupplement
 
 logger = logging.getLogger(__name__)
@@ -139,20 +138,29 @@ async def get_today_supplement_log(
     today_start = datetime.now(timezone.utc).replace(
         hour=0, minute=0, second=0, microsecond=0
     )
-    result = await db.execute(
-        select(QuickLog).where(
-            QuickLog.user_id == user_id,
-            QuickLog.metric_type == "supplement_taken",
-            QuickLog.logged_at >= today_start,
+    try:
+        result = await db.execute(
+            select(HealthEvent.id, HealthEvent.metadata_).where(
+                HealthEvent.user_id == user_id,
+                HealthEvent.metric_type == "supplement_taken",
+                HealthEvent.recorded_at >= today_start,
+                HealthEvent.deleted_at.is_(None),
+            )
         )
-    )
-    rows = result.scalars().all()
-    entries: list[TodayLogEntry] = []
-    for row in rows:
-        supplement_id = row.data.get("supplement_id")
-        if supplement_id:
-            entries.append(TodayLogEntry(supplement_id=supplement_id, log_id=row.id))
-    return TodayLogResponse(entries=entries)
+        entries: list[TodayLogEntry] = []
+        for event_id, metadata in result.all():
+            supplement_id = (metadata or {}).get("supplement_id")
+            if supplement_id:
+                entries.append(
+                    TodayLogEntry(
+                        supplement_id=str(supplement_id),
+                        log_id=str(event_id),
+                    )
+                )
+        return TodayLogResponse(entries=entries)
+    except Exception:
+        logger.exception("today-log failed for user=%s", user_id[:8] if user_id else "?")
+        raise
 
 
 @limiter.limit("60/minute")
@@ -234,21 +242,28 @@ async def delete_supplement_log_entry(
     user_id: str = Depends(get_authenticated_user_id),
 ) -> None:
     """Delete a specific supplement_taken log entry owned by the authenticated user."""
+    try:
+        entry_uuid = _uuid.UUID(log_entry_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Log entry not found")
     result = await db.execute(
-        select(QuickLog).where(
-            QuickLog.id == log_entry_id,
-            QuickLog.user_id == user_id,
-            QuickLog.metric_type == "supplement_taken",
+        select(HealthEvent).where(
+            HealthEvent.id == entry_uuid,
+            HealthEvent.user_id == user_id,
+            HealthEvent.metric_type == "supplement_taken",
+            HealthEvent.deleted_at.is_(None),
         )
     )
     if result.scalars().first() is None:
         raise HTTPException(status_code=404, detail="Log entry not found")
     await db.execute(
-        sa_delete(QuickLog).where(
-            QuickLog.id == log_entry_id,
-            QuickLog.user_id == user_id,
-            QuickLog.metric_type == "supplement_taken",
+        update(HealthEvent)
+        .where(
+            HealthEvent.id == entry_uuid,
+            HealthEvent.user_id == user_id,
+            HealthEvent.metric_type == "supplement_taken",
         )
+        .values(deleted_at=datetime.now(timezone.utc))
     )
     await db.commit()
 
@@ -384,10 +399,11 @@ async def _get_meal_hour_pattern(user_id: str, db: AsyncSession) -> str | None:
     """Return a plain-English description of when the user typically eats, or None if insufficient data."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=30)
     result = await db.execute(
-        select(QuickLog.logged_at).where(
-            QuickLog.user_id == user_id,
-            QuickLog.metric_type == "meal",
-            QuickLog.logged_at >= cutoff,
+        select(HealthEvent.recorded_at).where(
+            HealthEvent.user_id == user_id,
+            HealthEvent.metric_type == "meal",
+            HealthEvent.recorded_at >= cutoff,
+            HealthEvent.deleted_at.is_(None),
         ).limit(200)
     )
     rows = result.scalars().all()
@@ -516,22 +532,23 @@ async def get_supplement_insights(
     for row in ds_rows:
         health_by_metric[row.metric_type][row.date] = row.value
 
-    # 5. Supplement-taken logs from QuickLog
+    # 5. Supplement-taken logs from HealthEvent
     cutoff_dt = datetime.combine(cutoff, _time.min, tzinfo=timezone.utc)
     ql_result = await db.execute(
-        select(QuickLog).where(
-            QuickLog.user_id == user_id,
-            QuickLog.metric_type == "supplement_taken",
-            QuickLog.logged_at >= cutoff_dt,
+        select(HealthEvent).where(
+            HealthEvent.user_id == user_id,
+            HealthEvent.metric_type == "supplement_taken",
+            HealthEvent.recorded_at >= cutoff_dt,
+            HealthEvent.deleted_at.is_(None),
         )
     )
     ql_rows = ql_result.scalars().all()
 
     taken_by_date: dict[date, set[str]] = {}
     for row in ql_rows:
-        supplement_id = (row.data or {}).get("supplement_id")
+        supplement_id = (row.metadata_ or {}).get("supplement_id")
         if supplement_id:
-            d = row.logged_at.astimezone(timezone.utc).date()
+            d = row.recorded_at.astimezone(timezone.utc).date()
             taken_by_date.setdefault(d, set()).add(str(supplement_id))
 
     consistency_by_date: dict[date, float] = {
