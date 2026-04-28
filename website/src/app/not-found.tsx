@@ -1,67 +1,194 @@
-/**
- * 404 Not Found page — ZuraLog.
- * Next.js App Router automatically renders this file for any unmatched route.
- */
+"use client";
 
-import Link from 'next/link';
-import { FloatingNav } from '@/components/layout/FloatingNav';
-import { Footer } from '@/components/layout/Footer';
+import Link from "next/link";
+import { useEffect, useRef } from "react";
+import { motion } from "framer-motion";
+import { gsap } from "gsap";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
+import { ArrowLeft } from "lucide-react";
+
+const EXPO_OUT = [0.16, 1, 0.3, 1] as [number, number, number, number];
 
 export default function NotFound() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const numberRef = useRef<HTMLParagraphElement>(null);
+  const patternRef = useRef<HTMLDivElement>(null);
+
+  // Mouse parallax on the 404 number and pattern
+  useEffect(() => {
+    const container = containerRef.current;
+    const number = numberRef.current;
+    const pattern = patternRef.current;
+    if (!container || !number || !pattern) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+
+      gsap.to(number, {
+        x: x * 20,
+        y: y * 12,
+        duration: 0.8,
+        ease: "power2.out",
+      });
+
+      gsap.to(pattern, {
+        x: x * -10,
+        y: y * -8,
+        duration: 1.2,
+        ease: "power2.out",
+      });
+    };
+
+    const handleMouseLeave = () => {
+      gsap.to([number, pattern], {
+        x: 0,
+        y: 0,
+        duration: 1,
+        ease: "elastic.out(1, 0.4)",
+      });
+    };
+
+    container.addEventListener("mousemove", handleMouseMove);
+    container.addEventListener("mouseleave", handleMouseLeave);
+    return () => {
+      container.removeEventListener("mousemove", handleMouseMove);
+      container.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, []);
+
+  // Slow pattern drift animation
+  useEffect(() => {
+    const pattern = patternRef.current;
+    if (!pattern) return;
+
+    gsap.to(pattern, {
+      backgroundPosition: "600px 600px",
+      duration: 60,
+      ease: "none",
+      repeat: -1,
+    });
+  }, []);
+
   return (
-    <div className="relative flex min-h-screen flex-col bg-[#F0EEE9] font-jakarta" data-theme="light">
-      <FloatingNav />
+    <>
+      <div
+        ref={containerRef}
+        className="relative flex min-h-screen flex-col overflow-hidden"
+        style={{ background: "#FAFAF5" }}
+      >
+        {/* Topographic pattern texture */}
+        <div
+          ref={patternRef}
+          className="pointer-events-none absolute inset-[-100px]"
+          style={{
+            backgroundImage: 'url("/brand-pattern-hd.jpg")',
+            backgroundSize: "600px auto",
+            backgroundRepeat: "repeat",
+            opacity: 0.025,
+            mixBlendMode: "multiply",
+          }}
+        />
 
-      <main className="flex flex-1 items-center justify-center px-6 py-32">
-        <div className="flex max-w-md flex-col items-center text-center">
+        <Navbar />
 
-          {/* Big 404 — topographic pattern text */}
-          <p
-            className="ds-pattern-text text-[120px] font-bold leading-none tracking-tighter select-none"
-            style={{ backgroundImage: 'var(--ds-pattern-sage)' }}
-          >
-            404
-          </p>
-
-          {/* Eyebrow */}
-          <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#344E41]/20 bg-[#344E41]/8 px-3 py-1 text-[11px] font-medium uppercase tracking-widest text-[#344E41]/70">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#344E41]" />
-            Page not found
-          </span>
-
-          {/* Headline */}
-          <h1 className="mt-5 text-[24px] font-semibold tracking-tight text-[#161618]">
-            Looks like this page skipped leg day.
-          </h1>
-
-          {/* Subtext */}
-          <p className="mt-4 text-[14px] leading-relaxed text-black/45">
-            It trained hard, but it just does not exist. The page you are
-            looking for may have been moved, deleted, or never existed in the
-            first place.
-          </p>
-
-          {/* Actions */}
-          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
-            <Link
-              href="/"
-              className="relative isolate overflow-hidden inline-flex items-center justify-center gap-2 font-jakarta rounded-ds-pill h-[44px] px-6 text-[15px] font-semibold text-ds-text-on-sage ds-pattern-drift transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
-              style={{ backgroundImage: 'var(--ds-pattern-sage)' }}
+        <main className="relative z-10 flex flex-1 items-center justify-center px-6 pt-24 pb-16">
+          <div className="flex flex-col items-center text-center">
+            {/* 404 Number */}
+            <motion.p
+              ref={numberRef}
+              initial={{ opacity: 0, scale: 0.8, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.9, ease: EXPO_OUT }}
+              className="select-none text-[180px] font-bold leading-none tracking-[-0.06em] sm:text-[240px]"
+              style={{ color: "#344E41" }}
             >
-              Back to home
-            </Link>
-            <Link
-              href="/#waitlist"
-              className="relative isolate overflow-hidden inline-flex items-center justify-center gap-2 font-jakarta rounded-ds-pill h-[44px] px-6 text-[15px] font-semibold bg-transparent border-[1.5px] border-[var(--color-ds-secondary-border)] text-ds-text-primary transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
+              404
+            </motion.p>
+
+            {/* Pill badge */}
+            <motion.span
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: EXPO_OUT, delay: 0.15 }}
+              className="mt-2 inline-flex items-center gap-2 rounded-full px-4 py-1.5"
+              style={{
+                background: "rgba(52, 78, 65, 0.06)",
+                border: "1px solid rgba(52, 78, 65, 0.08)",
+              }}
             >
-              Join the waitlist
-            </Link>
+              <span
+                className="h-[5px] w-[5px] rounded-full"
+                style={{ background: "#344E41" }}
+              />
+              <span
+                className="text-[11px] font-medium uppercase tracking-[2px]"
+                style={{ color: "#344E41", fontFamily: "var(--font-geist-mono, monospace)" }}
+              >
+                Page not found
+              </span>
+            </motion.span>
+
+            {/* Headline */}
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: EXPO_OUT, delay: 0.25 }}
+              className="mt-6 text-[28px] font-semibold tracking-tight sm:text-[32px]"
+              style={{ color: "#1A2E22" }}
+            >
+              This path doesn&apos;t exist yet.
+            </motion.h1>
+
+            {/* Subtext */}
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: EXPO_OUT, delay: 0.35 }}
+              className="mt-3 max-w-sm text-[16px] leading-relaxed"
+              style={{ color: "rgba(52, 78, 65, 0.45)" }}
+            >
+              The page you&apos;re looking for may have been moved or no longer
+              exists.
+            </motion.p>
+
+            {/* Buttons */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: EXPO_OUT, delay: 0.45 }}
+              className="mt-10 flex flex-col items-center gap-3 sm:flex-row"
+            >
+              <Link
+                href="/"
+                className="btn-pattern-light group inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-semibold animate-sage-glow transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
+                style={{
+                  background: "#CFE1B9",
+                  color: "#141E18",
+                  boxShadow: "0 2px 12px rgba(207, 225, 185, 0.4)",
+                }}
+              >
+                <ArrowLeft className="h-4 w-4 transition-transform duration-300 group-hover:-translate-x-0.5" />
+                Back to Home
+              </Link>
+              <Link
+                href="/#waitlist"
+                className="inline-flex items-center justify-center rounded-full px-7 py-3.5 text-[15px] font-semibold transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
+                style={{
+                  color: "#344E41",
+                  border: "1.5px solid rgba(52, 78, 65, 0.20)",
+                }}
+              >
+                Join the Waitlist
+              </Link>
+            </motion.div>
           </div>
+        </main>
 
-        </div>
-      </main>
-
-      <Footer />
-    </div>
+        <Footer />
+      </div>
+    </>
   );
 }
